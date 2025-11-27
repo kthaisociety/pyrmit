@@ -1,0 +1,5 @@
+node_modules
+.vinxi
+.output
+.env
+.DS_Store
