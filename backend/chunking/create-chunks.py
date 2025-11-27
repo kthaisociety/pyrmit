@@ -6,6 +6,15 @@ from pathlib import Path
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
 
+from openai import OpenAI
+client = OpenAI()
+
+def embed_text(text: str):
+    response = client.embeddings.create(
+        model="text-embedding-3-small",
+        input=text
+    )
+    return response.data[0].embedding
 
 def safe_get(d: dict, key: str, default=None):
     """Safely fetch metadata values."""
@@ -63,6 +72,7 @@ def main():
     for i, node in enumerate(nodes):
         try:
             content = safe_text(node.get_content())
+            embedding = embedding = embed_text(content)
             metadata = node.metadata or {}
 
             item = {
@@ -70,7 +80,7 @@ def main():
                 "document_name": safe_get(metadata, "file_name", "unknown"),
                 "chunk_index": i,
                 "content": content,
-                "embedding": None,
+                "embedding": embedding,
                 "created_at": datetime.now().isoformat(),
             }
 
