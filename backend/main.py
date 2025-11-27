@@ -1,6 +1,6 @@
-from fastapi import FastAPI
+sfrom fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import engine, Base
+from backend.db.database import engine, Bases
 from routers import chat
 
 # Create tables
