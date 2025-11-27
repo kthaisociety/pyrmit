@@ -60,13 +60,25 @@ def main():
 
     structured_chunks = []
 
+    file_id_map = {}
+    current_doc_id = 1
+
     for i, node in enumerate(nodes):
         try:
             content = safe_text(node.get_content())
             metadata = node.metadata or {}
 
+            # enumerate documents, for now its just 1
+            file_name = safe_get(metadata, "file_name", "unknown")
+            if file_name not in file_id_map:
+                file_id_map[file_name] = current_doc_id
+                current_doc_id += 1
+
+            doc_id = file_id_map[file_name]
+
             item = {
                 "id": str(uuid.uuid4()),
+                "document_id": doc_id,
                 "document_name": safe_get(metadata, "file_name", "unknown"),
                 "chunk_index": i,
                 "content": content,
