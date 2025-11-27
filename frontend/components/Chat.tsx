@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, FormEvent, useRef } from 'react';
+import Image from 'next/image';
 
 interface Message {
   role: string;
@@ -67,8 +68,13 @@ export default function Chat() {
         <div className="max-w-3xl mx-auto p-4 space-y-6 pb-32 pt-10">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center text-center p-8 mt-20 opacity-50">
-              <div className="w-16 h-16 bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                <span className="text-2xl">🏗️</span>
+              <div className="w-24 h-24 relative rounded-full overflow-hidden mb-4 shadow-sm">
+                <Image 
+                  src="/pyrmit_middle.jpg" 
+                  alt="Pyrmit Logo" 
+                  fill 
+                  className="object-cover"
+                />
               </div>
               <h2 className="text-2xl font-bold mb-2">Pyrmit Agent</h2>
               <p className="max-w-md">I can help you navigate building permits, zoning laws, and construction regulations.</p>
@@ -78,10 +84,15 @@ export default function Chat() {
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`flex ${
+              className={`flex items-start gap-3 ${
                 msg.role === 'user' ? 'justify-end' : 'justify-start'
               }`}
             >
+              {msg.role !== 'user' && (
+                <div className="w-8 h-8 relative rounded-full overflow-hidden flex-shrink-0 mt-1 border border-zinc-200 dark:border-zinc-700">
+                  <Image src="/pyrmit_middle.jpg" alt="Pyrmit" fill className="object-cover" />
+                </div>
+              )}
               <div
                 className={`max-w-[85%] rounded-2xl px-5 py-3 shadow-sm ${
                   msg.role === 'user'
@@ -98,7 +109,10 @@ export default function Chat() {
           ))}
           
           {loading && (
-            <div className="flex justify-start">
+            <div className="flex items-start gap-3 justify-start">
+              <div className="w-8 h-8 relative rounded-full overflow-hidden flex-shrink-0 mt-1 border border-zinc-200 dark:border-zinc-700">
+                <Image src="/pyrmit_middle.jpg" alt="Pyrmit" fill className="object-cover" />
+              </div>
               <div className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl px-5 py-4 shadow-sm">
                 <div className="flex space-x-2 items-center h-4">
                   <div className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
