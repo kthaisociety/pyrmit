@@ -117,10 +117,12 @@ def main():
                     # Save to database
                     db_chunk = models.DocumentChunk(
                         id=item["id"],
+                        document_id=item["document_id"],
                         document_name=item["document_name"],
                         chunk_index=item["chunk_index"],
                         content=item["content"],
                         embedding=item["embedding"],
+                        created_at=datetime.fromisoformat(item["created_at"]),
                     )
                     db.add(db_chunk)
 
