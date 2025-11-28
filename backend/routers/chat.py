@@ -4,6 +4,8 @@ from db.database import get_db
 import models
 import schemas
 import os
+import yaml
+from pathlib import Path
 from openai import OpenAI
 
 router = APIRouter()
@@ -17,8 +19,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
 
     last_message = request.messages[-1]
 
-    # --- STEP 1: Generate Embedding (New Addition) ---
-    # We put this in a try/except block so chat keeps working even if embedding fails
+    # --- STEP 1: Generate Embedding ---
     embedding_vector = None
     try:
         response = client.embeddings.create(
@@ -26,14 +27,12 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
             model="text-embedding-3-small"
         )
         embedding_vector = response.data[0].embedding
-        # For now, we print it to logs to verify it works without crashing the DB
-        print(f"✅ Embedding generated successfully. Dimensions: {len(embedding_vector)}")
+        print(f"✅ Embedding generated successfully.")
     except Exception as e:
         print(f"⚠️ Embedding failed: {e}")
     # ------------------------------------------------
 
     # Save user message
-    # Note: We are NOT passing embedding_vector here yet to avoid DB errors
     user_message = models.ChatMessage(role=last_message.role, content=last_message.content)
     db.add(user_message)
     db.commit()
@@ -41,16 +40,22 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
 
     # Call OpenAI Chat
     try:
-        # Prepare messages for OpenAI
         messages = [{"role": m.role, "content": m.content} for m in request.messages]
         
-        # Add system prompt if not present
+        # Load system prompt from YAML
+        prompt_path = Path(__file__).parent.parent / 'prompts' / 'land_law_prompt.yaml'
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            system_prompt = yaml.safe_load(f)
+
         if not any(m["role"] == "system" for m in messages):
-            messages.insert(0, {"role": "system", "content": "You are a helpful building permit assistant."})
+            messages.insert(0, system_prompt)
+        else:
+            messages[0] = system_prompt
 
         completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages
+            model="gpt-3.5-turbo", 
+            messages=messages,
+            temperature=0.2 # Very low temperature for high precision
         )
         ai_response_content = completion.choices[0].message.content
     except Exception as e:
