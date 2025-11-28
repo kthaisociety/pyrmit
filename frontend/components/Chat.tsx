@@ -6,9 +6,16 @@ import Image from 'next/image';
 interface Message {
   role: string;
   content: string;
+  session_id?: string;
 }
 
-export default function Chat() {
+interface ChatProps {
+  sessionId: string | null;
+  onSessionCreated: (newSessionId: string) => void;
+  user: { name: string } | null;
+}
+
+export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,12 +32,22 @@ export default function Chat() {
   }, [messages]);
 
   useEffect(() => {
-    // Fetch history on load
-    fetch(`${API_URL}/api/history`)
-      .then((res) => res.json())
-      .then((data: Message[]) => setMessages(data))
-      .catch((err) => console.error('Failed to fetch history', err));
-  }, [API_URL]);
+    if (sessionId) {
+      setLoading(true);
+      fetch(`${API_URL}/api/sessions/${sessionId}`, { credentials: 'include' })
+        .then((res) => res.json())
+        .then((data: Message[]) => {
+          setMessages(data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error('Failed to fetch history', err);
+          setLoading(false);
+        });
+    } else {
+      setMessages([]);
+    }
+  }, [API_URL, sessionId]);
 
   const sendMessage = async (e: FormEvent) => {
     e.preventDefault();
@@ -46,13 +63,22 @@ export default function Chat() {
       const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newHistory }),
+        body: JSON.stringify({ 
+          messages: newHistory,
+          session_id: sessionId 
+        }),
+        credentials: 'include',
       });
       
       if (!res.ok) throw new Error('Failed to send message');
       
       const data: Message = await res.json();
       setMessages((prev) => [...prev, data]);
+
+      // If we started a new session, notify parent
+      if (!sessionId && data.session_id) {
+        onSessionCreated(data.session_id);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       // Optionally add an error message to the chat
@@ -105,6 +131,11 @@ export default function Chat() {
                 </p>
                 <div className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</div>
               </div>
+              {msg.role === 'user' && (
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-xs flex-shrink-0 mt-1">
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              )}
             </div>
           ))}
           
