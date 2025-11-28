@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import get_db
+from db.database import get_db
 import models
 import schemas
 import os
 import uuid
+import yaml
+from pathlib import Path
 from openai import OpenAI
 from sqlalchemy.sql import func
 from dependencies import get_current_user
@@ -54,6 +56,21 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
     
     # Save user message
     last_message = request.messages[-1]
+
+    # --- STEP 1: Generate Embedding ---
+    embedding_vector = None
+    try:
+        response = client.embeddings.create(
+            input=last_message.content,
+            model="text-embedding-3-small"
+        )
+        embedding_vector = response.data[0].embedding
+        print(f"✅ Embedding generated successfully.")
+    except Exception as e:
+        print(f"⚠️ Embedding failed: {e}")
+    # ------------------------------------------------
+
+    # Save user message
     user_message = models.ChatMessage(
         role=last_message.role, 
         content=last_message.content,
@@ -63,9 +80,8 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
     db.commit()
     db.refresh(user_message)
 
-    # Call OpenAI
+    # Call OpenAI Chat
     try:
-        # Prepare messages for OpenAI
         # We should probably fetch the full history for this session from DB to give context
         # instead of relying on what frontend sent, OR trust frontend. 
         # For now, let's trust the frontend sends the context or we fetch it.
@@ -73,12 +89,20 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
         
         messages = [{"role": m.role, "content": m.content} for m in request.messages]
         
+        # Load system prompt from YAML
+        prompt_path = Path(__file__).parent.parent / 'prompts' / 'land_law_prompt.yaml'
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            system_prompt = yaml.safe_load(f)
+
         if not any(m["role"] == "system" for m in messages):
-            messages.insert(0, {"role": "system", "content": "You are a helpful building permit assistant."})
+            messages.insert(0, system_prompt)
+        else:
+            messages[0] = system_prompt
 
         completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages
+            model="gpt-3.5-turbo", 
+            messages=messages,
+            temperature=0.2 # Very low temperature for high precision
         )
         ai_response_content = completion.choices[0].message.content
     except Exception as e:
@@ -96,3 +120,6 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
 
     return ai_message
 
+@router.get("/history", response_model=list[schemas.MessageResponse])
+def get_history(db: Session = Depends(get_db)):
+    return db.query(models.ChatMessage).order_by(models.ChatMessage.created_at).all()
