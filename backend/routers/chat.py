@@ -17,8 +17,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
 
     last_message = request.messages[-1]
 
-    # --- STEP 1: Generate Embedding (New Addition) ---
-    # We put this in a try/except block so chat keeps working even if embedding fails
+    # --- STEP 1: Generate Embedding ---
     embedding_vector = None
     try:
         response = client.embeddings.create(
@@ -26,14 +25,12 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
             model="text-embedding-3-small"
         )
         embedding_vector = response.data[0].embedding
-        # For now, we print it to logs to verify it works without crashing the DB
-        print(f"✅ Embedding generated successfully. Dimensions: {len(embedding_vector)}")
+        print(f"✅ Embedding generated successfully.")
     except Exception as e:
         print(f"⚠️ Embedding failed: {e}")
     # ------------------------------------------------
 
     # Save user message
-    # Note: We are NOT passing embedding_vector here yet to avoid DB errors
     user_message = models.ChatMessage(role=last_message.role, content=last_message.content)
     db.add(user_message)
     db.commit()
@@ -41,16 +38,43 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
 
     # Call OpenAI Chat
     try:
-        # Prepare messages for OpenAI
         messages = [{"role": m.role, "content": m.content} for m in request.messages]
         
-        # Add system prompt if not present
+        # --- KEY CHANGE: Deep Swedish Land Law Prompt ---
+        land_law_prompt = (
+            "Du är en juristexpert specialiserad på svensk fastighetsrätt (Swedish Land Law). "
+            "Din uppgift är att översätta användarens frågor till strikt juridisk terminologi för databassökning. "
+            "Du ska prioritera begrepp från:"
+            "\n1. Jordabalken (JB) - För köp, hyra, arrende och grannelagsrätt."
+            "\n2. Plan- och bygglagen (PBL) - För bygglov och detaljplaner."
+            "\n3. Lantmäteriförrättningar - För gränsdragning och fastighetsindelning."
+            "\n\n"
+            "Regler:"
+            "- Svara INTE på frågan."
+            "- Returnera endast en lista med juridiska termer och lagrum."
+            "\n\n"
+            "Exempel 1:"
+            "\nIn: 'Vi bråkar om var tomtgränsen går.'"
+            "\nUt: 'Fastighetsbestämning; Gränsutvisning; Jordabalken 1 kap 3 §; Lantmäteriförrättning; Rättelse av gräns.'"
+            "\n\n"
+            "Exempel 2:"
+            "\nIn: 'Jag får använda grannens väg för att komma till min stuga.'"
+            "\nUt: 'Officialservitut; Avtalsservitut; Härskande och tjänande fastighet; Jordabalken 14 kap; Vägförrättning.'"
+            "\n\n"
+            "Exempel 3:"
+            "\nIn: 'Huset jag köpte har mögel i grunden som säljaren inte sa något om.'"
+            "\nUt: 'Dolda fel i fastighet; Undersökningsplikt; Prisavdrag; Hävning av köp; Jordabalken 4 kap 19 §.'"
+        )
+
         if not any(m["role"] == "system" for m in messages):
-            messages.insert(0, {"role": "system", "content": "You are a helpful building permit assistant."})
+            messages.insert(0, {"role": "system", "content": land_law_prompt})
+        else:
+            messages[0]["content"] = land_law_prompt
 
         completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages
+            model="gpt-3.5-turbo", 
+            messages=messages,
+            temperature=0.2 # Very low temperature for high precision
         )
         ai_response_content = completion.choices[0].message.content
     except Exception as e:
