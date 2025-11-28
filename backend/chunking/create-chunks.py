@@ -7,11 +7,13 @@ from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
 
 from openai import OpenAI
-client = OpenAI()
+
+import dotenv
+client = OpenAI(api_key="")
 
 def embed_text(text: str):
     response = client.embeddings.create(
-        model="text-embedding-3-small",
+        model="text-embedding-3-large",
         input=text
     )
     return response.data[0].embedding
@@ -51,7 +53,7 @@ def load_documents(path: str):
 
 def main():
     try:
-        documents = load_documents("data")
+        documents = load_documents("../data")
     except Exception as e:
         print(f"Error loading documents: {e}")
         return
