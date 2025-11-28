@@ -20,7 +20,7 @@ client = OpenAI()
 
 def embed_text(text: str):
     response = client.embeddings.create(
-        model="text-embedding-3-small",
+        model="text-embedding-3-large",
         input=text
     )
     return response.data[0].embedding
@@ -57,7 +57,7 @@ def load_documents(path: str):
 
 def main():
     try:
-        documents = load_documents("data")
+        documents = load_documents("../data")
     except Exception as e:
         print(f"Error loading documents: {e}")
         return
@@ -74,8 +74,24 @@ def main():
         return
 
     structured_chunks = []
+
+    file_id_map = {}
+    current_doc_id = 1
     db = SessionLocal()
 
+    for i, node in enumerate(nodes):
+        try:
+            content = safe_text(node.get_content())
+            embedding = embedding = embed_text(content)
+            metadata = node.metadata or {}
+
+            # enumerate documents, for now its just 1
+            file_name = safe_get(metadata, "file_name", "unknown")
+            if file_name not in file_id_map:
+                file_id_map[file_name] = current_doc_id
+                current_doc_id += 1
+
+            doc_id = file_id_map[file_name]
     try:
         for i, node in enumerate(nodes):
             try:
@@ -83,14 +99,15 @@ def main():
                 embedding = embed_text(content)
                 metadata = node.metadata or {}
 
-                item = {
-                    "id": str(uuid.uuid4()),
-                    "document_name": safe_get(metadata, "file_name", "unknown"),
-                    "chunk_index": i,
-                    "content": content,
-                    "embedding": embedding,
-                    "created_at": datetime.now().isoformat(),
-                }
+            item = {
+                "id": str(uuid.uuid4()),
+                "document_id": doc_id,
+                "document_name": safe_get(metadata, "file_name", "unknown"),
+                "chunk_index": i,
+                "content": content,
+                "embedding": embedding,
+                "created_at": datetime.now().isoformat(),
+            }
 
                 structured_chunks.append(item)
 
