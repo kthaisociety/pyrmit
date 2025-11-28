@@ -5,10 +5,14 @@ from pathlib import Path
 import sys
 import os
 
+from dotenv import load_dotenv
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
 
 from openai import OpenAI
+
+# Load environment variables from .env file
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 # Add parent directory to path to import from backend
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -92,53 +96,52 @@ def main():
                 current_doc_id += 1
 
             doc_id = file_id_map[file_name]
-    try:
-        for i, node in enumerate(nodes):
-            try:
-                content = safe_text(node.get_content())
-                embedding = embed_text(content)
-                metadata = node.metadata or {}
+            for i, node in enumerate(nodes):
+                try:
+                    content = safe_text(node.get_content())
+                    embedding = embed_text(content)
+                    metadata = node.metadata or {}
 
-            item = {
-                "id": str(uuid.uuid4()),
-                "document_id": doc_id,
-                "document_name": safe_get(metadata, "file_name", "unknown"),
-                "chunk_index": i,
-                "content": content,
-                "embedding": embedding,
-                "created_at": datetime.now().isoformat(),
-            }
+                    item = {
+                        "id": str(uuid.uuid4()),
+                        "document_id": doc_id,
+                        "document_name": safe_get(metadata, "file_name", "unknown"),
+                        "chunk_index": i,
+                        "content": content,
+                        "embedding": embedding,
+                        "created_at": datetime.now().isoformat(),
+                    }
 
-                structured_chunks.append(item)
+                    structured_chunks.append(item)
 
-                # Save to database
-                db_chunk = models.DocumentChunk(
-                    id=item["id"],
-                    document_name=item["document_name"],
-                    chunk_index=item["chunk_index"],
-                    content=item["content"],
-                    embedding=item["embedding"],
-                )
-                db.add(db_chunk)
+                    # Save to database
+                    db_chunk = models.DocumentChunk(
+                        id=item["id"],
+                        document_name=item["document_name"],
+                        chunk_index=item["chunk_index"],
+                        content=item["content"],
+                        embedding=item["embedding"],
+                    )
+                    db.add(db_chunk)
 
-            except Exception as e:
-                print(f"Error processing chunk {i}: {e}")
-                continue
+                except Exception as e:
+                    print(f"Error processing chunk {i}: {e}")
+                    continue
 
-        # Commit all chunks to database
-        db.commit()
-        print(f"Saved {len(structured_chunks)} chunks to database")
+                # Commit all chunks to database
+                db.commit()
+                print(f"Saved {len(structured_chunks)} chunks to database")
 
-        # Also save to JSON for backup
-        with open("chunks.json", "w", encoding="utf-8") as f:
-            json.dump(structured_chunks, f, indent=2, ensure_ascii=False)
-        print(f"Saved {len(structured_chunks)} chunks → chunks.json")
+                # Also save to JSON for backup
+                with open("chunks.json", "w", encoding="utf-8") as f:
+                    json.dump(structured_chunks, f, indent=2, ensure_ascii=False)
+                print(f"Saved {len(structured_chunks)} chunks → chunks.json")
 
-    except Exception as e:
-        print(f"Error: {e}")
-        db.rollback()
-    finally:
-        db.close()
+        except Exception as e:
+                print(f"Error: {e}")
+                db.rollback()
+        finally:
+            db.close()
 
 
 if __name__ == "__main__":
