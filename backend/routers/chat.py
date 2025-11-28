@@ -4,6 +4,8 @@ from db.database import get_db
 import models
 import schemas
 import os
+import yaml
+from pathlib import Path
 from openai import OpenAI
 
 router = APIRouter()
@@ -40,36 +42,15 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db)):
     try:
         messages = [{"role": m.role, "content": m.content} for m in request.messages]
         
-        # --- KEY CHANGE: Deep Swedish Land Law Prompt ---
-        land_law_prompt = (
-            "Du är en juristexpert specialiserad på svensk fastighetsrätt (Swedish Land Law). "
-            "Din uppgift är att översätta användarens frågor till strikt juridisk terminologi för databassökning. "
-            "Du ska prioritera begrepp från:"
-            "\n1. Jordabalken (JB) - För köp, hyra, arrende och grannelagsrätt."
-            "\n2. Plan- och bygglagen (PBL) - För bygglov och detaljplaner."
-            "\n3. Lantmäteriförrättningar - För gränsdragning och fastighetsindelning."
-            "\n\n"
-            "Regler:"
-            "- Svara INTE på frågan."
-            "- Returnera endast en lista med juridiska termer och lagrum."
-            "\n\n"
-            "Exempel 1:"
-            "\nIn: 'Vi bråkar om var tomtgränsen går.'"
-            "\nUt: 'Fastighetsbestämning; Gränsutvisning; Jordabalken 1 kap 3 §; Lantmäteriförrättning; Rättelse av gräns.'"
-            "\n\n"
-            "Exempel 2:"
-            "\nIn: 'Jag får använda grannens väg för att komma till min stuga.'"
-            "\nUt: 'Officialservitut; Avtalsservitut; Härskande och tjänande fastighet; Jordabalken 14 kap; Vägförrättning.'"
-            "\n\n"
-            "Exempel 3:"
-            "\nIn: 'Huset jag köpte har mögel i grunden som säljaren inte sa något om.'"
-            "\nUt: 'Dolda fel i fastighet; Undersökningsplikt; Prisavdrag; Hävning av köp; Jordabalken 4 kap 19 §.'"
-        )
+        # Load system prompt from YAML
+        prompt_path = Path(__file__).parent.parent / 'prompts' / 'land_law_prompt.yaml'
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            system_prompt = yaml.safe_load(f)
 
         if not any(m["role"] == "system" for m in messages):
-            messages.insert(0, {"role": "system", "content": land_law_prompt})
+            messages.insert(0, system_prompt)
         else:
-            messages[0]["content"] = land_law_prompt
+            messages[0] = system_prompt
 
         completion = client.chat.completions.create(
             model="gpt-3.5-turbo", 
