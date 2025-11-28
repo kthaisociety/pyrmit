@@ -9,6 +9,7 @@ import uuid
 import yaml
 from pathlib import Path
 from openai import OpenAI
+from sqlalchemy.sql import func
 from dependencies import get_current_user
 
 # from pgvector.sqlalchemy import Vector <-- REMOVED for now
