@@ -11,3 +11,4 @@ passlib[argon2]>=1.7.4
 python-multipart>=0.0.9
 argon2-cffi>=23.1.0
 google-generativeai>=0.8.5
+pyyaml>=6.0.0
