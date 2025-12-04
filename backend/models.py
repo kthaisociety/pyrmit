@@ -56,6 +56,7 @@ class DocumentChunk(Base):
     __tablename__ = "document_chunks"
 
     id = Column(String, primary_key=True, index=True)
+    document_id = Column(Integer, nullable=True)
     document_name = Column(String, nullable=True)
     chunk_index = Column(Integer, nullable=True)
     content = Column(Text, nullable=True)

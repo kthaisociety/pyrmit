@@ -52,6 +52,7 @@ class SessionTable(BaseModel):
 
 class DocumentChunk(BaseModel):
     id: str
+    document_id: int | None = None
     document_name: str | None = None
     chunk_index: int | None = None
     content: str | None = None
