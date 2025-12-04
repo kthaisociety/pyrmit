@@ -77,6 +77,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
         try:
             relevant_chunks = RAG(db, embedding_vector, k=5)
             print(f"✅ Retrieved {len(relevant_chunks)} relevant chunks.")
+            print(relevant_chunks)
         except Exception as e:
             print(f"⚠️ RAG retrieval failed: {e}")
 

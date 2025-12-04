@@ -75,7 +75,9 @@ def load_documents(path: str):
 
 def main():
     try:
-        documents = load_documents("../data")
+        # Path relative to the backend directory
+        data_path = os.path.join(os.path.dirname(__file__), '..', 'data')
+        documents = load_documents(data_path)
     except Exception as e:
         print(f"Error loading documents: {e}")
         return

@@ -11,7 +11,7 @@ from openai import OpenAI
 from sqlalchemy.sql import func, select
 from sqlalchemy import text
 from dependencies import get_current_user
-from Models import DocumentChunk
+from models import DocumentChunk
 
 def RAG(db: Session, query_embedding: list[float], k: int = 10):
     """
