@@ -90,12 +90,25 @@ class ChatMessage(BaseModel):
     content: str
 
 
+class ChatSession(BaseModel):
+    id: str
+    user_id: str | None = None
+    title: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ChatRequest(BaseModel):
+    session_id: str | None = None
     messages: list[ChatMessage] = Field(default_factory=list)
 
 
 class MessageResponse(ChatMessage):
     id: int
+    session_id: str | None = None
     created_at: datetime
 
     class Config:
