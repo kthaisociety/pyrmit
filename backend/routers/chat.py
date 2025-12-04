@@ -10,6 +10,7 @@ from pathlib import Path
 from openai import OpenAI
 from sqlalchemy.sql import func
 from dependencies import get_current_user
+from routers.queryDB import RAG
 
 router = APIRouter()
 
@@ -62,13 +63,22 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
     try:
         response = client.embeddings.create(
             input=last_message.content,
-            model="text-embedding-3-small"
+            model="text-embedding-3-large"
         )
         embedding_vector = response.data[0].embedding
         print(f"✅ Embedding generated successfully.")
     except Exception as e:
         print(f"⚠️ Embedding failed: {e}")
     # ------------------------------------------------
+    
+    # --- STEP 2: Retrieve relevant chunks using RAG ---
+    relevant_chunks = []
+    if embedding_vector:
+        try:
+            relevant_chunks = RAG(db, embedding_vector, k=5)
+            print(f"✅ Retrieved {len(relevant_chunks.content)} relevant chunks.")
+        except Exception as e:
+            print(f"⚠️ RAG retrieval failed: {e}")
 
     # Save user message
     user_message = models.ChatMessage(
@@ -94,6 +104,11 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
         with open(prompt_path, 'r', encoding='utf-8') as f:
             system_prompt = yaml.safe_load(f)
 
+         # Add retrieved context to system prompt if available
+        if relevant_chunks:
+            context = "\n\n".join([chunk.content for chunk in relevant_chunks])
+            system_prompt["content"] = system_prompt["content"] + f"\n\nRelevant context from documents:\n{context}"
+
         if not any(m["role"] == "system" for m in messages):
             messages.insert(0, system_prompt)
         else:
@@ -107,7 +122,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
         ai_response_content = completion.choices[0].message.content
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
     # Save AI response
     ai_message = models.ChatMessage(
         role="assistant", 
