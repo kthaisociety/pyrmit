@@ -17,7 +17,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 # Add parent directory to path to import from backend
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from database import SessionLocal
+from db.database import SessionLocal
 import models
 
 client = OpenAI()

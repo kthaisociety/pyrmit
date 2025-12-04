@@ -76,7 +76,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
     if embedding_vector:
         try:
             relevant_chunks = RAG(db, embedding_vector, k=5)
-            print(f"✅ Retrieved {len(relevant_chunks.content)} relevant chunks.")
+            print(f"✅ Retrieved {len(relevant_chunks)} relevant chunks.")
         except Exception as e:
             print(f"⚠️ RAG retrieval failed: {e}")
 
@@ -104,9 +104,9 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
         with open(prompt_path, 'r', encoding='utf-8') as f:
             system_prompt = yaml.safe_load(f)
 
-         # Add retrieved context to system prompt if available
+        # Add retrieved context to system prompt if available
         if relevant_chunks:
-            context = "\n\n".join([chunk.content for chunk in relevant_chunks])
+            context = "\n\n".join(relevant_chunks)
             system_prompt["content"] = system_prompt["content"] + f"\n\nRelevant context from documents:\n{context}"
 
         if not any(m["role"] == "system" for m in messages):

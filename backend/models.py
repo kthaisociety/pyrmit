@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from db.database import Base
+from pgvector.sqlalchemy import Vector
 
 class User(Base):
     __tablename__ = "users"
@@ -60,7 +61,7 @@ class DocumentChunk(Base):
     document_name = Column(String, nullable=True)
     chunk_index = Column(Integer, nullable=True)
     content = Column(Text, nullable=True)
-    embedding = Column(ARRAY(Float), nullable=True)
+    embedding = Column(Vector(3072), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class ChatSession(Base):
