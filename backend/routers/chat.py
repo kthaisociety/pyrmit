@@ -77,7 +77,8 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
         try:
             relevant_chunks = RAG(db, embedding_vector, k=5)
             print(f"✅ Retrieved {len(relevant_chunks)} relevant chunks.")
-            print(relevant_chunks)
+            for i in range(len(relevant_chunks)):
+                print(f"Chunk {i+1}: " + relevant_chunks[i] + "\n" + "-"*200 + "\n")
         except Exception as e:
             print(f"⚠️ RAG retrieval failed: {e}")
 
@@ -101,7 +102,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
         messages = [{"role": m.role, "content": m.content} for m in request.messages]
         
         # Load system prompt from YAML
-        prompt_path = Path(__file__).parent.parent / 'prompts' / 'land_law_prompt.yaml'
+        prompt_path = Path(__file__).parent.parent / 'prompts' / 'test_rag_prompt.yaml'
         with open(prompt_path, 'r', encoding='utf-8') as f:
             system_prompt = yaml.safe_load(f)
 
