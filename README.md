@@ -1,14 +1,23 @@
 # Pyrmit - Building Permit Agent
 
-Pyrmit is an intelligent building permit agent designed to assist with permit-related queries. It features a modern React frontend and a robust Python FastAPI backend, orchestrated via Docker.
+<table>
+  <tr>
+    <td valign="middle">
+      Pyrmit is an intelligent building permit agent designed to assist with permit-related queries. The user is able to input their own legal documents and chunk, embed and store them in an SQL database. The agent can then be used to provide an action plan to fast-track the building permit process.
+    </td>
+    <td valign="middle">
+      <img src="frontend/public/pyrmit_middle.jpg" alt="Pyrmit Logo" width="300" />
+    </td>
+  </tr>
+</table>
 
 ## Tech Stack
 
-- **Frontend**: [Next.js](https://nextjs.org/) (React, TypeScript)
-- **Backend**: [FastAPI](https://fastapi.tiangolo.com/) (Python)
-- **Database**: PostgreSQL with [SQLAlchemy](https://www.sqlalchemy.org/)
-- **AI Integration**: OpenAI GPT models
-- **Containerization**: Docker & Docker Compose
+### Frontend
+![Next JS](https://img.shields.io/badge/Next-black?style=for-the-badge&logo=next.js&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+
+### Backend
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)
 
 ## Project Structure
 
@@ -106,9 +115,9 @@ If you prefer to run the backend and frontend locally for faster development (ho
     - Install dependencies:
       ```bash
       cd backend
-      python3 -m venv venv
-      source venv/bin/activate
-      pip install -r requirements.txt
+      uv venv
+      source .venv/bin/activate
+      uv pip install -r requirements.txt
       ```
     - Run server:
       ```bash
