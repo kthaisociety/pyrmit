@@ -1,5 +1,8 @@
 from mistralai import Mistral
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 api_key = os.environ["MISTRAL_API_KEY"]
 
@@ -23,7 +26,7 @@ class MistralOCR:
     
     def ocr(self, file_id: str):
 
-        signed_url = self.client.files.get_signed_url(file_id)
+        signed_url = self.client.files.get_signed_url(file_id=file_id)
         ocr_response = self.client.ocr.process(
             model="mistral-ocr-latest",
             document={
@@ -35,3 +38,16 @@ class MistralOCR:
             # extract_footer=True, # default is False
             include_image_base64=False
         )
+
+        return ocr_response
+
+    def main(self, file_path: str):
+
+        uploaded_pdf = self.upload_pdf(file_path)
+        ocr_result = self.ocr(uploaded_pdf.id)
+        return ocr_result
+    
+if __name__ == "__main__":
+    ocr_processor = MistralOCR(api_key=api_key)
+    result = ocr_processor.main("chunking/data/kristineberg_etapp1.pdf")
+    print(result)
