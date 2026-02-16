@@ -4,6 +4,9 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from db.database import Base
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import create_engine
+import os
+from dotenv import load_dotenv
 
 class User(Base):
     __tablename__ = "users"
@@ -86,3 +89,19 @@ class ChatMessage(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("ChatSession", back_populates="messages")
+
+if __name__ == "__main__":
+    load_dotenv()
+
+    # Use the Connection String from Settings > Database
+    # It looks like: postgresql://postgres:[password]@db.[id].supabase.co:5432/postgres
+    DATABASE_URL = os.environ["SUPABASE_DB_URL"] 
+
+    # Create the engine using the Postgres protocol
+    engine = create_engine(DATABASE_URL)
+
+    # Use the metadata of your base class (usually Base) to create tables
+    # If DocumentChunk is a class, use DocumentChunk.metadata
+    Base.metadata.create_all(engine)
+    
+    print("Tables created successfully!")
