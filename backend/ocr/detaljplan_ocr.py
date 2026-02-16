@@ -36,7 +36,7 @@ class MistralOCR:
             table_format="html", # default is None
             # extract_header=True, # default is False
             # extract_footer=True, # default is False
-            include_image_base64=False
+            include_image_base64=True
         )
 
         return ocr_response
