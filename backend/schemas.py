@@ -114,3 +114,43 @@ class MessageResponse(ChatMessage):
     class Config:
         from_attributes = True
 
+
+class ChunkIngestRequest(BaseModel):
+    input_path: str = "output.md"
+    output_path: str | None = "chunks.json"
+    document_name: str = "kristineberg_detaljplan"
+    document_id: int = 1
+    max_chars: int = Field(default=1800, ge=200, le=8000)
+    clear_existing_for_document: bool = True
+
+
+class ChunkIngestResponse(BaseModel):
+    inserted: int
+    deleted: int
+    document_name: str
+    document_id: int
+    output_path: str | None = None
+
+
+class FolderIngestItem(BaseModel):
+    source_file: str
+    markdown_file: str
+    document_name: str
+    document_id: int
+    inserted: int
+    deleted: int
+
+
+class FolderIngestRequest(BaseModel):
+    data_dir: str = "chunking/data"
+    markdown_output_dir: str = "data/ocr_markdown"
+    max_chars: int = Field(default=1800, ge=200, le=8000)
+    clear_existing_for_document: bool = True
+
+
+class FolderIngestResponse(BaseModel):
+    documents_processed: int
+    total_inserted: int
+    total_deleted: int
+    items: list[FolderIngestItem]
+

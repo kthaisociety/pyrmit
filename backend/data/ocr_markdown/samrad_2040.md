@@ -1,0 +1,2347 @@
+ÖVERSIKTSPLAN
+
+2040
+
+UTSTÄLLNINGSHANDLING 2017
+
+Samrådsredogörelse
+
+---
+
+2
+
+# Samrådsredogörelse
+## Översiktsplan 2040
+
+Samhällsbyggnadsförvaltningen 2017
+
+## Innehåll
+
+1. Vad är samrådsredogörelse? ... 5
+2. Hur har samrådet gått till? ... 5
+3. Inkomna yttranden med synpunkter ... 6
+3.1 Privatperson (-6) ... 6
+3.2 E.ON Värme Sverige AB (-8) ... 6
+3.3 Privatperson (-9) ... 7
+3.4 Privatperson (-10) ... 7
+3.5 Privatperson (-11) ... 8
+3.6 Polismyndigheten (-14) ... 8
+3.7 Sjöfartsverket (-15) ... 10
+3.8 Försvarsmakten (-16) ... 11
+3.9 FastPartner AB (-17) ... 11
+3.10 Svenska kraftnät (-18) ... 12
+3.11 Rydells (-20) ... 15
+3.12 Trafikverket (-21) ... 15
+
+---
+
+3
+
+3.13 Vattenfall (-22) ... 20
+3.14 Österåkers kommun (-23) ... 20
+3.15 Knivsta kommun (-24) ... 22
+3.16 Privatperson (-25) ... 22
+3.17 Företagarna i Vallentuna (-27) ... 24
+3.18 Lantmäteriet (-28) ... 26
+3.19 Norrvatten (-29) ... 27
+3.20 Storstockholms brandförsvar (-30) ... 27
+3.21 Granngruppen boende Olhamrakvarns väg samt Qvarntorps samfällighetsförening (-31) ... 30
+3.22 Össeby-Garns skytteförening (-32) ... 32
+3.23 Gunnar Forss AB (-33) ... 33
+3.24 Fahlin Förvaltning AB (-34) ... 34
+3.25 Markims hembygdsförening (-35) ... 35
+3.26 Össeby hembygdsförening (-36) och Angarngruppen (-44) ... 37
+3.27 Privatpersoner (-37 &amp; -38 snarlika synpunkter) ... 41
+3.28 Naturskyddsföreningen Vallentuna (-39) ... 43
+3.29 Vallentuna församling (-40) ... 45
+3.30 Lilla Mörby Utveckling AB (-41) ... 46
+3.31 Centerpartiet Vallentuna kommun (-42) ... 48
+3.32 Privatperson (-43) ... 53
+3.33 LRF Vallentuna (-45) ... 53
+3.34 Kulturnämnden (-47) ... 55
+3.35 Länsstyrelsen m.fl. (-48) ... 55
+3.36 Täby kommun (-52) ... 74
+3.37 Upplands Väsby kommun (-51) ... 77
+
+---
+
+4
+
+3.38 Stockholms läns landsting (-55) ... 79
+3.39 Danderyd (-50) ... 83
+3.40 Sigtuna kommun (-53) ... 84
+3.41 Miljö- och samhällsbyggnadsnämnden (-54) ... 85
+
+4. Planen efter samrådet ... 88
+
+---
+
+5
+
+# 1. Vad är samrådsredogörelse?
+
+Samrådsredogörelsen ingår som en del av utställningshandlingarna av översiktsplan 2040. Syftet med samrådsredogörelsen är att beskriva hur samrådet har gått till och bemöta och redovisa synpunkter som inkommit samt visa vilka förändringar som föranletts av samrådet.
+
+# 2. Hur har samrådet gått till?
+
+Under perioden från den 1 september 2017 till den 30 oktober 2017 pågick samrådet för Vallentunas nya översiktsplan med sikte på år 2040. Förslaget med tillhörande miljökonsekvensbeskrivning har under samrådsperioden funnits att läsa på www.vallentuna.se/oversiktsplan samt i tryckt form på Vallentuna kulturhus, Karby bibliotek, Kärsta bibliotek, Lindholmens barn- och skolbibliotek och i kommunhusets reception. Annonsering om samråd har skett i ortstidning Vallentuna Nyheter (nummer 36 september – 15 september 2017) samt i Mitt i Vallentuna steget (nr 37 12 september 2017). Utöver att inbjudan att delta i samråd av Översiktsplan 2040 har publicerats på kommunens webbplats och i ortstidningar och annonseras på kommunens bibliotek och reception fick nedanstående en riktad inbjudan att delta i samrådet via e-post den 31 augusti 2017.
+
+- ☑ Miljö- och samhällsbyggnadsnämnden
+- ☑ Fritidsnämnden
+- ☑ Kulturnämnden
+- ☑ Barn- och ungdomsnämnden
+- ☑ Utbildningsnämnden
+- ☑ Socialnämnden
+- ☑ Kommunala pensionärsrådet KPR
+- ☑ Kommunala funktionshinderrådet KFR
+- ☑ Roslagsvatten AB
+- ☑ Käppalaförbundet
+- ☑ Norrvatten
+- ☑ SÖRAB
+- ☑ Storstockholms brandförsvar
+- ☑ Kommuner i Stockholm nordost
+- ☑ Kommuner i Arlandaregionen
+- ☑ Swedavia AB Stockholm-Arlanda Airport
+- ☑ Länsstyrelsen i Stockholm
+- ☑ Tillväxt, miljö och regionplanering, Stockholms läns landsting
+- ☑ Trafikförvaltningen, Stockholms läns landsting
+- ☑ Trafikverket
+- ☑ Vattenmyndigheten (länsstyrelsen i Västmanland)
+- ☑ Skogsstyrelsen
+
+- ☑ Naturvårdsverket
+- ☑ Myndigheten för samhällsskydd och beredskap
+- ☑ Försvarsmakten
+- ☑ Svenska kraftnät
+- ☑ Polismyndigheten i Stockholms län
+- ☑ Lantmäterimyndigheten i Stockholms län
+- ☑ Stockholms läns museum
+- ☑ Arriva Sverige AB
+- ☑ Nobina Sverige AB
+- ☑ Elverket Vallentuna AB
+- ☑ Vattenfall Eldistribution
+- ☑ Eon värme Sverige AB
+- ☑ Ragn-Sells
+- ☑ Skanova Nätplanering Stockholm
+- ☑ IP Only
+- ☑ Stockholms Handelskammare Vallentuna
+- ☑ Företagarna i Vallentuna
+- ☑ Brottbyföretagarna
+- ☑ Vallentuna centrumförening
+- ☑ Hyresgästföreningen nordost
+- ☑ Lantbrukarnas riksförbund Vallentuna
+- ☑ Friluftsfrämjandet Södra Roslagen
+- ☑ Angarngruppen
+
+---
+
+6
+
+✓ Vallentuna
+✓ Frösunda hembygdsförening
+✓ Markims hembygdsförening
+✓ Vallentuna församling
+✓ Össeby församling
+✓ Intressenter att köpa mark i Vallentuna (enligt kommunens intressentlista)
+
+Den 30 september 2017 mellan kl. 10-15 i Vallentuna kulturhus fanns möjlighet att få information om samrådsförslaget samt ställa frågor och diskutera med representanter från kommunens samhällsbyggnadsförvaltning.
+
+# 3. Inkomna yttranden med synpunkter
+
+Totalt inkom ca 40 skriftliga synpunkter.
+
+Följande remissinstanser meddelade att de avstod att lämna ett yttrande:
+
+- Naturvårdsverket (-7)
+- Myndigheten för samhällsskydd och beredskap (-26)
+
+Yttranden har avpersonifieras och finns även i kommunens diarium. Diarienummer: KS 2017.278 i respektive aktbilaga (-xx).
+
+# 3.1 Privatperson (-6)
+
+De planerade 2000 bostäderna i Kristineberg ligger mycket illa till för kollektivtrafik. Detta ger oundvikligen ökad biltrafik - möjligen för pendlarparkering till Arninge resecentrum. Invånarna kommer att ångra att de inte bosatte sig i den nya stad Täby planerar bygga från Roslags-Näsby till Arninge. Samtidigt får nuvarande boende i Kragsta och Bällstaberg långt att gå för en promenad i den natur TÄBY är noga att bevara! Kristinebergsskogen ligger på bekvämt avstånd och borde bevaras för Vallentunabor i syd.
+
+Kommentar: Ytterligare regional busstrafik planeras på Arningevägen såväl som lokalbusstrafik inom Kristineberg. Till Roslagsbanans stationer planeras gena gång- och cykelvägar. Ambitionen i pågående planering är också att skapa flera sammanhängande grönstrukturstråk från befintlig bebyggelse, genom Kristineberg, till Gävsjödalen.
+
+# 3.2 E.ON Värme Sverige AB (-8)
+
+E.ON Värme har idag fjärrvärme i Vallentuna med utgångspunkt från anläggningen i Okvista till Bällstaområdet &amp; centrala delarna av Vallentuna. Vi noterar att ni ser fjärrvärme som ett förordat alternativ vid uppvärmning i framtiden. E.ON kan även vara med att lösa uppvärmningsbehov på olika klimatsmarta sätt framöver i Vallentuna. När det kommer detaljerade planer så är vi med och kontrollerar så att tänkta byggplaner inte krockar med våra befintliga/planerade ledningar.
+
+---
+
+Kommentar: Informationen noteras.
+
+## 3.3 Privatperson (-9)
+
+Det borde stå mer om att bygga utan för stor inverkan på naturen. I tex uthamra där vi bor står det i detaljplanen att man ska undvika onödiga höjningar men om man tar en promenad där så är det mängder av platta tomter med massiva slänger och höjningar mot väg eller grannar så det är ingenting som har efterlevts. I de flesta andra nyare områden är det i princip enbart gruppbebyggelse där allting ser likadant ut och kopplingen till naturen noll. Så slutresultatet är att den här kommunen med alla förutsättningar att vara naturnära känns massakerad i boendeplaneringen.
+
+Möjligheter till bad nämns väldigt kort. Kommunen borde satsa mer på att använda sjöarna och göra dem tillgängliga för bad inte bara för de med sjötomter. För att skapa tillgänglighet krävs inte bara en större badplats för de som bor längre ifrån sjön utan även mindre badplatser för de som har promenadavstånd. I Uthamra borde det finnas en badplats, i bällsta en stor vid Gustavs udde och ytterligare en till två små för snabba dopp (övriga delar av kommunen har jag för dålig koll på för att kunna kommentera). Utan mindre lokala badplatser kommer det bli att personer som bor kanske 100 meter från sjön tar bilen 3 km för att få bada i den vilket är varken trevligt eller miljövänligt. Det här är något som verkligen efterfrågas av oss boende och något som borde lyftas fram som en viktig punkt och inte som nu mest bara nämnas i förbifarten.
+
+Kommentar: I planen föreslås, som en del av strategierna för den fysiska utvecklingen, att platsens specifika förutsättningar ska vara en utgångspunkt vid utveckling och att närhet mellan bebyggelse och landskap ska uppnås genom en väl genomtänkt grönstruktur – från bostadens närmiljö till det stora omgivande landskapet. Strategierna avses vara vägledande för detaljplaneringen som styr hur ett specifikt område får bebyggas. Planen lyfter även fram att naturliga förutsättningar så långt som möjligt ska nyttjas vid planering och exploatering för en god resursanvändning. Det kan bland annat ske genom en terränganpassad bebyggelseutveckling där naturliga nivåskillnader utnyttjas eller genom att växtlighet i form av träd och buskar bevaras.
+
+Synpunkt om att flera badplatser behövs noteras. I takt med att Vallentunas befolkning växer så behöver anläggningar för idrott och folkhälsa utvecklas. Under hösten 2017 har kommunen beslutat att anlägga en badplats på östra sidan av Vallentunasjön, vid Gustavsudde. Om det inte är möjligt avser kommunen att anlägga badplatsen vid Västra Manhemsvägen. Planens uppdateras avseende detta.
+
+## 3.4 Privatperson (-10)
+
+Det läggs stor vikt att växa kommunen norrut och västerut. En del av fokus är att förbättra vägarna så att de säkrare och lättare ansluts till Vallentunas stora vägar (Stockholmsvägen och Arningeleden). Men läget idag är ansträngt på dessa vägar.
+
+---
+
+På morgon och eftermiddagar är det mycket trafik och lång köbildning. Om man skall växa kommunen norrut och västerut, och lägga till än mer trafik, så behöver man först förbättra dessa stora vägar, annars blir det ohållbart att bo kvar i Vallentuna.
+
+Trafikläget har markant försämrats senaste åren. Det är många bilar och många bussar som trafikerar vägarna. Det går inte att trolla bort allt med Roslagsbanan, utan det behövs även vägnät med större kapacitet.
+
+En del av dessa beslut (t.ex. tunneln vid Norrortsleden mot Åkersbergarondellen) har inte Vallentunas politiker något inflytande över, så kommunens trafik beror på Statens villighet att investera i Arninge- och Norrortsleden.
+
+Det bör nämnas att planerna vi har i Vallentuna också beror på dessa beslut. Om de inte tas, borde vi inte förbinda oss till att bygga så mycket bostäder som det nu är planerat.
+
+Kommentar: Bebyggelseutvecklingen kräver åtgärder i trafikinfrastrukturen och planen redovisar flertalet alternativ för dess utbyggnad. Kommunen ska genomföra en utredning om framtidens övergripande trafikinfrastrukturbehov till och från Vallentuna tätort där behoven antas vara störst i syfte att precisera åtgärder som är lämpliga att gå vidare med. I övrigt så genomförs kontinuerligt analyser och åtgärder och utifrån vad som kan komma att krävas för en viss bebyggelseutveckling. Därtill så har kommunen en kontinuerlig dialog, och i vissa fall överenskommelser, med grannkommuner, landsting och stat om framtidens trafikinfrastruktur.
+
+## 3.5 Privatperson (-11)
+
+Självklart skall inte området väster om Upplands Väsbyvägen bebyggas med bostäder. Behåll marken mellan flygfältet och Vallentunasjön som ett framtida parkområde för rekreation. När Vallentuna växer måste det finnas ordentligt tilltagna områden för friluftsliv. Annars blir en koloss med villor. Samhällsekonomiskt och av miljöskäl skall bebyggelsen i första hand följa Roslagsbanan och förtätas runt stationerna. Detta skapar en attraktiv bebyggelse med en snabb kommunikation till Stockholm. Att placera ut bostadsområden på andra sidan Väsbyvägen skapar bilåkande samt att det måste till massa dyra tunnlar el broar eller andra onödigt dyra investeringar. Gör nu inte samma "tavla" som med Arningeleden.
+
+Kommentar: Föreslaget markerat utvecklingsområde söder om väg 268 tas bort på karta och i text.
+
+## 3.6 Polismyndigheten (-14)
+
+Polismyndigheten önskar att ett brottsförebyggande tänkande finns med i detta tidiga skede av planering. Vi önskar också att det i den slutgiltiga planbeskrivningen av området bör få finnas med ett stycke som upptar det brottsförebyggande/trygghetsrelaterade tänkandet.
+
+Kanske i form av en rubrik av typen "Bebyggelseinriktade hinder mot brott".
+
+8
+
+---
+
+9
+
+# Bakgrund
+
+Att begå brott underlättas av
+
+- enkel och direkt tillgänglighet till objektet
+- säkra och varierade flyktvägar
+- ostörd "arbetsmiljö" där man varken syns eller hörs
+- obefolkade - eller överbefolkade - platser
+- anonymitet och diffust ansvar för miljön
+- dåligt underhållna miljö
+
+Inom kriminologin finns något som kallas beslutsteorin. Enkelt uttryckt tar denna upp fyra olika inriktningar på hur vi kan bekämpa brottslighet:
+
+- Öka upptäcktsrisken
+- försvåra genomförandet av brott
+- minska utbytet av brott
+- försvåra bortförklaringar
+
+Polismyndigheten tar här fram förslag på de två första punkterna – öka upptäcktsrisken och försvåra genomförandet av brott. En ökad upptäcktsrisk försvårar också genomförandet av brott.
+
+# Informell kontroll
+
+Informell kontroll utövas av alla människor i samhället. Människor känner sig tryggare med en naturlig informell kontroll än utan. Det känns bra att jag från min bostad kan se ut genom fönstren på det som händer utanför. Det känns också bra för dem som finns ute att veta att man kan bli sedd av dem som är inne - om något skulle hända. Därför är det viktigt med en informell kontroll.
+
+# Brottsförebyggande tänkande.
+
+Polismyndigheten är för en blandad bebyggelse, dvs. arbetsplatser och bostäder i samma område. Detta gör att området är befolkat dygnet runt med informell social kontroll. Gärningsmännen vill inte bli sedda. En blandad bebyggelse med informell kontroll dygnet runt gör att chansen för upptäckt ökar. Byggnaderna bör utformas och placeras så att gärningsmän inte kan gömma sig eller begå brott på insynsskyddade ställen. Som exempel kan nämnas att fastigheterna inte utformas med prång utan insyn, att garagen placeras så att en gärningsman kan observeras vid garaget (och bostaden) av den boende eller dess grannar, att parkeringsplatserna (med målade rutor) placeras så att man kan se mellan parkerade bilar.
+
+Då det byggs nytt är det också bra om det redan från början installeras ett ordentligt skalskydd. Med skalskydd menar vi från fabriken monterade låsbara terrass- och fönsterhandtag - samt dörrlås med hakregel. Dörrar bör vara försänkta i huslivet så att en negativ brytvinkel uppstår.
+
+Det är också viktigt att området får överblickbarhet och rätt belysning. Den informella kontrollen stärks genom visuella samband och siktlinjer mellan rörelsestråk och byggnader och omvänt. Eftersträva därför att platser och stråk är väl överblickbara för att inte skapa lägen gynnsamma för rån och överfall. Undvik nischer, vrår, hörn eller
+
+---
+
+vegetation intill gångvägar där det går att gömma sig. Platser och stråk ska vara ändamålsenligt belysta, utan att blända, för att undvika känslan av utsatthet och otrygghet. Belysningen ska vara utformad så att motande personer kan känna igen varandra samt så att människor kan urskiljas från den omgivande bebyggelsen. Belysning utomhus behöver inte vara stark och energikrävande. Även ytor vid sidan av rörelsestråk bör belysas så att gående kan överblicka området de rör sig igenom och så att de inte enbart själva blir belysta "måltavlor.
+
+Människor är i högre grad observanta på vad som sker och även beredda att ingripa om de känner en personlig tillhörighet till och ansvar för det egna området. Vid planeringen av området är det därför en fördel att försöka dela in området i privata, halvprivata, halvoffentliga eller offentliga rum genom portaler, häckar och dylikt. De boende bör få möjlighet att sätta personlig prägel på sin miljö och därmed signalera sin "hemvist". Känslan av att vara på privat mark kan få en gärningsman att avstå från att begå brott.
+
+Koncentrera trafiksystemen. Samla gärna olika trafikslag såsom bilar, cyklar och gående synliga intill varandra i parallella stråk för att stärka den informella bevakningen. Minimera gångvägarnas antal och längd. Lokalisera dessa till angränsande stadsdelar för att höja närvaron av människor. Förbindelse mellan kollektivtrafik och bostad, arbete och service bör ske längs bostadsbebyggelse. En in- och utfart till området, för biltrafik, ökar upptäcktsrisken.
+
+Vi som er polis, i Lokalpolisområde Täby, ställer oss självklart till ert förfogande om ni önskar få ytterligare synpunkter vad gäller trygghet och brottsförebyggande åtgärder.
+
+Polismyndigheten önskar, i ett senare skede, även ha en brottsförebyggande dialog med utsedd byggherre.
+
+Kommentar: Strategier för den fysiska utvecklingen kompletteras med strategin "Utveckla trygga och attraktiva livsmiljöer". I övrigt noteras Polismyndighetens kunskap om fysiska åtgärder för att förhindra brott och vidare dialog kommer att sökas i den mer detaljerade planeringen.
+
+## 3.7 Sjöfartsverket (-15)
+
+Sjöfartsverket har ansvar för tillgänglighet, framkomlighet och säkerhet i svenska farleder och farvatten. Verksamheten bedrivs med inriktning huvudsakligen på handelssjöfarten. Fritidsbåtstrafikens, fiskets och marinens intressen ska beaktas. Sjöfartsverket arbetar dessutom för hög transportkvalitet, god miljö, regional utveckling och ett jämställt transportsystem. I Sjöfartsverkets uppdrag ingår att bevaka sjöfartens transportleder och hamnterminaler inklusive dess anslutningar till landbaserad infrastruktur. Sjöfartsverket har tagit del av "Remiss - Översiktsplan för Vallentuna kommun".
+
+Sjöfartsverket gör bedömningen att förslaget inte kommer att påverka sjöfarten negativt och har därmed inget att erinra, men vill hållas informerad i det framtida planarbetet gällande vattenområden där det förekommer båttrafik, för samråd och synpunkter.
+
+10
+
+---
+
+Kommentar: Informationen noteras.
+
+## 3.8 Försvarsmakten (-16)
+
+Försvarsmakten har följande synpunkter i rubricerat ärende.
+
+Försvarsmakten fattade beslut om nu gällande riksintressen och områden av betydelse för totalförsvarets militära del enligt 3 kap 9§ miljöbalken den 18 mars 2015 (FM2015-3297:1). De riksintressen som påverkar kommuner, länsstyrelser eller andra aktörer i plan- och lovärenden eller tillståndsärenden redovisas i Försvarsmaktens riksintressekatalog.
+
+Riksintressekatalogen finns tillgänglig länsvis på Försvarsmaktens hemsida:
+
+www.forsvarsmakten.se/sv/om-myndigheten/samhallsplanering/riksintressen
+
+I översiktsplan bör en text som beskriver riksintressen för totalförsvarets militära del återfinnas, Vallentuna kommun har i stort gjort detta dock saknas några intressen, se nedan. Kommunen bör i sina översiktsplan även ta hänsyn till totalförsvarets civila del. Enligt regeringens försvarspolitiska inriktning 2016-2020 ska planeringen för civilt försvar nu återupptas. Planeringsarbete ska utgå från att förmågan att hantera kriser i samhället i fredstid också ska ge en grundläggande förmåga att hantera krigssituationer.
+
+Försvarsmaktens riksintressen i Lugnet-Kilen i Vada socken är beskrivet på ett fullgott sätt i text, riksintresset kan med fördel även redovisas i kartan för att tydligöra inom vilket område remisser ska skickas till Försvarsmakten.
+
+Vallentuna kommun berörs också av ett riksintresse i de västra delarna av kommunen vilket behöver redovisas på samma sätt som det i Lugnet-Kilen
+
+Vallentuna kommun berörs också av influensområdet från väderradar på Arlanda, vilket bör beskrivas i översiktsplanen.
+
+Kommentar: Planen kompletteras med redovisning av Försvarsmaktens intressen i karta och i text. Planen kompletteras även med totalförsvarets civila del.
+
+## 3.9 FastPartner AB (-17)
+
+Vi är i huvudsak positiva till översiktsplanen. Vi anser att det är viktigt vid planläggningen att förutom bostadsbyggande även planera för andra verksamheter som t.ex. kontor.
+
+Kommentar: Synpunkt noteras. Att möjliggöra verksamhetsutveckling är ett viktigt fokusområde vid utvecklingen av centrala Vallentuna.
+
+---
+
+12
+
+# 3.10 Svenska kraftnät (-18)
+
+## Nuläge
+
+I Vallentuna har Svenska kraftnät fyra stycken kraftledningar i kommunens östra del, två 220 kV-ledningar och två 400 kV-ledningar.
+
+## Svenska kraftnäts magnetfältspolicy
+
+Vid all nyprojektering av 220 kV- och 400 kV-växelströmsledningar i det svenska stamnätet tillämpar Svenska kraftnät en magnetfältspolicy som innebär att vi utgår från 0,4 mikrotesla som högsta magnetfältsnivå vid bostäder eller där människor vistas varaktigt.
+
+I samband med att tillstånd omprövas för våra växelströmsledningar vidtar vi ofta åtgärder för att minska magnetfälten eller erbjuder oss att köpa fastigheter som står så nära ledningen att magnetfältet överstiger 4,0 mikrotesla.
+
+Mer information om Svenska kraftnät och magnetfält finns på vår webbplats.
+
+De senaste 30 årens forskning har inte kunnat säkerställa några hälsorisker relaterat till magnetfält. Mer information finns på Strålsäkerhetsmyndigheten hemsida, www.ssm.se. Där finns bland annat en broschyr om magnetfält och hälsorisker.
+
+Broschyren finns på adressen:
+
+http://www.stralsakerhetsmyndigheten.se/Global/Publikationer/Broschyr/2009/Magnetfalt-och-halsorisker-low.pdf/
+
+## Allmän information
+
+Svenska kraftnät har ledningsrätt för kraftledningarna som är av betydelse för rikets elförsörjning. Ledningsrätten innebär att åtgärd/verksamhet som på något sätt inskränker Svenska kraftnäts verksamhet, inte får vidtas på fastighet som belastas av ledningsrätt.
+
+Samråd ska hållas med Svenska kraftnät när åtgärder planeras inom 250 meter från stamnätsledningar och stationer. Mer information om hur samråd med Svenska kraftnät går till finns på vår webbplats:
+
+http://www.svk.se/aktorsportalen/samhallsplanering
+
+Svenska kraftnät vill påminna om att byggnationer i närheten av transformatorstationer och ledningsstråk kan medföra svårigheter vid eventuella framtida förändringar i stamnätet.
+
+Alla kraftledningar som drivs och förvaltas av Svenska kraftnät har underjordiska installationer. Vid alla typer av markarbete inom en kraftledningsgata ska Svenska kraftnät rådfrågas om direktiv innan markarbete påbörjas.
+
+Ur ett elsäkerhetsperspektiv regleras avståndet mellan kraftledningar och olika verksamheter i Elsäkerhetsverkets föreskrifter ELSÄK-FS 2008:1 med ändring ELSÄK-FS 2010:1 och ELSÄK-FS 2015:3. Föreskrifterna reglerar bland annat byggnation och vissa typer av verksamheter på upp till 100 meters avstånd från
+
+---
+
+kraftledningar. Exempel på detta är verksamhet med brandfarliga och explosiva varor, upplag, parkeringsplatser, busshållplatser med mera.
+
+Svenska kraftnät önskar att Vallentuna kommun tar motsvarande hänsyn vid planering av ny bebyggelse invid befintliga stamnätsledningar som Svenska kraftnät gör vid byggnation av nya ledningar. För att säkerställa att Svenska kraftnäts magnetfältpolicy uppfylls ska ny bebyggelse där människor vistas varaktigt placeras minst 80 meter från en 220 kV-ledning respektive 130 meter från en 400 kV-ledning. Vi vill förtydliga att de schablonavstånd vi angett på 80 respektive 130 meter gäller för de områden där det passerar endast en ledning.
+
+Dessa schablonavstånd är baserade på maximerat årsmedelströmvärde och är att anse som en rekommendation till beslutande myndighet. För avstånd utifrån en eller flera parallellgående ledningars faktiska årsmedelströmvärde krävs en magnetfältsberäkning. Svenska kraftnät utför beräkningar för sina egna ledningar utifrån magnetfältpolicyn, det vill säga 0,4 mikrotesla.
+
+Svenska kraftnät vill passa på att informera om att invid och under en kraftledning finns det risk för steg- och beröringsspänningar i marken. Det finns också elsäkerhetsrisker med att anlägga en metallisk konstruktion, t.ex. elstängsel och vindskydd med plåttak, i närheten av kraftledningar. Byggnader i närheten av stamnätet för el kan behöva jordas exempelvis om väggar och tak är av plåt. Om jordning är aktuellt eller om du har andra frågor rörande ärendet, vänligen kontakta oss för ytterligare information.
+
+## Ärendespecifik information
+
+Under kapitlet Tekniska försörjningsystem angående energidistribution på sida 38 anger översiktsplanen att:
+
+Markförläggning av nya eller befintliga högspänningsledningar ska eftersträvas när befintliga bostadsområden förnyas och nya bostadsområden byggs under förutsättning att det är tekniskt lämpligt och ekonomiskt rimligt.
+
+Svenska kraftnät instämmer i resonemanget men vill här understryka vikten av den tekniska och ekonomiska lämpligheten och rimligheten. Detta är direkt kopplat till översiktplanens utgångspunkt att Vallentuna ska verka för en driftsäker eldistribution.
+
+Växelströmsledningar med så hög spänning som 400 kV är inte lämpliga att gräva ner som kabel, på grund av reaktiv effekt vid markförläggning kan stora delar av den el som matas in inte användas redan efter korta sträckor. Utöver de tekniska begränsningarna för överföringskapacitet och kompensationsbehov är markförlagda kablar också betydligt sämre än luftledningar för driftsäkerheten. Att upprätthålla hög driftsäkerhet i det nationella elsystemet är en viktig del av Svenska kraftnäts uppdrag från regeringen. Ju fler komponenter som byggs in i ett elnät, desto fler potentiella felkällor finns det.
+
+Markförläggning av stamnätsförbindelser medför att kompenseringsstationer måste anläggas samt att kabeln måste skarvas var sjuhundrade meter. Varje skarv och varje station som byggs blir en ny potentiell felkälla i stamnätet. Därmed försämras driftsäkerheten. Dessutom tar markförlagda kablar betydligt längre tid att felsöka och
+
+13
+
+---
+
+reparera än luftledningar. Vid ett större fel kan en luftledning vara reparerad inom några timmar medan det kan ta veckor (730 timmar enligt europeisk statistik) att återställa en markkabel. Kablarnas större sannolikhet för att gå sönder tillsammans med den längre reparationstiden gör att de jämfört med luftledningar är ett betydligt sämre alternativ ur driftsäkerhetssynpunkt. Teknikval redogörs för i Svenska kraftnäts koncessionsansökan och slutligen är det Energimarknadsinspektionen som ger tillstånd för kraftledningen.
+
+På sida 70 i översiktplanen redogör kommunen för planeringsinriktningen med hänsyn till elektromagnetiska fält. Svenska kraftnät vill vara tydliga att vi vid våra anläggningar tillämpar en magnetfältspolicy för att säkerställa att en god boendemiljö i närheten av våra ledningar upprätthålls. Vi rekommenderar därför att översiktplanen kompletteras med vår magnetfältspolicy som också uppfyller Vallentuna kommuns ambitioner.
+
+Så länge våra rekommendationer beaktas har Svenska kraftnät inga invändningar mot aktuell översiktsplan.
+
+Svenska kraftnät vill informera om att våra anläggningsobjekt finns att hämta via Geodataportalen, www.geodata.se, som WMS eller som en shape-fil. Informationen innehåller den geografiska positionen för Svenska kraftnäts ledningar, stolpar, stationer och stationsområden. Utöver den geografiska positionen finns uppgifter om förläggningssätt (luftledning, kabel etc.) och spänningsnivå förvåra ledningar. Vid produktion av kartor där Svenska kraftnäts geografiska anläggningsinformat- ion används ska följande copyrighttext framgå: "© Affärsverket svenska kraftnät".
+
+Ytterligare information rörande samhällsplanering i närheten av våra anläggningar återfinns i skrifterna Elnät i fysisk planering och Vägledning för verksamhet vid markförlagd kabel i stamnätet. För övergripande information rörande Svenska kraftnäts framtida planer för stamnätet för el hänvisar vi till Per-spektivplan 2025 och Nätutvecklingsplan 2016 - 2025. Dessa dokument finns publicerade på vår webbplats, www.svk.se.
+
+# Information angående samråd och remisser till Svenska kraftnät
+
+Svenska kraftnät önskar att ni vid remittering av kommande ärenden sänder fullständigt material till oss. Vi ser gärna att relevant lägesbunden data i form av shape- eller dwg-filer skickas till oss med information om vilket koordinatsystem de är skapade i. Exempel på detta kan vara detaljplanegränser och utredningskorridorer. Samråd skickas till: registrar@svk.se alternativt till: Svenska kraftnät, Box 1200 172 24 Sundbyberg
+
+Kommentar: Svenska kraftnäts ledningar inom kommunen är belägna i kommunens västra del. Planen kompletteras med att samråd ska hållas med Svenska kraftnät när åtgärder planeras inom 250 meter från stamnätsledningar och stationer. I övrigt noteras informationen.
+
+---
+
+15
+
+# 3.11 Rydells (-20)
+
+Rydells Försäljning AB, Rydells Odling AB samt S-Blommor i Stockholm AB har en gemensam omsättning på ca 550 milj kronor med 240 st anställda. Bolagets verksamhet drivs från anläggningen på Stängselboda i Vallentuna. Genom bildandet av Blomstergruppen under 2017 har vi för avsikt att växa oss betydligt större de närmaste åren.
+
+Vägen till Stängselboda är redan idag undermålig och innebär en säkerhetsrisk för vår verksamhet under vinterhalvåret. Därför är en planerad väg från Upplandsväsbyvägen, norr om Lindö Park, förbi Stängselboda (Foderby 2:4) mycket positivt för företagets möjligheter att fortsätta den planerade expansionen från anläggningen i Vallentuna.
+
+Vi är intresserade av diskutera utveckling av fastigheten Vallentuna-Nyby 1:2 med kommunen framgent.
+
+Kommentar: Planen beaktar markbehov för eventuell förlängning av Tallhammarsvägen och/eller Lindövägen. En förlängning som enligt tidig- och översiktlig bedömning kan bli aktuell vid en större samhällsutveckling i nordvästra Vallentuna tätort. Det finns idag inga beslut om genomförande men synpunkten noteras för det fortsatta arbetet med att utveckla den övergripande transportinfrastrukturen i kommunen. Eventuella behov av förbättringar på kort sikt i befintlig väg bör tas upp i berörd vägförening.
+
+Utvecklingsplaner för nämnd fastighet noteras.
+
+# 3.12 Trafikverket (-21)
+
+Trafikverket har tagit del av samrådsförslag översiktsplanen för Vallentuna kommun. Trafikverket yttrar sig i egenskap som ansvarig transportslagsövergripande och långsiktigt planering av det samlade transportsystemet i regionen och som ansvarig för den statliga trafikinfrastrukturen i kommunen. Trafikverket ansvarar även för att peka ut riksintresse för kommunikationer och önskar lyfta fram följande:
+
+## Övergripande synpunkter
+
+Trafikverket anser att översiktsplanen utgör ett bra underlag för vidare planering i kommunen och välkomnar kommunens ambition att förtätta i befintlig bebyggelse och utveckla bostadsområden längs viktiga pendlings- och kommunikationsstråk. Förtätade miljöer bidrar till en transportsnål samhällsplanering där befintliga transportsystem kan användas vilket stämmer väl överens med såväl med det transportpolitiska tillgänglighetsmålet som hänsynsmålet. De transportpolitiska målen är en utgångspunkt för statens åtgärder inom transportområdet, exempelvis hur myndigheterna ska prioritera bland olika önskemål och behov när de genomför sina uppdrag.
+
+## Effektiv och framkomligt transportsystem
+
+---
+
+För att undvika att utvecklingen av Vallentuna kommun påverkar framkomligheten på det omgårdande statliga vägnätet negativt är det angeläget att kommunen planerar aktivt för gång, cykel och kollektivtrafik samt utvecklar det lokala vägnätet. I enlighet med Trafikverkets Framkomlighetsprogram är det viktigt med ett vägnät med huvudsak en lokal funktion, vilket kommunen är väghållare för, utformas och dimensioneras för att hantera trafik av lokal karaktär. Trafikverket utgår från Framkomlighetsprogrammet som är framtaget för Stockholms län.
+
+Kommunens transportplanering prioriterar kollektivtrafik, nyttotrafik samt gång- och cykel likt Trafikverkets Framkomlighetsprogram. E18 och Norrortsleden (väg 265) är idag hårt belastade vägar under rusningstid i riktning mot centrala Stockholm och det är viktigt att se systemet i sin helhet. En ökad exploatering i en växande region, innebär framkomlighetsproblematik för all typ av trafik i vägsystemet i hela regionen.
+
+Det är positivt och i enlighet med RUFS att utveckla en tätare bebyggelse nära stationerna vid Roslagsbanan för att öka andelen bostäder och verksamheter i kollektivtrafiknära lägen. Trafikverkets basprognos 2040 gällande väg-, järnvägs och flygtrafikutveckling behöver också vara ett underlag som översiktsplanen utgår och förhåller sig till. Basprognosen är en del av prioritering för de nationella och regionala infrastrukturinvesteringarna. Detta är även kopplat till den utpekade bebyggelseutvecklingen enligt RUFS.
+
+Översiktsplanen föreslår att utreda vidare en bostadsutveckling i Gillinge samt Karby och Brottby i nära anslutning till E18. Trafikverket vill belysa att bostäder i anslutning till E18 kan innebära konflikter med riksintresset E18 såsom buller, luftkvalitet, framkomlighet etc.
+
+## Riksintressen
+
+Trafikverket vill uppmärksamma att det är viktigt att våra intressen skyddas mot åtgärder som kan skada eller påverka våra anläggningar negativt. Trafikverkets vill också poängtera det viktiga i att närområdet kring riksintressena hålls fria från exploatering, då marken i framtiden kan bli aktuell vid eventuella ombyggnationer.
+
+Trafikverket beslutade 2012-03-12 om uppdatering av vilka anläggningar som bedöms vara av riksintresse för kommunikationer. På följande länk finns material kring riksintressen som berör Vallentuna kommun samlat: http://www.trafikverket.se/riksintressen.
+
+Följande riksintressen berörs av översiktsplanen:
+
+- E18
+- Väg 265
+- Roslagsbanan
+- Arlanda flygplats
+
+## Avstånd till statlig infrastruktur
+
+Det finns säkerhetsavstånd fastställda av Länsstyrelsen utifrån vägens funktion, enligt 47§ väglagen. Detta för att möjliggöra utveckling av vägar och att minska risker vid olyckor och överskridande av riktvärden för exempelvis luftkvalitet. Varje enskilt fall
+
+16
+
+---
+
+prövas dessutom utifrån risk, trafikmängd, hastighet, terrängförhållanden samt drift- och underhåll.
+
+Trafikverket Region Stockholm eftersträvar ett bebyggelsefritt avstånd från vägar och järnvägar enligt nedan.
+
+För dessa gäller olika mått för olika typer av vägar (a beläggningskant – kvartersgräns, b kvartersgräns – byggnad):
+
+[tbl-0.html](tbl-0.html)
+
+## Luftfart
+
+Efter att Swedavia har tagit fram sin s.k. Master Plan över framtida utveckling, där nya banlägen redovisas, kommer det att göras nya bullerberäkningar. Först när detta arbete är klart går det att redovisa Arlanda flygplats influensområde för buller.
+
+Runt alla flygplatser finns områden där höjder, byggnader, master mm behöver begränsas för att flygsäkerheten inte ska äventyras, den s.k. hinderbergränsande ytan. Inom den höjdbergränsande ytan bör en flyghinderanalys beställas hos LFV om det planeras höga objekt. Alla byggnader över 20 meter ska prövas av LFV i en flyghinderanalys. Planeras objekt över 20 m över marknivå, måste LFV ger tillfälle att yttra sig som sakägare till de flygtekniska systemen för kommunikation, navigation och övervakning (CNS). Höga objekt riskerar att störa dessa system.
+
+Kommunen berörs, förutom av den hinderbergränsande ytan från Arlanda, även av MSA- ytor (Minimum Sector Altitude), för både Bromma och Arlanda flygplatser. Ytorna är normal cirkulära och omfattar en radie av 60 km från flygplatsens mittpunkt. MSA-ytorna kan innebära höjdbergränsningar för mycket höga objekt
+
+Kommunen kan och bör i ett tidigt skede samråda med LFV, Försvarsmakten och Swedavia för att ta reda på hur högt det är möjligt att bygga på en viss plats/fastighet eller inom ett väl avgränsat område, med hänsyn till dessa riksintressen. Det är en viktig planeringsförutsättning att förhålla sig till i den fortsatta planeringen.
+
+17
+
+---
+
+18
+
+# Miljö, hälsa och säkerhet
+
+Samhällsplaneringen har en mycket viktig roll i att uppnå nationella mål för samhällets långsiktiga utveckling, bl.a. rörande begränsad klimatpåverkan, transportsystemets funktionssätt samt de 16 nationella miljömålen.
+
+Transportsystemet påverkar de flesta miljömålen och särskilt målen Begränsad klimatpåverkan, Frisk luft, God bebyggd miljö och Ett rikt väx- och djurliv samt Levande sjöar och vattendrag. I kommande aktiviteter och löpande arbete bör detta beskrivas och beaktas.
+
+# Buller och vibrationer
+
+Buller kommer främst från vägtrafik, järnvägen, flygplatser, industrier och annan störande verksamhet och är ett stort problem för många kommuner då exploatering sker nära dessa. I samband med detaljplanering, främst gällande bostäder och skolor, anser Trafikverket att en bedömning av bullersituationen ska göras och att riktvärden enligt Förordningen om trafikbuller vid bostadsbyggande (SFS 2015:216) ska hållas. Avsteg enligt 4 § i förordningen kan dock göras i centrala eller kollektivtrafiknära lägen. Platsspecifika bullerutredningar ska alltid göras. För utomhus på uteplats ska 50 dB(A), ekvivalent nivå och 70 dB(A), maximalnivå klaras.
+
+Det åligger kommunen att visa att planerade bostadsområden inte utsätts för buller över riktvärdena enligt aktuell förordning. Det är Trafikverkets ansvar att genomföra kartläggning av bullersituationen i befintliga miljöer längs E18. Kommunen ansvarar för bullerutredning vid tillkommande bebyggelse och anser att bullerberäkningar ska ta höjd för Basprognos 2040.
+
+# Risk och farligt gods
+
+I samband med detaljplanläggning av områden inom 150 meter från stråk där transporter med farligt gods kan förekomma, anser Trafikverket att risker förknippade med farligt god ska beaktas. Rekommenderade skyddsavstånd kopplat till önskad markanvändning finns redovisade i bl.a. vägledningen "Riktlinjer för planläggning intill vägar och järnvägar där det transporteras farligt gods" (Länsstyrelsen Stockholms län). Här framgår att om rekommenderade skyddsavstånd inte kan hållas, så bör en riskanalys tas fram för att klargöra vilka skyddsåtgärder som kan bli nödvändiga för att planerad markanvändning ska bedömas som lämplig utifrån risksynpunkt. Även i detta sammanhang bör beräknad trafik prognosår 2040 beaktas.
+
+# Planering med Roslagabanans förgrening till Arlanda
+
+Trafikverket anser det viktigt med goda möjligheter till kollektivtrafik i planeringen, i enighet med de transportpolitiska målen. Trafikverket saknar dock ett resonemang hur översiktsplaneringen hanteras vidare om förgreningen till Arlanda ej genomförs. Detta för att belysa eventuell påverkan på befintligt transportsystem av en sådan exploatering samt vad det har för betydelse för bebyggelseutvecklingen.
+
+# Pågående projekt och planerade utredningar
+
+Väg 268, E4- Grana
+
+---
+
+Trafikverket planerar för förbättrade vägar för bil-, cykel- och gångtrafik mellan E4 i Upplands Väsby och Vallentuna, för vidare möjlig förbindelse till E18 vilket innebär förbättrad framkomlighet och ökad trafiksäkerhet för alla trafikanter på sträckan. Genom planerade åtgärder säkerställer Trafikverket regionala kopplingar för såväl bil som gång och cykel. Väg 268 är utpekad "kompletterande regionalt viktig väg" i framkomlighetsprogrammet och är av vikt för framkomligheten i Stockholms län. Vägen bör utformas och dimensioneras för att hantera trafik av lokal samt regional karaktär inklusive eventuell framtida stombusstrafik. Målet är att alla trafikanter har en god framkomlighet och en förutsägbar restid till sina målpunkter
+
+Åtgärdsvalsstudie för väg 265, Norrortsleden
+
+Trafikverket planerar att starta en åtgärdsvalsstudie år 2018 som studerar de framkomlighetsbegränsningar som råder på sträckan under högtrafik och beräknas bli större efter öppnandet av Förbifart Stockholm. Trafikverket avser att utreda detta i syfte att identifiera de åtgärdsbehov som behöver hanteras samtidigt behöver behovet av nya gång- och cykelrelationer i stråket utredas.
+
+Kapacitet Arningevägen Väg 264, Vallentuna – Täby
+
+Bostadsexploateringen i Vallentuna kommun kommer påverka trafiken på Väg 264 och det riskerar att bli framkomlighetsproblem. Samtidigt håller Arninge på att utvecklas som en regional kärna i enlighet med RUFS. Det saknas idag gång- och cykelförbindelse från Vallentuna/Kristineberg söderut. Åtgärdsvalsstudien planeras starta 2019.
+
+## Fortsatt arbete
+
+Trafikverket ser fram emot det fortsatta samarbetet med samhällsutvecklingen inom Vallentuna kommun. Både med den kommunäckande översiktsplanen och med kommande detaljplaner, men även inom de infrastrukturprojekt som pågår i kommunen. Trafikverket välkomnar samtidigt en tidig dialog med kommunen kring de ärenden och åtgärder som kan ha inverkan på statlig infrastruktur.
+
+Kommentar: Kommunen har trafikprognos avseende 2030 med utblick mot 2040 med indata densamma som Trafikverket använt vid modellanalyser som genomförts 2012-2013. Prognosen, och genomförda analyser, påvisar att kapacitetsbrister kan uppstå främst till och från Vallentuna tätort. Kommunens avser att inom de närmaste åren genomföra en trafikutredning avseende framtidens övergripande trafikinfrastrukturbehov till och från Vallentuna tätort kopplat till samhällsutvecklingen i stort och de valmöjligheter som översiktsplanen ger upphov till. Utredningen förutsätts utgå från uppdaterade prognoser, Trafikverkets basprognos 2040 eller senare.
+
+Norr om befintlig Vallentuna tätort finns ett framtida bebyggelseutvecklingsområde som kommunen har tagit ställning är avhängigt av Roslagsbanans förlängning till Arlanda. Kommunen avser att en gång per mandatperiod aktualitetspröva ställningstagandet i det fall beslut om avgrening dröjer. Utveckling inom detta område behöver oavsett föregås av fördjupad kunskap. Läs vidare i pågående arbete med fördjupad översiktsplan för norra Vallentuna tätort och Lindholmen.
+
+19
+
+---
+
+Kommunen deltar gärna aktivt i Trafikverkets kommande åtgärdsvalstudier som berör kommunen.
+
+Övriga synpunkter noteras.
+
+## 3.13 Vattenfall (-22)
+
+Vattenfall Eldistribution AB, nedan Vattenfall, återkommer med svar på remiss Översiktsplan för Vallentuna kommun
+
+Vattenfall DMS: 1003007580
+
+Vattenfall har elnätanläggningar med beteckningen regionalt elnät inom aktuellt område med en spänningsnivå på 77 kV till största delen ledning i luft.
+
+Vattenfall vill påminna om följande
+
+- För alla detaljer och anläggningar som placeras invid Vattenfalls regionnätsledningar gäller att dessa skall placeras så att drift- och underhållsarbeten för ledningen inte försvaras.
+- Schaktning eller sprängning inom ledningsrätts-/servitutsområde får inte ske utan att man i god tid inhämtat ledningsägarens medgivande.
+- Försiktighetsprincipen som ingår i de allmänna hänsynsreglerna i miljöbalken avseende att verksamheter eller åtgärder inte medför skada eller olägenhet för människors hälsa eller miljön.
+- En eventuell ombyggnad eller flytt av luftledning eller markkabel tillhörande Vattenfall utförs av Vattenfall men bekostas av exploater.
+- Vid behov av ombyggnad av ovan angivna ledningar vilka är linjekoncessionspliktiga ledningar är det troligt att ny koncession behöver sökas.
+- Vattenfall har inget övrigt att erinra i detta ärende.
+
+Kommentar: informationen noteras.
+
+## 3.14 Österåkers kommun (-23)
+
+Österåkers kommun är positiva till förslag till Översiktsplan 2040 för Vallentuna kommun, bl.a. avseende det regionala fokus som uttrycks samt visad ambition för samverkan i frågor gällande bl.a. grön- och blåstruktur.
+
+### Bebyggelseutveckling
+
+Österåkers kommun ser positivt på Vallentuna kommuns strategi att samordna bebyggelse och kollektivtrafik samt utvecklingen av bostäder längs Roslagsbanan. När det gäller utveckling av en ny station och bostadsområde vid den nya sträckningen på Roslagsbanan vill Österåkers kommun framhäva vikten av att vid fortsatt planering ta hänsyn till, samt utreda konsekvenser på, regionala grönstrukturen och de gröna kilarna.
+
+20
+
+---
+
+Österåkers kommun ser positivt på den föreslagna utvecklingen av Gillinge med bostäder och verksamheter samt att Vallentuna kommun resonerar om vikten av att knyta samman Gillinge med omkringliggande områden så som Rosenkälla. Positiva synenergieffekter mellan Gillinge och Rosenkälla bör beaktas vid kommande planering, och om möjligt i översiktsplanen omnämnas. Ett förtydligande om vilka eventuella risker som den föreslagna utvecklingen kan komma att resultera i är också önskvärt.
+
+## Naturmiljöer och naturvärden
+
+I översiktsplanen kan resonemang kring eventuella konsekvenser av bebyggelseutveckling på den regionala grönstrukturen och de gröna kilarna förtydligas.
+
+## Störande verksamheter
+
+Vid utveckling av störande verksamheter som kan få konsekvenser i Österåkers kommun behöver hänsyn tas till befintliga och framtida bebyggelse i Österåker.
+
+## Klimat
+
+Österåkers kommun ser positivt på att Vallentuna kommun belyser vikten av regionala och länsövergripande samarbeten gällande klimatpåverkan och anpassning.
+
+## Vatten
+
+Det gäller även vattensamverkan kring Åkerströmmen och arbetet med att nå goda miljökvalitetsnormer för vatten som lyfts i översiktsplanen. Vid utveckling av Karby-Brottby behöver hänsyn tas till eventuell påverkan på vattenkvaliten i Åkersströmmens avrinningsområde, vilket gärna kan belysas i översiktsplanen. Resonemang om att minska påverkan på vattenförekomster efterfrågas.
+
+## Transport
+
+Österåkers kommun stödjer ambitionen med att förlänga Roslagsbanan mot Arlanda och därmed skapa nya resemönster som skulle bidra positivt till Stockholm nordosts utveckling. Resonemang kring hur den nya avgrening av Roslagsbanan kan kopplas samman med andra noder i regionen som t.ex. det nya resecentrumet i Arninge kan med fördel läggas till i översiktsplanen. När det gäller planförslagets ambition att skapa regionala cykelstråk bör de stråk som utpekas i Österåkers kommuns förslag till nya översiktsplan 2040 beaktas.
+
+Kommentar: Till planen hör en miljökonsekvensbeskrivning som redovisar konsekvenser översiktligt. Utöver detta pågår fördjupade översiktsplaner i norra Vallentuna tätort och Lindholmen samt i Karby och Brottby där kommunen avser att göra mer specifika hänsynsställningstaganden för kommande utveckling som underlag för fortsatt planering. I norra Vallentuna tätort och Lindholmen planeras även planprogram för komplexa delområden att tas fram som utgångspunkt för fortsatt planering. I Gillinge avser kommunen att återuppta arbetet med den fördjupade översiktsplanen inom de närmaste åren. En viktig utgångspunkt för arbetet är som Österåkers kommun påpekar att tillsammans hitta synergieffekter mellan Gillinge och Rosenkälla.
+
+21
+
+---
+
+Kommunen har påbörjat arbete med en blåplan med syftet att underlätta det fortsatta arbetet med att uppnå miljökvalitetsnormerna. Kommunen kommer i detta sammanhang söka särskild dialog med Österåker om detta inom ramen för vattensamverkan Åkerströmmen.
+
+Planen kompletteras med att markbehov för cykelväg längs norrortsleden ska beaktas i enlighet med framtida regionalt cykelstråk som redovisas i Österåkers översiktsplan.
+
+## 3.15 Knivsta kommun (-24)
+
+Knivsta kommun har begränsat sig till att i korthet kommentera de frågor som rör Arlandaregionen.
+
+I planförslaget anges det att Vallentuna kommun vill verka för att influensområdet från Arlanda flygplats ska minska i kommunen. Hur skulle en minskning av influensområdet i Vallentuna kommun påverka influensområdens utbredning i andra kommuner inom Arlandaregionen?
+
+Roslagsbanans förlängning mot Arlanda skulle bidra till större rörlighet inom regionen vilket är positivt.
+
+Kommentar: Kommunen förutsätter att ett nytt influensområde kommer att fastställas utifrån en helhetssyn och föregås av dialog mellan statliga myndigheter och berörda kommuner.
+
+## 3.16 Privatperson (-25)
+
+### Kårsta och Ekskogen
+
+- Det skall finnas med att en fördjupad översiktsplan görs över Kårsta och Ekskogen. Detta kom inte med i den nuvarande översiktsplanen.
+- Studentbostäder även i Kårsta och Ekskogen.
+- Mer byggnation i Kårsta och Ekskogen. Detta genom att Dessa orter ligger vid Roslagsbanan och Det är områden med utvecklingspotential. Vallentuna med omnejd är näst intill fullbyggt. Kårsta och Ekskogen har idag fortfarande gångavstånd till Roslagsbanan vilket förenklar då inga nya busslinjer måste till.
+- Kraftigt förstärkt vattenförsörjning genom en ledning från Norrtäljeledningen till Kårsta, vilket även skulle ge en redundans på vattenförsörjningen även till Lindholmen och Ormsta.
+- Saga bio som är kommunens enda biograf nämns inte under kulturen, bara att det finns en kommunal biograf i teatern som inte visar film kontinuerligt, utan mest opera.
+
+22
+
+---
+
+- Minskat strandskydd längs ån i Kårsta för att möjliggöra bättre bostadsbyggande invid Kårsta station.
+- Äldreboende i Kårsta.
+- Dagligvaruhandel i Kårsta.
+- Företagsby i Kårsta, Industrimark vid Löt. Löt och soptippen ligger strategiskt vid E18 och inte lång körväg till Kapellskär.
+- En ny ordentlig idrottsplats vid Kårsta skola istället för Kårevallen. (Lämpligt att detta tas med redan i den pågående detaljplanen för Kårsta-Rickeby 2.) Kårevallen bebyggs då istället med bostäder.
+
+## Allmänt
+
+- E18 genom Vallentuna kommun behöver byggas ut till att bli 4-filig.
+- Åkermark bör användas så restriktivt som möjligt till bebyggelse. Jordbruksmarken behövs för livsmedelsförsörjning.
+- Egen rötningsanläggning för biogas inom kommunen. Kan placeras ex. i Löt vid tippen.
+- Tidigare postorter blir åter postorter men postnumren behålls inom nuvarande postnummerserie. Se hur det är gjort i Norrtälje kommun (Rö är åter en postort).
+- Roslagsbanan till Rimbo finns med även en framtida gren till Arlanda. Det är en väldigt vag vision dessa utbyggnader. Kommunen borde trycka mycket mer på detta i Översiktsplanen.
+- Fler återvinningsstationer och även någon mer återvinningscentral i södra kommundelen.
+- Pågående Föp Karby – Brottby skall utgå då den redan är på samråd. Bör vara beslutad innan denna översiktsplan beslutas.
+- Pågående Föp Norra Vallentuna tätort skall utgå då den redan är på samråd. Bör vara beslutad innan denna översiktsplan beslutas.
+- Fördjupad översiktsplan över Frösunda.
+- Bokbussar skall tas oerhört försiktigt då dessa kan generera att övriga filialer läggs ned.
+- 30 min trafik på Roslagsbanan till Kårsta.
+- Reservvattentäkt i Sparren.
+
+Kommentar: Planen förtydligas att inriktningen är att värna jord- och skogsbruket. Planen föreslår mer bebyggelse i Kårsta och Ekskogen bl.a. med utgångspunkt från Roslagsbanan. Planen kan däremot i sig inte styra typ av bostad t.ex. studentbostäder eller verksamhet t.ex. äldreboende eller dagligvaruhandel även om
+
+23
+
+---
+
+kommunen är positiv till etablering. Enligt kommunens lokalresursplan 2018-2027 är kapaciteten inom äldreomsorg god under aktuell planperiod. Behov ses dock över årligen och kan komma att ändras. Bokbussar är en komplettering till filialerna för att nå flera kommuninnevånare. De kommer inte att ersätta filialerna. Planen kompletteras med biografen Saga. Planen uppdateras med ytterligare område för utveckling av verksamheter i Löt. Planen uppdateras med etablering av returpark inom eller i anslutning till Vallentuna tätort.
+
+Det finns en generell efterfrågan att redovisa en samlad markanvändningskarta för hela kommunen varför pågående fördjupade översiktsplaner redovisas i översiktsplanen. Planen uppdateras dock för att helt stämma överens med pågående planering. När samtliga av dessa planer är antagna kommer dessa att publiceras på en webbkarta på kommunens webbplats där tydlighet kommer att eftersträvas.
+
+Planen kompletteras med att en fördjupad översiktsplan för Kårsta och Ekskogen ska tas fram.
+
+Kommunen kommer att pröva ny bebyggelse inom strandskyddsområde inom pågående planläggning för Kårsta-Rickeby 2. Inom samma plan diskuteras Kårevallens framtida utvecklingsmöjligheter.
+
+Planen anger att markbehov ska reserveras för fler körfält på E18 och för en förlängning av Roslagsbanan till Rimbo. Kommunen verkar för dessa utbyggnader och utökad turtäthet till Kårsta.
+
+Parallellt med arbetet med planen pågår arbete med ett regionalt vattenförsörjningsprogram under ledning av länstyrelsen. I programmet är avsikten att peka ut reservvattentäkter i ett samlat grepp för hela regionen och avsikten är att spegla behovet i Vallentuna i planen utifrån resultatet i programmet.
+
+Förstärkning av VA-anläggningen i Roslagsbanestråket pågår. Utbyggnad pågår Etapp 1 mellan centrala Vallentuna tätort och Molnby är snart klar. Redundans genom ny ledning till Norrtäljeledning ingår inte i planeringen under planperioden men är tänkbar på längre sikt.
+
+Postnord ansvarar för namngivning av postorter och postnumrering.
+
+## 3.17 Företagarna i Vallentuna (-27)
+
+Företagarna i Vallentuna vill härmed framföra ett antal synpunkter över Översiktsplan 2040.
+
+## Servicenivå i världsklass
+
+"En servicenivå i världsklass" är en av rubrikerna i ÖP:n, Vi vet inte om den hör hemma just i det dokumentet men eftersom det ändå nämns kräver det lite synpunkter.
+
+Det är bra att ambitionsnivån är hög. Att den kommunala servicen ska vara i världsklass ser vi väldigt positivt på. Vi utgår från att det innebär stora förändringar jämfört med hur det ser ut i nuläget.
+
+---
+
+Det är framför allt två områden som företagarna vill få till förändringar. Avgifterna för bygglov och anslutningsavgifterna för vatten och avlopp är på tok för höga och drabbar både företagare och vanliga invånare mycket hårt. Det är viktigt att kommunen ser över dessa taxors konstruktion. De är i det närmaste obegripliga. De drabbar företagare och invånare på ett orättvist sätt och avgiftsnivåerna är betydligt högre än vad kommunens handläggningskostnad är. Det som är mest korkat är att kunden får betala mer ju större fastigheten är. Kommunens kostnad kan ju inte öka pga av en sådan omständighet.
+
+Vi utgår från att handläggningstiderna nu förkortas och att tillgängligheten förbättras avsevärt. Det är en fråga som många företagare vid upprepade tillfällen klagat på.
+
+Vi ser fram emot att kommunen nu kommer att ta stora kliv uppåt i alla rankinglistor som mäter servicenivåerna i steget mot världsklass.
+
+## Vallentuna Centrum
+
+Vallentuna centrums torgytor är nu ombyggda vilket vi ser positivt på. Det tråkiga är att utbudet försämrats, butikerna har gjorts om till mäklarkontor vilket knappast höjer känslan av ett levande centrum.
+
+Det är viktigt när centrum byggs ut att det planeras för kontorsarbetsplatser och fler butiksytor. Det får inte bara byggas bostäder om Vallentuna inte ska uppfattas som en sovstad. Så gott som alla vill se ett mer levande centrum som är till för alla, även barnen (väldigt få lekytor efter ombyggnaden). Resultaten av alla invånarenkäter som gjorts de senaste åren påtalar bristen på bra restauranger med god mat och trevlig miljö. Här måste även kommunen tänka till och skapa goda förutsättningar.
+
+## Arbetsplatsområden
+
+Kommunen har i stort sett sålt slut på all mark avsedd för verksamheter. Det är viktigt att arbetet med att ta fram nya arbetsplatsområden påskyndas. Planering pågår för Karby och Okvista och bör påskyndas. Vi vill alla ha fler arbetstillfällen i kommunen, fler borde få möjligheten att arbeta på hemmaplan.
+
+Ett nytt arbetsplatsområde utmed Väsbyvägen ser vi positivt på. Vi tillstyrker i stort sett hela beskrivningen av de "utgångspunkter" kommunen angett under avsnittet "Bostäder, näringsliv och service".
+
+Vi ser gärna också att kommunen tar fram en långsiktig upprustningsplan för de arbetsplatsområden som är sunkiga t ex Vargmötet. Det är flera företag som flyttat där ifrån pga att det är för nedslitet och skräpigt.
+
+## Trafik
+
+Vi ser mycket positivt på kommunens strävan att få till en förlängning av Roslagsbanan till Arlanda. Det skulle givetvis få mycket positiva effekter för de flesta i kommunen både företagare och vanliga invånare. Det är nödvändigt att Vägen till Väsby rätas ut och att del korsningar byggs om till rondeller.
+
+När det gäller biltrafiken så nämns det att på sikt kan en förlängning av Arningevägen öster om Ormsta bli aktuell. Det behovet finns redan i dag. Lindholmsvägen är på
+
+25
+
+---
+
+mornarna och kvällarna mycket hårt belastad. Det har uppstått en trafikinfarkt i Ormsta och många har svårt att köra ut på Lindholmsvägen, runt Ormstaskolan är det kaos. Frågan är hur det blir när Hagaskolan är färdigbyggd? Det är också tunga transporter på Lindholmsvägen till och från bygget av SL:s Depå i Molnby.
+
+Det är hög tid att redan nu planera för en ny vägsträckning. Det blir allt fler boende i Lindholmen med omnejd, alla åker inte kollektivt även om planerare och politiker gärna vill tro det.
+
+## Natur och Kultur
+
+Det är viktigt i allt byggande att grönytor både skapas och sparas. Vi anser att grönområdet mellan Väsbyvägen och Vallentunasjön ska bevaras. Det vore också bra om Väsby Kvarn kunde återuppbyggas. Restaureringen av Vallentunasjön bör fortsätta, kanske dags att pröva något annat än att tömma sjön på mört.
+
+Även naturen kring Molnby bör bevaras i så stor utsträckning som möjligt. Området är ett populärt och vackert promenadstråk med mycket fina idylliska vyer. Det har också varit kraftiga protester från boende i både Molnby och närliggande Snapptuna mot det utbyggnadsförslag som kommunen presenterat.
+
+## Skolor
+
+Av ÖP:n framgår det att kvaliteten ska vara hög i kommunens skolor. Det är viktigt att Vallentuna Gymnasium blir mer attraktivt och att utbudet breddas och kvaliteten höjs. Det som fungerar bra i dag är programmen för bygg och fordon. Näringslivet borde få en mer aktiv roll i Gymnasiets verksamhet. Även samarbete med högskolorna måste tillkomma. Målet måste vara ett fullt gymnasium dit alla ungdomar vill söka.
+
+Kommentar: Gällande bygglovstaxor så vidarebefordras synpunkten till kommunens bygglovsverksamhet som bereder kommunens plan- och bygglovstaxa. Barn- och ungdomsförvaltningen har vidarebefordras önskemål om att näringslivet bör få en mer aktiv roll i gymnasiets verksamhet. Att möjliggöra fler kontorsplatser och mer handel i Vallentuna centrum är ett viktigt fokusområde vid utvecklingen av centrala Vallentuna. Planläggning av verksamhetsområden är prioriterat. Utöver nya verksamhetsområden pågår modernisering av äldre detaljplaner just nu i Okvista.
+
+Planering av väg 268 Väsbyvägen pågår. Under 2018 avser kommunen att påbörja en s.k. åtgärdsvalsstudie för Lindholmsvägen för att identifiera snabba och effektiva åtgärder vad gäller framkomlighets- och trafiksäkerhetsförbättringar. En mer långsiktig behovsutredning avses också göras inom de närmaste åren när det gäller att se över det övergripande trafikinfrastrukturbehovet till och från Vallentuna tätort relaterat till bebyggelseutvecklingen.
+
+Övriga synpunkter noteras.
+
+## 3.18 Lantmäteriet (-28)
+
+Vid genomgång av planförslagets samrådshandlingar/granskningshandlingar (daterade augusti 2017) har följande noterats:
+
+---
+
+27
+
+# Planfrågor som berör Lantmäteriets kommande arbete
+
+Lantmäteriets arbetsuppgifter, efter det att detaljplaner har vunnit laga kraft, är att med stöd av detaljplanen bilda och ändra fastigheter och inrätta ev gemensamhetsanläggningar, skapa servitut, ledningsrätter mm.
+
+# Lantmäteriets synpunkter
+
+Lantmäteriet konstaterar att översiktsplanen inte innehåller någon information som Lantmäteriet bedömer sig skyldiga att kommentera. Det finns exempelvis ingen information om hur översiktsplanen avses genomföras, exploateringsavtal eller liknande.
+
+Kommentar: Informationen noteras.
+
+# 3.19 Norrvatten (-29)
+
+Norrvatten har mottagit information om rubricerad översiktsplan för samråd.
+
+Norrvatten har huvudvattenledningar med tillhörande ledningsrätter som passerar inom kommunen, men ser inga speciella risker för dem. I kommande detaljplaneprocesser identifieras eventuella konflikter och samråd kan ske.
+
+Kommentar: Informationen noteras.
+
+# 3.20 Storstockholms brandförsvar (-30)
+
+Storstockholms brandförsvar (SSBF) har av samhällsbyggnadsförvaltningen i Vallentuna kommun fått möjlighet till yttrande avseende rubricerat ärende. Detta yttrande behandlar hantering av olycksrisker samt möjlighet till räddningsinsatser.
+
+Olycksrisker samt möjlighet till räddningsinsats ska beaktas i planprocessen för att tillgodose krav på hänsyn till människors hälsa och säkerhet samt risken för olyckor, enligt plan- och bygglagen (SFS 2010:900). Olycksrisker är dessutom att betrakta som en olägenhet enligt miljöbalken (SFS 1998:808) och ska beaktas i behovsbedömningar för planer och program samt eventuella miljökonsekvensbeskrivningar (MKB).
+
+# Hantering av olycksrisker
+
+SSBF ser positivt på att Vallentuna kommun har identifierat vissa risker och tagit fram strategier för framtida användning av mark och vatten i Översiktsplanen. Det är även positivt att kommunen har intentionen att förbättra säkerheten för bil och cykeltrafik.
+
+I ÖP används bilder och kartor och andra illustrationer vilket gör dokumentet lättläst och överskådligt. SSBF föreslår att ÖP förses med "Riskkarta" där kända riskällor är inritade och därmed lätt att identifiera. Med riskkällor menar SSBF inte bara de av länsstyrelsen rekommenderade trafiklederna för farligt gods och spårbunden trafik
+
+---
+
+utan även bensinmackar, industrier, andra målpunkter, Seveso-anläggningar och Farliga verksamheter m.m.
+
+För att underlätta kommande planarbete förslår SSBF att kommunen redan i ÖP tar fram riskhanteringsavstånd och gärna skyddsavstånd från kända riskällor. Då kan man redan i ÖP se var riskerna behöver utredas samt i vilka områden som är olämpliga att exploatera. Vid hantering av riskkällor i ÖP bör lämplig lokalisering alltid vara den grundläggande principen. Kartläggning av riskhanterings- och skyddsavstånd ger en överblick över kommunens riskkällor och dess närhet och vilka konsekvenser dessa kan få för framtida exploatering. Syftet med detta är bland annat att undvika framtida konfliktområden. SSBF anser generellt att tillräckligt säkerhetsavstånd är den bästa riskreducerande åtgärden. SSBF ser nackdelar med riskhantering för varje enskild detaljplan. I en enskild detaljplan kan helheten vara svår att överblicka. Riskhantering med stor geografisk utbredning som exempelvis farligt godsleder, järnvägar och översvämningar är oftast strategiskt bättre att hantera i tidiga skeden, genom ÖP, FÖP eller program.
+
+SSBF anser det vara självklart att riskfrågor ingår i aktualitetsprövningen av översiktsplanen som ska genomföras varje mandatperiod.
+
+## Transport av farligt gods
+
+Enligt Länsstyrelsens riktlinjer ska riskhanteringsprocessen beaktas i framtagandet av detaljplaner inom 150 meters avstånd från farligt godsleder. Länsstyrelsen har även angivna rekommendationer avseende skyddsavstånd som riskreducerande åtgärd vilket kan vara vägledande i kommunens riskbedömning. Detta avstånd kan minskas om risknivån visas vara låg alternativt om kompletterande riskreducerande åtgärder införs. Observera att skyddsavstånd är generellt att föredra framför andra riskreducerande åtgärder. Länsstyrelsen rekommenderar en bebyggelsefri zon om minst 25 meter från vägkant/järnväg med transport av farligt gods, oavsett risknivå.
+
+## Riskfylld verksamhet
+
+### Bensinstationer
+
+Länsstyrelsens riktlinjer rekommenderar att riskhanteringsprocessen bör beaktas om avståndet från planerad exploatering understiger 100 meter från en bensinstations verksamhet. Transporter till bensinstationer behöver också beaktas.
+
+### Farlig verksamhet, SEVESO/2:4
+
+Norr om Vallentuna centrum är Paragon Nordic lokaliserad. Verksamheten hanterar farliga kemikalier i en sådan mängd att den omfattas av Seveso-lagstiftningen. Detta betyder att det finns risk för allvarliga kemikalieolyckor vid verksamheten och det är därför viktigt att verksamheten beaktas vid fysisk planering. Även Löts bergtäkt som hanterar explosiva varor omfattas av Sevesolagstiftningen. SSBF vill nämna att det i Regeringens proposition gällande genomförande av Seveso III-direktivet anges att det är nödvändigt att på lång sikt se till att upprätthålla tillräckliga säkerhetsavstånd mellan Seveso-verksamheter och byggnader för allmänheten.
+
+## Spårbunden trafik och urspårningsrisk
+
+---
+
+Järnväg/Roslagsbana (urspårningsrisk)
+
+Länsstyrelsen rekommenderar en bebyggelsefri zon om 25 meter från järnväg. Skyddsavståndet från järnväg avser bland annat risker förknippat med avåkningar samt urspårning. Detta avstånd kan minskas om risknivån visas vara låg alternativt om kompletterande riskreducerande åtgärder införs. Enligt ÖP planeras i framtiden bostäder som är stationsnära i förhållande till Roslagsbanan. Vidare finns planer att på sikt bygga ut Roslagsbanan mot Arlanda och Rimbo.
+
+## Suicidrisk
+
+Om det inom kommunen planeras för broar/spårområdesnära bebyggelse/högre byggnader med takterrasser tillgängliga för allmänheten vilka kan medföra risk för suicid, anser SSBF att frågan vad gäller suicidrisk bör lyftas under planarbetet. Åtgärder för att förhindra suicid kan exempelvis vara stängsel, hinder för hoppning, skyltar med nummer till hjälporganisationer med mera.
+
+## Möjlighet till räddningsinsatser
+
+SSBF:s möjligheter att genomföra räddningsinsatser är en samhällsviktig funktion och är i vissa fall dimensionerande vid projektering av byggnadstekniskt brandskydd enligt PBL.
+
+### Framkomlighet/Tillgänglighet
+
+Tätare bebyggelse planeras i Vallentunas tätorter. SSBF påpekar att brandförsvarrets möjligheter att utföra räddningsinsats bör beaktas. Med detta menas bl.a. framkomlighet och tillgänglighet för fordon och utrustning.
+
+### Brandvatten
+
+Kommunens VA-plan nämns i ÖP och enligt den kommer uppkomna behov att mötas genom utbyggnad. SSBF vill påpeka att dessa behov även gäller brandvatten. Utbyggnad av brandvatten ska naturligt följa utbyggnad av nya och befintliga områden.
+
+I dag finns områden med obefintlig eller begränsad tillgång till brandvatten från brandpostssystem. Kårstaområdet är ett exempel där exploateringsplaner finns och det befintliga brandvattensystemet inte uppfyller gängse praxis.
+
+## Underlag för yttrande
+
+Som underlag för yttrandet har SSBF tagit del av följande handlingar:
+
+- Översiktsplan 2040, Vallentuna kommun, Samrådshandling. Vallentuna kommun. Juni 2017.
+- Miljökonsekvens beskrivning, Samrådshandling, Översiktsplan 2040. Vallentuna kommun. 2017.
+
+**Kommentar:** I kommunen finns flera områden där risksituationen särskilt behöver uppmärksammas. Förslag om riskkarta noteras till framtida utvecklingsarbete. Planen anger endast bebyggelsefriaavstånd vid klargjorda behov, i övrigt krävs
+
+29
+
+---
+
+30
+
+fördjupade studier om en utvecklingsåtgärd är lämplig eller inte eller om särskilda åtgärder krävs. Rikshanteringsavstånd vad gäller farligt godsleder finns i planen. Planen kompletteras med att risksituationen ska bedömas vid åtgärder i närheten av miljöfarliga verksamheter.
+
+Övriga synpunkter noteras och i förekommande fall förutsätts fortsatt dialog.
+
+## 3.21 Granngruppen boende Olhamrakvarns väg samt Qvarntorps samfällighetsförening (-31)
+
+Granngruppen Boende Olhamrakvarns väg samt Qvarntorps samfällighetsförening vill härmed lämna in synpunkter på Översiktsplan 2040 Vallentuna kommun.
+
+Granngruppen (GG) fokuserar sina synpunkter på övergripande målsättningar samt hur Översiktsplan 2040 (ÖP) berör det område som är GG´s närmiljö:
+
+Angarnssjöängen, Okvistaområdet och Olhamrakvarnsväg, ett område som inte bara har betydelse för oss som boende och vår samfällighet utan i högsta grad är betydelsefullt som resurs för alla kommuninnevånare och besökande i Vallentuna. På sida 10 i ÖP påtalas att Vallentunas styrkor ska bevaras. Här framhålls att kulturell historia och stora naturvärden är Vallentunas starkaste varumärke och attraktionskraft. Vallentunabon värderar natur och hälsa högt. Det nya som ska planeras ska stärkas genom koppling till det gamla. GG instämmer här helt med ÖP och vill att tillämpningen av inriktningen ska vara konsekvent i det område som synpunkterna i detta dokument avser.
+
+På sida 22 i ÖP läggs riktlinjer upp för bebyggelseutveckling på landsbygden. Riktlinjerna slår i markerat stycke bl.a. vakt om natur- och kulturvärden, landskapsbild, friluftslivsanspråk samt att grundvatten ska skyddas mot föroreningar och överutnyttjande. Även här är GG enig med ÖP. Gulmarkerad text är extra aktuell för de synpunkter som följer.
+
+På sidan 25 i ÖP har området Okvista 5 markerats med gul zon som kommande verksamhetsområde. Det pågår ett detaljplanearbete i området med sikte på detta.
+
+### Synpunkt 1:
+
+Det är olämpligt att planera för ytterligare verksamheter i Okvista.
+
+Skäl till synpunkt 1 (skäl 1.1 till 1.4)
+
+## 1.1: Risken för miljöföroreningar:
+
+Okvista 5 ligger inom Angarnssjöängens tillrinningsområde så som åskådliggörs i ÖP sidan 47. Angarnssjöängen är ett Natura 2000-område med oerhört stora naturvärden som inte får äventyras. Det finns stora problem med de miljöfarliga utsläpp som finns i redan existerande verksamhetsområden i Okvista. Kommunen har inte kunnat få stopp på eller ens lyckats lokalisera utsläppen trots att de har pågått under lång tid. Många intilliggande fastigheter och natur riskerar att drabbas av förstört grundvatten redan i dagsläget. Det är oansvarigt av kommunen att planera för ytterligare verksamheter när befintliga problem i detta känsliga område inte är lösta.
+
+---
+
+Okvista 5 ligger alltför nära betydande naturmiljövärden. I ÖP sidan 57 illustreras Vallentuna kommuns gröna kilar. Det har också framkommit i kommunens utredningsmaterial inför detaljplaneläggning att det finns ett bestånd av grodor i området Okvista 5. Grodor är listade i listade i EU:s Art- och Habitatsdirektiv och det krävs dispens från Länsstyrelsen för att få tillstånd att förstöra bo- och reproduktionsplatser. I området finns även gott om kopparorm.
+
+I ÖP sidan 58 illustreras Riksintresse för naturvård. Okvista 5 ligger mycket nära intill Riksintresset Angarnssjöängen.
+
+## 1:2 Skönhets- Natur och Rekreationsvärden:
+
+GG finner att Okvista 5 även ligger mellan stora natur- och rekreationsområden. För att inte förstöra befintliga betydande värden skulle området i Okvista 5 behöva utformas med avskärmande zoner av natur och med stor estetisk hänsyn, något som övriga Okvista i helt saknar. I existerande Okvista har vi stora plåthangarer, vidsträckta sterila asfaltterade parkerings- och rangerytor, uppställning längs vägkanter av lastbilar, släp och containers, bilskrot och lämningar av skräp med okänd ägare. Buller och rök från verksamheter stör redan i dag. Att ställa höga estetiska krav och krav på att icke bedriva störande verksamheter på en tomtspekulant och sedan ansvarsfullt kontrollera att kraven efterlevs påverkar priset negativt och kostar att följa upp vilket knappast är förenligt med god kommunekonomi. Genom planområdet för Okvista 5 går Olhamra kvarns väg. Det är i ÖPs sida 62 markerat som enda kommunikationsled mellan de olika gröna värdekärnorna, IP och Roslagsleden. Idag är det en sammanhållen naturmiljö som skulle gå förlorad om Okvista 5 blir verklighet. Det rimmar illa med ÖP:s övergripande formuleringar.
+
+Okvista 5 ligger gränsande mot kommunikationsled med stort värde för friluftslivet där Olhamrakvarnsväg (gamla norrtäljevägen) utgör en betydande del av leden. Qvarntorps samfällighet står för vinterunderhåll på den östra del som utgör tillfart till boende.
+
+## 1:3 Kulturvärden:
+
+GG finner att området Okvista 5 ligger som en liten ö helt intill områden med mycket höga kulturhistoriska kvaliteter, ÖP sidan 52, till och med intill Riksintressen för kulturmiljö, ÖP sidan 54 Det kan inte vara välbetänkt att placera ett verksamhetsområde så nära så stora kulturvärden.
+
+## 1:4 Trafikkapaciteten är otillräcklig:
+
+Existerande trafikutredning som tagits fram inför detaljplanearbetet visar att ytterligare verksamheter i ett utbyggt Okvista 5 kommer att skapa betydande trafikproblem som endast kan lösas med dyra förbättringar av vägnätets kapacitet.
+
+Arningeleden och Angarnsvägen samt utfarterna därtill är redan i dag överbelastade. Risken är att kommunen starkt förvärrar trafiksituationen (genom att sälja tomter till nya verksamheter) utan att kunna styra trafikverkets prioriteringar gällande utbyggnad av vägnätet. För oss boende innebär detta att vi får en försämring jämfört med i dag och riskerar att hamna i kösituationer. Det riskerar att i dessa kösituationer bli omfattande tomgångskörning med stora mängd utsläpp av bilavgaser som följd.
+
+31
+
+---
+
+32
+
+# Synpunkt 2:
+
+Vägsträckningen av Olhamrakvarnsväg bör förbli oförändrad. Vägen redovisas i ÖP i samband med Naturmiljövärden och rekreationsvärden (se sidan 57, 59, 62 och 63). GG är helt enig med ÖP gällande att bevara vägen
+
+Skäl till synpunkt 2
+
+2.1: Vägsträckningen är den del av gamla Norrtäljevägen och är kulturhistoriskt intressant.
+
+2.2: Vägen fungerar utmärkt för friluftslivet i form av cykel-gång- och ryttartrafik eftersom den är avskärmad från den täta motortrafiken på Angarnsvägen.
+
+2:3 Vägen binder samman två attraktiva rekreationsområden - Vallentuna IP-området och Roslagsleden.
+
+2:4 Att förbinda trafik i Okvista 5 med övriga Okvista innebär att Olhamra kvarns väg, den i ÖP markerade vandringsleden, bryts av industrier. Något som helt förstör både vägen, som är gamla Norrtäljevägen men även möjlighet för de groddjur som lever i området för Okvista 5 att nå kvarnbäcken.
+
+Kommentar: För att främja det lokala näringslivet behöver kommunens reserv på planlagd mark för verksamhetsetablering öka. Behovet är som störst för små och medelstora verksamheter som är svårintegrerade i en blandad bebyggelse men som i övrigt inte verkar störande på omgivningen. En utvidgning av Okvista verksamhetsområde bedöms som särskilt efterfrågat med utgångspunkt från dess lokalisering i anslutning till befintligt verksamhetsområde i Vallentuna tätort. I pågående detaljplanearbete för Okvista 5 prövas lämpligheten av en utvidgning av verksamhetsområdet. Synpunkter att beakta i pågående arbete vidarebefordras till kommunens projektorganisation för Okvista 5.
+
+Karta om Roslagsleden i planen uppdateras för att visa korrekt sträckning.
+
+# 3.22 Össeby-Garns skytteförening (-32)
+
+Össeby-Garns skytteförening har tagit del av samrådshandlingarna för Översiktsplan 2040 och har följande synpunkter.
+
+Föreningen ser med tillfredsställelse att Össeby-Garns skjutbana (vid Karby industriområde) i enlighet med nu gällande översiktsplan 2010-2030 anges vara av regional betydelse. Då kommunen tidigare tagit ställning för att skjutbanan ska vara kvar på lång sikt, finns också en detaljplan som gäller för skjutbaneområdet.
+
+Särskilt vill vi erinra om att det är den enda skjutbanan som numera finns inom Vallentuna kommun, och som det därför är anledning att utveckla och anpassa för att uppfylla nuvarande och framtida miljöhänsyn. Av miljökonsekvensbeskrivningen borde det följaktligen framgå att anläggande av bullervallar är under planering;
+
+---
+
+marklov beviljades av kommunen 2017-07-04, diarienummer SHBG 2016-002118. När denna åtgärd är utförd kommer ljudnivåerna att minska väsentligt i förhållande till omgivningen.
+
+Kommentar: Informationen noteras och miljökonsekvensbeskrivningen uppdateras.
+
+## 3.23 Gunnar Forss AB (-33)
+
+Vi är verksamma i olika mark exploateringsprojekt bland dem Västra Roslags Näsby (har 14 000 kvadratmeter i kvarter 1).
+
+Tycker att Vallentuna har en enorm potential som vi är mycket intresserade av att följa.
+
+## Översiktsplan 2040
+
+Min åsikt är att hela översiktsplanen 2040 är beroende av om Roslagsbanan kommer att förlängas till Arlanda. Sker så förändras alla förutsättningar för Vallentunas utveckling. Trafikverket har gjort en studie på Roslagsbanans förlängning och funnit den samhällsekonomiskt och företags ekonomiskt lönsam. Denna utbyggnad går att finansiera även om så behövs via privata initiativ.
+
+Byggs denna förlängning är inte Vallentuna slutet på Stockholm, slutet på vägen. Vallentuna blir knutpunkt för flygtrafiken för större delen av nordöstra Stockholm. Utbyggnadsplanerna som finns i Arlandas omedelbara närhet innefattar väldigt många arbetsplatser. På grund av buller och andra hinder kan inte boende byggas i Arlandas närhet. Andra områden nära Arlanda är mindre attraktiva. Många av de arbetstillfällen som kommer att skapas är av service karaktär dvs. inte högavlönat. Rätt plan 2040 kommer att göra Vallentuna till den mest attraktiva bostadsorten för många av de som kommer att anställas på Arlanda.
+
+Förbindelsen mellan Vallentuna och Arlanda skapar en angöring för flygplatsen dvs. byte från transportmedlet bilar och bussar till spårbundet. Parkering och service kring denna angöring har betydande ekonomisk betydelse. De investeringar som görs kring Flygplatsstaden vid avfart från E4 till Arlanda visar tydligt på detta. Marknaden för denna typ av tjänst/produkt där man sannolikt väljer Vallentuna är Östra Stockholm från Danderyd upp till Norrtälje.
+
+Kring flygplatser byggs det alltfler hotell och övernattningsmöjligheter. Miljön är tråkig och störd av buller under i princip hela dygnet. Flygbolags personal bor idag i många fall i Stockholms innerstad för att erbjuda en bättre miljö än Arlanda området. De flesta flygplatser såsom Arlanda har inte bra restauranger eller annan miljö för att koppla av. Roslagsbanans förlängning ger en effektiv restid kring 10 minuter. Om turtätheten är hög är Vallentuna transport tekniskt lika bra som alla erbjudanden från Radisson och utåt Märsta. Restauranger och hotell kommer att har ekonomisk bärkraft.
+
+## Vilka möjligheter skapar då detta?
+
+Underlaget kommer att möjliggöra ett mycket attraktivt "Stationssamhälle". Det innebär att det bygger på resenärer som använder kollektivtrafik och som har ett
+
+---
+
+tillräckligt stort utbud av produkter/tjänster för att "stanna" i den lokala miljön. I ett sådant centrum finns kommersiella förutsättningar för ett utbud som är levande under hela dygnet. Bagerier, restauranger, hotell, kultur samsas med boende, kontor och "vanliga affärer". Sannolikt är inte det nuvarande centrumet en bra placering. Det finns för många verksamheter som inte bidrar till trivselfaktorn. Exempel på detta är kommunkontor, banker, mäkerier, vanliga kontor, parkeringsplatser i närmiljön osv. Ett större "stationssamhälle" inom det möjliga avståndet från nuvarande centrum kommer att ge ökar attraktivitet för båda delarna men besökarna och de boende med Arlanda som gemensam "kärna" har olika "trivsel behov".
+
+De stora naturvärden, fornminnen och fritidsaktiviteter som finns i Vallentuna kommer att få en ekonomisk möjlighet att ytterligare förstärkas. Ett kompakt stationssamhälle ger tillgänglighet till dessa värden även om man går eller cyklar.
+
+## 2040
+
+Jag anser att den nya översiktsplanens förutsättningar är helt olika beroende på om Roslagsbanan byggs ut till Arlanda eller. Innan denna fråga har fått ett svar bör man inte göra en plan för 2040. Med Roslagsbanan till Arlanda tror jag att kommunens befolkning kommer att fördubblas med en stark koncentration på Stationssamhället. Denna täta exploatering ger nya förutsättningar för utvecklingen kring dessa. I Stationssamhällets närhet bör volym naturvärden sparas, rekreationsområden skapas och kommunikationsvägar med gröna avenyer möjliggöras. Stockholms län behöver Arlanda förbindelsen och Vallentunas utveckling till en modern oas för nutidsmänniskan.
+
+&gt; Kommentar: En utbyggnad av Roslagsbanan till Arlanda är viktig både i ett lokalt och regionalt perspektiv. En utbyggnad av banan bedöms ligga några år framåt i tiden vilket medför att nästa översiktsplan kan fokusera än mer på frågan. För närvarande pågår en fördjupad planering för delar av Vallentuna tätort som direkt berörs. Planeringen syftar bl.a. att skapa förutsättningar för ökad genomförbarhet av en utbyggnad av Roslagsbanan. Se vidare fördjupad översiktsplan norra Vallentuna tätort och Lindholmen.
+
+## 3.24 Fahlin Förvaltning AB (-34)
+
+Företräder Backa Norr AB som äger fastigheterna Lövsättra 1:11 &amp; 1:12 i sydöstra delen av Vallentuna.
+
+Anser att utvecklingsområdet av blandad bebyggelse vid Gillinge ska utvidgas söderut att omfatta hela våra fastigheter.
+
+- I området kommer det sannolikt inom kort dras en kommunal avloppsledning som kommer kunna försörja detta område även om det utökas med fler bostäder.
+
+- Vi upplever att det finns ett stort intresse från boende i området att det utvecklas med fler bostäder.
+
+---
+
+-Infrastruktur i form av vägar och kommunala färdmedel är i hög omfattning redan fungerande med närheten till E18 och dess motorvägsbussar samt Täby kommuns kommande nya trafikplats i Arninge.
+
+-Vi har ett stort intresse av att utveckla våra fastigheter i samråd med kommunen. Familjens huvudsakliga näring är förvaltning av hyresfastigheter genom Fahlin Förvaltning AB och vi avser att bygga en hög andel hyresrätter ifall vi får möjligheten.
+
+**Kommentar:** I aktuellt område föreslås en utveckling av ett nytt samhälle som tar utgångspunkt i det goda kommunikationsläget intill E18. En större samlad utveckling i området förutsätts föregås av en fördjupad översiktsplan som i mer detalj avgör utvecklingsområdets avgränsning. Markanvändningskartan uppdateras för övrigt utifrån att tydliggöra att jordbruksmark ska värnas.
+
+## 3.25 Markims hembygdsförening (-35)
+
+Markims hembygdsförening uppskattar att berörda bereds möjlighet att lämna synpunkter på den nya översiktsplanen. Vi har med intresse tagit del av det material som tillhandahållits. Samtidigt som vi gläds åt den optimism som genomsyrar planen oroas vi i hög grad av den ändring av riktning för kommunen som planen ger uttryck för. Vi anser att kommunen borde bygga vidare på det kapital man redan har istället för att, med alltför vidlyftiga planer, riskera den attraktionskraft som idag finns i kommunen, dvs det lugn, den småskalighet och den närhet till natur och levande kulturlandskap som varit dess kännemärke.
+
+Särskilt oroade är vi över planerna kring Roslagsbanans eventuella förgrening till Arlanda och de kraftiga bostadsbyggnationer kring denna som ges uttryck för i FÖP Norra Vallentuna och Lindholmen. I Översiktsplanen anges att platsens specifika förutsättningar ska vara utgångspunkt vid utveckling, att det öppna jordbrukslandskapet är en ändlig resurs som lätt kan äventyras, att hållbar produktion och konsumtion förutsätter en levande landsbygd och att kommunen ska värna jord- och skogsbruk. Allt detta anser vi äventyras av kommunens planer kring eventuell förgrening av Roslagsbanan. Markims hembygdsförenings farhågor kring detta stöds av Miljökonsekvensbeskrivningen och, liksom det i denna noteras, oroas vi av att det inte redovisas någon plan på hur eventuella konflikter mellan olika intressenter i dessa svåra frågor ska hanteras.
+
+Markim är en levande jordbruksbygd där människor sedan förhistorisk tid brukat jorden. Det är en av anledningarna till att området fördes upp som en presumtiv kandidat till UNESCOs världsarvslista. Den levande jordbruksbygden är viktig och får inte förringas i betydelse. Lantbrukarna i Markim håller landskapet öppet och bidrar till den biologiska mångfalden samtidigt som de bedriver ett stadsnära jordbruk som medför närproducerat till storstadsregionen Stockholm. En tvärförbindelse till Arlanda genom den produktiva jordbruksmarken skulle kraftigt försvåra för socknens lantbrukare att driva ett rationellt jordbruk med de barriärer och den fragmentering som banan skulle medföra. Det är viktigt att beakta det kulturmiljöhistoriska landskapet i Markim vid framtagande av alternativa sträckningar av Roslagsbanans eventuella avgrening till Arlanda. På ett mycket tydligt sätt går det att utläsa de olika landskapsutnyttjandena som skiftat efter hur landhöjningen gått och havet dragit sig
+
+35
+
+---
+
+bort från slätten. Historien om Markim går att förstå genom att studera landskapet. Markim är av riksintresse för kulturmiljön, K74, och ska skyddas från påtaglig skada. Enligt Vallentuna kommuns Kulturmiljöprogram 2010 bör en framtida översyn av riksintressets utbredning inkludera gårdarnas utmarker, det vill säga skogen. Kulturmiljövården anser alltså att även utmarkerna har ett högt värde tillsammans med det öppna landskapet, då det hjälper till att berätta om det historiska landskapet. Transportbehov av olika slag måste lösas utan att grundläggande natur- och kulturvärden i landskapet skadas. Vår bestämda uppfattning är att för att behålla dessa värden i bygdens unika kulturhistoriska kvaliteter måste HELA området bevaras och får därmed inte naggas i kanten t ex genom att den önskade spårförbindelsen till Arlanda dras i de västra delarna av Markim. Varje ingrepp av sådan storleksordning skulle ge förödande skador i ett så känsligt område. Det kan inte nog betonas att en kulturhistorisk miljö utgörs av en helhet av jordbruk, bebyggelse, vägar och landskap. Förutom det ingrepp som själva järnvägs- eller vägbanken skulle utgöra, skulle de tillfartsvägar som skulle krävas för arbetsfordon under byggtiden göra obotliga skador på landskapet. Landskapet i riksintresseområdet Markim-Orkesta är en omistlig del av kulturarvet och kommunen måste ta konsekvenserna av detta och värna området från strukturella förändringar. Markims hembygdsförening anser att det är av yttersta vikt att infrastrukturfrågan i regionen får en lösning, särskilt med tanke på den kraftiga expansion av bostäder som planeras. Den tilltagande trafiken på Markims vägar ser vi från hembygdsföreningens sida som ett allt större bekymmer. Detta känsliga vägnät måste snarast avlastats från genomfartstrafik genom förbättrade och välfungerande förbindelser mellan Vallentuna och Upplands-Väsby för vidare anslutning till befintlig infrastruktur i form av E4 och norra stambanan.
+
+Markims hembygdsförening har på lokal nivå noterat hur viktigt området blivit för rekreation och kulturupplevelser. Under sommarhalvåret söker sig ökande skaror av cyklister till det slingrande vägnätet. Natur- och kulturintresserade njuter i ständigt ökande omfattning upplevelser i de levande kultur- och jordbruksmiljöerna, dessutom har vi i detta område ett mycket stort antal fritidsryttare som har stor glädje av en vacker och säker ridmiljö. Att på något sätt påverka detta område skulle göra att dess attraktionskraft försvann. Det traditionella och unika vägnätet i Markim är en attraktion i sig och nuvarande sträckningar får därför inte förändras. Detta slingrande vägnät är redan idag belastat av snabb genomfartstrafik, vilket innebär ett reellt hot mot möjligheterna till fortsatt drift av aktivt lantbruk och bibehållen levande landsbygd.
+
+Eftersom hembygdsföreningarna är de organisationer som företräder lokalbefolkningens samlade intressen är det ett krav för en hållbar utveckling av hela kommunen att hembygdsföreningarna hålls fortlöpande informerade om planerade förändringar rörande strukturella frågor. Det är av största vikt att både hembygdsföreningar och berörda markägare få möjlighet att påverka projekteringar och detaljplanering i mycket tidiga skeden. Endast lokalbefolkningen och i synnerhet berörda markägare har den detaljkunskap som krävs för att göra bedömningar om hur t ex möjligheten att driva jordbruksföretag eller att behålla ett fungerade landsbygdsliv påverkas av spår- och vägsträckningar, förändrad transportbelastning och annat som påverkar det dagliga livet.
+
+36
+
+---
+
+Att vårda och bevara denna unika levande oas som Markim utgör i den snabbt växande regionen borde vara en självklarhet och en plikt gentemot kommande generationer.
+
+Kommentar: Att bygga vidare på den attraktionskraft Vallentuna har idag är en viktig utgångspunkt för planen och efterföljande planering. Planering pågår att utveckla medborgardialogen i samhällsbyggnadsprocessen dels för att det ska bli enklare att påverka kommunens samhällsplanering och dels för att beslutsunderlagen ska vara så bra som möjligt.
+
+Förstudien för Roslagsbanan till Arlanda lyfter särskilt fram påverkan på kulturmiljön, jord och skogsbruket samt barriäreffekter som frågor som kräver särskild uppmärksamhet i den fortsatta planeringen samt att åtgärder ska tas fram i samråd med markägarna.
+
+Riksintresseområden för kulturmiljövården kan komma att ändras inom de närmaste åren. Länsstyrelsen har påbörjat en aktualisering av samtliga riksintressen för kulturmiljövården. Ett av flera kunskapsunderlag som förutsätts användas i aktualiseringsarbetet är kommunens kulturmiljöprogram.
+
+Markim-Orkesta nämns bland de platser i planen som bedöms ha särskilt goda förutsättningar för utvecklad besöksnäring.
+
+Trafikverket planerar att förbättra tvärförbindelsen med Upplands Väsby och Vallentuna genom en rätare dragning och med en ny trafikplats på E4. Preliminärt ska den nya förbättrade tvärförbindelsen vara helt klar år 2025. I övrigt avser kommunen att inom de närmaste åren studera framtidens övergripande transportinfrastrukturbehov till och från Vallentuna tätort.
+
+## 3.26 Össeby hembygdsförening (-36) och Angarngruppen (-44)
+
+Angarngruppen instämmer med Össeby hembygdsförenings synpunkter avseende Angarnssjöängen med närområden.
+
+### Skrivelse från Össeby hembygdsförening:
+
+Össeby hembygdsförening vill här ge sina synpunkter på förslaget till ny översiktsplan för Vallentuna kommun 2040. Då även förslag till fördjupad översiktsplan för Karby och Brottby är ute på remiss kommer många av våra mer specificerade synpunkter att tas upp i våra synpunkter på den senare planen.
+
+En översiktsplan blir med nödvändighet, som namnet säger, mycket översiktlig. Intrycket av när vi läst materialet är dock att det blivit lite väl mycket beskrivning och betydligt mindre idéer och förslag. Vi skulle önska att kommunen kunde ha uttryckt lite mer av vad politikerna i kommunen verkligen vill åstadkomma. I den form ÖP har nu, finns rätt lite att hänga upp synpunkter på.
+
+För vår del blir det alltså mycket fråga om detaljsynpunkter på formuleringar och inte alltid så mycket på faktiskt innehåll.
+
+37
+
+---
+
+38
+
+# Strandskydd, fritidsområden och företagsetableringar/företagsutveckling
+
+I stora delar av kommunen gäller utökat strandskydd på 300 meter. Kommunen uttrycker ingen åsikt om ifall detta är bra eller inte. Vi kan tänka oss att det i en del fall kan räcka med 100 meter. Vi hade velat se en diskussion om detta och var i så fall 300-metersgränsen ska följas strikt och var kommunen kunde tänka sig att medge bebyggelse eller andra verksamheter mellan 100 och 300 meter. Detta för att inte plötsligt hela 300-meterskyddet ska tas bort i anslutning till planläggning och bygglov.
+
+En punkt där kommunen är bestämd är, att de fritidsområden som nu finns i kommunen ska fortsätta att vara det. Inom föreningens område finns två större fritidsboendeområden, Garns-Ekskogen och Ålgeby. Vi har redan sett en omfattande permanentning inom dessa områden och tror inte att kommunen kan vrida klockan tillbaka, oberoende av om tillåtna bebyggelseytor är små. Därför skulle vi vilja se i planen hur kommunen tacklar frågan att fritidsområden kommer att bli till viss del permanentbebodda.
+
+Vi förstår att kommunen behöver företagsetableringar. Inom vårt område, som är socknarna Kärsta, Vada, Angarn och Össeby-Garn, behövs det också för att ge möjlighet till lokalt anknutna arbeten. I området söder om Karby säteri planeras ett större industriområde där vår enda synpunkt är att det sker på ett utformningsmässigt sätt, så att det blir ett positivt första intryck av vår ort för den som kommer E18 norrut.
+
+I planen föreslås att livsmedelsaffärer i de mindre orterna ska motsvara ICA Supermarket-storlek. Det tycker vi är en bra målsättning. Den butik som nu finns i Karby/Brottby är en ICA Nära. Ågarna vill utvidga, men det strandar på att de själva måste betala en ny detaljplan och ändå inte veta om man får utvidga. Här är vår tydliga åsikt att då det gäller samhällsviktiga funktioner ska kommunen kunna stå för plankostnaden. Risken finns att ICA Brottbyhallen kan komma att lägga ned i samband med generationsbyte och det skulle vara katastrofalt för bygden.
+
+Då det gäller etableringar kring Karby torg måste en utökning av ICA ges högsta prioritet framför andra verksamheter, marken på platsen är inte oändlig.
+
+# Kommunikationer
+
+Vi ser det som mycket positivt att kommunen säger sig vilja satsa på gång- och cykelvägar. Inom vårt område finns en stor brist på sådant, både i Karby/Brottby och längs det mer trafikerade vägnätet, som Vadavägen, Angarnsvägen och Gamla Norrtäljevägen mellan Angarn och Karby/Brottby trafikplats samt österut. Inom Karby/Brottby står behovet av en GC-väg mellan centrum och Össeby-Garns kyrka mycket högt på önskelistan.
+
+Vallentuna kommun är ju en av landets mest hästrika, med det finns knappast några ridvägar längs våra större vägar. Ett önskemål är att kommunen skriver in i planen, att där så är möjligt ska en ridstig anläggas parallellt med GC-vägarna.
+
+Då det håller kollektivtrafiken är det inte bara tvärförbindelsen Karby/Brottby – Vallentuna som behövs, utan även möjligheter att på ett enkelt sätt ta sig till Arninge och Täby Centrum. I Arninge finns ett utbud av affärer och tjänster som inte finns i
+
+---
+
+Vallentuna tätort och i Täby Centrum finns gymnasier och närsjukhus, liksom ett utökat sortiment av specialaffärer.
+
+Till skillnad från telebolagen vet vi att det i många delar av vårt område är problem med 3G- och 4G-funktioner, trots vad företagens täckningskartor säger. Det är alltså ett behov av förbättrade möjligheter i landsbygdsdelarna av vårt område.
+
+Planen diskuterar också framtida elförsörjning, men nämner inte med ett ord solel som en möjlighet. Vi vet att elbolagen inte är så förtjusta i lokalproducerad el eftersom det blir knepigare att justera för ett varierande eltilskott, men det finns trots detta mycket att vinna på en hyfsat miljövänlig energikälla. Vi anser att kommunen inte borde blunda för solel som energikälla, samt också för egen del satsa på anläggningar på kommunala byggnader som ligger rätt orienterade.
+
+## Rätt platsnamn måste användas
+
+I vårt svar på förslag till FÖP för Karby och Brottby kommer vi att fokusera på att det krävs en riktig användning av platsnamn för att vi som bor i bygden ska förstå vad kommunen avser. Vi ska här bara nämna det stora vattendrag som rinner genom vår kommun, Åkerströmmen. Här har planförfattaren inte riktigt greppat de lokalt använda namn som finns på detta vattendrag. "De största vattendragen är Brottbyån, Husaån, Helgöån, samt Storån". Det är olika namn på samma vattendrag. Dessutom ingår Holmbroån i den nordvästra delen av Kårsta socken i systemet. Helst skulle vi se att hela vattendraget om möjligt får ett gemensamt namn. Officiellt är namnet på hela systemet Åkerströmmen, men det används inte av boende, men det kanske räcker med att det konstateras att samtliga de åar som nämns i planen tillhör samma vattensystem (Gustaf Vasa använde namnet Helgeån - eller egentligen "Den heliga ån", dvs. det namn som fortfarande brukas förå en bit av ån uppströms Helgösjön).
+
+## Natur och naturvård
+
+Kommunen följer nationella riktlinjer för vattenkvalitet och skriver att samtliga ytvatten ska ha uppnått god (eller acceptabel) status om tio år. Angarngruppen har nyligen avslutat en provtagningsserie i inloppen till Angarnssjöängen och konstaterat att det blivit något bättre jämfört med slutet av 1980-talet, men att förändringen är så långsam att god status inte kommer att kunna uppnås på mycket lång sikt. Och det hänger naturligtvis ihop med den omgivande markanvändningen, som oftast är jordbruk eller bete. I Mellansveriges lerområden finns dessutom naturligt höga halter av olika närsalter och metallsalter som det inte går att lagstifta bort. Däremot torde inverkan av avlopp från bebyggelse vara rätt liten redan idag, speciellt i glesbygden. Vi vet inte om det är möjligt att skriva in i planen skriva att tidsgränsen 2027 inte kommer att vara tillräcklig, men att kommunen naturligtvis arbetar mot detta mål. En åtgärd som skulle föra i rätt riktning är att jordbruket får en inriktning mot ekologiskt bruk av marken. Kanske också ett önskemål att skriva in i planen?
+
+Planen beskriver också riksintressen inom vårt område. På en punkt behöver texten preciseras. På sid. 58 står "Naturbetesmarker finns runt Angarnssjöängen, Hacksta, Skesta hage...". Både Hacksta och Skesta hage ligger vid Angarnssjöängen, dessutom bör Midsommarberget läggas till. En lämplig text är kanske "Angarnssjöängen, med t.ex. Midsommarberget, Hacksta och Skesta hage,..."
+
+---
+
+Planen säger inget om kommunens ambitioner i ena eller andra riktningen när det gäller riksintressen, naturreservat och Natura 2000-områden. Vi efterlyser några rader om hur man avser att utveckla kommunen mot bakgrund av att annan lagstiftning än Plan- och bygglagen kommer in.
+
+Friluftsliv är en viktig faktor för många som bor i vår kommun. Garnsviken är ett viktigt lång-färdsskridskoståk för såväl kommuninnevånare som besökare från andra delar av länet. Av den anledningen skulle vilja se att kommunen satsar på att ploga sin del av Garnsviken. Som det är nu är Österåkers kommun ibland vänliga nog att ploga ända upp till Garnsvikens norra del. I en ÖP-text kan väl detta uttryckas som en intention att satsa på att hålla banor för långfärdsskridskoåkning öppna.
+
+Föreningen vill påpeka att det i referenslistan finns "Naturkatalog för Vallentuna kommun" från 2006. Denna naturkatalog var snabbt ihopkommen som, om vi mins rätt, ett praktikarbete under en sommar. Katalogen är gammal, ofullständig och delvis föråldrad (inte minst efter-som gammalt textmaterial återanvändes). Under 2010-2012 utfördes på kommunens uppdrag ett stort arbete med en grönstrukturplan, som avsågs bli en parallell till kulturmiljöplanen - som ju senare utvecklats till kulturmiljöwebben. Grönstrukturplanen består av tre delar med WSP som genomförare. Rapporterna lämnades in till kommunen från november 2011 till januari 2012. Materialet har av någon anledning blivit liggande och vi anser att mycket värdefull information ligger begravd i dessa rapporter, information som även vi i hembygdsföreningen skulle ha nytta av att känna till. Det finns enligt vår uppfattning ett stort behov av att denna grönplan kan återaktiveras.
+
+## Kulturhistoriska värden
+
+I planen framhålls att "Kulturhistoriska värden ska ses som en resurs". Vi kan helt och hållet skriva under på det, men vi saknar en diskussion om kulturhistoriskt värdefulla byggnader i kommunen. I Karby/Brottby finns, förutom våra egna byggnader Kvarnstugan och Brottby kvarn, även Brottby torp och fd mejeriet - som bägge ligger nära bensinstationen Bilisten och är kvarvarande vittnesmål om tidigare verksamheter på platsen. Bägge kan rustas upp till mindre mötesplatser som så väl behövs i trakten.
+
+## Oklarheter i texten
+
+Det finns en text som återkommer även i FÖPen: "Vada vid Karby", sid. 52 i ÖP. Vad avser detta? Vada ligger 2 km från Karby och är en av socknarna i gamla Össeby kommun. Avses socknen Vada eller bebyggelsen vid Vadaby? I alla händelser ligger Vada inte "vid" Karby.
+
+En miss i kartan, sid. 47: I texten på sid. 46 nämns Vretaån, men den finns inte med på kartan.
+
+Kommentar: Planen ställningstagande vad gäller strandskydd är inte angivet i meter utan strändernas värden är utgångspunkt vid planering och prövning.
+
+Aktuella fritidsboendeområden är till viss del permanentbebodda idag. Planens ställningstagande att områdena ska behålla sin fritidsboendeprägel innebär främst att kommunen inte kommer att vara aktiv i t.ex. att genom detaljplan öka byggrätter, verka för etablering av offentlig service i närområdet eller förbättrad
+
+40
+
+---
+
+kollektivtrafik som är vanliga önskemål i boendesammanhang. Dvs. planen innebär en tydlighet från kommunens sida i frågor om förväntningar.
+
+Planläggning av eller för samhällsviktiga funktioner är prioriterade för kommunen.
+
+Synpunkt om att kommunen bör satsa på solcelle för kommunala byggnader som ligger rätt orienterade noteras.
+
+Text om vattendrag i plan uppdateras enligt synpunkt.
+
+Planen kommer att kompletteras med en Blåplan för kommunen som kommer att utgå från gällande miljökvalitetsnormer och vilka insatser som kommer att krävas för att dessa uppfylls.
+
+Beskrivning om Angarnssjöängen i plan uppdateras. I övrigt kompletteras och förtydligas planen om ambitioner av utveckling av naturreservat eller riksintressen.
+
+Synpunkt om plogning av Garnsviken vidarebefordras till kommunens fritidsförvaltning.
+
+Kommunens naturkatalog är en sammanställning, ögonblicksbild, av befintlig kunskap. Värdet som underlag för översiktsplanen är en den ger en överblick. Vid behov kommer en ny sammanställning att göras. Planen uppdateras med att grönstrukturplanen är färdigställd. I grönstrukturplanen finns bl.a. vidare inriktning för ridleder som bör vara separerade från t.ex. cykelvägar.
+
+## 3.27 Privatpersoner (-37 &amp; -38 snarlika synpunkter)
+
+Den goda jorden, söder om väg 268 vid Lilla Mörby har brukats i mer än ett tusen år. Detta är en dalgång med en gammal sjöbotten mellan Vallentunasjön och sjön Sormen, den användes som vinterväg under medeltiden. Senare års utbyggnad av Lilla Mörby till lastbilsåkeri och hotell är en olycka ur landskapsmiljösynpunkt varför en ombyggnad av själva fastigheten vore en välgärning.
+
+Med den inledningen motsätter vi oss bostadsbyggande på åkermark runt Lilla Mörby
+
+För "naturmiljö" samt "kulturmiljö och Landskapsbild" - blir det stora negativa konsekvenser.
+
+## Det ekologiska spridningssambandet i grönstråket
+
+Inom en av Storstockholms gröna kilar, Rösjökilen, blir det en rejäl barriäreffekt om den tänkta utbyggnaden vid Lilla Mörby blir av. Paras detta sedan med den ökade trafiken samt omläggningen av väg 268 och det markerade utredningsområdet, så blir effekten katastrofal. Idag (oktober) har vi flera flockar med hundratals gäss och andra flyttfåglar som rastar och flygtränar i sjön och dalgången 152 fågelarter har observerats.
+
+En utbyggnad här skulle bli ytterligare ett steg i den negativa utvecklingen för bilden av Vallentuna som gammal kulturbygd och en grön kommun.
+
+41
+
+---
+
+42
+
+# En utslagen lantbrukssektor i centralorten
+
+Lantbruket runt Vallentuna tätort består av ett antal lantbruksföretag som gör en heroisk naturvårdsinsats trots det tätortsnära läget. Vi har i detta område en mjölkbonde kvar. Han har redan tvingats slakta ut kor på grund av bristande vall skörd i år, parat med vallar som förlorats som en följd av kommunens och Norrvattens åtgärder (socio dukten, byte av huvudvattenledning, mm).
+
+Enligt planförslaget ska jordbruksmark "med hög beskaffenhet" endast tas i anspråk för bebyggelse om en bebyggelseutveckling på platsen har en stor samhällsbetydelse och det inte finns något annat alternativ och vilket överensstämmer enligt miljöbalken 3 kapitel 4§.
+
+Planförslagets utveckling vid Lilla Mörby kan antas medföra risk för avsevärda negativa konsekvenser för jordbruket i dalgången. Normalt kan ett kompensatoriskt handlande tänkas men i detta fall synes möjligheterna vara begränsade varför vi föreslår en utredning av alternativen.
+
+# Översiktsplanhistoria
+
+Lilla Mörbys fastighet markerades i Översiktsplan 2010 - 2030 som ett utredningsområde och omfattade då fastigheten Mörby 2:9. I översiktsplan 2040 har området tredubblats med mycket allvarliga långsiktiga effekter på den omgivande landsbygden och kulturmiljön.
+
+# Riksintresset Skålhamravägen K77 och Naturreservatet Björkby - Kyrkviken
+
+Ängsmarkerna i hela dalgången Vallentunasjön - Sormen samt Naturreservatet Björkby - Kyrkviken betas idag av hästar från två hästgårdar med vardera ett femtontal hästar, Hindras den driften av begränsningar av gödselspridning, hästallergener mm så blir betena obetade och måste röjas för hand varje år eller växa igen. En del skogsmark längs Skålhamravägen betas av kor så länge det nu bär sig att vara mjölkbonde i Vallentuna. Vad händer om utbyggnaden av Lilla Mörby kommer till stånd, jo dalgången växer sakta igen och vi kan glömma allt vad som heter riksintressen och naturreservat.
+
+# Trafik
+
+Ytterligare en utfart på Väsbyvägen från ett tätbyggt bostadsområde innebär en väsentlig förändring av trafikflödet. En hastighetsbegränsning till 50 km/tim borde redan idag övervägas för att begränsa olycksriskerna, eventuellt kan också rondeller övervägas vid Kyrkans/Kvarnbadets infart, Teknikvägen, Lilla Mörby och Tallhammarsvägen.
+
+# Vallentunasjön förskräcker
+
+Under åren 1950 till 1970 släppte Vallentuna centralort ut sitt avloppsvatten efter mekanisk rening direkt i Vallentuna sjön. Under åren 1970 till 2013 skedde omfattande bräddningar, från 2014 saknas uppgifterna från de ansvariga företagen. De misstagen har visat sig mycket svåra att reparera och vi förutsätter att Vallentuna kommer att bygga ny avloppstunnel mot Käppala för att hantera alla nya bostäder.
+
+---
+
+Kommentar: Föreslaget markerat utvecklingsområde tas bort på karta och i text.
+
+## 3.28 Naturskyddsföreningen Vallentuna (-39)
+
+Vallentuna Naturskyddsförening har tagit del av Översiktsplan 2040 och tillhörande Miljökonsekvensbeskrivning och vill lämna följande synpunkter.
+
+På de inledande sidorna skriver man om olika riktningar där man bl.a. vill bevara kommunens styrkor med sin rika historia och värdefulla natur samt hälsa och mod att gå före. Man vill också berika samspellet mellan bebyggelse, natur, kultur och rekreation. Det är bra att man vill att det ska vara lätt att ta sig ut i naturen från bostaden, både för befintliga bostäder och nya. Det skulle vara intressant att veta hur man tänker att det ska vara lätt för befintlig bebyggelse när man bygger bort den tätortsnära skogen.
+
+Vi håller med Miljökonsekvensbeskrivningen, MKB, som menar att man inte anger hur avvägning mellan bevarande av natur och exploatering ska göras. Vi förstår inte heller vad man menar med att man ska ge tydliga gränser mellan bebyggelse och övrigt landskap. Vi ser hellre att man tänker tvärtom, att det inte ska vara några tydliga gränser mellan natur och tätort. Naturen behövs i tätorten. Vi ser positivt på kommunens intention att bygga bostäder i kollektivtrafiknära områden.
+
+Om Vallentuna nu ska ha "mod att gå före" bör man även göra det inom området natur, hälsa, miljövård etc. Ämnen som just nu även har bra kommunikativt värde och kan verka attraktivt för potentiella nya kommuninvånare.
+
+Det är en brist att en grönstrukturplan inte ingår i underlagsmaterialet till öp:n. Det förslag till grönstrukturplan som togs fram 2013 var en omfattande och detaljerad utredning av värdefull natur i kommunen. Denna borde ha använts som underlagsmaterial.
+
+## Natur, rekreation och hälsa
+
+Idag är det tyvärr fler och fler som bränner ut sig och en orsak kan vara att bra miljöer för återhämtning minskar. Vistelse i skogen minskar stressnivåerna rejält. Därför är det viktigt med tillgång till tätortsnära skog/natur, både mindre dungare inom bostadsområden och större sammanhängande i dess närhet. Hur tänker man sig att förtäta bebyggelsen utan att dessa viktiga lungor försvinner? Det är viktigt att natur/grönområden lämnas kvar inom bebyggelsen, för att de boende och miljön ska må bra.
+
+De nuvarande rekreationsområden som finns i kommunen är väldigt få. På sid 60 skriver man att människor ska ha god tillgång till grönområden för rekreation. Vidare skriver man att man inte ska försämra möjligheten för rekreation. På samma sida skriver man vidare just att det är den närliggande naturen som besöks mest. Man skriver också om hälsa. För att leva upp till detta är viktigt att bevara större sammanhängande naturområden i närheten av tätorten, för att säkra naturtillgång för alla boende.
+
+---
+
+Därmed anser Naturskyddsföreningen att det är viktigt att bevara Kristinebergsskogen så mycket som möjligt i sin helhet. Den skogen används idag flitigt för promenader, svamp- och bärplockning, löpning m.m. I Gävsjöområdet bör alltså även Kristinebergsskogen ingå, för att säkra nära natur för de boende i södra delen av kommunen.
+
+Ett område till bör anges för utveckling av rekreation och det är Molnbyskogen, som dessutom ingår i Rösjökilen vilken bör skyddas från exploatering.
+
+Naturskyddsföreningen anser att det som kallas "gröna samband" och "grön värdekärna" är otydligt formulerat, vad kommer man att göra inom och kring dessa områden för att stärka sambanden, den biologiska mångfalden etc. För spridning av växter och djur men även för att människor ska kunna ta sig ut i skogen lätt behövs breda gröna korridorer. En trädkantad gångväg kommer inte vara tillräckligt. Man behöver också bevara stora sammanhängande skogar nära de befintliga bostäderna.
+
+Tärnholm nämns i öp, men håller på att växa igen med sly och många ängsarter har minskat rejält.
+
+Att bygga ut Roslagsbanan till Arlanda skulle komma att påverka spridningskorridoren i Molbyskogen mycket negativt.
+
+Vi håller med MKB:n om att känsliga områden ska skyddas, inte bara så långt som möjligt. Till exempel måste våtmarker bevaras eftersom de är viktiga för fördröjning och rening av dagvatten. Vi tycker att man ska ta bort orden "så långt som möjligt". Våtmarker är värdefulla och viktiga naturtyper för den biologiska mångfalden då bl.a. många viktiga insekter är knutna till våtmarken. Dessvärre minskar antalet våtmarker i Sverige och de har därför särskilt uppmärksammats i lagstiftningen.
+
+Om Frösunda förtätas finns, enligt MKB, risk att Ekebysjön drabbas negativt.
+
+Vi hoppas också att kommunen tar del av den forskning som finns just kring det positiva sambandet mellan hälsa och tillgång till natur nära där människor bor. Exempelvis Märit Jansson vid SLU har ett flertal publikationer: https://www.slu.se/cv/marit-jansson/
+
+## Klimat
+
+På sidan 42 nämns skogar och annan växtlighets förmåga att ta upp koldioxid. Därför viktigt att skogar bevaras och grönområden hyser en mångfald av växter i olika nivåer.
+
+Handel och kontor bör integreras med flerbostadshus, dvs med lokaler i bottenvåningen. Skapar mer levande områden vilket finns planer på i centrum enligt sid 26.
+
+Eftersom konsumtion bör minska och framförallt bilberoende bör inga större köpcentrum planeras, som lockar till bilåkande.
+
+MKB:n påpekar risk för betydande negativa effekter särskilt för naturmiljöer och kulturmiljöer. Till exempel anger MKB:n risk för att biotopskyddade områden tas i anspråk. Vilka åtgärder avser kommunen att genomföra för att minska negativa miljökonsekvenser?
+
+44
+
+---
+
+Vidare måste:
+
+- Alla detaljplaner bör föregås av en detaljerad naturinventering. Vid större detaljplaner ska miljökonsekvensbeskrivningar genomföras.
+- Större fokus bör ges på den tätortsnära naturen. En inventering av sådana områden bör utföras och särskilt viktiga tätortsnära skogar ska pekas ut i öp:n.
+- Vallentuna kommun är med i organisationer för hållbart byggande, till exempel Citylab. Vi förväntar oss att kommunen i sitt planeringsarbete arbetar efter de principer man ställer upp där.
+
+Kommentar: Kommunen växer utifrån att efterfrågan att bo och leva i Vallentuna är stor. Föreslagna utvecklingsområden utgår framför allt från att det finns eller planeras en effektiv kollektivtrafikförsörjning i närområdet. En konsekvens blir samtidigt att delar av den tätortsnära naturen tas i anspråk för ny bebyggelse. Ambitionen är dock att tillgängligheten till naturen ska förbättras med utveckling av gång- och cykelvägar samt i möjligaste mån säkerställa att parker och andra grönområden som är viktiga i en tätort hänger samman och gör det möjligt att lätt röra sig mellan grönområdena och vidare ut i landskapet.
+
+Att den tätare bebyggelsen ska ges tydligare gränser mot landskapet handlar framför allt om ett förhållningssätt. Till exempel inom ett visst geografiskt område ska bebyggelse dominera över natur medan i ett annat ska natur dominera över bebyggelse.
+
+Kommunen har sedan hösten 2017 en grönstrukturplan och de olika planerna är samordnade. Planen uppdateras avseende detta.
+
+Övriga synpunkter kommer att beaktas i den fortsatta planeringen.
+
+## 3.29 Vallentuna församling (-40)
+
+Vallentuna församling har fått möjlighet att yttra sig över Översiktsplan 2040 för Vallentuna kommun.
+
+Vi har studerat de områden som berör Vallentuna församling och vill lämna följande synpunkter:
+
+Sid 16: "Utredningsområde verksamheter" söder om Väsbyvägen: Församlingen ser kritiskt på all form av verksamheter nära naturen och den kyrkliga miljön.
+
+Sid 18; Församlingen ser positivt på utveckling av blandad bebyggelse runt Frösunda stationsområde.
+
+Sid 28; Behov av begravningsplats 2040. Däremot saknar vi markreservat för en "katastrofkyrkogård".
+
+Övriga synpunkter: Vi anser att kartorna kan vara svårlästa, bl.a. pga att ingen av kyrkorna är utsatta. Däremot är vi glada över de fina bilderna på flera av våra kyrkor med omgivningar.
+
+---
+
+46
+
+Kommentar: Föreslaget markerat utvecklingsområde söder om Väsbyvägen tas bort på karta och i text.
+
+En markreservation avseende en katastrofkyrkogård i planen är i kommunens perspektiv inte motiverad. Om ett lokalt hanterings-/förvaringsbehov av döda uppstår som vida överstiger de befintliga resurserna så får detta praktiskt hanteras ad hoc i relation till rådande situation och för tillfället tillgängliga resurser. Det är inte orimligt att anta att det kommer handla om en temporär lösning snarare än som sista viloplats på en planerad och förberedd katastrofkyrkogård.
+
+## 3.30 Lilla Mörby Utveckling AB (-41)
+
+### Sammanfattning av synpunkter från Lilla Mörby Utveckling AB
+
+Ägaren till Vallentuna Mörby 2:9 är positiv till att fastigheten och omkringliggande område (fastighet som ägs av kommunen) definieras som "blandad bebyggelse" i förslaget till Översiktsplan 2040. Lilla Mörby Utveckling AB är positiv till ökad exploatering av området. Företaget har tagit fram en vision (se bilaga) för sin fastighet och omkringliggande område för blandad bebyggelse, kommunal och kommersiell service samt gång- och cykelväg över väg 268. En exploatering av området är en ökad möjlighet att uppfylla Vallentunas åtagande i Sverigeförhandlingen.
+
+### Allmänt om Översiktsplan 2040
+
+Förslaget till översiktsplan är mycket väl genomarbetat och utgör en tydlig, utförlig och lättläst framtida inriktning för utvecklingen av kommunen. Vallentuna kommun avser att genomföra några strategier för den fysiska planeringen. Dessa är i sammanfattning:
+
+- Utveckla attraktiva livsmiljöer med en mängd av boendemiljöer.
+- Berika samspelet mellan bebyggelse, natur, kultur och rekreation med tydliga gränser mellan den täta bebyggelsen och natur-kulturandskap med en väl genomtänkt tillgänglig grönstruktur från bostad till det omgivande landskapet.
+- Samordna bebyggelse och kollektivtrafik bland annat genom att öka exploateringsgraden i anslutning till Roslagsbanans stationer och förbättrad stombusstrafik via väg 268 som också förkortar resavstånden.
+- Tätare bebyggelse med småstadskvaliteter där nya centrala områden ska få fler flerbostadshus, stadsradhus och flerfamiljsvillor. Ny miljö- och energiteknik skapar möjlighet att bygga tätt, tryggt och grönt. Verksamheter som inte passar in i bostadsmiljöer flyttas längre ut i kommunen.
+- Vallentuna (gäller Lindholmen också) tätort bör förena, blanda och koppla bebyggelse för att uppnå en sammanhållen stadskärna.
+- En fördjupad översiktsplan ska tas fram för västra Vallentuna tätort för utveckling av bostäder och verksamhet. En viktig utgångspunkt är att
+
+---
+
+bebyggelseområdet knyts samman sinsemellan, med centrum och med rekreationsstrukturen. Barriären som utgörs av väg 268 behöver minskas.
+
+## Synpunkter från Lilla Mörby Utveckling AB
+
+Viktiga förändrade förutsättningar för förslaget till Översiktsplan 2040
+
+Den regionala Stockholmsförhandlingen och den nationella Sverigeförhandlingen har genomförts för att bygga ut och att rusta upp infrastruktur. Det innebär för Vallentuna att kommunen har åtagit sig att 5 650 stationsnära bostäder vid Roslagsbanan ska byggas till och med år 2035. Med stationsnära bostäder har menats att bostäderna ska ligga ungefärigen högst ca 1 500 meter från närmaste station med goda förbindelser till stationen i form av tät matarbusstrafik och goda gång- och cykelvägar.
+
+## Positivt med ökad exploatering
+
+I förslaget till samråd för Översiktsplan 2040 definieras området väster om Vallentuna centrum och söder om väg 268 fram till flygfältet "blandad bebyggelse" (ungefär som den blå ringen). Inom ramen för detta område äger Lilla Mörby Utveckling AB fastigheten Vallentuna Mörby 2:9. Fastigheten har idag småskalig industri- och verkstadsverksamhet samt några bostäder.
+
+![img-0.jpeg](img-0.jpeg)
+
+Lilla Mörby Utveckling AB är positiv till förslaget att definiera fastigheten Vallentuna Mörby 2:9 som "blandad bebyggelse". Det utgör en viktig grundförutsättning för en ökad exploatering av området. Det är också positivt att förslaget innebär att området runt Vallentuna Mörby 2:9 även det definieras som "blandad bebyggelse".
+
+## Vision för Lilla Mörby med kringliggande fastighet
+
+Lilla Mörby Utveckling AB har skapat en vision för fastigheten Vallentuna Mörby 2:9 och kringliggande fastighet som ägs av kommunen (se bild ovan med området
+
+---
+
+inringat). I visionen finns flera olika utvecklingsalternativ, där det gemensamma är att exploatera området med tät och grön bebyggelsestruktur. Utvecklingsalternativen innebär blandade bostäder med kommunal och kommersiell service, gång- och cykelväg över väg 268. Tillgängligheten till rekreationsområdet söder och väster om området ökar och nås via gång- och cykelväg genom det tilltänkta området. Detta uppfyller det som förslagen till Översiktsplan 2040 anger om ökad tillgänglighet till grönstrukturen och att minska barriären som idag utgörs av väg 268 med flera andra viktiga utgångspunkter.
+
+Visionen (ny version) bifogas som bilaga.
+
+Kommentar: Föreslaget markerat utvecklingsområde söder om väg 268 tas bort på karta och i text. Se andra inkomna synpunkter angående aktuellt område.
+
+## 3.31 Centerpartiet Vallentuna kommun (-42)
+
+Vi genomförde 2017-09-04 ett öppet medlemsmöte om översiktsplanen, där framkom följande synpunkter.
+
+Kommentar: Centerpartiet är representerade i flera beslutande kommunala organ som ansvarar för frågor som flera av synpunkter berör.
+
+## Trafik och kollektivtrafik
+
+8.000 pendlar in till Vallentuna kommun och 16.000 ut från kommunen varje dag till sina arbetsplatser. Den allt mer infarktliknande trafiksituationen kring Vallentuna gör det än viktigare att vi skapar förutsättningar för fler företagare på hemmaplan.
+
+Kommunen behöver fler rondeller på exempelvis Arningevägen och Väsbyvägen för att få säkrare trafikplatser och dämpa farterna, och behöver skapa utrymme för detta i översiktsplanen.
+
+Alla bor inte nära Roslagsbanan. De bör kunna dra nytta av den moderniserade Roslagsbanan bättre än hittills. Tex ringlinjebussar skulle kunna förbinda dessa områden med närmsta station. Planering för detta krävs således i översiktsplanen.
+
+De pendlarbussar som finns bör gå tätare och med mer regelbundna turer hela dygnet – inte bara "enkelriktat" för de som jobbar dagtid i stan – exempelvis gäller detta buss 608.
+
+För boende i Karby-Brottby är inte Roslagsbanan det "nav" som omnämns i översiktsplanen. Den snabbaste förbindelse in till Stockholm är via E18. Det är därför viktigt att kommunen arbetar för att det blir lättare att ta sig till E18 från detta område, och att utveckla bättre kommunikationer i framtiden. Centerpartiet ser också ett behov av att förbättra förbindelse och kontakt med Österåker framförallt från detta område. Förbindelsen via Karby/Brottby till Vallentuna behöver också stärkas.
+
+Busshållplatserna måste bli säkrare och många hållplatser på landsbygden i kommunen är i dag direkt farliga.
+
+48
+
+---
+
+49
+
+Kommentar: Noteras för framtida dialog med landstinget. Planen möjliggör både utbyggnad av cirkulationsplatser och hållplatser.
+
+## Cykel
+
+På sidan 32 i förslaget till Översiktsplan bör målsättningen ska vara att cykeltrafiken mellan tätorterna ska förbättras, denna cykelinfrastruktur bör ej vara i blandtrafik.
+
+Inriktningen för cykeltrafiken bör vara att när nya områden byggs binda ihop inte bara bilvägar utan även gång- och cykelvägar. Gång- och cykelvägar och trafiksäkerheten för skolbarn, gångare- och cyklister är viktigt att tänka på i alla nya områden som byggs.
+
+Kommentar: Planen möjliggör utbyggnad av cykelvägar som efterfrågas.
+
+## Roslagsbanan till Arlanda
+
+Vilken sträckning som kan bli aktuell och var stationslägen kan komma att ligga längs en eventuell Roslagsbanesträckning till Arlanda, är en viktig diskussion där medborgardialoger bör användas för att fler ska vara informerade. Centerpartiet efterlyser en konsekvensanalys för att de som bor, har mark och verksamhet vid eventuella dragningar. Centerpartiet vill att kommunen verkar för att de som bor, har mark och verksamhet längs den planerade dragningen också får nytta av den, som en slags kompensation som kan minska förlusterna för markinträng och olägenheter med buller mm.
+
+Vi vill till exempel att Markimborna antingen får nära till en station eller en bra förbindelse till en station. En ökad tillgänglighet och minskade restider gynnar dem som bor där idag och ger även en nytta i form av miljövinst i ett samhällsperspektiv med mindre bilåkande.
+
+Kommentar: Pågående planering av Roslagsbanan till Arlanda innefattar en ny station.
+
+## Tätortsnära natur
+
+När Vallentuna expanderar är det viktigt att vi noga avväger olika intressen mot varandra.
+
+Vi vill att kommunen fortsatt värnar om våra Gröna kilar, och att vi värnar om att invånarna i vår kommun snabbt kan komma ut i vår natur som ökar välbefinnandet och är en av anledningarna till att många vill bo i här.
+
+Det är svårt att se var de "gröna lungorna" finns inplanerade i planen för Centrum. Ytor som t.ex. Snapptunafältet med flera blir allt viktigare att bevara.
+
+Ett området söder om Väsbyvägen har i detta förslag till översiktsplan förändrats från utredningsområde till ett utvecklingsområde. Området har också blivit större. Detta område är just ett sådant område där ett grönt samband är viktigt och kommunen måste göra en noga avvägning bland annat för naturreservatets fortlevnad, för människors rekreation, för kulturhistoriska intressen och för den biologiska mångfalden.
+
+---
+
+50
+
+Kommentar: Grönområden inom tätort ingår i huvudsak inom "blandad bebyggelse". De grönområden som redovisas inom tätort är antigen naturreservat eller är så pass viktiga för hela eller delar av tätorten att de redovisas.
+
+Föreslaget markerat utvecklingsområde söder om Väsbyvägen tas bort i karta och text.
+
+## Bebyggelseutveckling på landsbygden
+
+Centerpartiet efterlyser färre restriktioner att bygga på landsbygden även utanför "befintlig bebyggelse". Rutan "Riktlinjer för bebyggelseutveckling utanför tätort" på sidan 22 är en mycket bra utveckling jämfört med föregående översiktsplan. Det skulle dock kunna göras ännu tydligare t ex med några exempel på vad som borde vara tillåtet och vad som inte borde vara tillåtet. Vi önskar tydligare markanvändningskarta med olika kultur-, naturvärden mm inritat så att man kan se vad som riskerar att förloras i och med planerad bebyggelse och markreservat för infrastruktur. En idé skulle vara att göra förstoringar av kritiska områden.
+
+Dock ger texten "smärre komplettering på tomter större än 2000 kvm" rutan på sid 22 fel signaler och bidrar till en onödig regel. Vi önskar istället att kommunens översiktsplan är tydligt med de faktorer som utgör hinder för att bygga på landsbygden i Vallentuna kommun, t.ex. natur-, kultur- och riksintressen.
+
+Detta i syfte att medborgaren själv kan göra en rimlig bedömning kring om ett byggprojekt kommer att tillåtas eller ej. Detta är särskilt viktigt ur ett rättssäkerhetsperspektiv då kommunen beslutat att ta betalt även för avslagna förhandsbesked och bygglov.
+
+För att bevara och även utveckla och visa upp den historiska strukturen skulle man t.ex. kunna tillåta bebyggelse på äldre torpplatser.
+
+Kommentar: Se kommentar under synpunkt "Näringsliv och att leva på landsbygden i vår kommun".
+
+## Jord- och skogsbruk
+
+Bostadsbyggande och utveckling måste sättas i relation till den areella näringen och andra miljö- och samhällsekonomiska aspekter.
+
+På sidan 17 under rubriken jord- och skogsbruk finns ett stycke om planeringsinriktning.
+
+Centerpartiet anser att det är viktigt att Vallentuna kommun försäkrar sig om att följa Miljöbalken, vad gäller hur vi använder jordbruksmark till andra ändamål. Därför är formuleringen viktig. Enligt miljöbalken får brukningsvärd jordbruksmark endast tas i anspråk för bebyggelse om det behövs för att tillgodose väsentliga samhällsintressen och ingen annan mark kan användas för att tillgodose behovet på ett tillfredsställande sätt.
+
+Kommentar: Planen förtydligas och uppdateras utifrån att jordbruksmark ska värnas.
+
+---
+
+51
+
+# Näringsliv och att leva på landsbygden i vår kommun
+
+Vallentuna behöver ett landsbygdsprogram. Centerpartiet vill lägga till det bland kommande dokument som ska kopplas till översiktsplanen. I den vill vi att kommunen utarbetar en strategi för utvecklingen i kommunens landsbygd. Vi vill att Vallentuna kommun har en sammanhållen lands- och stadsutveckling för att utveckla det näringsliv, kvaliteteter, utbud och upplevelser som landsbygden kan erbjuda. Det handlar om utveckling av bebyggelse, kollektivtrafik, service, arbetsplatser och näringsliv som till exempel produktion av mat och energi, turist-, kultur-, fritids- och hästnäring. Vi ser gärna att detta arbete sker i samarbete med medborgarna i vår landsbygd, föreningar, och näringsliv eller i ett inrättat landsbygdsråd.
+
+Även på landsbygden är det viktigt att kunna utveckla sitt företagande. Det kan vara än viktigare för företagare på landsbygden att kunna stå på fler ben för att stärka sin egen konkurrenskraft. Det kan handla om allt från att utveckla sitt jordbruk till att också satsa på turism och upplevelseaktiviteter. Eller att utveckla gröna jobb, som kan bidra till en hållbar utveckling.
+
+Kommentar: Planen kompletteras med att landsbygdsprogram ska tas fram. Landsbygdsprogrammet föreslås vara en plattform och utgångspunkt för det övergripande arbetet med landsbygdsfrågor i kommunen innehållande en övergripande strategi och handlingsplan för utveckling i kommunens landsbygd. Programmet föreslås omfatta konkretiserade riktlinjer för bebyggelseutveckling såväl som frågor om utveckling av kollektivtrafik, service, arbetsplatser och näringsliv som till exempel produktion av mat och energi, turist-, kultur-, fritids- och hästnäring.
+
+# Räddningstjänst
+
+Vi efterlyser en karta med utryckningstider för räddningstjänsten liknande den i nu gällande översiktsplan. Lag (2003:778) om skydd mot olyckor, 1 kap., 3 § anger att "Räddningstjänsten skall planeras och organiseras så att räddningsinsatserna kan påbörjas inom godtagbar tid och genomföras på ett effektivt sätt." Därför är det rimligt att både kommun och medborgare kan se beräknade utryckningstider i olika delar av kommunen. Detta är särskilt viktigt för de som bor på landsbygden och som geografiskt bor längre ifrån räddningstjänsten.
+
+Kommentar: Räddningstjänsten har önskat att karta med utryckningstider inte redovisas i planen utifrån att tidigare sådana har uppfattats som absoluta medan den faktiska utryckningstiden varierar och beror på fler faktorer än geografisk avstånd från station. Räddningstjänsten är dock delaktig i den fysiska planeringen.
+
+# Kultur, bibliotek och kulturskola
+
+På sid 29 nämns några av kommunens kulturaktiviteter. Centerpartiet tycker också att vi ska visa upp några av de viktiga ideella kulturarrangörerna som finns i vår kommun.
+
+Kommentar: Avsnittet kultur kompletteras med biograf Saga.
+
+# Vallentuna tätort och Lindholmen
+
+---
+
+På sid 15 under rubriken Utgångspunkter stycke 5, vill Centerpartiet förtydliga att det som står i stycke 3 även gäller Lindholmen, eftersom detta är ett område som expanderat fort och kommer fortsätta växa. Samma förutsättningar ska gälla i Lindholmen som i de sk tätorten. "Det ska vara lätt att förflytta sig från Lindholmen mellan arbete, hem, fritidsaktiviteter och serviceanläggningar, till andra kommunalelar och till ny bebyggelse som planeras söder om Lindholmen. Att gå, cykla och åka kollektivt ska vara naturliga val."
+
+Södra Lindholmen med fler boende, behöver anslutning till befintlig gång- och cykelväg öster om Roslagsbanan vid Hällsta. Det är en för lång omväg att ta sig till stationen för att komma över järnvägen och redan idag går många inkl barn över rälsen här.
+
+Lindholmen behöver anslutas inte bara med bilvägar utan också med nya gång och cykelvägar till nya områden söderut, Slumsta och Molnby.
+
+Eftersom det varit en stor inflyttning (som kommer fortsätta), avstängningar av Roslagsbanan, bygge av Molnbydepån har både biltrafiken och den tunga trafiken ökat på Lindholmsvägen. Åtgärder måste sättas in för att stärka vägen och minska risker för olyckor.
+
+**Kommentar:** Planen uppdateras avseende utgångspunkter för Vallentuna tätort och Lindholmen. Mer detaljerade riktlinjer kommer att finnas i den fördjupade översiktsplan som innefattar Lindholmen som även kommer att innehålla konkretiserade reservat för väg och gång- och cykelväg.
+
+# Kårsta/Ekskogen
+
+Eftersom planen sträcker sig så långt fram i tiden som till 2040 tycker vi det är viktigt att ha en långsiktig plan för utvecklingen i Kårsta och Ekskogen. Under denna mandatperiod har processer för fördjupade översiktsplaner gjorts för Norra Vallentuna/Lindholmen och Karby/Brottby och två detaljplaner i Kårsta kommer bidra till ortens utveckling. Efter 2021 finns möjlighet till 30-minuterstrafik på Roslagsbanan vilket ökar attraktiviteten att bosätta sig i Kårsta. Nästa steg är att göra en fördjupad översiktsplan för Kårsta/Ekskogen.
+
+I de detaljplaner som nu arbetas fram kan utrymme för kommunal verksamhet/service finnas men i framtiden behöver man även titta på område för utveckling av verksamheter i Kårsta. I den eller i en fördjupad översiktsplan kan en rad behov ses över, som andra former av boenden än de som traditionellt finns i Kårsta och Ekskogen och t.ex. studentbostäder.
+
+Vi önskar att kommunen i kontakter med rikspolitiken och Länsstyrelsen fortsätter påverka kring möjligheten att förändra reglerna om strandskydd – t.ex. längs med ån i Kårsta.
+
+I kontakterna med Roslagsvatten, och Norrvatten måste kommunen fortsätta arbeta för en framtida god vattenförsörjning i hela Kårsta/Ekskogen.
+
+**Kommentar:** Planen uppdateras med att en fördjupad översiktsplan för Kårsta och Ekskogen ska tas fram.
+
+---
+
+53
+
+# Brottby/Kårsta med omnejd
+
+I arbetet med den fördjupade översiktsplanen i Karby/Brottby har vikten av plats för service och affärer kring Brottby/Karby betonats. Detta bör också tas i beaktande i översiktsplanen.
+
+Kollektivtrafiken är viktigt för boende i detta område, och det har nämnts ovan i denna skrivelse.
+
+Kommentar: Den fördjupade översiktsplanen för Karby och Brottby omfattar båda orterna som helhet varför utgångspunkter hänvisas till den planen.
+
+## 3.32 Privatperson (-43)
+
+Vi är nya i Vallentuna och ska bosätta oss i Gillinge. Vi förstår att Gillinge är ett fokus område i Vallentuna och fördjupad översiktplan kommer att komma. Bara under en kort tid i området så har vi märkt att extremt många lastbilar kör bokstavligen över E18 till gamla Norrtäljevägen för att sedan komma på E18. Detta är förfärligt med tanke miljösynpunkt då lastbilarna kör ungefär 2km längre via denna omväg och många lastbilar kör väldigt fort vilket skapar otrygghet för de som bor eller befinner sig i området. Vi är medvetna om att ramper ska byggas för att leda den tunga trafiken från Gillinge krossen direkt på E18, men enligt trafikverket är det inte bestämt när detta ska ske. Vi vill belysa detta och hoppas kommunen kan motivera trafikverket att bygga ramperna inom den närmaste tiden.
+
+Kommentar: Synpunkten noteras. Ramperna är dock en del av ny trafikplats i Rosenkälla i Österåker som i sin tur beror på bebyggelseutveckling i Rosenkälla och i det sammanhanget har Vallentuna kommun ingen större påverkans möjlighet.
+
+## 3.33 LRF Vallentuna (-45)
+
+LRF Vallentuna har fått information om att Vallentuna kommun uppvaktats med ett förslag till stadsplaneutveckling av konsultföretaget Urban minds som anlitats av byggföretagen Exter Fastigheter AB/Skeppsholms fastigheter AB.
+
+Förslaget inbegriper exploatering av fastigheten lilla Mörby samt ca 20 hektar omkringliggande god åkermark som idag ägs och utarrenderas av kommunen för jordbruksproduktion.
+
+LRF Mälardalen vill lämna följande synpunkter som bör beaktas innan man överväger att exploatera värdefull åkermark i kommunen. Det bör finnas möjligheter till andra lösningar för ökad bebyggelse i Vallentuna kommun. Se några av våra förslag längre ned.
+
+# Hänsyn till produktionsmark i framtidens biobaserade samhälle
+
+I alltfler sammanhang som berör framtiden och dessmöjligheter kommer nu framtidsspaningar som visar att de gröna näringarna och landsbygden i Sverige kommer att få ökad betydelse i ett livsmedels- och energiförsörjningsperspektiv. En
+
+---
+
+lokalt ökad produktion av livsmedel och bioenergi bidrar också till att binda kol och bidra till mindre koldioxidutsläpp.
+
+LRF menar att följande sakförhållanden kommer tvinga fram en ökad biomassa och livsmedelsproduktion i Sverige och Världen:
+
+Världens och Sveriges befolkning ökar starkt till år 2050
+
+Möjligheterna att importera livsmedel minskar i framtiden till år 2050
+
+Övergång sker till förnybara energikällor och biobaserade material
+
+Sverige kommer med en sådan utveckling att behöva producera betydligt mer biomassa inom skogs- och jordbruk men behöver också öka vår livsmedelsproduktion som idag nått nivån "all-time low" vad gäller vår nationella självförsörjningsgrad som gått från ca 85-90% under 1990-tal till att idag enbart stå för ca 50%. Om möjligheten att importera livsmedel gradvis minskar pga en ökande världsbefolkning och ett allt varmare klimat vaknar insikten om att vi i Sverige behöver producera mer mat och mer biobaserad energi och produkter.
+
+Med denna bakgrund har Sveriges riksdag tagit beslut om en nationell livsmedelsstrategi samtidigt som en nationell skogsstrategi är under utveckling. Syftet är givetvis att öka volym och värde av Sveriges produktion av mat, energi, och biobaserade produkter när den billiga fossila oljan successivt tar slut – fasas ut på grund av sinande tillgångar. Här medverkar också miljöhänsyn om mindre CO2 utsläpp som driver på en utveckling mot mer förnybar energi. Oavsett det framtida samhälle vi lever i år 2050 så förutspår de flesta framtidsscenarier att efterfrågan på livsmedel och biomassa kommer att öka rejält både i ett globalt och regionalt perspektiv.
+
+Sverige har i en internationell jämförelse relativt goda förutsättningar att möta en omställning mot ett mer biobaserat och högteknologiskt samhälle. Denna utveckling kommer dock inte att ske av sig självt den bygger på att det finns långsiktiga spelregler för att enskilda markägare-företagare förmår att förvalta och öka jord- och skogsbrukets produktion samtidigt som natur- och miljöhänsyn respekteras. Det bygger också på att teknik används som är mer marksnål och prioriterar de gröna näringarnas produktionsförutsättningar. Detta är nödvändigt för att underlätta övergången till det biobaserade samhälle som vi inom en snar framtid befinner oss i.
+
+Med bakgrunden ovan lämnar LRF Mälardalen några åtgärdsförslag med bakgrund i Urban minds förslag om att exploatera jordbruksmark i omedelbar närhet till en befintlig väg:
+
+LRF Vallentuna är helt emot att bebygga god åkermark med hänsyn till den livsmedelsstrategi som Sveriges riksdag antagit år 2017 som innebär att Sverige ska öka sin självförsörjningsgrad av livsmedel
+
+En bebyggelseexploatering enligt Urban minds förslag skulle leda till stora trafikrisker när man får anta att en betydande pendlartrafik ska ut från området "Mörby trädgårdsstad" till väg 268
+
+54
+
+---
+
+I föreslår att bebyggelse i Vallentuna kommun inriktar sig emot förtätning av mer centrala delar av Vallentuna jämfört med vad som tex sker i Uppsala kommun.
+
+Kommentar: Merparten av föreslagen bebyggelseutveckling föreslås i närheten av Roslagsbanan stationer. Föreslaget utvecklingsområde söder om Väsbyvägen tas bort i karta och text. Generellt förtydligas planen att jordbruksmark ska värnas.
+
+## 3.34 Kulturnämnden (-47)
+
+Kulturnämnden anser att översiktsplanen är ett bra och strategiskt dokument som möjliggör att Vallentuna kommun kan växa. För att översiktsplanen ska vara ett dokument som kan ge vägledning och stöd i kommunens fortsatta arbete anser kulturnämnden följande synpunkter tas med i det kommande arbetet med den slutgiltiga översiktsplanen.
+
+- Att utveckla besöksnäringen är positivt. En av utgångspunkterna för detta är att ett forum för besöksnäring bildas i kommunen, där representanter från samtliga berörda förvaltningar ingår, så som Kulturförvaltningen, Fritidsförvaltningen med flera.
+- Att platsens specifika förutsättningar ska vara utgångspunkt vid utvecklingen av kommunen är mycket positivt. Här finns möjlighet att i ett tidigt skede inte bara använda det underlag som finns, ex. kulturmiljöwebben och kulturmiljöprogrammet, utan även tidigt ta fram utredningar och underlag samt ha en dialog och att ta hjälp av kommunantikvarien.
+- Att avsnittet om skog och jordbruksmark måste ges ett mer genomarbetat innehåll och konsekvensanalys.
+- Att miljökonsekvensbeskrivningens synpunkter avseende kulturmiljövärden beaktas i det kommande arbetet.
+- Att skyddsinstrument av olika slag bör användas för att skydda kulturhistoriskt värdefulla och intressanta miljöer och byggnader. Bygga bort eller exploatera kulturmiljöers kulturhistoriska värden bör kompenseras.
+- Att en avgrening mot Arlanda kan komma att skada höga kulturhistoriska värden, beroende på vilken sträckning den får.
+- Att ett nytt verksamhetsområde intill Skålhamravägen kan komma att påverka de kulturhistoriska värdena och besöksmålet Runriket negativt. Redan utpekade områden för verksamhet och industri inom kommunen bör användas och utvecklas.
+
+Kommentar: Planen kompletteras med att vid behov ska kulturhistoriska utredningar och landskapsbildsanalyser genomföras. Avsnitt om skog- och jordbruksmark uppdateras. Text om utredningsområde verksamheter kompletteras med att området omfattas om besöksmålet Runriket. Övriga synpunkter och förslag noteras.
+
+## 3.35 Länsstyrelsen m.fl. (-48)
+
+Vallentuna kommun har översänt ett förslag till översiktsplan 2040 till Länsstyrelsen för samråd enligt 3 kap. 9 § plan- och bygglagen (2010:900), PBL.
+
+---
+
+56
+
+# Inledning
+
+Stockholms län växer stadigt och ett bostadsbyggande som håller hög takt, volym och kvalitet är viktigt för länets utveckling. Översiktsplaneringen är en viktig grund för detta arbete.
+
+En aktuell översiktsplan med tydliga ställningstaganden underlättar och möjliggör för en kortare och smidigare detaljplaneprocess. Därför är översiktsplanen ett värdefullt verktyg för att nå målsättningar om ett ökat bostadsbyggande. Samtidigt är också översiktsplanen av stor betydelse för att möjliggöra en hållbar utveckling utifrån ekologiska, sociala och ekonomiska aspekter, som i sig är viktiga faktorer för att uppnå de nationella målen.
+
+I förslaget till översiktsplan redogör kommunen för sin utvecklingsinriktning fram till år 2040. Under denna tid finns förslag till ett flertal utvecklingsområden och en ökad bostadsutveckling i kommunen generellt. Intentioner finns att bevara de värden som anses vara kommunens styrkor idag, bl.a. beträffande kultur- och naturmiljö.
+
+# Länsstyrelsens uppdrag
+
+Det är främst under samrådsskedet som Länsstyrelsen särskilt ska ta tillvara och samordna statens intressen, tillhandahålla underlag för kommunens bedömningar och ge råd i fråga om allmänna intressen enligt 2 kap. PBL. Länsstyrelsen ska vidare särskilt verka för att riksintressen enligt miljöbalken tillgodoses, att miljökvalitetsnormer enligt miljöbalken följs, att mellankommunala frågor samordnas på ett lämpligt sätt och att bebyggelse inte blir olämplig med hänsyn till människors hälsa eller säkerhet eller till risken för olyckor, översvämning eller erosion.
+
+I rollen att samordna statens intressen har Länsstyrelsen inhämtat synpunkter på förslaget till översiktsplan från bland annat Försvarsmakten, Luftfartsverket och Trafikverket Region Stockholm. Inkomna yttranden bifogas.
+
+Samrådsyttrandet är uppdelat i fyra delar.
+
+- Övergripande synpunkter.
+
+- Synpunkter på statliga och mellankommunala intressen. Detta är kopplat till de frågor Länsstyrelsen har att bevaka i utställningsskedet enligt 3 kap. 16 § PBL.
+
+- Länsstyrelsens råd angående allmänna intressen. Här framförs synpunkter och information som är att betrakta som råd i fråga om allmänna intressen enligt 3 kap. 10 § punkt 2 PBL.
+
+- Övrigt.
+
+# Övergripande synpunkter
+
+Länsstyrelsen stödjer kommunens ambition att skapa förutsättningar för ett utökat bostadsbyggande i kollektivtrafiknära lägen. Det planerade bostadstillskottet är ett viktigt bidrag till såväl kommunens som länets bostadsmarknad.
+
+---
+
+För en hållbar långsiktig planering är det också positivt att det i översiktsplanen finns ambitioner att platsens specifika förutsättningar ska vara utgångspunkt vid utveckling. Bl.a. har det angetts att såväl jordbruksmark som kulturmiljövärden är viktiga aspekter att beakta i utvecklingen.
+
+I det fortsatta arbetet med planförslaget behöver dock strategier och åtgärder för föreslagen markanvändning tydligare beskrivas och presenteras. Detta är en genomgående aspekt i planförslaget som berör bland annat möjligheten att följa miljökvalitetsnormer för vatten samt hänsyn till kulturmiljö, jordbruksmark, naturvärden, miljö, hälsa-, säkerhet- och riskhänsyn i samhällsplaneringen. Genom att ta fram underlag och strategier på en övergripande nivå underlättas kommande detaljplanearbete. Kommunen behöver även föra ett resonemang kring hur översiktsplaneringen hanteras vidare om förgreningen av Roslagsbanan till Arlanda inte kommer till stånd samt integrera den sociala aspekten av planeringen i förslaget.
+
+## Länsstyrelsens synpunkter på statliga och mellankommunala intressen
+
+Synpunkterna i detta avsnitt kopplar till de frågor som Länsstyrelsen även har att bevaka i utställningsskedet enligt 3 kap. 16 § PBL.
+
+## Riksintressen
+
+I Länsstyrelsens externa geodatakatalog finns en lista med riksintressen som Länsstyrelsen anser är de senaste versionerna.
+
+Denna finns här
+
+https://ext-geodatakatalog.lansstyrelsen.se/GeodataKatalogen/?query=676530671_GeodataKatalogen_AdvancedUser_resultset&amp;loc=sv
+
+Riksintresse för totalförsvaret enligt 3 kap. 9 § miljöbalken
+
+Länsstyrelsen har mottagit Försvarsmaktens yttrande över översiktsplanen och synpunkter kring riksintresse för totalförsvaret delges nedan. Vallentuna kommun har i stort beskrivit och återgett de riksintressen som finns för totalförsvarets militära del i kommunen.
+
+Försvarsmaktens riksintressen i Lugnet-Kilen i Vada socken är beskrivet på ett fullgott sätt i text, riksintresset kan med fördel även redovisas i kartan för att tydliggöra inom vilket område remisser ska skickas till Försvarsmakten. Vallentuna kommun berörs också av ett riksintresse i de västra delarna av kommunen vilket behöver redovisas på samma sätt som det i Lugnet-Kilen. Vallentuna kommun berörs också av influensområdet från väderradar på Arlanda, vilket bör beskrivas i översiktsplanen.
+
+Under rubriken riksintresse för kommunikationer enligt 3 kap. 8 § miljöbalken, luftfart, finns ytterligare information om Försvarsmakten som remissinstans gällande höga byggnader.
+
+Kommentar: Planen kompletteras med redovisning av Försvarsmaktens intressen i karta och i text.
+
+---
+
+Riksintresse för kulturmiljövården enligt 3 kap. 6 § miljöbalken
+
+Översiktsplanen beskriver kortfattat i text och på karta kommunens fem riksintressen och anger tre förhållningssätt kring hur dessa ska beaktas. Ett av förhållningssätten handlar om att värdebärande element i landskapet inte får försvinna. Länsstyrelsen anser att det bör tydliggöras att det är riksintressenas utpekade uttryck som utgör grunden till förståelsen och upplevelsen av den kulturhistoriska berättelse som riksintresset avser förmedla.
+
+En redovisning av hur utvecklingsområdena berör Vallentunas riksintressen är nödvändig och att det i översiktsplanen behöver anges hur Vallentunas riksintressen ska tillgodoses för att kunna uppfylla lagens intentioner. Ett konkret exempel på ett fall där redovisning bör lämnas är planerad bebyggelse söder om väg 268 väster om centrala Vallentuna och som berör riksintresset Skålhamravägen. Området behandlas även i detta yttrande utifrån ett fornlämningsperspektiv samt utifrån intresset av att bevara jordbruksmark.
+
+Kommentar: Planen uppdateras i syfte att tydliggöra att det är riksintressenas utpekade uttryck som utgör grunden till förståelsen och upplevelsen av den kulturhistoriska berättelse som riksintresset avser att förmedla.
+
+Föreslaget utvecklingsområde söder om väg 268 tas bort i karta och text.
+
+Riksintresse för friluftslivet enligt 3 kap. 6 § miljöbalken
+
+Riksintresse för friluftsliv Rösjön-Vallentunasjön-Rönninge by har inte redovisats i översiktsplanen, och Länsstyrelsen noterar att kommunen avser att uppdatera utställningshandlingen med detta.
+
+Den redovisning som görs av riksintresse för friluftslivet, Tärnanområdet i samrådshandlingen stämmer inte överens med den senaste avgränsning som Naturvårdsverket gjort av riksintresset och behöver därför uppdateras till utställningsskedet. I Länsstyrelsens externa GIS-skikt, som hänvisas till ovan i text, finns den senaste beslutade avgränsningen.
+
+Kommentar: Planen uppdateras enligt synpunkt.
+
+Riksintresse för luftfarten enligt 3 kap 8 § miljöbalken, vägledning
+
+Höga byggnader och objekt kan påverka och påverkas av samhällsviktiga funktioner och anläggningar av betydelse för riksintresse kommunikation (luftfart) och/eller riksintresse totalförsvaret. Länsstyrelsen har tagit fram ett faktablad med anledning av vad som gäller för detaljplanering kring höga byggnader och objekt med hänsyn till detta. Faktabladet bifogas som bilaga, och finns tillgängligt på Länsstyrelsens hemsida. Det handlar bl.a. om med vem, när och hur kommunen behöver samråda med Swedavia, Luftfartsverket, Trafikverket och Försvarsmakten. Bl.a. ska detaljplaner som medger byggnader och objekt med en totalhöjd över 20 meter remitteras till Luftfartsverket, Trafikverket och berörda flygplatser.
+
+Med fördel kan kommunen i översiktsplanen återge vad som gäller, för att underlätta tillkommande bebyggelse i kommunen.
+
+58
+
+---
+
+Kommentar: Planen förtydligas enligt synpunkt.
+
+## Mellankommunala frågor
+
+Som anges i översiktsplanen så har Nordostkommunerna Norrtälje, Österåker, Vaxholm, Täby, Danderyd och Vallentuna en gemensam vision för att utveckla regiondelen. Tidsperspektivet sträcker sig till år 2040 och med en utblick till år 2050. Länsstyrelsen förutsätter därmed att eventuella synpunkter på översiktsplanen från omkringliggande kommuner kommer att tas om hand och lösas.
+
+Kommentar: Kommunen har ett konstruktivt samarbete med grannkommunerna dels inom Stockholm nordost och dels inom Arlandaregionen.
+
+## Miljökvalitetsnormer för vatten
+
+Det är positivt att kommunen avser att ta fram en blåplan. Om denna kommer att tas fram före eller efter att översiktsplanen antas framgår dock inte, vilket kan förtydligas.
+
+Av översiktsplanen behöver det framgå hur kommunen avser att följa miljökvalitetsnormerna, MKN. Mark- och vattenanvändning kan komma att påverka möjligheten att uppnå MKN i berörda vattenförekomster. Kommunen har tydligt beskrivit miljöproblem och troliga orsaker till dessa för de vattendrag och sjöar som finns i kommunen. Genom att analysera markanvändningskartan och de miljöproblem som råder i utpekade vattenförekomster, kan kommunen med hjälp av text och kartor visa vattenområden som måste beaktas särskilt vid planering och byggande. Det gäller de yt- och grundvatten, vattenförekomsterna, vars status har klassificerats och för vilka Vattenmyndigheten i Norra Östersjöns vattendistrikt har beslutat om miljökvalitetsnormer som ska nås.
+
+## Vägledning
+
+Länsstyrelsen vill informera om att EU-domstolen i en dom som meddelades den 1 juli 2015, mål C461/13, gällande hur miljökvalitetsnormerna enligt ramdirektivet för vatten ska tolkas och tillämpas i tillståndsärenden, funnit att medlemsstaterna är skyldiga att inte meddela tillstånd till verksamheter som riskerar att orsaka en försämring av status eller när uppnående av god ekologisk ytvattenstatus äventyras.
+
+I domen tolkar EU-domstolen också begreppet försämring i ramdirektivet för vatten såsom en försämring till en lägre klass för en enskild kvalitetsfaktor, även om inte den sammanvägda statusen försämras. Vidare anser domstolen att för en kvalitetsfaktor som redan befinner sig i lägsta klass innebär varje försämring av denna en försämring av status.
+
+En slutsats av domen är att det i planärenden kommer ställas större krav på att visa att planförslaget inte riskerar att leda till en försämring av status eller att det äventyrar att miljökvalitetsnormer för vatten kan följas.
+
+Kommentar: Planen förtydligas och uppdateras utifrån synpunkter.
+
+## Hälsa och säkerhet samt risk för olyckor, översvämning eller erosion
+
+---
+
+60
+
+# Förorenad mark
+
+I MKBn framgår det felaktigt att det finns 160 kända områden i kommunen som är förorenade, medan rätt antal anges i samrådshandlingen, cirka 230 områden. En platsspecifik bedömning har gjorts för 52 av områdena och en riskklass har tilldelats enligt MIFO fas-1, Metodik för Inventering av Förorenade Områden.
+
+Länsstyrelsen understryker betydelsen av att föroreningssituationer utreds i ett tidigt skede vid planering av ny bebyggelse. Detta för att säkerställa att marken är lämplig för planerad användning så att människors hälsa inte påverkas negativt.
+
+Tillsynsmyndigheten bör också involveras så tidigt som möjligt i planprocessen. Kommunen bör även i översiktsplanen ange hur bygglov utanför detaljplanelagt område ska hanteras om det kan beröra ett eventuellt förorenat område.
+
+Länsstyrelsen anser vidare att kommunen bör redogöra för hur ett förändrat klimat kan komma att påverka spridning av och exponering för föroreningar.
+
+I MKBn anges att Länsstyrelsen påpekat att det i översiktsplanen är viktigt att inte exploatera tidigare förorenad mark med exempelvis förskolor. Detta måste på något sätt blivit ett missförstånd och vi vill förtydliga att detta inte är en fråga som bör behandlas i översiktsplanen alls. Enligt vår bedömning, så finns inga begränsningar i markanvändning, om tillräckliga saneringsåtgärder har genomförts.
+
+Kommentar: MKBn uppdateras avseende antal kända förorenade områden och missförstånd att undvika att exploatering tidigare förorenad mark med exempelvis förskolor. Planen kompletteras med vikten av förorenad mark undersökas i ett tidigt skede i planeringen. Planen har särskilda riktlinjer för bebyggelseutveckling utanför tätort som bl.a. anger att ny bebyggelse ska lokaliseras med hänsyn till risker. I övrigt gäller samma förfarande och ansvar som anges som planeringsinriktning.
+
+# Trafik- och verksamhetsbuller
+
+Under planeringsinriktning anges att avsteg från riktvärden kan göras för buller utomhus i centrala eller kollektivtrafiknära lägen. Kommunen får gärna förtydliga om detta är kommunens eget ställningstagande. Det bör även framgå om detta avser både trafik- och verksamhetsbuller eller endast trafikbuller, då riktvärden och regelverk skiljer sig åt gällande dessa. Länsstyrelsen vill också förtydliga att innan 2015, tillämpades avsteg i planeringen för trafikbuller, medan förordning (2015:216) om trafikbuller vid bostadsbyggnader istället ger en generös möjlighet för ny bebyggelse i bullerutsatta lägen, där bebyggelseutformningen i stället kan anpassas efter trafikbuller på platsen. Dock är det en fördel om kommunen själva vill främja en god boendemiljö, genom att eftersträva lägre riktvärden, eftersom buller är en faktor som i stor utsträckning visat sig påverka människors hälsa.
+
+Kommentar: Aktuell planeringsinriktning tas bort.
+
+# Risk och säkerhet
+
+Farligt gods och farliga verksamheter
+
+Översiktsplanen redovisar vilka vägar som utgör transportleder för farligt gods. Utgångspunkter för planeringen tas upp och uppges vara att undvika leder för farligt
+
+---
+
+gods i tätorterna. Länsstyrelsen vill dock förtydliga att så länge som det finns verksamheter som generar farligt gods i tätorterna behövs trafiklederna. Det framgår att det finns en Seveso-anläggning i kommunen, som också klassas som farlig verksamhet. Denna ligger i centrala Vallentuna, vilket dock inte framgår. Sammanhanget mellan verksamheter och vägar skulle bli tydligare om målpunkter för farligt gods, t.ex. drivmedelstationer och farliga verksamheter, redovisades. En karta som visar verksamheterna tillsammans med rekommenderade vägar för farligt gods skulle vara positivt.
+
+Kommunens planeringsinriktning intill leder för farligt gods uppges vara ett utredningsavstånd på 150 meter och strävan efter ett bebyggelsefritt avstånd på 25 meter. Kommunen borde även ta ett övergripande grepp om risk utmed lederna, utifrån faktorer som exempelvis vilken sorts av transporter finns, hur många och vad för slags etableringar önskas i närheten? Kritiska punkter och områden kan då identifieras och eventuellt åtgärdas i ett tidigt skede i detaljplaneprocessen. Länsstyrelsen har uppdaterade riktlinjer för hur riskhantering utmed rekommenderade leder för transporter med farligt gods bör se ut (Fakta 2016:4), vilka bifogas yttrandet, men också går att finna på Länsstyrelsens hemsida.
+
+Kommentar: Planen kompletteras med att Sevesoanläggningen är lokaliserad i Vallentuna tätort samt med "riskkarta".
+
+Ras och skred, översvämning
+
+Kommunen redogör för förändringar av klimatet och har med kartor över ras och skred, översvämningsrisk vid sjöar samt lågpunktskartering vid 100-årsregn. Hänvisning till kartornas källor är önskvärt, då det är av vikt att veta när de är framtagna och av vem.
+
+Utgångspunkter och planeringsinriktning för hantering av identifierade riskområden redovisas. Länsstyrelsen anser att en redovisning och ett ställningstagande behöver tillkomma gällande lägsta grundläggningsnivå i kommunen. Länsstyrelsens rekommenderar att ny sammanhållen bebyggelse samt samhällsfunktioner av betydande vikt placeras ovanför nivån för beräknat högsta flöde (BHF). Enstaka byggnader av lägre värde placeras ovanför nivån för ett 100-årsflöde. Mer information i Länsstyrelsens faktablad 2017:1 Rekommendationer för lägsta grundläggningsnivå längs vattendrag och sjöar i Stockholm län – med hänsyn till risken för översvämning, vilket bifogas som bilaga, men också finns tillgängligt på Länsstyrelsens hemsida.
+
+Kommentar: Planen kompletteras med att konsultföretaget WSP har utfört karteringarna på uppdrag av kommunen 2013. Planen redovisar även identifierade områden för beräknat högsta flöde. Identifierade områden redovisas i planen samlat på karta för god överblick. Planeringsinriktningen uppdateras utifrån Oxundaåns dagvattenpolicy som innebär att planering och höjdsättning av mark ska utföras så att byggnader och samhällsviktiga funktioner inte skadas vid kraftiga regn eller höga vattennivåer i sjöar och vattendrag. Länsstyrelsens faktablad läggs till planens förteckning av underlagsmaterial.
+
+Länsstyrelsens synpunkter gällande allmänna intressen
+
+---
+
+I det följande avsnittet framförs synpunkter och information som är att betrakta som råd i fråga om allmänna intressen enligt 3 kap. 10 § punkt 2 PBL. Synpunkterna är sorterade i bokstavsordning, efter ämne.
+
+## Bostadsförsörjning
+
+Avsnittet om bostäder behöver kompletteras med ett utförligare resonemang och bedömningar som grundar sig på kommunens aktuella riktlinjer för bostadsförsörjning. Kommunen anger att riktlinjer för bostadsförsörjning håller på att tas fram varför Länsstyrelsen ser det som angeläget att riktlinjerna antas skyndsamt. Först när kommunen har riktlinjer antagna enligt den nya lagstiftningen 2 § lagen (2000:1383) om kommunernas bostadsförsörjningsansvar kan riktlinjerna för bostadsförsörjning ligga till grund för översiktsplanen.
+
+Sedan 2014 ska riktlinjer för bostadsförsörjning enligt Bostadsförsörjningslagen redovisas i ett separat dokument. Riktlinjerna ska vara vägledande när kommunen i översiktsplaneringen tillämpar och bedömer det allmänna intresset i 2 kap. 3 § punkten 5 PBL, d.v.s. bostadsbyggande och utveckling av bostadsbeståndet. Att riktlinjerna ska vara vägledande innebär att de ska påverka de bedömningar och ställningstaganden som görs i översiktsplanen.
+
+Länsstyrelsen ser positivt på det preliminära målet om att Vallentuna kommun aktivt ska verka för ett hållbart bostadsbyggande med en inriktning att det tillkom mer 9000 nya bostäder inom perioden 2018–2020 som bidrar till en variation av bostäder avseende storlek, utförande och läge. Typ av upplåtelseformer skulle dock behöva varieras eftersom kommunen har en mycket liten andel hyresrätter.
+
+Länsstyrelsen ser fram emot att inom kort kontaktas av Vallentuna kommun i fortsatt arbete med riktlinjer för bostadsförsörjning för diskussion om innehåll och formalia.
+
+**Kommentar:** Kommunen har under 2017 haft underhandsdialog med länsstyrelsen om kommunens pågående arbete med riktlinjer för bostadsförsörjning och länsstyrelsen har från och med december 2017 fått möjlighet att lämna synpunkter på ett konkret förslag. Pågående arbete med riktlinjer är vägledande för arbetet med planen. I planen redovisas en sammanfattning. Riktlinjerna förutsätts antas av kommunfullmäktige innan planen antas i enlighet med lagen om bostadsförsörjningsansvar.
+
+## Dagvattenhantering
+
+Under rubriken Miljökvalitetsnormerna för vatten (s. 45–46) anges att kommunen ska verka för att uppnå MKN i kommunens vatten. Kommunen kan med fördel förtydliga hur en god dagvattenhantering kan säkerställas. Oxundaåns dagvattenpolicy bör också beskrivas kortfattat, för att visa vilken betydelse den kommer att ha för förbättringsarbetet och hur arbetet går tillväga. På vilket sätt mellankommunalt samarbete sker i förbättringsarbetet kan även anges, t.ex. vad arbetet inom vattensamverkan innebär.
+
+**Kommentar:** Planen kompletteras med redovisning av aktuell dagvattenpolicy.
+
+## Jordbruksmark
+
+---
+
+Jordbruksmarken har ett starkt skydd i lagstiftningen. Den får bara exploateras i undantagsfall och endast för att tillgodose ett väsentligt samhällsintresse om detta behov inte kan tillgodoses på ett från allmän synpunkt tillfredsställande sätt genom att annan mark tas i anspråk. Länsstyrelsen förordar en restriktiv hållning till exploatering av jordbruksmark, såväl åkermark som naturbetesmarker. Jordbruksmarken har ett värde för livsmedelsproduktion, men rymmer även värden i form av ett levande kulturlandskap, arbetstillfällen, energiproduktion, värdefulla biotoper och besöksnäring.
+
+Om kommunen avser att ta jordbruksmark i anspråk för bebyggelse, är det viktigt att i översiktsplanen redovisa motiven för detta i enlighet med 3 kap. 4 § miljöbalken samt resonera kring påverkan på jordbruksmarken i förhållande till kommunens totala resurser av jordbruksmark. Bebyggande av jordbruksmark är en irreversibel åtgärd och den svenska jordbruksmarken beräknas bli än mer värdefull i framtiden med en växande befolkning och globala klimatförändringar.
+
+Det är positivt att kommunen anger att jord- och skogsbruk ska värnas i planen. Det anges även att jordbruksmark med hög beskaffenhet endast ska bebyggas om bebyggelsen har en stor samhällsbetydelse och andra rimliga alternativ saknas. Ett förtydligande bör göras av vad begreppen stor samhällsbetydelse samt rimliga alternativ kan innebära. En tydligare beskrivning kan vara viktig i framtiden när kommunen ställs inför val av lokalisering av bebyggelse.
+
+Bebyggelse utanför tätort anges ske med hänsyn till brukningsvärd jordbruksmark. Hur detta ska ske bör förtydligas. En beskrivning bör också tillföras av vad som menas med att det öppna jordbrukslandskapet förutsätter att bebyggelsen utvecklas.
+
+I MKB:n framgår det att ett genomförande av översiktsplanen kan riskera att försvåra en rationell jordbruksdrift och möjlighet att upprätthålla ett öppet odlingslandskap, vilket bör beaktas och tas tillvara i fortsatt arbete. Kommunen behöver på ett tydligare sätt visa på alternativ som inte försvårar för jordbruket eller tar jordbruksmark i anspråk.
+
+Jordbruksmarken hanteras bara översiktligt i översiktsplanen. I planen kan det med fördel framgå om det finns områden där det görs olika bedömningar av jordbruksmarkens betydelse och då även i förhållande till bebyggelseutveckling. Länsstyrelsen vill framhålla fördjupad översiktsplan för Karby Brottby, som ett bra exempel, vilken är på utställning samtidigt som den kommunövergripande översiktsplanen. Där framgår det tydligt att bebyggelsen planeras vid sidan om jordbruksmarken. På så sätt blir översiktsplanen ett mer användbart redskap i kommunens kommande planering.
+
+Länsstyrelsens synpunkter på föreslagna utvecklingsområden med hänsyn till jordbruksmark:
+
+- Utredningsområdet för verksamheter, som är placerat sydväst om befintligt verksamhetsområde Västra Rosendal, berör till stor del jordbruksmark. Länsstyrelsen efterfrågar ett alternativ där exploatering av jordbruksmark undviks.
+
+63
+
+---
+
+I området kring Kårsta visar markanvändningskartan att exploatering av jordbruksmark undviks, vilket länstyrelsen ser som positivt. Som förtydligande, kan det med fördel framgå av texten, för att undvika eventuella tolkningar som kan leda till exploatering av jordbruksmark.
+
+- Karby Brottby Länsstyrelsen hänvisar till yttrande om den fördjupade översiktsplanen. Kommunen visar på ett tydligt sätt hur bebyggelse planeras intill redan befintlig bebyggelse utan att jordbruksmark exploateras. Det är tydligt att kommunen värnar om jordbruksmarken i den fördjupade översiktsplanen, vilket dock inte avspeglas i den kommunövergripande översiktsplanen.
+
+- Gillinge. Här exploateras jordbruksmark för blandad bebyggelse väster om E18. Inom det utpekade utvecklingsområdet finns blandad mark och Länsstyrelsen efterfrågar ett tydliggörande kring huruvida jordbruksmarken kommer att undantas från exploateringen. Om kommunen avser att exploatera jordbruksmarken i området, efterfrågar länsstyrelsen att alternativ för lokalisering ses över för att exploatering av jordbruksmark ska undvikas, samt i förekommande fall motivera varför exploateringen behöver ske på jordbruksmark.
+
+- Vallentuna tätort. Område utpekats för blandad bebyggelse intill väg 268 väster om Vallentuna. Området består idag av högt klassad jordbruksmark enligt åkermarksgraderingen och består av stora sammanhängande skiften. Länsstyrelsen fördömer att bebyggelsen inte kommer till på södra sidan av väg 268. När bebyggelse påbörjas inom ett tidigare oexploaterat område med jordbruksmark, finns risk att bebyggelsen fortsätter breda ut sig på bekostnad av jordbruksmarken. Området behandlas även i yttrandet utifrån riksintresse för kulturmiljövården samt fornlämningar.
+
+- Område pågående FÖP Norra Vallentuna och Lindholmen. I höjd med Molnby-Ubby utpekas stora områden med jordbruksmark till att tas i anspråk för utveckling av blandad bebyggelse. Länsstyrelsen anser att kommunen bör se till att exploatering på jordbruksmark undviks. I övrigt hänvisar Länsstyrelsen till yttrandet kring den fördjupade översiktsplanen över Norra Vallentuna och Lindholmen.
+
+- I området längs med Roslagsbanan upp till Frösunda ser Länsstyrelsen positivt på att kommunen valt att planera bebyggelsen kring Roslagsbanan istället för att förlägga all utbyggnad kring Frösunda kyrka, som är helt omgiven av jordbruksmark. Kommunen bör dock förtydliga sitt ställningstagande vid val av lokalisering inom utbyggnadsområdet när det kommer till jordbruksmarken som finns där.
+
+Vägledning jordbruksmark
+
+Länsstyrelsen i Stockholms län ställningstagande kring brukningsvärd jordbruksmark: http://www.lansstyrelsen.se/Stockholm/SiteCollection-Documents/Sv/lantbruk-och-landsbygd/lantbruk/beslut-stallningstagande-brukningsvard-jordbruksmark.pdf
+
+---
+
+- Jordbruksverkets rapport Kommunens möjlighet att bevara och utveckla jordbruksmarkens värden:
+
+http://webbutiken.jordbruksverket.se/sv/artiklar/ovr357.html
+
+Kommentar: Planen förtydligas att med rimligt alternativ avses inom närområdet och att vid bedömning av samhällsbetydelse ingår att identifiera brister och tillgångar i närområdet och bedöma förutsättningar för en hållbar utveckling.
+
+Planen kompletteras med att ny bebyggelse inte ska försvåra en rationell jordbruksdrift och möjlighet att upprätthålla ett öppet odlingslandskap i anslutning till tätortsområdena.
+
+Enligt förslag i planen ska ny bebyggelse utanför tätort i första hand lokaliseras i anslutning till befintlig bebyggelse. Ett av flera skäl till detta är det ger bättre förutsättningar att värna jordbruksmark och för en rationell jordbruksdrift. Med skrivning att det öppna jordbrukslandskapet förutsätter att bebyggelsen utvecklas menas att utveckling är en förutsättning för en levande landsbygd. Ett konkret exempel kan vara vid generationsskifte.
+
+Angående planens redovisade utredningsområde för verksamheter strax väster om Vallentuna tätort så finns en stor efterfrågan från näringslivet om mark för etablering i bra kommunikationslägen och skilt från bostäder. Detta gäller i hela kommunen men i synnerhet i och i anslutning till Vallentuna tätort. Inom ramen för arbetet med planen har flera alternativ sökt. Både i norra och södra delen av tätorten bedöms förutsättningarna inom planperioden för etablering av nytt verksamhetsområde vara små utöver pågående planläggning. I östra delen pågår detaljplanearbete för utvidgning av befintligt verksamhetsområde Okvista, vilket är ett prioriterat arbete. Kommunen bedömer utifrån ovan att aktuellt utredningsområde är intressant, och kan eventuellt vara ett lämpligt, läge för verksamhetsetableringar. Planläggning ska föregås av en fördjupad utredning som i sin tur förutsätter att berörda fastighetsägare är positiva. Planen förtydligas om hantering och att utredningsområdet omfattar jordbruksmark.
+
+I kommunens ställningstagande vid val av lokalisering generellt inom tätorter är att ta hänsyn till behov och efterfrågan av funktioner som tillhör en tätort som sammantaget ger en god livsmiljö. Se vidare teckenförklaring.
+
+Angående Kärsta och Frösunda uppdateras markanvändningskartan för att tydliggöra att jordbruksmarken i anslutning till tätorterna ska värnas. I Frösunda och inom tätortsområde behålls ett mindre utvecklingsområde i direkt anslutning till stationen. Detta område omfattas idag av Arlanda influensområde och är inte möjligt att utveckla med bostäder. Om influensområdet för denna del i framtiden tas bort kan det vara aktuellt med bostadsutveckling kring befintlig station.
+
+För Vallentuna tätort har markanvändningskartan uppdaterats för att tydliggöra att jordbruksmarken i anslutning till tätorten ska värnas. Med utgångspunkt från framför allt den efterfrågan som finns i att bo i tätorten planeras en tätortsutvidgning som till del berör befintlig jordbruksmark. I västra Vallentuna tätort ska kommunen fördjupa översiktsplanen. Föreslaget utvecklingsområde strax söder om väg 268 tas dock bort i karta och text. I norra Vallentuna tätort och
+
+65
+
+---
+
+Lindholmen pågår en fördjupad översiktsplan och vidare dialog mellan kommunen och bl.a. länsstyrelsen görs med fördel inom ramen för detta fördjupade arbete.
+
+Markanvändningskartan avseende Karby och Brottby har uppdaterats utifrån aktuell utställningshandling av den fördjupade översiktsplanen.
+
+Markanvändningskartan och text avseende Gillinge uppdateras för att tydliggöra att utgångspunkten för utvecklingen i området är att värna jordbruksmark.
+
+# Kulturmiljö
+
+Vallentunas kulturmiljö präglas av agrara landskap som bl.a. uppvisar bebyggelseplatser och markanvändningsmönster med lång historisk kontinuitet. Kulturlandskapet är varierat med en stor mängd fornlämningar som påvisar det stora tidsdjupet. Stora delar är ännu jordbrukslandskap och glest bebyggt och har betydande kulturhistoriska värden, även ur ett regionalt perspektiv.
+
+Det anges att kommunens kulturmiljöprogram ska vara ett underlag för den fysiska planeringen, men det framgår inte på ett tydligt sätt hur kommunen avser att hantera dessa värden inom utpekade utvecklingsområden. Det skulle vara mer överblickbart om det med ord och bild visades vilka utvecklingsområden som berör utpekade kulturmiljöer och hur kulturmiljöernas värden ska beaktas. Utmaningarna i sådana konfliktpunkter och hur kulturvärden ska hanteras i dessa är viktiga att ta upp. Några anvisningar finns i bebyggelseutvecklingsavsnittet på sid 22, men bör även läggas in i kulturmiljöavsnittet. Vad förhållningssättet innebär att anslutning till lokal byggnadstradition kan ske med både traditionellt och modernt formspråk bör utvecklas för att kunna fungera som stöd. Förhållningssätt till skala och täthetgrad i olika miljötyper nämns inte överhuvudtaget.
+
+Länsstyrelsen instämmer i slutsatserna i MKBn att planförslaget sammantaget kommer att medföra negativ påverkan på lokala kulturmiljövärden. Öppna landskap som kulturmiljö är känslig för sammanhängande bebyggelseförtätning samt ny infrastruktur. Ny sammanhängande bebyggelse kommer att innebära en betydande karaktärsförändring av den agrara karaktären, vilket innebär en risk för en fragmentisering av landskapet. Befintliga tätortsbildningar utmed Roslagsbanan har till viss del en annan historia med en mer sammanhängande bebyggelsestruktur. Dessa är lättare att komplettera, men hänsyn måste tas till platsspecifika bebyggelsevärden och hur ny bebyggelse möter omkringliggande landskap. I fortsatt planering bör kulturmiljökompetens involveras. Detta för att varje plats specifika förutsättningar ska kunna tillvaratas i planeringen framöver.
+
+För att planen ska bli mer användbar i kommande planering, kan det gärna framgå hur kulturmiljöarbetet ska bedrivas i den dagliga plan- och lovhanteringen och hur antikvarisk kompetens kan knytas till processerna. Fördjupade underlag bör generellt tas fram i de kommande planprojekten, vilket bör framgå av översiktsplanen.
+
+Kommentar: I planens samlade riksintressekarta framgår förslag till markanvändning. Kulturmiljökompetens är involverad i kommunens fysiska planering. Planen uppdateras med att vid behov ska kulturhistoriska utredningar och landskapsbildsanalyser genomföras. Förtydligande görs att kulturmiljöprogrammet är ett viktigt underlag och vad programmet innefattar.
+
+---
+
+67
+
+# Hållbart resande
+
+Det är positivt att det framgår att kommunen avser att göra satsningar på gång- och cykeltrafik, vilket också inkluderar regionala cykelstråk. Att tätortsutveckling ska ske i kollektivtrafikförsörjda stråk är också positivt för ett mer hållbart resmönster.
+
+# Kommunikationer
+
+## Roslagsbanan
+
+Länsstyrelsen delar Trafikverkets synpunkter om att ett resonemang behöver föras kring hur översiktsplaneringen hanteras vidare om förgreningen av Roslagsbanan till Arlanda inte sker. Detta för att belysa eventuell påverkan på befintligt transportsystem av en sådan exploatering samt vad det har för betydelse för bebyggelseutvecklingen.
+
+Kommentar: Norr om befintlig Vallentuna tätort finns ett framtida bebyggelseutvecklingsområde som kommunen har tagit ställning är avhängigt av Roslagsbanans förlängning till Arlanda. Kommunen avser att en gång per mandatperiod aktualitetspröva ställningstagandet i det fall beslut om avgrening dröjer. Utveckling inom detta område behöver oavsett föregås av fördjupad kunskap. Läs vidare i pågående arbete med fördjupad översiktsplan för norra Vallentuna tätort och Lindholmen.
+
+## Väg
+
+Länsstyrelsen delar även Trafikverkets synpunkter att en bostadsutveckling som avses fortsätta utredas i Gillinge samt Karby och Brottby i anslutning till riksintresset E18 kan innebära flera konflikter med riksintresset såsom buller, luftkvalitet, framkomlighet etc.
+
+# Lokal grönstruktur och naturvärden
+
+Enligt MKB:n riskerar planförslaget att innebära märkbara till stora negativa konsekvenser för naturmiljön då förslaget möjliggör stora intrång i områden med höga naturvärden. För grönstrukturen ser intrånget ut att bli betydande.
+
+Planeringsinriktningen för grönstruktur är enligt underlaget att "samverkan ska ske med grannkommunerna om den regionala grönstrukturen". Grönstruktur, eller grön infrastruktur, är stora och komplexa frågor som flera kommuner jobbar aktivt med. Länsstyrelsen ser positivt på att kommunen avser att samverka med grannkommunerna gällande detta.
+
+Kommunen bör ha en strategi som visar på hur konflikten mellan bebyggelse och naturmiljö ska hanteras. En sådan bör visa hur grönstrukturen med tillhörande naturvärden ska skyddas och utvecklas/stärkas där det behövs. På s 17 i planförslaget finns en karta med teckenförklaring "Stråk mellan grönområden upprätthålls och utvecklas för en sammanhängande grönstruktur". Vad detta innebär varken beskrivs eller utvecklas på något sätt i handlingen.
+
+Utifrån aktuellt samrådsunderlag framstår det som att omfattande bebyggelse planeras inom flera delar av grönstrukturen (exempelvis Kristineberg och
+
+---
+
+Roslagsbanans förgrening till Arlanda), utan att det framgår vilka konsekvenserna blir för naturmiljön och den biologiska mångfalden.
+
+En förutsättning för att kunna bedöma påverkan på en grönstruktur är att det finns en god kännedom om artförekomster och naturvärden. En god kännedom om artförekomster förhindrar även konflikter mellan artskyddsbestämmelserna och exploateringar.
+
+Kommentar: Kommunen har sedan hösten 2017 en grönstrukturplan. I avsnitt rekreation och fritid finns mer beskrivande text och inriktning för lokal grönstruktur. Naturvärdesinventeringar görs vid behov i samband med planläggning. Fler gröna kopplingar har lagts till i syfte att visa hur befintliga grönområden ska kopplas samman vid föreslagen utveckling.
+
+# Nationella miljökvalitetsmål
+
+I miljökonsekvensbeskrivningen har planförslaget bl.a. utvärderats från de nationella miljökvalitetsmålen. Länsstyrelsen anser också att samrådshandlingen med fördel kan kompletteras med en text om detta.
+
+Kommentar: Miljökonsekvensbeskrivningen är en del av planhandlingen.
+
+# Socialt medveten samhällsplanering
+
+I ett kommunalt perspektiv är den sociala aspekten viktig för att åstadkomma en hållbar utveckling för de som bor, besöker eller jobbar i kommunen. Kommunen bör arbeta integrerat med social hållbarhet och kan med fördel även definiera vad social hållbarhet innebär för just Vallentuna.
+
+I den aktuella översiktsplanen saknas fokus på individen och den sociala planeringen. Nu går det till viss del att utläsa att det finns goda intentioner för en social planering i olika avsnitt i planen. Men, detta bör utvecklas såväl i förslaget som helhet, men kan också behöva behandlas i ett eget avsnitt. T.ex. kan ett sådant avsnitt behandla den sociala aspekten av planering utifrån barnperspektiv, jämställdhet och för personer med funktionsvariation. Ett sådant avsnitt bör belysa såväl den fysiska planeringen, som delaktighet och möjlighet att påverka sitt liv och framtid i kommunen. Av betydelse att även lyfta i översiktsplanen kan vara ett förhållningssätt för att motverka den alltmer utbredda segregation som sker i Stockholmsregionen. Skillnader som bl.a. tar sig uttryck i inkomster, utbildning, arbetslöshet och hälsa.
+
+Kommentar: En stor del av detta som inte tydligt framgår i planen planeras i pågående riktlinjer för bostadsförsörjning. Synpunkt att lyft fram socialt medveten samhällsplanering mer samlat noteras för kommande fysiska planer.
+
+# Strandskydd
+
+I samrådshandlingen bör det förtydligas att det utökade strandskyddet gäller upp till 300 meter samt att det även råder runt en del sjöar. Beträffande upphävande av strandskydd gäller att det ska föreligga särskilda skäl enligt 7 kap. 18 c § MB och om det är förenligt med strandskyddets syften att långsiktigt skydda allemansrättslig
+
+68
+
+---
+
+tillgång samt bevara goda livsvillkor för djur- och växtlivet. Det är otydligt vad som menas på s 48, att strandskyddet kan upphävas om tillgängligheten ökar.
+
+I planeringsinriktningen för stränder och vattenrum anges att bebyggelse och anläggningar ska skapa förutsättningar för allmänhetens tillgänglighet samt att livsvillkoren för djur och växter värnas. Länsstyrelsen vill understryka att utgångspunkten i strandskyddsbestämmelserna är att bebyggelse inte är tillåten och att det är det faktum att stränderna är obebyggda som gör att de är tillgängliga för allmänheten i och med allemansrätten. I det fall bebyggelse redan är befintlig inom strandskyddsområden så ska utgångspunkten vara att ytterligare bebyggelse inte ska förekomma.
+
+**Kommentar: Planen förtydligas enligt synpunkt.**
+
+# Tekniska försörjningssystem
+
+Länsstyrelsen noterar att kommunen har aktualiserat VA-planen (KF 2017-03-13 §23) men Länsstyrelsen har inte deltagit i den processen. VA-planen refererar till ÖP 2010–2030, men ska enligt uppgift i VA-planen både fungera som tillägg till aktuell ÖP och som underlag till kommande ÖP. Det blir svårtolkat, då det inte framgår vad som har uppdaterats i den nu antagna VA-planen jämfört med den tidigare.
+
+Enligt ÖP 2040 (s. 37) ska "aktuell förnyelsetakt och prioritering mellan områden för utbyggnad framgå av kommunens VA-plan. Av VA-planen ska även aktuella villkor för enskilda anläggningar framgå. VA-planen ska dessutom innehålla åtgärdsplaner för att minska tillförseln av föroreningar till grundvatten, sjöar och vattendrag via dagvatten och smältvatten samt från bräddavlopp och enskilda avlopp." Det är bra att kommunen vill motverka bräddningar och oönskad belastning på recipienter. Länsstyrelsen påminner om att detta även kan göras genom minskad andel tillskottsvatten till anläggningarna. Det senare är särskilt viktigt för de områden som avleds mot Käppala reningsverk, som är en av de anläggningar som är en betydande källa till övergödning i Stockholms inre skärgård. I planen prioriteras åtgärder i syfte att avlasta Vallentunasjön – en prioritering som Länsstyrelsen delar. Det är dock inte tydligt hur kommunen avser att arbeta med VA-planen så att den kan bidra till att följa miljökvalitetsnormerna för vatten och svara mot behoven av kommunens identifierade expansion.
+
+VA-planen identifierar förbättringsbehov i den allmänna dricksvattenförsörjningen till Lindholmen och Kärsta samt möjlig kapacitetsbrist i spillvattenavledningen från Lindholmen till Vallentuna centrum. Ytterligare hydrauliska analyser ska ha genomförts under åren 2015–2016 men eventuellt resultat av dessa framgår inte av VA-planen. Det är angeläget att den allmänna VA-anläggningen byggs ut för att möta nuvarande behov och hinner anpassas till tillkommande exploatering för att exploateringen inte ska riskera att orsaka olägenhet.
+
+Länsstyrelsen har ett pågående tillsynsärende enligt lagen om allmänna vattentjänster gällande delar av Kårevägen i Kärsta (Lst dnr 567-13528-2016). Området ingår i gruppen med högsta prioritet i VA-planen (2016–2020), men samtidigt tycks kommunen planera för åtgärder för att möjliggöra sådan anslutning under perioden 2021–2030, vilket ger otydliga signaler om kommunens avsikter. Länsstyrelsen har ännu inte fattat något beslut i ärendet, men mycket talar för att berörda fastigheter
+
+69
+
+---
+
+omfattas av 6 § lag om allmänna vattentjänster och därmed snarast ska förses med allmänna vattentjänster.
+
+VA-planen omnämns inte som ett underlag till MKB:n. Då planen ska redovisa kommunens ambitioner avseende förnyelsetakt och planerad utbyggnad och anslutning till kommunal VA, blir det då svårt att konsekvensbedöma planerad expansion framförallt avseende dess påverkan på vatten.
+
+Kommentar: VA-planen är kommunens första och bygger på Översiktsplan 2010-2030. Planen förtydligas att VA-planen ska uppdateras när kommunen har en ny översiktsplan. VA-planen utgår från gällande översiktsplan. Utbyggnad av VA-anläggningen i Roslagsbanestråket pågår. Etapp 1 Vallentuna-Molnby snart klar. Kommunen instämmer i bedömningen om att aktuellt område i Kårsta snarast behöver förses med allmänna vattentjänster. För att möjliggöra utbyggnad av vatten och avlopp inom det aktuella området på ett rationellt sätt pågår framtagande av detaljplan för att möjliggöra utbyggnad av vatten och avlopp samtidigt som kommunala gator inom området. Projektet är prioriterat pga. den nuvarande situationen avseende vatten och avlopp men kan inte forceras snabbare då det finns fler frågor som måste lösas i samband med framtagande av detaljplan. En utbyggnad av kommunalt vatten och avlopp utan föregående av detaljplan skulle motverka ändamålsenlig planläggning av området.
+
+## Övrigt
+
+## Pågående och påbörjad planläggning
+
+I de områden där planläggning påbörjats eller pågår, hänvisar Länsstyrelsen till de synpunkter som framförts och framförs i Länsstyrelsens yttranden. Samma sak gäller andra kommunala strategier, policys, planer och program där Länsstyrelsen är remissinstans.
+
+## Kulturmiljölagen
+
+### Fornlämningar
+
+Generellt saknas det en redogörelse för kommunens fornlämningar. I avsnittet om kulturmiljöer och kulturhistoriska värden nämns att Vallentuna kommun är rik på fornlämningar, men ingen av fornlämningsmiljöerna finns tydligt redovisad på en karta eller heller med hänvisning till Riksantikvarieämbetets digitala fornsökssystem FMIS.
+
+I den tematiska avgränsningen om kulturmiljö och landskapsbild finns fornlämningar med. Kommunen får gärna förtydliga att fornlämningar omfattas av en egen lagstiftning med skydd i kulturmiljölagen. Det bör även framgå att utvecklingsområden som nämns i översiktsplanen bli föremål för arkeologisk utredning i kommande detaljplaneplanering för att fastställa att inte oupptäckta fornlämningar kommer att beröras.
+
+När kulturminneslagen ändrades till kulturmiljölagen (1988:950) 2014, gjordes även en ändring att lämningar som är äldre än 1850 är ansedda som fornlämningar. Genom kulturmiljölagen har fornlämningar ett skydd som innebär att en nyupptäckt fornlämning har ett omedelbart skydd utan att det behövs något myndighetsbeslut.
+
+---
+
+För att underlätta kommande planering bör därför känsliga fornlämningsområden identifieras i ett tidigt skede, så att de kan beaktas i kommande planering. Exempelvis pekas ett utredningsområde ut för ett nytt verksamhetsområde längs väg 268 väster om Vallentuna tätort, vilket också behandlats tidigare i detta yttrande utifrån riksintresse för kulturmiljövården samt utifrån intresset av jordbruksmark. Det anges att kulturhistoriska värden inom området kan påverkas negativt, bl.a. riksintresse för kulturmiljövården, men det framgår inte att det finns en avsevärd mängd fornlämningar inom området.
+
+För de fornlämningsområden som lyfts fram bör även ett ställningstagande tillföras gällande de fornlämningsmiljöer som kommer att påverkas av förtätningar och exploateringar.
+
+Kommentar: Planen kompletteras med hänvisning till Riksantikvarieämbetets fornssökssystem. Arkeologiska utredningar är en naturlig del av planläggningsarbetet. Planen kompletteras med information om fornlämningar i aktuellt utredningsområde för verksamheter. I övrigt hanteras fornlämningar i efterföljande planering, bl.a. i pågående arbete med fördjupade översiktsplaner.
+
+# Landskapsbildskydden
+
+Landskapsbildskydden i Vallentuna nämns, men kommunen behöver även redovisa hur dessa områden ska hanteras i utvecklingssituationer. Skyddsformen rör främst visuella landskapsvärden och är överfördd till miljöbalken från 19 § naturvårdslagen (1964:822) i dess lydelse före den 1 januari 1975. Skyddet är mest omnämnt som information i planen, men riskerar att ge en missvisande bild av att när landskapsbildskydd finns kring kyrkor är kyrkomiljön inte skyddad av kulturmiljölagen. Vägledning gällande landskapsbildsskyddet finns på Länsstyrelsens hemsida.
+
+Kommentar: Planen förtydligas.
+
+# Totalförsvaret
+
+Kommunen bör ta hänsyn till totalförsvarets civila del. Riksdagen har i den försvarspolitiska inriktningen för perioden 2016–2020 beslutat att en sammanhängande planering för totalförsvaret ska återupptas. Beslutet medför att totalförsvarsplaneringen behöver beaktas i all samhällsplanering. Planeringsarbete ska utgå från att förmågan att hantera kriser i samhället i fredstid också ska ge en grundläggandeförmåga att hantera krigssituationer. Med fördel kan kommunen redovisa hur detta avses göras i översiktsplaneringen. Kommunernas ansvar regleras i lag (2006:544) om kommuners och landstings åtgärder inför och vid extraordinära händelser i fredstid och höjd beredskap.
+
+Kommentar: Planen kompletteras med totalförsvarets civila del.
+
+# Formalia
+
+Samrådshandlingen
+
+Vattenskydd
+
+---
+
+Under rubriken Grundvatten (s. 44) listas tre skyddade grundvattentäkter inom kommunen; Västlunda, Orkesta-Granby och Backa. De tre grundvattenförekomsterna, har enligt VISS, idag god kemisk och god kvantitativ status. Kommunen kan med fördel förtydliga vilka former av skydd dessa grundvatten har, t ex genom vattenförvaltningens MKN, skyddsföreskrifter eller annat.
+
+Länsstyrelsen vill informera att det i VISS framgår att kommunen har 17 vattenförekomster med MKN. Tre av dessa är grundvattenförekomster och resten är sjöar och vattendrag. I MKB-texten under konsekvensanalysen för mark- och vatten (s. 3–4 MKB) anges att endast 5 av kommunens 30 sjöar och vattendrag är vattenförekomster med MKN.
+
+Kommentar: Planen kompletteras med att grundvattenvattentäkterna skyddas genom skyddsområde med skyddsföreskrifter. De är beslutade av länsstyrelsen. Miljökonsekvensbeskrivningen uppdateras enligt synpunkt.
+
+## Vattenförekomster
+
+Det är bra att det finns med översiktliga kartor över vattenförekomsterna (s 46–47) i översiktsplanen. Länsstyrelsen rekommenderar att kartan på s 46 delas upp efter dagens statusklassning och MKN-målen 2021 och 2027. Detta för att den ska bli lättare att förstå. I sammanhanget bör även kommunen se över färgvalet, eftersom de lätt kan blandas ihop med de färgskalor som används i vattenförvaltningens system, där bland annat röd färg signalerar dålig status.
+
+Kommentar: Planen uppdateras.
+
+## Miljökonsekvensbeskrivningen
+
+### Vattenkvalitet och VA
+
+Med det stora förbättringsbehovet som finns för de flesta av kommunens vatten för att kunna uppnå god ekologisk status är det troligen underskattat att konsekvenserna av föreslagna exploateringarna kommer att bli små, märkbara negativa konsekvenser (gul). Länsstyrelsen bedömer även att konsekvenserna kan ses underskattade gällande nollalternativet i MKB:n.
+
+Nulägesbeskrivningen över VA-situationen i kommunen i MKB:n är inte korrekt. Jfr s. 36–37 i ÖP.
+
+Kommentar: Länsstyrelsens bedömning noteras.
+
+### Övrigt
+
+Länsstyrelsen önskar att kommunen förtydligar vilka fördjupade översiktsplaner som finns och vilka som avses respektive inte avses aktualitetsförklaras.
+
+Kommentar: Parallellt med översiktsplanen pågår två fördjupningar. Planen förtydligas.
+
+## Bilagor
+
+72
+
+---
+
+- Planering av höga byggnader och objekt, Länsstyrelsen Stockholm, faktablad 2017:9
+- Rekommendationer för lägsta grundläggningsnivå längs vattendrag och sjöar i Stockholm län – med hänsyn till risken för översvämning, Länsstyrelsen Stockholm, faktablad 2017:1
+- Riktlinjer för planläggning intill vägar och järnvägar där det transporteras farligt gods, Länsstyrelsen Stockholm, faktablad 2016:4
+- Yttrande från Försvarsmakten, 2017-10-09 (se -16)
+- Yttrande från Svenska kraftnät, 2017-10-12 (se-18)
+- Yttrande från Trafikverket region Stockholm, 2017-10-16 (se -21)
+- Yttrande från Vattenfall eldistribution, 2017-10-17 (se -22)
+- Yttrande från Fortifikationsverket, 2017-09-05
+
+Fortifikationsverket bedömer att det inte finns någon påverkan på vår verksamhet i nuläget.
+
+Vad det gäller större förändringar inom riksintresse för totalförsvaret hänvisar vi till Försvarsmakten då vårt uppdrag är att tillhandahålla ändamålsenliga fastigheter för Försvarsmaktens verksamhet samt tillse att deras verksamhetsutövning inte inskränks eller påverkas. Försvarsmakten har i detta ärende svarat direkt till Länsstyrelsen.
+
+- Yttrande från Luftfartsverket 2017-09-17
+
+LFV vill som sakägare av CNS-utrustning avge följande yttrande:
+
+På sidan 39 under rubriken "Vindkraft" står följande:
+
+"Vid tillståndsprövning av vindkraftverk krävs remiss till Luftfartsverket med hänsyn till bland annat hindersprövning."
+
+Ordet hindersprövning är felaktigt i denna kontext och bör ersättas med ordet flyghinder. Meningen bör skrivas "Vid tillståndsprövning av vindkraftverk krävs remiss till LFV med hänsyn till bland annat flyghinder och vindkraftverkens eventuella påverkan på LFVs CNS-utrustning." CNS står för kommunikationsnavigations och övervakningsutrustning.
+
+Observera att Luftfartsverket numera heter så endast i juridiska sammanhang. Vi heter numera LFV i alla andra sammanhang.
+
+På sidan 68 under rubriken "Riksintresset Arlanda och dess influensområde" blir innebörden av texten att influensområdet för buller också innefattar höjdbegränsande ytor. Så är icke fallet, bullerytorna är separata från den största hinderbegränsande ytan, den så kallade MSA-ytan, som omger flygplatsen. MSAytan sträcker sig med 60 km radie ut ifrån flygplatsen och detta är det största området som höjdbegränsningar finns inom. Denna yta överlappar flera andra ytor med höjdbegränsningar.
+
+73
+
+---
+
+Dessutom äger och förvaltar LFV CNS-utrustning på och omkring Arlanda flygplats som kan komma att påverkas av etableringar. Observera att lagar och regelverk som omger denna utrustning är skilda från hinderbegränsningarna och att påverkan på LFVs eller flygplatsens CNS-utrustning kan innebära en lägre tillåten bygghöjd än vad hinderytorna medger.
+
+I övrigt har LFV inget att erinra mot översiktsplanen.
+
+**Kommentar: Planen uppdateras enligt synpunkter.**
+
+- Yttrande från Skogsstyrelsen, 2017-09-18
+
+Skogsstyrelsen har inget att erinra.
+
+- Yttrande från Swedavia, 2017-10-16
+
+Swedavia har gott samarbete med Vallentuna kommun och man arbetar tillsammans med inom gruppering Arlandakommunerna för att stärka Arlandaregionen.
+
+Swedavia stödjer kommunens uttalade strategi att samordna bebyggelse och kollektivtrafik så länge det kan ske utan att negativt påverka flygplatsens utveckling.
+
+Gällande Roslagsbanans förlängning till Arlanda stödjer Swedavia den utveckling och håller i sina utvecklingsplaner öppet för en station på Arlanda. Swedavia ser även att det bör studeras möjligheten att förlänga även bort till Märsta station vilket dock är en fråga utanför denna översiktsplan.
+
+Den föreslagna bebyggelseutvecklingen synes i allt väsentligt inte komma i konflikt med riksintresset Stockholm Arlanda flygplats och dess influensområde. Redovisningen av flygplatsens influensområde är i Swedavias mening tillfredställande.
+
+**Kommentar: Informationen noteras.**
+
+## 3.36 Täby kommun (-52)
+
+### Sammanfattning
+
+Täby har fått samrådsförslag för ny översiktsplan för Vallentuna kommun för yttrande. Inriktningen är ett tillskott på 9000 nya bostäder och 7000 nya arbetstillfällen.
+
+Täby ser positivt på att Vallentuna växer. Det stärker hela Nordostsektorn.
+
+Kollektivtrafiknära bebyggelseutveckling längs med Roslagsbanan stämmer överens med hur Täby kommun avser att utveckla kommunen. Tillsammans bidrar det till att kollektivtrafik, boende, arbete och service blir mer tillgängligt för fler. Förslaget till översiktsplan har en tydlig inriktning för förbättrad tillgänglighet till Arlanda, vilket är ett gemensamt arbete inom Stockholm Nordost. Täby saknar emellertid översiktsplanens förhållningssätt till Täby centrum-Arninge mot bakgrund av regionala gemensamma mål i RUFS och Vision Stockholm Nordost och
+
+74
+
+---
+
+mellankommunala frågor som rör trafik och mobilitet. Täby ser positivt på att samverkan mellan kommunerna när det gäller vattenfrågor för att klara miljökvalitetsnormerna kvarstår och att frågor som rör den regionala grönstrukturen lyfts på tydligt sätt.
+
+## Ärendet
+
+Täby har fått samrådsförslag för ny översiktsplan för Vallentuna kommun för yttrande. Samråd pågår till och med 30 oktober. Täby har fått förlängd remisstid till 15 november.
+
+Bebyggelseutvecklingen föreslås koncentreras till Vallentuna tätort, Lindholmen, Frösunda, Ekskogen, Kårsta, Gillinge, Karby-Brottby och Löt-Roslagsstoppet. Inriktningen är ett tillskott på 9000 nya bostäder under perioden 2018-2040, med en variation av storlekar, i utförande och avseende läge. Av dessa är 5650 bostäder åtagande inom Sverigeförhandlingen.
+
+Roslagsbanan ska utvecklas till T-centralen och utgöra ryggraden i kommunens fysiska utveckling. Översiktsplanen pekar också ut ytterligare utveckling av Roslagsbanan mot Arlanda och Rimbo samt genom kapacitetsförstärkningar norr om Vallentuna tätort. Arningevägen och Norrortsleden ska utvecklas som viktiga stråk till Täby centrum-Arninge och till Kista-Sollentuna-Häggvik. Väg 268 föreslås utvecklas som en förbättrad tvärförbindelse mellan Arninge och Barkarby-Jakobsberg via Vallentuna och Upplands-Väsby. Det möjliggör framtida stombusstrafik från Arninge via Arningevägen och Väsbyvägen i Vallentuna tätort samt centrala Upplands-Väsby.
+
+Vallentuna ska verka för 7000 nya arbetstillfällen som ett tillskott till befintliga 9000. Företagsetableringar ska i så hög utsträckning som möjligt integreras med bostadsområden, och i goda lägen sett ur både ett personal- och kundperspektiv. Okvista, Fågelsången och västra Rosendal ska vara verksamhetsområden med begränsad omgivningspåverkan och prydlig karaktär. Löt-Roslagsstoppet, Karby och östra Gillinge ska utvecklas som verksamhetsområden där verksamheterna inte ska behöva anpassa sin verksamhet till krav på prydlighet och skydd mot störningar för omgivningen. I sydvästra Vallentuna, längs med väg 268 och inom Arlandas influensområde, pekas ett utredningsområde för ett nytt verksamhetsområde ut.
+
+## Överväganden
+
+Täby ser positivt på att Vallentuna växer. Det stärker hela Nordostsektorn. Kollektivtrafiknära bebyggelseutveckling längs med Roslagsbanan stämmer överens med hur Täby kommun avser att utveckla kommunen. Tillsammans bidrar det till att kollektivtrafik, boende, arbete och service blir mer tillgängligt för fler.
+
+Förslaget till översiktsplan har en tydlig inriktning för förbättrad tillgänglighet till Arlanda, vilket är ett gemensamt arbete inom Stockholm Nordost. Täby saknar emellertid översiktsplanens förhållningssätt till Täby centrum-Arninge som Stockholm Nordosts regionala stadskärna och centrum för boende, arbete, service och resor.
+
+Utvecklingen av den regionala stadskärnan Täby centrum-Arninge har sin utgångspunkt i såväl RUFS 2010, utställningsförslag för RUFS 2050 samt Vision Stockholm Nordost. Främst handlar det om den regionala stadskärnans funktion som
+
+75
+
+---
+
+målpunkt för resor och för byten till övriga kollektivtrafiksystemet i nordostsektorn. Tvärgående kapacitetsstark kollektivtrafik mellan de regionala stadskärnorna i enlighet med regionala mål är därmed av nytta även för Vallentuna.
+
+I RUFS 2010 samt i utställningsförslag till RUFS 2050 ingår tvärförbindelse respektive relationer med behov av förbättrad tillgänglighet mellan Täby centrum och Kista-Sollentuna-Häggvik. Därtill finns den planerade stombusslinjen mellan bland annat Täby och Barkarby genom Sollentuna, del av linje J i stomnätsplanen, med. Utredning för västlig tvärförbindelse från Täby centrum-Arninge kvarstår inom Idé- och åtgärdsvalsstudie för kapacitetsstark kollektivtrafik i Nordost. Dessa är mellankommunala frågor som berör trafik och mobilitet och behöver lyftas i översiktsplanen.
+
+I Arninge ska 3000 nya bostäder tillkomma och ett resecentrum etableras. Resecentrum ska möjliggöra byten mellan Roslagsbanan, stombusstrafik och lokalbussar tillsammans med ca 300 infartsparkeringsplatser för bil, med en beredskap för totalt 700 platser i framtiden. Resecentrumet har regional betydelse och kommer även att vara bytespunkt i stråket för stombusstrafik till Upplands-Väsby, via Vallentuna. Många boende i Vallentuna förväntas nyttja resecentrumet eller handelsområdet, i synnerhet nya invånare i Kristineberg som kan komma att ta bilen till infartsparkeringen vid Arninge resecentrum.
+
+Även centrala delarna av Täby, områdena kring Roslagsbanans stationer Tibble, Roslags-Näsby, Täby centrum och Galoppfältet (Täby park), ska utvecklas med bättre bytesmöjligheter i kollektivtrafiken på lång sikt. I området finns potential för uppemot 17 000 nya bostäder och 15 000 nya arbetstillfällen till år 2050. Idag pågår utbyggnad och planering i olika skeden för nästan 10 000 bostäder och 4-5000 arbetstillfällen. I samrådsförslaget till fördjupning av översiktsplanen för Täby stadskärna 2050 pekas kollektivtrafikstråk för tvärgående kapacitetsstark kollektivtrafik ut mellan stadskärnan och Kista-Sollentuna-Häggvik med viktiga bytespunkter vid Täby centrum, Roslags-Näsby och vid hållplats för stombussar på E18 så att det ger nytta för hela Nordostsektorn. För Täbys del och i ett systemperspektiv är Helenelund en intressant målpunkt eftersom där kan pendeltåg, tvärbanan och framtida tvärförbindelse mot Täby kopplas samman.
+
+Täby saknar en trafikanalys av förslaget och en diskussion om framtida framkomlighet på Arningevägen, Norrortsleden och E18. Översiktsplanen skulle med fördel kunna ange tydligare riktning för hur nya stadsutvecklingsområden och verksamhetsområden som inte ligger i närheten av Roslagsbanan ska kollektivtrafikförsörjas. Det är viktigt för att förhindra ett inbyggt bilberoende. Just dessa vägar pekas ut som stråk för kollektivtrafik, vilket också innebär risker för att kollektivtrafiken inte blir konkurrenskraftig om framkomligheten är dålig.
+
+Stockholmsvägen i Vallentuna, som i Täby kommun övergår i Vikingavägen, är ett viktigt stråk för kollektivtrafiken mellan Vallentuna och Täby. Här går bussar som har ett stort upptagningsområde längs södra Vallentuna och i Täby kyrkby. Det är även i detta stråk som ersättningstrafik för Roslagsbanan går. Idag är framkomligheten för busstrafiken låg i vissa avsnitt, vilket till stor del beror på höga trafikflöden. Täby kommun arbetar med att ta fram åtgärder på kort och lång sikt längs Vikingavägen för att öka framkomligheten för kollektivtrafik. Med den utveckling som översiktsplanen anger kommer biltrafiken på Stockholmsvägen och Vikingavägen
+
+76
+
+---
+
+med stor sannolikhet att öka, tillsammans med utökad turtäthet på kollektivtrafik. Det kan bidra till att kollektivtrafiken fastnar i köer under rusningstid. Täby kommun önskar samverkan i frågan.
+
+I området Kristineberg, intill Arningevägen, planeras för ca 2 000 bostäder tillsammans med skolor och förskolor samt ett stadsdelscentrum. Det är viktigt att Vallentuna kommun säkerställer god kollektivtrafikförsörjning och goda möjligheter att gå och cykla till kollektivtrafik som går längs Arningevägen och till Roslagsbanans stationer. Arningevägen riskerar att få ökade trafikflöden i och med bebyggelseutvecklingen, vilket också påverkar Norrortsleden och längre söderut vid trafikplats Arninge och E18. Täby kommun önskar en dialog kring Arningevägen med Vallentuna kommun tillsammans med Trafikverket och att en åtgärdsvalsstudie för Arningevägen genomförs.
+
+I samrådsförslaget pekas en förlängning av Arningevägen norrut ut, tillsammans med utvecklingsområdet Södra Haga. Utveckling längs Arningevägen, både i Kristineberg och i Södra Haga, behöver mötas upp med kapacitetsstark och attraktiv kollektivtrafik för att inte områdena ska få högt resande med bil.
+
+Täby vill betona vikten av samverkan mellan kommunerna när det gäller vattenfrågor för att klara miljökvalitetsnormerna med avseende på frågans mellankommunala karaktär. Detta lyfts i planen, vilket är bra. Detsamma gäller för samverkan kring grönstruktur och särskilt den regionala grönstrukturen.
+
+Täby vill påpeka två felaktigheter i kartorna. I kartan på s 14 saknas bebyggelse i Arninge. I kartan på s 25 har Norrortsleden en felaktig dragning.
+
+Kommentar: Planen kompletteras med den regionala stadskärnans betydelse för Vallentuna.
+
+Om planen genomförs i sin helhet kommer större åtgärder i trafikinfrastrukturen att behövas. Planen redovisar ett flertal alternativ utifrån olika scenarion. Vallentuna avser att fördjupa detta arbete med en trafikutredning som ska konkretisera framtida övergripande trafikinfrastrukturbehov till och från Vallentuna tätort. Dialog med bl.a. Täby kommer att genomföras i detta sammanhang. Dvs. utöver den mer kontinuerliga dialog i trafikfrågor som redan finns och de åtgärder som kan bli aktuella på kort sikt.
+
+Felaktiga kartor åtgärdas.
+
+## 3.37 Upplands Väsby kommun (-51)
+
+### Planens struktur
+
+Upplands Väsby kommun anser att planförslaget har en tydlig struktur med strategier ner till beskrivning av sakfrågor med framåtblickande "Utgångspunkter" och "Planeringsinriktningar". Det skulle ha varit intressant att även få veta mer om den fortsatta processen, inklusive någon form av system för uppföljning av översiktsplanen.
+
+### Regionalt samarbete
+
+---
+
+Planförslaget har en tydlig redovisning av det omfattanden regionala och mellankommunala samarbetet. Upplands Väsby kommun delar Vallentuna kommuns åsikt om vikten av samarbete i olika sakfrågor och på olika nivåer.
+
+## Mellankommunal cykel- och vägförbindelse (väg 268)
+
+Planförslaget uttrycker att Vallentuna ligger centralt i regionen mellan Stockholm och Arlanda och att goda förbindelser med Arlanda och Uppsala är viktiga. En utbyggd Roslagsbanan till Arlanda redovisas som en sådan viktig förbindelse. Planförslaget understryker även behovet av förbättrade cykel- och vägförbindelser vid väg 268. En bättre vägförbindelse ger möjlighet till en stombusslinje Arninge – Upplands Väsby station – Barkarby. Förutom förbättrad förbindelse mot Upplands Väsby, understryks att förbindelsen är viktig för Vallentuna kommun när det gäller vägtrafik till Arlanda/Uppsala. I planförslaget uttrycks detta:
+
+"Trafikverket planerar att förbättra tvärförbindelsen mellan Upplands Väsby och Vallentuna genom en rätare sträckning med ny trafikplats på E4 och andra åtgärder i syfte att förbättra trafiksäkerhet och restid. En ny sträckning av Väsbyvägen (väg 268) förbättrar tillgängligheten till såväl Upplands Väsby och dess pendeltågsstation som till Arlanda och Uppsala."
+
+Upplands Väsby kommun delar Vallentuna kommuns åsikt om behov av bättre mellankommunal och regional förbindelse för såväl cykel-, kollektiv- och biltrafik. Samarbete mellan kommunerna och Trafikverket pågår kring detta med diskussion om bland annat medfinansiering. Vi vill dock understryka att det genomsamma behovet även inbegriper en välfungerande trafikplats vid E4:an, vilket skulle kunna framgå tydligare i Vallentunas översiktsplan, till exempel med en formulering i det citerade stycket ovan.
+
+## Verksamhetsområde utmed väg 268
+
+I sydvästra Vallentuna, längs väg 268, inom Arlandas influensområde och i direkt anslutning till kommungränsen mot Upplands Väsby redovisar planförslaget ett utredningsområde för ett nytt verksamhetsområde. Utredningsområdet innebär att Vallentuna kommun är beredd att pröva en samlad verksamhetsetablering i området. Vid en prövning uppges ingå att studera lämplig omfattning och inriktning utifrån aktuell plats förutsättningar. Bland annat uppges utredningsområdet omfattas av riksintresse för kulturmiljön (Skålhamravägen).
+
+Upplands Väsby kommun konstaterar att för denna typ av verksamheter/verksamhetsområden saknas planeringsinriktning i planförslaget. Vi tolkar planförslagets beskrivning som att i verksamhetsområden av detta slag behöver verksamheterna inte i lika stor utsträckning anpassa sin verksamhet till krav på prydlighet och skydd mot störningar för omgivningen. Verksamheter som anges är till exempel industri, tillverkning, lager och handel med skymmande varor. Vi vill understryka behovet av att stor hänsyn tas till platsen och omgivningen. I Upplands Väsby finns bostäder nära kommungränsen. Det föreslagna utredningsområdet ligger, förutom inom riksintresse för kulturmiljö, dessutom i sin helhet inom Rösjökilen. De angivna verksamheter som skulle kunna vara tänkbara, innebär alla risk för stor andel hårdgjord mark och inhägnader, vilket kan negativt störa spridningssambanden inom kilen. Verksamheter av detta slag ger även trafikalstring av framförallt tung trafik.
+
+78
+
+---
+
+Väg 268 har redan idag hög andel tung trafik, cirka tolv procent. Planförslaget anger att vägen förmodas fortsatt vara rekommenderad för trafik med farligt gods. Beroende på slutligt val av ombyggnad av väg 268, kan boende i Upplands Väsby vara mer eller mindre påverkade av trafiken på vägen.
+
+## Miljökonsekvensbeskrivningen
+
+Vad vi kan se har miljökonsekvensutredningen inte bedömt konsekvenserna av utredningsområde för verksamheter utmed väg 268.
+
+## Ekonomiska konsekvenser
+
+Remissvaret bedöms inte ge några ekonomiska konsekvenser.
+
+## Barnrättsperspektivet
+
+Barnrättsperspektivet har inte blivit belyst i denna fråga.
+
+Kommentar: En eventuell utveckling i utredningsområdet vid väg 268 ska föregås av fördjupad utredning med konsekvensbeskrivning. I ett sådant fall kommer särskild dialog med Upplands Väsby kommun att sökas.
+
+## 3.38 Stockholms läns landsting (-55)
+
+### Inledning
+
+Stockholms läns landsting yttrar sig över remissen i egenskap av regionplaneorgan för Stockholms län, som regional kollektivtrafikmyndighet samt utifrån landstingets övergripande trafikpolitik. Ärendet har beretts i samråd med landstingets trafikförvaltning, som inte avger eget yttrande. Landstingets remissvar utgår från utställningsförslaget RUFS 2010 samt utställningsförslaget för RUFS 2050.
+
+### Synpunkter
+
+Landstinget anser sammantaget att samrådsförslaget till ny översiktsplan har en god ambitionsnivå som på ett bra sätt redovisar kopplingarna mellan bebyggelseutveckling, kollektivtrafik och näringslivsutveckling. Det är positivt att kommunen redovisar ambitiösa mål för utbildning och hälsa, natur och kulturmiljö samt beskrivande mål och utmaningar från ett regionalt perspektiv. Kommunens samrådsförslag stämmer väl in med den regionala inriktningen, men skulle med fördel kunna förtydligas om hur de mellankommunala frågorna avses hanteras.
+
+### Regional bebyggelseutveckling och markanvändning
+
+Både kommunens mål om antal bostäder som bedöms kunna tillkomma i kommunen fram till år 2040, principerna om byggnader i stationsnära lägen och ambitionerna om en variation av bostäder ligger väl i linje med utställningsförslaget till RUFS 2050. Landstinget ser positivt på att kommunen eftersträvar en balanserad utveckling av både arbetsplatser och bostäder. Det är också positivt att kommunens inriktning innebär att planera bebyggelse i kollektivtrafiknära lägen för att på så sätt stärka
+
+79
+
+---
+
+förutsättningarna för en hållbar, attraktiv och ändamålsenlig markanvändning och kollektivtrafik.
+
+När det gäller Kristineberg som en ny stadsdel vill landstinget betona dels att det utpekade området för den nya stadsdelen primärt föreslås i en regional grönkil och dels risken att föreslagen bebyggelse och förutsättningarna i området försvårar kollektivtrafikens konkurrenskraft mot bilen.
+
+Landstinget är positivt till hur kommunen avser utveckla de tekniska försörjningssystemen. Inriktningen följer i stort de förhållningssätt och ställningstaganden som redovisas i RUFS.
+
+Landstinget delar kommunens bedömning av vilka de primära mellankommunala intressena för utvecklingen av Vallentuna kommun är, men noterar att värmeverket i Vallentuna som bedöms vara av regional betydelse inte framgår av planen. Landstinget vill också uppmärksamma kommunen på att masshantering och täktverksamhet samt de transporter de genererar är en viktig mellankommunal och delregional samordningsfråga. Det bör också framgå av planen att kommunen har en befintlig bergtäkt med mellanlagringfunktion vid Löt av regional betydelse.
+
+Planeringsinriktningar för att uppnå massbalans inom kommunens samt intilliggande exploateringsprojekt samt en högre grad av återanvändning och återvinning av schaktmassor och bygg- och rivningsavfall kan med fördel beskrivas tydligare.
+
+Kommentar: Den nya stadsdelen Kristineberg omfattas inte av en regional grönkil. Stombuss planeras att trafikera Arningevägen såväl som att stadsdelen planeras för lokal busstrafik.
+
+Planen lyfter fram LÖTs regionala betydelse. Kommunen har efterfrågat en regional dialog och samordning i lokaliseringsfrågor rörande t.ex. kombiterminaler, logistikcentra, distributionscentraler, masshantering och takt av regional betydelse. Arlandaregionen framförde det nu senast i samband med remiss om utställningsförslag av regional utvecklingsplan 2050.
+
+Planen kompletteras med att en strategi för hantering av schaktmassor och överskottsjord ska tas fram för en mer resurseffektiv och en mer kretsloppsanpassad hantering i takt med utvecklingen.
+
+Regionalt näringsliv och service
+
+Landstinget ser positivt på att Vallentuna kommun arbetar med och ser sin roll i ett regionalt perspektiv. Fram till år 2040 planeras för 7 000 nya arbetstillfällen i kommunen och landstinget ser positivt på antalet nya arbetstillfällen såväl som att arbeta med integrerade företagslokaler i bottenvåningar i bostadsområden för nya företagsetableringar. Att utnyttja närheten till Arlanda är också viktigt för att attrahera näringsliv till Vallentuna.
+
+Det är positivt med ambitionen att stärka centrala Vallentuna och, med en ökad täthet och mer stadskvaliteter, skulle det vara en bra plats även för en ökad grad av kontorsbaserade verksamheter.
+
+80
+
+---
+
+I utställningsförslaget till RUFS 2050 har landsbygdens rumsliga utveckling lyfts fram genom att bland annat landsbygdsnoder pekats ut i nära samarbete med berörda kommuner, där Karby Brottby lyfts fram i Vallentuna kommun. Kommunen bör överväga att revidera förslaget till verksamhetsområde i Karby Brottby så att det integreras i landsbygdsnoden. Även andra områden som redovisas för sällanköpshandel avviker från intentionerna för de rumsliga principerna i förslaget till RUFS 2050.
+
+Det är välkommet att, som kommunen gör, se de olika förutsättningar som finns för besöksnäringen i kommunen, för att vara en del av Stockholmsregionens ökande besöksnäring. Landstinget ser vidare mycket positivt på kommunens ambition att värna jord- och skogsbruket i kommunen, vilket ligger väl i linje med förslaget till RUFS 2050 och till regional Landsbygds- och skärgårdsstrategi.
+
+Det är positivt att kommunen beskriver samhällets utveckling och skolans betydande roll för detta samt ambitionen att erbjuda hög kvalitet i skolundervisningen såväl som en skola för alla. Det är positivt att ambitionen är att erbjuda hög kvalitet för den sociala omsorgen.
+
+Det är positivt att Vallentuna uttrycker att utbudet inom kultur ska vara om-fattande med hög kvalitet samt tillgängligt för alla.
+
+Kommentar: Verksamhetsområdet i Karby föreslås i pågående fördjupad översiktsplan vara en del av tätorten.
+
+## Klimat, vatten och buller
+
+Kommunens förslag skulle vinna på ett utvecklat resonemang kring mångfunktionella ytor kopplat till klimatpåverkan och klimatanpassning. Landstinget önskar också ett utförligare resonemang kring hur kommunen planerar för att bidra till att nå de regionala målen om att vara en region utan klimatpåverkande utsläpp år 2045.
+
+I avsnittet trafik- och verksamhetsbuller önskar landstinget att kommunen preciserar vilka mål de har för icke centrala lägen respektive centrala lägen utan att använda avstegsbegreppet.
+
+Anser att "avsteg" inte är ett begrepp som anges i förordningen om trafikbuller vid bostadsbyggnader (SFS 2015:216 och SFS 2017:359).
+
+Delarna som berör grönstruktur kan med fördel utvecklas med ett resonemang kring dess betydelse för att hantera ett förändrat klimat. Att utveckla och värna grön infrastruktur är ett viktigt verktyg i att hantera ett varmare klimat.
+
+Kommentar: Energifrågor hanteras främst i kommunens energiplan.
+
+Planeringsinriktning gällande avsteg för riktlinjer för trafikbuller tas bort.
+
+Kommunen har sedan hösten 2017 en färdigställd grönstrukturplan som kompletterar och konkretiserar översiktsplanen.
+
+Regionalt transportsystem
+
+---
+
+I översiktsplanen nämns behovet av blandad bebyggelse med bostäder, arbetsplatser och service för att möjliggöra för korta avstånd där gång och cykel är självklara. Landstinget önskar att det preciseras om hur planeringen ska genomföras samt att översiktsplanen anger principer för prioriteringsordning vad gäller fördelning av utrymme för olika färdmedel. I principerna är det viktigt att beakta markbehov för utbyggnad av cykelstråk, däribland det regionala cykelstråket Arningestråket.
+
+Landstinget efterfrågar att kommunen tydliggör visioner och mål för transportsystemet i kommunen, bland annat mål för andelen gående och cyklister och mål för ökat resande med kollektivtrafiken.
+
+Det är positivt att cykeln beskrivs som färdmedelsalternativ för både lokala och regionala resor och att översiktsplanen pekar ut ett flertal viktiga regionala kopplingar. I dessa är det viktigt att beakta markbehov för utbyggnad av cykelstråk, däribland det regionala cykelstråket Arningestråket. Positivt är även att kommunen lyfter behovet av kombinationsresor och möjligheten att byta mellan cykel och kollektivtrafik. Det skulle i det sammanhanget kunna föras resonemang om prioriteringar och avvägningar mellan infartsparkeringar och lokalisering av ny bebyggelse. Verktyg som kombinerad mobilitet kan bli viktiga för att uppnå ett ekonomiskt och hållbart transportsystem och det skulle kunna redovisas tydligare i översiktsplanen.
+
+Landstinget stödjer förtätning av befintliga stationssamhällen samt att utveckla bytespunkter mellan olika trafikslag vid stationer och hållplatser för stomtrafik som fokusområden. Översiktsplanen beskriver nya viktiga kollektivtrafikkopplingar som är viktiga för kommunens framtida utveckling. Vid utveckling av nya områden är det viktigt att nya kollektivtrafikkopplingar analyseras från ett systemperspektiv för hur kollektivtrafik och trafikering bör bedrivas.
+
+Landstinget anser att om en utveckling av blandad bebyggelse söder om Frösunda ska ske bör det förutsätta en stationsflytt. En flytt av Frösunda station kommer kräva stora investeringsbehov och är sannolikt svårt att genomföra då stationen idag redan försörjer ett samhälle med snabba transporter till kommuncentrum och Stockholms innerstad. Landstinget ser dock annars en stor risk att bebyggelsen blir svår att kollektivtrafikförsörja, och menar att kommunen bör presentera en hållbar bebyggelseidé med en flyttad station där ny föreslagen bebyggelsen kan ges ett bra kollektivtrafikläge.
+
+Vid utvecklingen av området mellan Lindholmen och Vallentuna önskar landstinget en redogörelse av bebyggelsens utbredning och täthet, och därmed möjlighet till kollektivtrafikförsörjning för området. Vidare ser landstinget en risk att föreslagen bebyggelseutveckling i Gillinge till stor del blir personbilsorienterad då en stor del av området skulle hamna utanför attraktivt gångavstånd från Gillinge motorvägshållplats.
+
+Roslagsbanan till Arlanda har utretts av landstinget. Utredningen avbröts och har återupptagits av Stockholm Nordost. För landstinget är en förlängning av Roslagsbanan inte en prioriterad investering från ett regionalt perspektiv fram till 2030. En fortsatt dialog om hur tillgängligheten mellan Vallentuna och Arlanda ska utvecklas bortom år 2030 välkomnas av landstinget.
+
+82
+
+---
+
+Roslagsbanan till Rimbo studerades i "ÅVS av regional kapacitetsstark kollektivtrafik till Nordostsektorn i Stockholms län", men är inget som lands-tinget i nuläget planerar för. Landstinget anser att det är bra att kommunen markerat reservat för dubbelspårsutbyggnad längs hela Roslagsbanan.
+
+Depåkapaciteten i Okvista är en förutsättning för kollektivtrafiken och fyller en viktig regional funktion. Den bör därför redovisas i planen då landstinget planerar utveckling av den. Vid utveckling av området vill landstinget betona att det är viktigt att tillkommande verksamheter kan samexistera med bussdepån.
+
+Kommentar: Planen sammanfattar till stora delar kommunens trafikstrategi i trafikfrågor. Trafikstrategin innehåller bl.a. konkretiserade mål. Prioriteringsordningen är så som trafikslagen presenteras i planen. Arbete med parkeringsstrategi pågår.
+
+Kommunen noterar synpunkt om Frösunda och avser att ta kontakt med landstinget i ett tidigt planeringskede. En större utveckling i södra Frösunda ingår för närvarande inte i kommunens planering för de närmaste 10-åren. I andra utvecklingsområden som omnämns pågår eller planeras fördjupad översiktsplan med konkretisering.
+
+Depån kompletteras med att bussdepån i Okvista är av regional betydelse.
+
+## 3.39 Danderyd (-50)
+
+Vallentunas översiktsplan tar fasta på Stockholm Nordosts vision gällande att skapa förutsättningar för 100 000 nya invånare i regionen och 50 000 nya arbetstillfällen. Vallentunas ambition är att verka för att 7 000 nya arbetstillfällen ska skapas i kommunen samt 9 000 nya bostäder. Bostadsbyggandet ska ske mellan 2018 och 2040. Idag finns det cirka 12 500 bostäder i Vallentuna och bostadsbeståndet kommer enligt översiktsplanen i princip att fördubblas. Merparten av dessa bostäder kommer att lokaliseras kring befintliga tätorter där främst Vallentuna tätort ska kompletteras med nya bostäder.
+
+I planförslaget lyfts Roslagsbanan fram som väldigt viktig för kommunikationer. Genom Sverigeförhandlingen har Vallentuna åtagit sig att medfinansiera Roslagsbanans förlängning från Universitetet till Odenplan och T-centralen. Vallentuna kommun ska i och med Sverigeförhandlingen medverka till att 5 650 nya stationsnära bostäder byggs inom kommunen fram till år 2035. Vallentuna verkar även för Roslagsbanans förlängning till Arlanda.
+
+Vallentunas invånare arbetspendlar i huvudsak mot Täby och Stockholm. Detta mönster kommer säkerligen förstärkas framöver genom kommande exploateringar. Förslaget till översiktsplan förespråkar vikten av mellankommunalt samarbete. Danderyd bedömer att mellankommunalt samarbete, framförallt angående infrastruktur- och kollektivtrafikfrågor, är än viktigare framöver när samtliga kommuner inom Stockholm Nordost växer.
+
+Om kommunerna norr om Danderyd växer, är det av stor vikt att genomfartstrafiken på E18 inte ökar i samma takt som befolkningen. Danderyds kommun är redan idag
+
+83
+
+---
+
+hårt belastat av buller och partiklar som genereras från trafiken på E18. För att åstadkomma en bättre miljö längs E18-stråket utreder Danderyd möjligheterna att tunnelförlägga E18 genom kommunen. Ett program inför en fördjupning av översiktsplanen har tagits fram och samråd genomfördes under hösten 2016. Programmet pekar ut och belyser strategiska utvecklingsfrågor för det centrala stråket genom kommunen samt visar olika handlingsalternativ för att åstadkomma en bättre miljö i området längs med E18. En tunnelförläggning av E18 genom Danderyd möjliggör, förutom bostadsbebyggelse, att en bättre resandenod med bytesmöjlighet mellan tunnelbana Roslagsbanan och bussar kan skapas vid Danderyds sjukhus, vilket gagnar resande från hela nordostsektorn. En eventuell tunnelförläggning av E18 genom Danderyd borde vara ett gemensamt intresse för kommunerna inom Stockholm Nordost.
+
+Kommentar: Vallentuna är positiva till tunnelförläggning av E18 genom Danderyd. Mellankommunalt samarbete kring infrastrukturfrågor är viktigt.
+
+## 3.40 Sigtuna kommun (-53)
+
+Sigtuna kommun har genom remiss beretts tillfälle att lämna synpunkter på upprättad samrådshandling om översiktsplan för Vallentuna kommun. Sigtuna kommun får med anledning av remissen anföra följande.
+
+Inledningsvis får Sigtuna kommun framföra att kommunen biträder planförslagets huvudsakliga inriktning för den fysiska utvecklingen. Inom ramen för olika etablerade samverkansorgan bedriver kommunerna idag en dialog kring gemensamma mellankommunala och delregionala frågor. Sigtuna kommun ser positivt på den kommungemensamma uppfattningen i dessa mellankommunala frågor återspeglas i planförslaget.
+
+## Roslagsbanans avgrening till Arlanda och vidare koppling till Märsta
+
+Arlandakommunerna Sigtuna, Vallentuna, Knivsta och Upplands Väsby bedriver tillsammans med Swedavia ett delregionalt samarbete inom ramen för begreppet Arlandaregionen. Mot bakgrund av den pågående utvecklingen av flygplatsstaden – Airport City Stockholm – och ambitionen om 50 000 arbetstillfällen i området till år 2030, ser parterna ett tillagande behov av få till stånd åtgärder för en ökad tillgänglighet i Arlandaregionen. En åtgärd som gemensamt förordas av parterna i samarbetet och som stödjer tillgängligheten till Arlanda och kopplingen mellan de regionala stadskärnorna Arlanda-Märsta och Täby-Arninge är Roslagsbananas avgrening till Arlanda.
+
+Sigtuna kommun ser positivt på den tydliga viljeriktning och beredskap som finns både i Stockholm-Nordost och i Arlandaregionen om en framtida avgrening av Roslagsbanan till Arlanda och som även redovisas i Vallentunas förslag till översiktsplan. Särskilt angeläget för Sigtuna kommun i detta sammanhang är också välfungerande kollektivtrafiklösningar i stråket Arlanda-Märsta säkerställs. Sigtuna kommun har därför inom ramen för det gemensamt pågående utredningsarbetet om en förlängning av Roslagsbanan till Arlanda tagit initiativ till en kompletterande studie hur en sådan koppling till Märsta kan utformas.
+
+84
+
+---
+
+Men en utbyggd Roslagsbana till Arlanda med koppling till Märsta skapas kollektivtrafikstråk som förbinder de regionala stadskärnorna Täby-Arninge och Arlanda-Märsta. Detta kan också bidra till möjligheterna för en bättre integrerad bostadsutbildnings- och arbetsmarknad i norr- och nordostsektorn och kan även skapa en nödvändig redundans i trafiksystemet. De dynamiska effekterna av en sådan koppling måste bedömas som avgörande positiva både för Sigtuna kommun och för Vallentuna kommun.
+
+Kommentar: Synpunkter och information noteras.
+
+## 3.41 Miljö- och samhällsbyggnadsnämnden (-54)
+
+Följande ändringar görs i översiktsplanen under de rubriker som anges.
+
+### Bebyggelseutveckling&gt;Riktlinjer för bebyggelseutveckling utanför tätort (s. 22):
+
+Förslag till ändringar:
+
+Bygglovsavdelningen bedömer att tydligare riktlinjer för bebyggelse utomplan behöver fastställas i översiktsplanen.
+
+Kommentar: Planen kompletteras med att landsbygdsprogram ska tas fram. Landsbygdsprogrammet föreslås vara en plattform och utgångspunkt för det övergripande arbetet med landsbygdsfrågor i kommunen innehållande en övergripande strategi och handlingsplan för utveckling i kommunens landsbygd. Programmet föreslås bl.a. omfatta konkretiserade riktlinjer för bebyggelseutveckling.
+
+### Tekniska försörjningssystem&gt;Avfall (s. 39):
+
+Förslag till ändringar
+
+Ny text:
+
+"Hantera schaktmassor lokalt
+
+Vallentuna kommun ska möjliggöra för hantering av massor lokalt vid större exploateringsprojekt. Lokal masshantering bidrar till minskade transporter, bättre ekonomi, förkortade byggtider och en bättre arbetsmiljö. Platser för masshantering ska vara tillgängliga från transportvägar – och gärna redan utnyttjas för liknande ändamål. De ska gärna ligga en bit ifrån bostäder och känsliga natur-, kultur-, och fritidsområden samt vara stora nog för massor och maskiner.
+
+Planeringsinriktning
+
+För att tidigt informera om blivande upplagsplatser krävs tillfälliga bestämmelser för schaktupplag och etableringsplatser vid framtagandet av detaljplaner."
+
+Motivering
+
+---
+
+I samrådshandlingarna av RUFS 50 (nästa Regionala Utvecklingsplan För Stockholmsregionen) diskuteras de tekniska försörjningssystemen som ska förse verksamheter med sten- och jordmaterial och ge möjlighet att hantera avfall på ett resurseffektivt sätt utan klimatpåverkande utsläpp.
+
+"Avfallssektorn har stor betydelse när det gäller att ta hand om avfall från bygg- och anläggningsarbeten. Vid dessa arbeten uppstår stora mängder avfall i form av schaktmassor och överskottsjord. För att återvinna eller deponera överblivna schaktmassor behövs det avfallsanläggningar. En mer kretsloppsanpassad hantering av schaktmassorna skulle dock kunna minska den mängd som behöver transporteras bort eller deponeras. Därför ska alltid återanvändning, vidareförädling och återvinning samt massbalans eftersträvas inom exploateringsprojektet, eller genom att det sker ett utbyte med geografiskt närliggande projekt."
+
+Helt nyligen har kunskapsmaterial om masshantering tagits fram inom ramen för RUFS arbetet där en av slutsatserna är att ett bättre samspel mellan kommunerna och entreprenörerna är en viktig förutsättning för en mer kretsloppsanpassad hantering av schaktmassor. Platser för materialterminaler behöver pekas ut i planeringsprocessen.
+
+I Naturvårdsverkets föreskrifter (NFS 2017:2) om kommunala avfallsplaner om förebyggande och hantering av avfall läggs ett större ansvar på kommunerna för att möjliggöra en transportsnål, resurseffektiv avfallshantering.
+
+Regeringens fastställda etappmål om återanvändning, materialåtervinning och annat materialutnyttjande av icke-farligt byggnads- och rivningsavfall i byggsektorn ska vara minst 70 viktprocent senast år 2020. Det behöver finnas en närhetsprincip i återvinningstänket.
+
+För att underlätta logistiken när Vallentuna växer kan längden på lastbils- och persontransporter förkortas när planerade förnyelseområden ska byggas ut. Det görs genom att planera in tillfälliga områden för etablering och massupplag i eller i nära anslutning till planområdena. Dessa områden avetableras när byggskedet är över. Behov av minskade transporter har flera fördelar såsom till exempel mindre koldioxidutsläpp, minskad trängsel och kortare ledtider. Den ekonomiska hushållningen blir bättre då exploateraren inte behöver betala för att köra iväg massor som sedan ska köpas in igen i ett senare skede.
+
+**Kommentar:** Planen kompletteras med att en strategi för hantering av schaktmassor och överskottsjord ska tas fram för en mer resurseffektiv och en mer kretsloppsanpassad hantering i takt med utvecklingen.
+
+# Klimat och vatten &gt; Reservvatten och nödvatten (s. 45)
+
+Förslag till ändringar
+
+Texten i översiktsplanen behöver formuleras om så att skyddet av grundvatten och förvaltningen av de kommunala reservvattentäkterna stärks.
+
+Motivering
+
+---
+
+Vallentuna kommun har till stora delar sina grundvattenresurser intakta. Dricksvatten är näst efter luft det mest grundläggande behovet vi människor har för att leva. Resursen rent grundvatten är därför mycket viktigt att förvalta. Det är särbart att ha Mälaren som enda kommunala dricksvattenresurs. Vallentuna har en stor fördel som fortfarande har kvar egna grundvattenreserver av god kvalitet. Att rena ett förorenat grundvatten (eller ytvatten som t.ex. Mälaren) är dyrt. Det är mycket billigare att se över skyddet för de reservvattentäkter som finns och mer aktivt värna även övriga dricksvattentäkter. Skyddet och förvaltningen av reservvattentäkterna är idag eftersatt och behöver stärkas. Texten i översiktsplanen behöver formuleras om så att skyddet av grundvatten och förvaltningen av de kommunala reservvattentäkterna stärks.
+
+**Kommentar:** Planen kompletteras med att takterna är skyddade genom skyddsområde med skyddsföreskrifter. Reservvattenförsörjning för Vallentuna tillgodoses genom Norrvattens gemensamma resurser för reservvattenförsörjning. Hur dessa resurser ska göras tillgängliga för brukarna i Vallentuna planeras gemensamt av Roslagsvatten och Norrvatten.
+
+# Klimat och vatten &gt; Miljökvalitetsnormer för vatten &gt; Utgångspunkter (s. 46)
+
+Förslag till ändringar
+
+Ny text:
+
+"Vallentuna ska arbeta systematiskt med att minska närsaltbelastningen och föroreningsutsläppen till grund- och ytvatten, så att miljökvalitetsnormerna för vattenförekomsterna inom och nedströms kommunens gränser uppfylls.
+
+Planeringsinriktning: Vid prövning av tillståndsansökningar, planer och bygglov ska påverkan på miljökvalitetsnormerna utredas. Om det finns risk för påverkan ger kommunen och Länsstyrelsen vägledning för hur projektet ska handläggas och prövas. Om miljökvalitetsnormen ändå riskerar att överskridas ska projektet inte godkännas."
+
+**Kommentar:** Planen uppdateras i stort enligt synpunkt.
+
+# Naturmiljöer och naturvärden &gt; Planeringsinriktning (s. 62)
+
+Förslag till ändringar
+
+Ny text:
+
+"Samverkan ska ske med grannkommunerna om den regionala grönstrukturen i syfte att långsiktigt upprätthålla de gröna kilarnas ekologiska funktion och kvalitet (i enlighet med prioriterade åtgärder i RUFS 2050). Kompensationsåtgärder ska tillämpas vid exploateringsprojekt som skapar barriärer eller försvagar de gröna kilarna."
+
+Motivering
+
+---
+
+För varje generation tummas det från alla håll på de gröna kilarna, det bebyggs i kanterna. Varje litet avsteg kan anses bagatellartat och behjärtansvärt, men till slut kommer det till en punkt då den gröna kilen inte längre är en grön kil, även om den ser ut som det. Det är inte en grön kil om området består av en grön sammanhängande yta av golfbanor eller fotbollsplaner. De ekologiska kvalitéerna måste finnas, och de har vissa minimikrav. Det är dags att finna kriterier för dessa minimikrav och enas över kommungränserna om att respektera dessa, samt att börja arbeta med kompensationsåtgärder vid exploateringsprojekt.
+
+Kommentar: Ett etablerat regionalt samarbete om de gröna kilarna finns. Liksom kriterier att gröna kilar helst ska vara minst 500 meter breda och inkl. buffert helst totalt 1,5 kilometer.
+
+# Miljö och risk &gt; Trafik- och verksamhetsbuller &gt; Planeringsinriktning (s. 70)
+
+Förslag till ändringar
+
+Lägg till punkten:
+
+"Värna om 'tysta platser', det vill säga platser utan buller skapade av människan."
+
+Motivering
+
+Tysta platser är platser utan ljud skapade av människan, såsom biltrafik, trädgårdsmaskiner och industribuller. Tysta platser kommer att vara en bristvara i framtiden, om man inte värnar dem i den kommunala planeringen. De tysta platserna behöver tydliggöras i tid medan kommunen har dem kvar som en naturresurs som bidrar till att göra Vallentuna attraktivt. Värdet av tysta platser kan vara ett försäljningsargument för exempelvis hästgårdar som säljer naturupplevelser från hästryggen, och en resurs för att invånarna och besökande ska kunna återhämta sig på fritiden.
+
+Kommentar: Planen kompletteras med att vid utveckling av transportinfrastruktur och etablering av bullrande verksamheter ska hänsyn tas till värdet av rekreationsområden helt utan eller med begränsat samhällsbuller.
+
+# 4. Planen efter samrådet
+
+Översiktsplanen har uppdaterats utifrån vad som framgår av kommentarer till inkomna synpunkter. Planen har också uppdaterats med utgångspunkt från nya fördjupade kunskaper och inriktningar inom delområden från juni 2017. Därtill har förtydliganden och redaktionella ändringar gjorts.
+
+Uppdateringar av planen inkluderar bl.a. att:
+
+- underlag Folkhälsopolicy och Folkhälsostrategi har lagts till befintliga och pågående underlag
+- Lekplatsplan och Grönstrukturplan har flyttats till befintliga och pågående underlag
+
+---
+
+- underlag som Fördjupad översiktsplan för Kårsta och Ekskogen, Landsbygdsprogram, uppdatering VA-plan och Strategi för hantering av schaktmassor och överskottsjord har lagts till framtida underlag av större betydelse för ett genomförande av översiktsplanen
+- hänvisningar till andra underlag och styrdokument som är särskilt viktiga för planen har förtydligats i bild och text
+- Vallentuna ska utveckla trygga såväl som attraktiva livsmiljöer
+- Vallentuna tätort och Lindholmen ges i princip samma utgångspunkter för utvecklingen
+- föreslaget markerat utvecklingsområde söder om väg 268 tas bort i karta och text
+- förtydliganden i markanvändningskartan har gjorts för samtliga tätorter och i text att befintlig jordbruksmark i hög utsträckning ska värnas samt komplettering av vägledning för framtida avvägningar vid eventuella motstående intressen
+- vägreservat har konkretiserats i norra Vallentuna tätort och Lindholmen och grön koppling har lagts till i Västra Vallentuna tätort
+- markanvändningskartan i Karby och Brottby har konkretiserats ytterligare
+- verksamhetsområdet i markanvändningskartan i Löt/Roslagsstoppet har utökats
+- markanvändningskartan i Gillinge har konkretiserats ytterligare och förslag till planområde för Fördjupad översiktsplan har lagts till
+- markreservat för cykelväg längs Norrortsleden har lagts till
+- hur samråd ska bedrivas vid utveckling i närheten av kraftledningar och vid eventuella tillståndsprövningar av vindkraftverk har lagts till
+- avfallssektorn även har betydelse när det gäller att ta hand om avfall från bygg- och anläggningsarbeten
+- Oxundaåns dagvattenpolicy redovisas
+- dagvattenutredningar ska tas fram vid detaljplanering inom vissa delar av kommunen samt redovisning av konkreta förväntningar på kommande Blåplan i avseende miljökvalitetsnormer för vatten
+- förtydligande avseende strandskydd och landskapsbildskydd
+- vid behov ska kulturhistoriska utredningar och landskapsbildsanalyser genomföras har lagts till
+- geografisk avgränsning för riksintresseområdet Tärnan har ändrats
+- nytt riksintresseområde för friluftslivet kring Vallentunasjön har lagts till på karta och i text
+- vid utveckling av transportinfrastruktur och etablering av bullrande verksamheter ska hänsyn tas till värdet av rekreationsområden utan eller med begränsat samhällsbuller har lagts till
+- Arlandas största hinderbegränsande yta, stoppområde för vindkraftverk och influensområde för väderradar samt vägledning för förfarande vid prövning av högre byggnader och objekt i kommunen har lagts till
+- vid åtgärder i närheten av miljöfarliga verksamheter ska risksituationen bedömas har lagts till
+- ett nytt riksintresseområde för försvarsmakten i kommunens västra del och att det civila försvarets behov ska beaktas i samhällsplaneringen har lagts till.
+
+89
