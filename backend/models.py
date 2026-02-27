@@ -67,6 +67,21 @@ class DocumentChunk(Base):
     embedding = Column(Vector(3072), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
+class LawChunk(Base):
+    __tablename__ = "law_chunks"
+
+    id = Column(String, primary_key=True, index=True)
+    law_name = Column(String, nullable=False, index=True)
+    source_file = Column(String, nullable=True)
+    chapter = Column(String, nullable=True)
+    chapter_title = Column(String, nullable=True)
+    section = Column(String, nullable=True, index=True)
+    chunk_index = Column(Integer, nullable=True)
+    content = Column(Text, nullable=True)
+    embedding = Column(Vector(3072), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
 

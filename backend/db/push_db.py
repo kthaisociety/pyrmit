@@ -21,6 +21,36 @@ class PushDB:
         response = self.client.table("document_chunks").insert(data).execute()
         return response
 
+    def push_chunks(self, chunks: list[dict], batch_size: int = 25):
+        if not chunks:
+            return None
+
+        response = None
+        for start in range(0, len(chunks), batch_size):
+            batch = chunks[start:start + batch_size]
+            response = self.client.table("document_chunks").insert(batch).execute()
+
+        return response
+
+    def delete_chunks_by_document_name(self, document_name: str) -> int:
+        response = self.client.table("document_chunks").delete().eq("document_name", document_name).execute()
+        return len(response.data or [])
+
+    def push_law_chunks(self, chunks: list[dict], batch_size: int = 25):
+        if not chunks:
+            return None
+
+        response = None
+        for start in range(0, len(chunks), batch_size):
+            batch = chunks[start:start + batch_size]
+            response = self.client.table("law_chunks").insert(batch).execute()
+
+        return response
+
+    def delete_law_chunks_by_law_name(self, law_name: str) -> int:
+        response = self.client.table("law_chunks").delete().eq("law_name", law_name).execute()
+        return len(response.data or [])
+
 
 '''
 class DocumentChunk(Base):
