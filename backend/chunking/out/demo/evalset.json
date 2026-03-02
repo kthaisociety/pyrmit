@@ -1,0 +1,961 @@
+[
+  {
+    "id": 1,
+    "question": "Vad betyder följande avsnitt: fastbränslet kan skyddsavståndet minskas i avsevärd mån enligt Boverket.?",
+    "gold_passage_id": "435d5f655aea29c7",
+    "gold_page": 35,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "fastbränslet",
+      "kan",
+      "skyddsavståndet",
+      "minskas",
+      "i"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 2,
+    "question": "Vad betyder följande avsnitt: KAPITEL \n1\n13\nanslutning till planområdet i öster finns ett nybyggt område, Påtåker, bestående av \nfriliggande villor.?",
+    "gold_passage_id": "4a8d53da1ee68f40",
+    "gold_page": 18,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "KAPITEL",
+      "1",
+      "13",
+      "anslutning",
+      "till"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 3,
+    "question": "Vad betyder följande avsnitt: 2.1 Fastighetsbildning, gemensamhetsanläggning mm.?",
+    "gold_passage_id": "48600e201cbda76a",
+    "gold_page": 5,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "2.1",
+      "Fastighetsbildning,",
+      "gemensamhetsanläggning",
+      "mm."
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 4,
+    "question": "Vad betyder följande avsnitt: KAPITEL \n1\n15\nPerspektiv över torget vid den norra entrén med flerbostadshus med verksamheter i \nbottenvåningen, Sweco A?",
+    "gold_passage_id": "076580e641a6af18",
+    "gold_page": 20,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "KAPITEL",
+      "1",
+      "15",
+      "Perspektiv",
+      "över"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 5,
+    "question": "Vad betyder följande avsnitt: Värdefulla grönstråk som bevaras i planförslaget i enlighet med gällande översikts-\nplan och program.?",
+    "gold_passage_id": "f0e0e8711006dae3",
+    "gold_page": 13,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "Värdefulla",
+      "grönstråk",
+      "som",
+      "bevaras",
+      "i"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 6,
+    "question": "Vad betyder följande avsnitt: KAPITEL \n1\n19\nÖversikt - förslagna korsningar till och från planområdet, Kapacitetsutredning 2014.?",
+    "gold_passage_id": "2236921a17bc1257",
+    "gold_page": 24,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "KAPITEL",
+      "1",
+      "19",
+      "Översikt",
+      "-"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 7,
+    "question": "Vad betyder följande avsnitt: Som underlag för vårt uttalande om ansvarsfrihet har vi ut­\növer vår revision av årsredovisningen och koncernredovisning?",
+    "gold_passage_id": "e70b40b7eb297824",
+    "gold_page": 47,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Som",
+      "underlag",
+      "för",
+      "vårt",
+      "uttalande"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 8,
+    "question": "Vad betyder följande avsnitt: Nettoomsättning, Mkr\nRörelseresultat före engångsposter, Mkr\n0\n100\n200\n300\n400\n500\n600\n700\n800\n2015\n2014\n2013\n2012\n2011\n?",
+    "gold_passage_id": "88bba09b7df7d85a",
+    "gold_page": 18,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Nettoomsättning,",
+      "Mkr",
+      "Rörelseresultat",
+      "före",
+      "engångsposter,"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 9,
+    "question": "Vad betyder följande avsnitt: I norra delen av planområdet, utmed befintligt dike, planeras för en permanent \ndagvattendamm som dimensioneras för förd?",
+    "gold_passage_id": "5a264d4a89adb46f",
+    "gold_page": 44,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "I",
+      "norra",
+      "delen",
+      "av",
+      "planområdet,"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 10,
+    "question": "Vad betyder följande avsnitt: 39\nGÖTENEHUS 2015\nNot 25 Eget kapital\nUtdelning\nStyrelsen har föreslagit årsstämman att utdelning om 0:05 kronor per \nak?",
+    "gold_passage_id": "a2c92dcb6db2eaa5",
+    "gold_page": 41,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "39",
+      "GÖTENEHUS",
+      "2015",
+      "Not",
+      "25"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 11,
+    "question": "Vad betyder följande avsnitt: Kristinebergsområdets \nrekreationsvärden kommer till stor del att kunna bevaras, genom att breda skogsstråk \nbevaras mel?",
+    "gold_passage_id": "25633094a600392e",
+    "gold_page": 38,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "Kristinebergsområdets",
+      "rekreationsvärden",
+      "kommer",
+      "till",
+      "stor"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 12,
+    "question": "Vad betyder följande avsnitt: KAPITEL \n1\n19\nÖversikt - förslagna korsningar till och från planområdet, Kapacitetsutredning 2014.?",
+    "gold_passage_id": "ab600fed19e4b3bc",
+    "gold_page": 24,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "KAPITEL",
+      "1",
+      "19",
+      "Översikt",
+      "-"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 13,
+    "question": "Vad betyder följande avsnitt: brand) på värmeverket eller avfallsanläggningen \nbedöms kunna påverka planområdet.?",
+    "gold_passage_id": "4b3b89c32e689fe5",
+    "gold_page": 34,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "brand)",
+      "på",
+      "värmeverket",
+      "eller",
+      "avfallsanläggningen"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 14,
+    "question": "Vad betyder följande avsnitt: Marknaden är geografiskt uppdelad i regionerna Skara­\nborg, Göteborg, Stockholm och Skåne.?",
+    "gold_passage_id": "c89fd64dd9710b25",
+    "gold_page": 12,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Marknaden",
+      "är",
+      "geografiskt",
+      "uppdelad",
+      "i"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 15,
+    "question": "Vad betyder följande avsnitt: befattningshavare och revisorer\nStyrelse\nEfter förslag från valberedningen beslutade årsstämman \n2015 att styrelsearvode?",
+    "gold_passage_id": "3f7457e253b285a4",
+    "gold_page": 50,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "befattningshavare",
+      "och",
+      "revisorer",
+      "Styrelse",
+      "Efter"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 16,
+    "question": "Vad betyder följande avsnitt: 2015 \n2014 \n2015 \n2014\nFör skulder till kreditinstitut \ninkl checkräkningskredit \nFastighetsinteckningar \n155 594 227 90?",
+    "gold_passage_id": "02305d5ee06b9c3d",
+    "gold_page": 42,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "2015",
+      "2014",
+      "2015",
+      "2014",
+      "För"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 17,
+    "question": "Vad betyder följande avsnitt: KAPITEL \n1\n9\nÖversiktlig jordartskarta, planområdet markerat med hel svart linje undantaget \nhuvudgatans förlängning.?",
+    "gold_passage_id": "86512487975749ce",
+    "gold_page": 14,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "KAPITEL",
+      "1",
+      "9",
+      "Översiktlig",
+      "jordartskarta,"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 18,
+    "question": "Vad betyder följande avsnitt: Planprogrammet utgör tillsammans med utvecklingsstrategin underlag för fem \ndetaljplaner med en utbyggnad med ca 1700-18?",
+    "gold_passage_id": "e8a2d45c3caa1c75",
+    "gold_page": 12,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "Planprogrammet",
+      "utgör",
+      "tillsammans",
+      "med",
+      "utvecklingsstrategin"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 19,
+    "question": "Vad betyder följande avsnitt: Förskola \nI anslutning till torget och längs med den nya huvudgatan placeras en förskola.?",
+    "gold_passage_id": "1fafc9621626514a",
+    "gold_page": 22,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "Förskola",
+      "I",
+      "anslutning",
+      "till",
+      "torget"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 20,
+    "question": "Vad betyder följande avsnitt: KAPITEL \n1\n1\nPlanbeskrivning \nÖversiktskarta, planområdet ungefärligt markerat.?",
+    "gold_passage_id": "70345f4307d99ed0",
+    "gold_page": 6,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "KAPITEL",
+      "1",
+      "1",
+      "Planbeskrivning",
+      "Översiktskarta,"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 21,
+    "question": "Vad betyder följande avsnitt: 24\nGÖTENEHUS 2015\nKoncernens kassaflödesanalys\nTkr \nNot 37 \n2015 \n2014\nDen löpande verksamheten\nResultat efter finansiel?",
+    "gold_passage_id": "de800781d50d3a44",
+    "gold_page": 26,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "24",
+      "GÖTENEHUS",
+      "2015",
+      "Koncernens",
+      "kassaflödesanalys"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 22,
+    "question": "Vad betyder följande avsnitt: Dagvattnet från angränsande områden norr om detaljplaneområdet föreslås att ledas \ntill ett separat dike (D1 och D2, mar?",
+    "gold_passage_id": "2dc284df7adb985f",
+    "gold_page": 32,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "Dagvattnet",
+      "från",
+      "angränsande",
+      "områden",
+      "norr"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 23,
+    "question": "Vad betyder följande avsnitt: 5,8 \n7,5\nAmortering år 2\n4,5 \n2,6\nAmortering år 3\n2,5 \n2,3\nAmortering år 4\n1,7 \n2,2\nAmortering år 5\n1,4 \n1,2\nAmortering ?",
+    "gold_passage_id": "b29a0f3045fd0384",
+    "gold_page": 43,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "5,8",
+      "7,5",
+      "Amortering",
+      "år",
+      "2"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 24,
+    "question": "Vad betyder följande avsnitt: Grönstruktur i södra Vallentuna i Översiktsplan 2010-2030, Källa: Planprogram \nför Kristineberg.?",
+    "gold_passage_id": "22fdebf22f0e2771",
+    "gold_page": 15,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "Grönstruktur",
+      "i",
+      "södra",
+      "Vallentuna",
+      "i"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 25,
+    "question": "Vad betyder följande avsnitt: Värdet på goodwill prövas minst en gång per år med \navseende på eventuellt nedskrivningsbehov.?",
+    "gold_passage_id": "c6a4b9e485680033",
+    "gold_page": 32,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Värdet",
+      "på",
+      "goodwill",
+      "prövas",
+      "minst"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 26,
+    "question": "Vad betyder följande avsnitt: Området präglas av en central torg- och parkmiljö runt vilka bebyggelsen grupperas.?",
+    "gold_passage_id": "9c7e2aa81e6ffaf1",
+    "gold_page": 19,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "Området",
+      "präglas",
+      "av",
+      "en",
+      "central"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 27,
+    "question": "Vad betyder följande avsnitt: Den planerade bebyggelsen inom etapp 1 ligger utanför riskområdet från \nArningevägen.?",
+    "gold_passage_id": "20165a980bd41a00",
+    "gold_page": 34,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "Den",
+      "planerade",
+      "bebyggelsen",
+      "inom",
+      "etapp"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 28,
+    "question": "Vad betyder följande avsnitt: Kapacitet \nEn Kapacitetsutredning Kristineberg – Vallentuna (Sweco) 2014-11-03 har genom-\nförts som visar en prognos om ?",
+    "gold_passage_id": "d5310dd0141f062f",
+    "gold_page": 24,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "Kapacitet",
+      "En",
+      "Kapacitetsutredning",
+      "Kristineberg",
+      "–"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 29,
+    "question": "Vad betyder följande avsnitt: 7.6 Markavvattningsföretag \nInom planområdets norra del finns ett aktivt markavvattningsföretag för dike \nGammelängs tf.?",
+    "gold_passage_id": "4404b31b24eaf1a7",
+    "gold_page": 30,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "7.6",
+      "Markavvattningsföretag",
+      "Inom",
+      "planområdets",
+      "norra"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 30,
+    "question": "Vad betyder följande avsnitt: 86 982 \n20 \n43 909 \n130 911\nÅrets resultat *)\n2 907 \n2 907\nUtgående eget kapital 2014-12-31\n86 982 \n20 \n46 816 \n133 818\n?",
+    "gold_passage_id": "00a0504ab2914036",
+    "gold_page": 30,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "86",
+      "982",
+      "20",
+      "43",
+      "909"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 31,
+    "question": "Vad betyder följande avsnitt: Resultatet per aktie har beräknats genom att årets resultat hänförligt \ntill moderbolagets aktieägare 21 160 tkr (8 212)?",
+    "gold_passage_id": "d16e3e7f93bacfb0",
+    "gold_page": 43,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Resultatet",
+      "per",
+      "aktie",
+      "har",
+      "beräknats"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 32,
+    "question": "Vad betyder följande avsnitt: KAPITEL \n2\n40\nI planarbetet har följande personer medverkat; Martin Larsson projektledare (konsult), \nAnna Nilsson plana?",
+    "gold_passage_id": "375ae2b59efc3707",
+    "gold_page": 45,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "KAPITEL",
+      "2",
+      "40",
+      "I",
+      "planarbetet"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 33,
+    "question": "Vad betyder följande avsnitt: Kollektivtrafik \nDen nya huvudgatan genom Kristineberg är möjlig att trafikera med busslinje om ny \nlinjedragning blir a?",
+    "gold_passage_id": "6a227283c89b4c1e",
+    "gold_page": 28,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "Kollektivtrafik",
+      "Den",
+      "nya",
+      "huvudgatan",
+      "genom"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 34,
+    "question": "Vad betyder följande avsnitt: Nedskrivningar\nGötenehus Group gör en bedömning av tillgångens åter­\nvinningsvärde då det finns indikationer på att en t?",
+    "gold_passage_id": "f0dc61c19784db50",
+    "gold_page": 32,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Nedskrivningar",
+      "Götenehus",
+      "Group",
+      "gör",
+      "en"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 35,
+    "question": "Vad betyder följande avsnitt: Not 13 Skatter\n Koncernen Moderbolaget\n2015 \n2014 \n2015 \n2014\nSkatt på årets resultat\nAktuell skattekostnad \n- \n- \n- \n-\n?",
+    "gold_passage_id": "b7757460e2ffc22a",
+    "gold_page": 38,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Not",
+      "13",
+      "Skatter",
+      "Koncernen",
+      "Moderbolaget"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 36,
+    "question": "Vad betyder följande avsnitt: Avfall \nFör flerbostadshusen föreslås hushållsavfall, matavfall och förpackningsåtervinning \nlämnas i soprum inne i bygg?",
+    "gold_passage_id": "f7124c8891aecb94",
+    "gold_page": 33,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "Avfall",
+      "För",
+      "flerbostadshusen",
+      "föreslås",
+      "hushållsavfall,"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 37,
+    "question": "Vad betyder följande avsnitt: 44\nGÖTENEHUS 2015\nStyrelsen och verkställande direktören försäkrar att årsredovisningen och koncernredovisningen har upp?",
+    "gold_passage_id": "f8ebb7f7424ea94f",
+    "gold_page": 46,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "44",
+      "GÖTENEHUS",
+      "2015",
+      "Styrelsen",
+      "och"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 38,
+    "question": "Vad betyder följande avsnitt: I enlighet med aktiebolagslagens bestämmelser fast­\nställer styrelsen varje år en arbetsordning för sitt arbete \ninnehål?",
+    "gold_passage_id": "d3061e50d02cce51",
+    "gold_page": 20,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "I",
+      "enlighet",
+      "med",
+      "aktiebolagslagens",
+      "bestämmelser"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 39,
+    "question": "Vad betyder följande avsnitt: Erlagda pensionspremier redovisas fortlöpande som en \npensionskostnad.?",
+    "gold_passage_id": "93583639ad13bf59",
+    "gold_page": 34,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Erlagda",
+      "pensionspremier",
+      "redovisas",
+      "fortlöpande",
+      "som"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 40,
+    "question": "Vad betyder följande avsnitt: Alla immateriella tillgångar med obestämd livslängd testas minst varje \når mot att värdet inte avviker negativt från akt?",
+    "gold_passage_id": "5971235c3a694af9",
+    "gold_page": 38,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Alla",
+      "immateriella",
+      "tillgångar",
+      "med",
+      "obestämd"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 41,
+    "question": "Vad betyder följande avsnitt: Planförslagets kvarter och gatustruktur jämfört med Naturvärdesobjekt (NVO) 1 och \n2.?",
+    "gold_passage_id": "7f1f5c0f30e1485a",
+    "gold_page": 16,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "Planförslagets",
+      "kvarter",
+      "och",
+      "gatustruktur",
+      "jämfört"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 42,
+    "question": "Vad betyder följande avsnitt: Värmen \nproduceras \ni \nen \nbiobränsleanläggning i Okvista och i en oljepanna i Bällstaberg.?",
+    "gold_passage_id": "ed23d1a90157944f",
+    "gold_page": 32,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "Värmen",
+      "produceras",
+      "i",
+      "en",
+      "biobränsleanläggning"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 43,
+    "question": "Vad betyder följande avsnitt: De största åldersgrupperna i \nSverige är nu dels generationen från efterkrigstiden som \när födda under andra hälften av ?",
+    "gold_passage_id": "8fb03d9f84f33fc5",
+    "gold_page": 9,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "De",
+      "största",
+      "åldersgrupperna",
+      "i",
+      "Sverige"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 44,
+    "question": "Vad betyder följande avsnitt: Utanför den tätare entrénoden är dock detta gaturum småskaligare \noch mer utblandat med naturmiljön, med sparade barrträ?",
+    "gold_passage_id": "c0a5fcacb11b0bfc",
+    "gold_page": 19,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "Utanför",
+      "den",
+      "tätare",
+      "entrénoden",
+      "är"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 45,
+    "question": "Vad betyder följande avsnitt: KAPITEL \n1\n11\n• \nNaturvärdesklass 1 – högsta naturvärde \n• \nNaturvärdesklass 2 – högt naturvärde \n• \nNaturvärdesklass 3 ?",
+    "gold_passage_id": "4e540383e6fd3e07",
+    "gold_page": 16,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "KAPITEL",
+      "1",
+      "11",
+      "•",
+      "Naturvärdesklass"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 46,
+    "question": "Vad betyder följande avsnitt: förutsättningarna i området med en höjdrygg som delar av området ger två punkter dit \nvattnet är lämpligt att ledas för ?",
+    "gold_passage_id": "4bce169bda5b4c97",
+    "gold_page": 31,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "förutsättningarna",
+      "i",
+      "området",
+      "med",
+      "en"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 47,
+    "question": "Vad betyder följande avsnitt: Utöver vad som redovisats ovan har inga andra ersättningar eller för­\nmåner utgått till styrelseledamöter, verkställande?",
+    "gold_passage_id": "2d4ffdac2ab8fb2c",
+    "gold_page": 35,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Utöver",
+      "vad",
+      "som",
+      "redovisats",
+      "ovan"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 48,
+    "question": "Vad betyder följande avsnitt: Området avvattnas idag norrut genom befintligt igenväxt åkerdike med utlopp under \nOkvistavägen som rinner vidare i dike?",
+    "gold_passage_id": "4fe7354245a962f2",
+    "gold_page": 15,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "Området",
+      "avvattnas",
+      "idag",
+      "norrut",
+      "genom"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 49,
+    "question": "Vad betyder följande avsnitt: Under verksamhetsåret uppgick pensionskostnaderna för verkställande \ndirektören till 890 tkr exklusive löneskatt.?",
+    "gold_passage_id": "bfa4fc6c586f5787",
+    "gold_page": 35,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Under",
+      "verksamhetsåret",
+      "uppgick",
+      "pensionskostnaderna",
+      "för"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 50,
+    "question": "Vad betyder följande avsnitt: Antalet transporter med farligt gods beräknas inte \nöka nämnvärt, dock innebär förslaget att antalet skyddsobjekt ökar i?",
+    "gold_passage_id": "07b0cc9d21681d3b",
+    "gold_page": 37,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "Antalet",
+      "transporter",
+      "med",
+      "farligt",
+      "gods"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 51,
+    "question": "Vad betyder följande avsnitt: 19\n FÖRVALTNINGSBER ÄT TELSE – GÖTENEHUS 2015\nInom styrelsen finns en fastighetskommitté, en ersätt­\nningskommitté och e?",
+    "gold_passage_id": "109aed2cf703c6dc",
+    "gold_page": 21,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "19",
+      "FÖRVALTNINGSBER",
+      "ÄT",
+      "TELSE",
+      "–"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 52,
+    "question": "Vad betyder följande avsnitt: 7\nGÖTENEHUS 2015\nFaktorer som påverkar efterfrågan\nFlera faktorer påverkar hur efterfrågan på nyproducerade \nbostäder ut?",
+    "gold_passage_id": "42a148060609676e",
+    "gold_page": 9,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "7",
+      "GÖTENEHUS",
+      "2015",
+      "Faktorer",
+      "som"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 53,
+    "question": "Vad betyder följande avsnitt: Hela området är beräknat med ett individtal på ca 4420 och utredningens \nbedömning är att risken varje individ utsätts f?",
+    "gold_passage_id": "4320e1e39eec72f2",
+    "gold_page": 34,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "Hela",
+      "området",
+      "är",
+      "beräknat",
+      "med"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 54,
+    "question": "Vad betyder följande avsnitt: 17\n FÖRVALTNINGSBER ÄT TELSE – GÖTENEHUS 2015\nFör att klara en ytterligare ökad nyproduktion av bostäder \nkrävs sannolik?",
+    "gold_passage_id": "6acbafbccd09e127",
+    "gold_page": 19,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "17",
+      "FÖRVALTNINGSBER",
+      "ÄT",
+      "TELSE",
+      "–"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 55,
+    "question": "Vad betyder följande avsnitt: Perspektiv vid radhus utmed huvudgatan.?",
+    "gold_passage_id": "14aa829f495ffed7",
+    "gold_page": 21,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "Perspektiv",
+      "vid",
+      "radhus",
+      "utmed",
+      "huvudgatan."
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 56,
+    "question": "Vad betyder följande avsnitt: Handel och centrum \nInom planen möjliggörs för flerbostadshus med lokaler för verksamheter i bottenplan.?",
+    "gold_passage_id": "82d79de2986164aa",
+    "gold_page": 23,
+    "gold_doc_id": 3,
+    "gold_doc_name": "kristineberg_etapp1.pdf",
+    "must_contain": [
+      "Handel",
+      "och",
+      "centrum",
+      "Inom",
+      "planen"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 57,
+    "question": "Vad betyder följande avsnitt: Götenehus byggrättsportfölj omfattar dels byggrätter \npå egen mark, dels byggrätter som disponeras genom \nvillkorade för?",
+    "gold_passage_id": "be93f2612ad35efc",
+    "gold_page": 13,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Götenehus",
+      "byggrättsportfölj",
+      "omfattar",
+      "dels",
+      "byggrätter"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 58,
+    "question": "Vad betyder följande avsnitt: • \nArningevägen gör det möjligt med en tätare bebyggelse med koppling till \nArninge som utvecklas till en yttre regional?",
+    "gold_passage_id": "4ced9067e4ae964e",
+    "gold_page": 10,
+    "gold_doc_id": 2,
+    "gold_doc_name": "Bilaga 1 a.pdf",
+    "must_contain": [
+      "•",
+      "Arningevägen",
+      "gör",
+      "det",
+      "möjligt"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 59,
+    "question": "Vad betyder följande avsnitt: Ett nedskrivningsbehov föreligger när det återvinnings­\nbara beloppet avseende en kassagenererande enhet (eller \ngrupper?",
+    "gold_passage_id": "073ab349fab0a504",
+    "gold_page": 33,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Ett",
+      "nedskrivningsbehov",
+      "föreligger",
+      "när",
+      "det"
+    ],
+    "type": "templated"
+  },
+  {
+    "id": 60,
+    "question": "Vad betyder följande avsnitt: Vidare kommer IFRS 16 Leases att \nersätta IAS 17 från och med 1 januari 2019.?",
+    "gold_passage_id": "4425ae1d73becd79",
+    "gold_page": 31,
+    "gold_doc_id": 1,
+    "gold_doc_name": "Årsredovisning 2015.pdf",
+    "must_contain": [
+      "Vidare",
+      "kommer",
+      "IFRS",
+      "16",
+      "Leases"
+    ],
+    "type": "templated"
+  }
+]
