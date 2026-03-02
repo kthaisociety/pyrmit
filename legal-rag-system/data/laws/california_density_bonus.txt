@@ -1,0 +1,32 @@
+California Government Code § 65915 - Density Bonus Law
+
+When an applicant proposes a housing development within the jurisdiction of a city, the city shall grant the applicant a density bonus and other incentives or concessions as follows:
+
+(1) For a housing development of five or more units where the applicant agrees to include affordable housing:
+
+    (A) A density increase of 35 percent if at least 15 percent of the total units are affordable to households at moderate income levels.
+    
+    (B) A density increase of 50 percent if at least 20 percent of the total units are affordable to households at low income levels.
+    
+    (C) A density increase of 80 percent if at least 10 percent of the total units are affordable to households at very low income levels.
+
+(2) The density bonus shall be calculated over the maximum allowable residential density under the zoning ordinance applicable to the project.
+
+(3) The granting of a density bonus shall not be interpreted to require any other waiver or modification of development standards.
+
+(4) In addition to the density bonus, an applicant shall be entitled to incentives or concessions as follows:
+    - One incentive for projects with 10-20% affordable units
+    - Two incentives for projects with 21-30% affordable units
+    - Three incentives for projects with 31% or more affordable units
+
+(5) This statute preempts local ordinances where they conflict with state density bonus provisions.
+
+(6) The local government shall not apply any development standard that will have the effect of physically precluding the construction of a development meeting the criteria for a density bonus.
+
+Affordable Housing Definitions:
+- Very Low Income: 50% or less of area median income
+- Low Income: 51-80% of area median income
+- Moderate Income: 81-120% of area median income
+
+Effective Date: January 1, 2021
+Last Amended: January 1, 2024

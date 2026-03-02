@@ -1,0 +1,23 @@
+Palo Alto Municipal Code - Title 18 Zoning test
+
+§ 18.12.040 R-2 Zone Regulations
+
+(a) Permitted Uses: Multi-family residential dwellings are permitted in the R-2 zone.
+
+(b) Density: The maximum residential density in the R-2 zone shall not exceed 15 dwelling units per acre.
+
+(c) Height Limit: No building shall exceed 35 feet in height.
+
+(d) Setbacks:
+    - Front: 20 feet minimum
+    - Side: 10 feet minimum  
+    - Rear: 15 feet minimum
+
+(e) Parking: Two parking spaces required per dwelling unit.
+
+(f) Lot Coverage: Maximum lot coverage shall not exceed 40% of the total lot area.
+
+(g) Open Space: Minimum of 200 square feet of usable open space per unit required.
+
+Effective Date: January 1, 2020
+Last Amended: March 15, 2023
