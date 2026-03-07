@@ -29,6 +29,7 @@ FastAPI Backend (backend/ -- port 8000)
     |--- Auth router   (/api/auth/*)      -- signup, signin, signout, /me
     |--- Chat router   (/api/chat, /api/sessions/*)  -- RAG chat, session history
     |--- Chunks router (/api/chunks/*)    -- ingest detaljplan PDFs / law txt files
+    |--- Agents router (/api/analyze)     -- multi-agent feasibility analysis
     |
     |--- RAG pipeline (routers/queryDB.py)
     |       |--- pgvector cosine similarity query on document_chunks
@@ -52,7 +53,7 @@ PostgreSQL + pgvector (db -- port 5432)
 | ----------------- | -------------------- | ------------------ | -------------------------------------------------------------------- |
 | `backend`         | `backend/`           | Python (FastAPI)   | REST API, auth, chat with RAG, chunking ingestion, DB models         |
 | `frontend`        | `frontend/`          | TypeScript (Next.js) | Chat UI with sidebar session list, auth pages, cookie-based auth   |
-| `legal-rag-system`| `legal-rag-system/`  | Python (standalone) | Experimental multi-agent RAG (LawAgent + CaseAgent + Orchestrator) |
+| `agents`          | `backend/agents/`    | Python (FastAPI)     | Multi-agent RAG: LawAgent + DocumentAgent + Orchestrator            |
 
 ---
 
@@ -71,6 +72,7 @@ PostgreSQL + pgvector (db -- port 5432)
 | Chat UI / session switching    | Frontend       | `frontend/components/Chat.tsx`, `frontend/components/Sidebar.tsx` |
 | Auth pages (login/signup)      | Frontend       | `frontend/app/auth/`                                     |
 | System prompts                 | Backend        | `backend/prompts/land_law_prompt.yaml`                   |
+| Agent analysis (feasibility)   | Backend        | `backend/agents/`, `backend/routers/agents.py`           |
 
 ---
 
@@ -136,6 +138,7 @@ PostgreSQL + pgvector (db -- port 5432)
 | POST   | `/api/chat`                       | Yes  | Send message, get RAG-powered response       |
 | POST   | `/api/chunks/ingest-detaljplan`   | No   | Ingest a detaljplan PDF or markdown file     |
 | POST   | `/api/chunks/ingest-laws`         | No   | Ingest law TXT files into law_chunks         |
+| POST   | `/api/analyze`                    | Yes  | Multi-agent feasibility analysis             |
 
 ---
 
@@ -222,12 +225,13 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 - `frontend/components/Chat.tsx` -- Chat message list, input form, session history fetch
 - `frontend/components/Sidebar.tsx` -- Session list, new chat button, user info + logout
 
-### Experimental Multi-Agent System
+### Agents (Multi-Agent RAG)
 
-- `legal-rag-system/agents/orchestrator.py` -- Coordinates LawAgent + CaseAgent, feasibility analysis
-- `legal-rag-system/agents/law_agent.py` -- RAG agent for statutory law (Ollama/Mistral + pgvector)
-- `legal-rag-system/agents/case_agent.py` -- RAG agent for historical permit cases
-- `legal-rag-system/utils/pg_vector_store.py` -- pgvector-backed vector store utility
+- `backend/agents/law_agent.py` -- RAG agent for statutory law (OpenAI GPT + SQLAlchemy pgvector on law_chunks)
+- `backend/agents/document_agent.py` -- RAG agent for detaljplan documents (OpenAI GPT + SQLAlchemy pgvector on document_chunks)
+- `backend/agents/orchestrator.py` -- Coordinates LawAgent + DocumentAgent, feasibility analysis
+- `backend/agents/parsers.py` -- Parse user queries, format agent responses
+- `backend/routers/agents.py` -- POST /api/analyze endpoint
 
 ---
 

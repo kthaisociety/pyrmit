@@ -154,3 +154,23 @@ class FolderIngestResponse(BaseModel):
     total_deleted: int
     items: list[FolderIngestItem]
 
+
+# --- Agent / Analyze schemas ---
+
+class AnalyzeRequest(BaseModel):
+    query: str | None = None
+    location: str | None = None
+    project_type: str | None = None
+    units: int | None = None
+
+
+class AnalyzeResponse(BaseModel):
+    feasibility: str
+    confidence: int
+    summary: str
+    law_findings: str
+    case_findings: str
+    requirements: list[str]
+    timeline: str | int | None = None
+    next_steps: list[str]
+
