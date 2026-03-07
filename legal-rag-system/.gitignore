@@ -13,6 +13,7 @@ vector_dbs/
 
 # Environment variables
 .env
+.env.template
 
 # IDE
 .vscode/
