@@ -1,3 +1,9 @@
+import os
+from dotenv import load_dotenv
+
+# Must run before any module that reads env vars at import time
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from db.database import engine, Base

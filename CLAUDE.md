@@ -99,19 +99,21 @@ PostgreSQL + pgvector (db -- port 5432)
 4. PushDB.push_law_chunks -> Supabase law_chunks table
 ```
 
-### Chat Request (RAG)
+### Chat Request (Multi-Agent RAG)
 
 ```
 1. POST /api/chat { messages, session_id? }
 2. auth middleware: validate session cookie -> get user
 3. Create/lookup ChatSession in DB
-4. Generate embedding for last user message (OpenAI text-embedding-3-large)
-5. RAG(db, embedding, k=5): cosine distance query on document_chunks
-6. (TODO: also query law_chunks for law context)
-7. Build system prompt from backend/prompts/land_law_prompt.yaml + retrieved chunks
-8. Call OpenAI chat completion (GPT-4o or similar)
-9. Save assistant response as ChatMessage in DB
-10. Return MessageResponse { role, content, session_id }
+4. Save user message to chat_messages
+5. parse_query(message) -> extract location, units, project_type
+6. If location or units missing -> return Swedish clarifying prompt
+7. LawAgent: embed query -> cosine search on law_chunks -> GPT structured JSON
+8. DocumentAgent: embed query -> cosine search on document_chunks -> GPT structured JSON
+9. Orchestrator: combine results -> feasibility verdict + confidence
+10. format_response(result) -> formatted plain-text analysis
+11. Save assistant response as ChatMessage in DB
+12. Return MessageResponse { role, content, session_id }
 ```
 
 ### Auth Flow
@@ -183,11 +185,12 @@ curl -X POST http://localhost:8000/api/chunks/ingest-detaljplan \
 
 Backend `.env` (backend/.env):
 ```
-DATABASE_URL=postgresql://user:password@db:5432/pyrmit
+DATABASE_URL=postgresql://user:password@localhost:5432/pyrmit
 OPENAI_API_KEY=...
 MISTRAL_API_KEY=...       # For PDF OCR
 SUPABASE_URL=...          # For PushDB (chunk ingestion)
-SUPABASE_KEY=...
+SUPABASE_KEY=...          # Anon/publishable key
+SUPABASE_SERVICE_KEY=...  # Service role key; required for ingest (bypasses RLS on law_chunks/document_chunks)
 ```
 
 Frontend `.env` (frontend/.env):

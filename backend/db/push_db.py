@@ -6,7 +6,8 @@ class PushDB:
 
     def __init__(self):
         self.supabase_url = os.environ["SUPABASE_URL"]
-        self.supabase_key = os.environ["SUPABASE_KEY"]
+        # Use service role key to bypass RLS for server-side writes
+        self.supabase_key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ["SUPABASE_KEY"]
         self.client: Client = create_client(self.supabase_url, self.supabase_key)
 
     def push_chunk(self, id: str, document_id: int, document_name: str, chunk_index: int, content: str, embedding: list):
