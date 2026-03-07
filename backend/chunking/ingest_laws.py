@@ -4,9 +4,12 @@ import uuid
 from pathlib import Path
 import sys
 
+from dotenv import load_dotenv
 from openai import OpenAI
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from chunking.chunk_laws import LawChunker
 from db.push_db import PushDB
