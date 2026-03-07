@@ -22,22 +22,28 @@ def parse_query(query: str) -> dict:
         "project_type": None,
     }
 
-    # Extract number of units
-    units_match = re.search(r"(\d+)\s*[-\s]?unit", query, re.IGNORECASE)
+    # Extract number of units (English + Swedish)
+    units_match = re.search(
+        r"(\d+)\s*[-\s]?(?:unit|lägenheter|bostäder|enheter|hus)",
+        query, re.IGNORECASE,
+    )
     if units_match:
         parsed["units"] = int(units_match.group(1))
 
-    # Extract location (simple pattern matching)
+    # Extract location (English "in/at" + Swedish "i/på/vid")
+    # Use a word-boundary anchor on the preposition so it doesn't match mid-word
     location_match = re.search(
-        r"(?:in|at)\s+([a-zA-Z\s]+?)(?:[,\.]|\s+CA|\?|$)", query, re.IGNORECASE
+        r"(?:^|(?<=\s))(?:in|at|i|på|vid)\s+([\w\-åäöÅÄÖ]+(?:\s+[\w\-åäöÅÄÖ]+)?)(?=[,\.\?\!]|\s+CA|\s*$)",
+        query, re.IGNORECASE,
     )
     if location_match:
         parsed["location"] = location_match.group(1).strip().title()
 
-    # Detect project type
-    if any(word in query.lower() for word in ["apartment", "multi-family", "units"]):
+    # Detect project type (English + Swedish)
+    lower = query.lower()
+    if any(w in lower for w in ["apartment", "multi-family", "units", "flerbostadshus", "lägenheter"]):
         parsed["project_type"] = "multi-family residential"
-    elif any(word in query.lower() for word in ["house", "single-family", "home"]):
+    elif any(w in lower for w in ["house", "single-family", "home", "villa", "enfamiljshus", "radhus"]):
         parsed["project_type"] = "single-family residential"
     else:
         parsed["project_type"] = "residential"

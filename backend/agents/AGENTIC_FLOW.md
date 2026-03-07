@@ -6,13 +6,23 @@ This package implements a multi-agent RAG pipeline for analysing the feasibility
 
 ## Architecture
 
+The agents are invoked from **two entry points** — the chat UI and a direct API:
+
 ```
-POST /api/analyze
-        │
-        ▼
-    agents.py router
-        │  parse_query() if free-text input
-        │
+Frontend Chat UI                        Direct API
+─────────────────                       ──────────
+POST /api/chat                     POST /api/analyze
+  (ChatRequest)                      (AnalyzeRequest)
+        │                                  │
+        ▼                                  ▼
+   chat.py router                    agents.py router
+   parse_query()                     parse_query() if free-text
+        │                                  │
+        │  location/units missing?         │
+        │  → return clarifying prompt      │
+        │                                  │
+        ├──────────────────────────────────┤
+        │         (same from here)         │
         ├──────────────────────────────────┐
         ▼                                  ▼
   LawAgent                          DocumentAgent
@@ -27,8 +37,11 @@ POST /api/analyze
                        ▼
                   Orchestrator
                        │
-                       ▼
-              AnalyzeResponse JSON
+        ┌──────────────┴───────────────────┐
+        ▼                                  ▼
+  format_response()                  AnalyzeResponse JSON
+  → plain text in                    → structured JSON in
+    MessageResponse                    AnalyzeResponse
 ```
 
 ### Components

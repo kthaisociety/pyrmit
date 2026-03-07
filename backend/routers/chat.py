@@ -5,12 +5,13 @@ import models
 import schemas
 import os
 import uuid
-import yaml
-from pathlib import Path
 from openai import OpenAI
 from sqlalchemy.sql import func
 from dependencies import get_current_user
-from routers.queryDB import RAG
+from agents.law_agent import LawAgent
+from agents.document_agent import DocumentAgent
+from agents.orchestrator import Orchestrator
+from agents.parsers import parse_query, format_response
 
 router = APIRouter()
 
@@ -55,75 +56,43 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
         # Actually sqlalchemy defaults might not update on python object modification unless configured. 
         # Let's just touch it if needed, or rely on the fact we are adding messages.
     
-    # Save user message
     last_message = request.messages[-1]
-
-    # --- STEP 1: Generate Embedding ---
-    embedding_vector = None
-    try:
-        response = client.embeddings.create(
-            input=last_message.content,
-            model="text-embedding-3-large"
-        )
-        embedding_vector = response.data[0].embedding
-        print(f"✅ Embedding generated successfully.")
-    except Exception as e:
-        print(f"⚠️ Embedding failed: {e}")
-    # ------------------------------------------------
-    
-    # --- STEP 2: Retrieve relevant chunks using RAG ---
-    relevant_chunks = []
-    if embedding_vector:
-        try:
-            relevant_chunks = RAG(db, embedding_vector, k=5)
-            print(f"✅ Retrieved {len(relevant_chunks)} relevant chunks.")
-            for i in range(len(relevant_chunks)):
-                print(f"Chunk {i+1}: " + relevant_chunks[i] + "\n" + "-"*200 + "\n")
-        except Exception as e:
-            print(f"⚠️ RAG retrieval failed: {e}")
 
     # Save user message
     user_message = models.ChatMessage(
-        role=last_message.role, 
+        role=last_message.role,
         content=last_message.content,
-        session_id=session_id
+        session_id=session_id,
     )
     db.add(user_message)
     db.commit()
     db.refresh(user_message)
 
-    # Call OpenAI Chat
-    try:
-        # We should probably fetch the full history for this session from DB to give context
-        # instead of relying on what frontend sent, OR trust frontend. 
-        # For now, let's trust the frontend sends the context or we fetch it.
-        # The previous implementation trusted request.messages. Let's stick to that for now but ideally we load from DB.
-        
-        messages = [{"role": m.role, "content": m.content} for m in request.messages]
-        
-        # Load system prompt from YAML
-        prompt_path = Path(__file__).parent.parent / 'prompts' / 'test_rag_prompt.yaml'
-        with open(prompt_path, 'r', encoding='utf-8') as f:
-            system_prompt = yaml.safe_load(f)
+    # Parse the user query for location, units, project_type
+    parsed = parse_query(last_message.content)
+    location = parsed.get("location")
+    units = parsed.get("units")
+    project_type = parsed.get("project_type") or "residential"
 
-        # Add retrieved context to system prompt if available
-        if relevant_chunks:
-            context = "\n\n".join(relevant_chunks)
-            system_prompt["content"] = system_prompt["content"] + f"\n\nRelevant context from documents:\n{context}"
-
-        if not any(m["role"] == "system" for m in messages):
-            messages.insert(0, system_prompt)
-        else:
-            messages[0] = system_prompt
-
-        completion = client.chat.completions.create(
-            model="gpt-3.5-turbo", 
-            messages=messages,
-            temperature=0.2 # Very low temperature for high precision
+    if not location or not units:
+        # Not enough info to run feasibility analysis — ask the user to clarify
+        ai_response_content = (
+            "Jag behöver lite mer information för att kunna göra en genomförbarhetsanalys.\n\n"
+            "Vänligen ange:\n"
+            "• **Plats** — t.ex. Södermalm, Vasastan, Kungsholmen\n"
+            "• **Antal enheter** — t.ex. 20 lägenheter\n\n"
+            "Exempel: \"Kan jag bygga 20 lägenheter i Södermalm?\""
         )
-        ai_response_content = completion.choices[0].message.content
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    else:
+        # Run full multi-agent feasibility analysis
+        try:
+            law_agent = LawAgent(db, client)
+            document_agent = DocumentAgent(db, client)
+            orchestrator = Orchestrator(law_agent, document_agent)
+            result = orchestrator.analyze(location, project_type, units)
+            ai_response_content = format_response(result)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
     
     # Save AI response
     ai_message = models.ChatMessage(
