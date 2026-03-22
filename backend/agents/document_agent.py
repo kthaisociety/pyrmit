@@ -3,20 +3,31 @@ RAG Agent for detaljplan / planning document research.
 Uses OpenAI GPT + SQLAlchemy pgvector queries on document_chunks.
 """
 
+import logging
+
 from openai import OpenAI
 from sqlalchemy.orm import Session
 
-from agents.base import BaseRAGAgent
+from agents.base import BaseRAGAgent, _TRANSLATION_INSTRUCTION
 from models import DocumentChunk
 
-_SYSTEM_PROMPT = "You are a permit analyst specializing in development project outcomes."
+logger = logging.getLogger(__name__)
 
-_USER_TEMPLATE = """Based ONLY on the following historical documents:
+_SYSTEM_PROMPT = (
+    "You are a permit analyst specializing in development project outcomes. "
+    + _TRANSLATION_INSTRUCTION
+)
+
+_USER_TEMPLATE = """Based ONLY on the following historical documents (which may be in Swedish):
 
 {context}
 
-Answer this question:
+Answer this question in English:
 What happened when people tried to build similar {project_type} projects (around {units} units) in {location}?
+
+When citing Swedish source text, use this format:
+> **English:** [your English interpretation]
+> **Original (Swedish):** [exact Swedish text from the source]
 
 Provide your answer in JSON format:
 {{
@@ -26,13 +37,13 @@ Provide your answer in JSON format:
             "units": <number>,
             "outcome": "APPROVED" or "DENIED",
             "year": <year>,
-            "conditions": ["<condition1>", "<condition2>"]
+            "conditions": ["<condition1 in English>", "<condition2 in English>"]
         }}
     ],
     "approval_rate": "<percentage>",
-    "common_requirements": ["<requirement1>", "<requirement2>"],
+    "common_requirements": ["<requirement1 in English>", "<requirement2 in English>"],
     "typical_timeline_months": <number>,
-    "political_climate": "<assessment>",
+    "political_climate": "<assessment in English>",
     "confidence": <0.0 to 1.0>
 }}
 
@@ -46,7 +57,7 @@ class DocumentAgent(BaseRAGAgent):
         super().__init__(db, openai_client, DocumentChunk, "Document Agent")
 
     def query(self, location: str, project_type: str, units: int) -> dict:
-        print(f"[{self.label}] Searching documents for {units} {project_type} units in {location}...")
+        logger.debug("Searching documents for %d %s units in %s", units, project_type, location)
 
         search_query = f"{location} {project_type} {units} units approved denied outcome"
         docs = self._retrieve(search_query)
@@ -59,10 +70,10 @@ class DocumentAgent(BaseRAGAgent):
 
         try:
             result = self._extract_json(response_text)
-            print(f"[{self.label}] Found {len(result.get('similar_cases', []))} similar cases")
+            logger.info("Found %d similar cases", len(result.get("similar_cases", [])))
             return result
         except Exception as e:
-            print(f"[{self.label}] Error parsing response: {e}")
+            logger.error("Error parsing LLM response", exc_info=True)
             return {
                 "similar_cases": [],
                 "approval_rate": "unknown",

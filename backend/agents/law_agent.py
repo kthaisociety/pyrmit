@@ -3,28 +3,39 @@ RAG Agent for legal/regulatory research.
 Uses OpenAI GPT + SQLAlchemy pgvector queries on law_chunks.
 """
 
+import logging
+
 from openai import OpenAI
 from sqlalchemy.orm import Session
 
-from agents.base import BaseRAGAgent
+from agents.base import BaseRAGAgent, _TRANSLATION_INSTRUCTION
 from models import LawChunk
 
-_SYSTEM_PROMPT = "You are a legal expert specializing in zoning and land use law."
+logger = logging.getLogger(__name__)
 
-_USER_TEMPLATE = """Based ONLY on the following legal documents:
+_SYSTEM_PROMPT = (
+    "You are a legal expert specializing in zoning and land use law. "
+    + _TRANSLATION_INSTRUCTION
+)
+
+_USER_TEMPLATE = """Based ONLY on the following legal documents (which may be in Swedish):
 
 {context}
 
-Answer this question:
+Answer this question in English:
 What are the legal requirements for building {units} units of {project_type} in {location}?
+
+When citing Swedish source text, use this format:
+> **English:** [your English interpretation]
+> **Original (Swedish):** [exact Swedish text from the source]
 
 Provide your answer in JSON format:
 {{
     "max_units_allowed": <number or "varies">,
-    "base_zoning": "<description>",
+    "base_zoning": "<description in English>",
     "applicable_laws": ["<law1>", "<law2>"],
-    "conditions": ["<condition1>", "<condition2>"],
-    "special_provisions": "<any density bonuses, exemptions, etc>",
+    "conditions": ["<condition1 in English>", "<condition2 in English>"],
+    "special_provisions": "<any density bonuses, exemptions, etc — in English>",
     "confidence": <0.0 to 1.0>
 }}
 
@@ -38,7 +49,7 @@ class LawAgent(BaseRAGAgent):
         super().__init__(db, openai_client, LawChunk, "Law Agent")
 
     def query(self, location: str, project_type: str, units: int) -> dict:
-        print(f"[{self.label}] Searching regulations for {units} {project_type} units in {location}...")
+        logger.debug("Searching regulations for %d %s units in %s", units, project_type, location)
 
         search_query = f"{location} zoning {project_type} density {units} units maximum allowed"
         docs = self._retrieve(search_query)
@@ -51,10 +62,10 @@ class LawAgent(BaseRAGAgent):
 
         try:
             result = self._extract_json(response_text)
-            print(f"[{self.label}] Found {len(result.get('applicable_laws', []))} applicable laws")
+            logger.info("Found %d applicable laws", len(result.get("applicable_laws", [])))
             return result
         except Exception as e:
-            print(f"[{self.label}] Error parsing response: {e}")
+            logger.error("Error parsing LLM response", exc_info=True)
             return {
                 "max_units_allowed": "unknown",
                 "base_zoning": "Could not determine",

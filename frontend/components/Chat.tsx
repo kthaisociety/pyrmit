@@ -2,6 +2,7 @@
 
 import { useState, useEffect, FormEvent, useRef } from 'react';
 import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   role: string;
@@ -129,7 +130,13 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
                 <p className="text-xs font-bold mb-1 opacity-70 uppercase tracking-wider">
                   {msg.role === 'user' ? 'You' : 'Pyrmit'}
                 </p>
-                <div className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</div>
+                {msg.role === 'user' ? (
+                  <div className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</div>
+                ) : (
+                  <ReactMarkdown className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                    {msg.content}
+                  </ReactMarkdown>
+                )}
               </div>
               {msg.role === 'user' && (
                 <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-xs flex-shrink-0 mt-1">

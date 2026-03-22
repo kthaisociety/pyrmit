@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     # Use the Connection String from Settings > Database
     # It looks like: postgresql://postgres:[password]@db.[id].supabase.co:5432/postgres
-    DATABASE_URL = os.environ["SUPABASE_DB_URL"] 
+    DATABASE_URL = os.environ["DATABASE_URL"]
 
     # Create the engine using the Postgres protocol
     engine = create_engine(DATABASE_URL)

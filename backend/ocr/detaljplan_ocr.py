@@ -1,6 +1,10 @@
+import logging
+
 from mistralai import Mistral
 import os
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -50,4 +54,4 @@ class MistralOCR:
 if __name__ == "__main__":
     ocr_processor = MistralOCR(api_key=api_key)
     result = ocr_processor.main("chunking/data/kristineberg_etapp1.pdf")
-    print(result)
+    logger.debug("OCR result: %s", result)

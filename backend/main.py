@@ -8,6 +8,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from db.database import engine, Base
 from routers import chat, auth, chunks, agents
+from logging_config import setup_logging
+
+setup_logging()
 
 # Create tables
 Base.metadata.create_all(bind=engine)

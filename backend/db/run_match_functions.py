@@ -1,11 +1,11 @@
-"""Run match_functions.sql against the Supabase Postgres DB."""
+"""Run match_functions.sql against the Postgres DB."""
 import os
 import psycopg2
 from dotenv import load_dotenv
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-DB_URL = os.environ["SUPABASE_DB_URL"]
+DB_URL = os.environ["DATABASE_URL"]
 
 SQL = """
 CREATE OR REPLACE FUNCTION match_law_chunks(query_embedding vector(3072), match_count int)

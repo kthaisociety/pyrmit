@@ -2,9 +2,10 @@ FROM oven/bun:1
 
 WORKDIR /app
 
-COPY package.json .
+COPY package.json bun.lock ./
 
-RUN bun install
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 COPY . .
 

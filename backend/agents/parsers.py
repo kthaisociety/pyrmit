@@ -53,47 +53,37 @@ def parse_query(query: str) -> dict:
 
 def format_response(response: dict) -> str:
     """
-    Format the orchestrator response for human readability.
+    Format the orchestrator response for human readability (Markdown).
 
     Args:
         response: Response dictionary from orchestrator
 
     Returns:
-        Formatted string
+        Markdown-formatted string
     """
     output = []
-    output.append("=" * 60)
-    output.append("FEASIBILITY ANALYSIS")
-    output.append("=" * 60)
-    output.append(f"\nFEASIBILITY: {response['feasibility']}")
-    output.append(f"CONFIDENCE: {response['confidence']}%")
-    output.append(f"\nSUMMARY:\n{response['summary']}")
+    output.append("## Feasibility Analysis")
+    output.append(f"\n**Feasibility:** {response['feasibility']}")
+    output.append(f"**Confidence:** {response['confidence']}%")
+    output.append(f"\n### Summary\n{response['summary']}")
 
     if response.get("law_findings"):
-        output.append(f"\n{'─' * 60}")
-        output.append("LAW FINDINGS:")
-        output.append(f"{response['law_findings']}")
+        output.append(f"\n### Law Findings\n{response['law_findings']}")
 
     if response.get("case_findings"):
-        output.append(f"\n{'─' * 60}")
-        output.append("HISTORICAL PRECEDENT:")
-        output.append(f"{response['case_findings']}")
+        output.append(f"\n### Historical Precedent\n{response['case_findings']}")
 
     if response.get("requirements"):
-        output.append(f"\n{'─' * 60}")
-        output.append("REQUIREMENTS:")
+        output.append("\n### Requirements")
         for req in response["requirements"]:
-            output.append(f"  • {req}")
+            output.append(f"- {req}")
 
     if response.get("timeline"):
-        output.append(f"\nESTIMATED TIMELINE: {response['timeline']}")
+        output.append(f"\n**Estimated Timeline:** {response['timeline']} months")
 
     if response.get("next_steps"):
-        output.append(f"\n{'─' * 60}")
-        output.append("RECOMMENDED NEXT STEPS:")
+        output.append("\n### Recommended Next Steps")
         for i, step in enumerate(response["next_steps"], 1):
-            output.append(f"  {i}. {step}")
-
-    output.append("=" * 60)
+            output.append(f"{i}. {step}")
 
     return "\n".join(output)

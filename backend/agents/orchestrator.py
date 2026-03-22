@@ -2,7 +2,11 @@
 Orchestrator agent that coordinates law and document agents.
 """
 
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict
+
+logger = logging.getLogger(__name__)
 
 
 class Orchestrator:
@@ -13,9 +17,14 @@ class Orchestrator:
         self.document_agent = document_agent
 
     def analyze(self, location: str, project_type: str, units: int) -> Dict[str, Any]:
-        law_result = self.law_agent.query(location, project_type, units)
-        document_result = self.document_agent.query(location, project_type, units)
+        logger.info("Starting analysis: %d %s units in %s", units, project_type, location)
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            law_future = executor.submit(self.law_agent.query, location, project_type, units)
+            doc_future = executor.submit(self.document_agent.query, location, project_type, units)
+            law_result = law_future.result()
+            document_result = doc_future.result()
         feasibility = self._determine_feasibility(units, law_result, document_result)
+        logger.info("Feasibility verdict: %s (confidence: %s%%)", feasibility["status"], feasibility["confidence"])
         return {
             "feasibility": feasibility["status"],
             "confidence": feasibility["confidence"],
@@ -56,7 +65,7 @@ class Orchestrator:
             return {
                 "status": "FEASIBLE WITH CHALLENGES",
                 "summary": f"Project is legally allowed but may face approval challenges. Approval rate for similar projects: {approval_rate_str}.",
-                "confidence": int(min(law_confidence, doc_confidence) * 80),
+                "confidence": int(min(law_confidence, doc_confidence) * 100),
             }
         if legally_allowed is False:
             return {

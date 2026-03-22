@@ -1,5 +1,9 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 from db.database import get_db
 import models
 import schemas
@@ -12,6 +16,7 @@ from agents.law_agent import LawAgent
 from agents.document_agent import DocumentAgent
 from agents.orchestrator import Orchestrator
 from agents.parsers import parse_query, format_response
+from agents.base import OPENAI_CHAT_MODEL
 
 router = APIRouter()
 
@@ -52,9 +57,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
         # Update timestamp
-        session.updated_at = func.now() # This might need explicit datetime if func.now() doesn't trigger on python side update, but let's rely on DB or explicit set
-        # Actually sqlalchemy defaults might not update on python object modification unless configured. 
-        # Let's just touch it if needed, or rely on the fact we are adding messages.
+        session.updated_at = func.now()
     
     last_message = request.messages[-1]
 
@@ -68,22 +71,75 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
     db.commit()
     db.refresh(user_message)
 
-    # Parse the user query for location, units, project_type
-    parsed = parse_query(last_message.content)
+    # Translate user message to English before processing
+    original_content = last_message.content
+    try:
+        translation_response = client.chat.completions.create(
+            model=OPENAI_CHAT_MODEL,
+            messages=[
+                {"role": "user", "content": f"Translate to English if not already in English (return only the translation, no explanation): {original_content}"}
+            ],
+            temperature=0,
+        )
+        translated_content = translation_response.choices[0].message.content.strip()
+    except Exception:
+        logger.warning("Translation failed, using original content", exc_info=True)
+        translated_content = original_content
+
+    # Parse the (translated) user query for location, units, project_type
+    parsed = parse_query(translated_content)
     location = parsed.get("location")
     units = parsed.get("units")
     project_type = parsed.get("project_type") or "residential"
 
     if not location or not units:
-        # Not enough info to run feasibility analysis — ask the user to clarify
-        ai_response_content = (
-            "Jag behöver lite mer information för att kunna göra en genomförbarhetsanalys.\n\n"
-            "Vänligen ange:\n"
-            "• **Plats** — t.ex. Södermalm, Vasastan, Kungsholmen\n"
-            "• **Antal enheter** — t.ex. 20 lägenheter\n\n"
-            "Exempel: \"Kan jag bygga 20 lägenheter i Södermalm?\""
-        )
+        logger.info("Missing location or units — falling back to general RAG")
+        # General RAG fallback: answer using retrieved law + document chunks
+        try:
+            law_agent = LawAgent(db, client)
+            document_agent = DocumentAgent(db, client)
+            law_chunks = law_agent._retrieve(translated_content, k=5)
+            doc_chunks = document_agent._retrieve(translated_content, k=5)
+            all_chunks = law_chunks + doc_chunks
+            if all_chunks:
+                context = "\n\n".join(
+                    f"Source {i + 1}:\n{chunk}" for i, chunk in enumerate(all_chunks)
+                )
+                rag_response = client.chat.completions.create(
+                    model=OPENAI_CHAT_MODEL,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are a Swedish land law and urban planning expert. "
+                                "Answer in English based on the provided Swedish legal sources. "
+                                "When quoting Swedish source text directly, use this format:\n"
+                                "> **English:** [your English interpretation]\n"
+                                "> **Original (Swedish):** [exact Swedish text]\n"
+                                "Use markdown formatting for clarity."
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated_content}",
+                        },
+                    ],
+                    temperature=0,
+                )
+                ai_response_content = rag_response.choices[0].message.content
+            else:
+                ai_response_content = (
+                    "I need a bit more information to run a full feasibility analysis.\n\n"
+                    "Please provide:\n"
+                    "- **Location** — e.g. Södermalm, Vasastan, Kungsholmen\n"
+                    "- **Number of units** — e.g. 20 apartments\n\n"
+                    "Example: \"Can I build 20 apartments in Södermalm?\""
+                )
+        except Exception as e:
+            logger.error("General RAG failed", exc_info=True)
+            raise HTTPException(status_code=500, detail=str(e))
     else:
+        logger.info("Running multi-agent analysis: location=%s units=%s type=%s", location, units, project_type)
         # Run full multi-agent feasibility analysis
         try:
             law_agent = LawAgent(db, client)
@@ -92,8 +148,9 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
             result = orchestrator.analyze(location, project_type, units)
             ai_response_content = format_response(result)
         except Exception as e:
+            logger.error("Multi-agent analysis failed", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     # Save AI response
     ai_message = models.ChatMessage(
         role="assistant", 
