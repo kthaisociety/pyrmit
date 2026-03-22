@@ -1,56 +1,57 @@
 import os
-from supabase import create_client, Client
 from dotenv import load_dotenv
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from db.database import engine, SessionLocal
+from models import DocumentChunk, LawChunk
 
 class PushDB:
 
     def __init__(self):
-        self.supabase_url = os.environ["SUPABASE_URL"]
-        # Use service role key to bypass RLS for server-side writes
-        self.supabase_key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ["SUPABASE_KEY"]
-        self.client: Client = create_client(self.supabase_url, self.supabase_key)
+        self.session = SessionLocal()
 
     def push_chunk(self, id: str, document_id: int, document_name: str, chunk_index: int, content: str, embedding: list):
-        data = {
-            "id": id,
-            "document_id": document_id,
-            "document_name": document_name,
-            "chunk_index": chunk_index,
-            "content": content,
-            "embedding": embedding
-        }
-        response = self.client.table("document_chunks").insert(data).execute()
-        return response
+        chunk = DocumentChunk(
+            id=id,
+            document_id=document_id,
+            document_name=document_name,
+            chunk_index=chunk_index,
+            content=content,
+            embedding=embedding
+        )
+        self.session.add(chunk)
+        self.session.commit()
+        return {"data": [chunk.id]}
 
-    def push_chunks(self, chunks: list[dict], batch_size: int = 25):
+    def push_chunks(self, chunks: list[dict], batch_size: int = 100):
         if not chunks:
             return None
 
-        response = None
-        for start in range(0, len(chunks), batch_size):
-            batch = chunks[start:start + batch_size]
-            response = self.client.table("document_chunks").insert(batch).execute()
-
-        return response
+        # Using bulk insert mappings for best performance
+        self.session.bulk_insert_mappings(DocumentChunk, chunks)
+        self.session.commit()
+        return {"data": chunks}
 
     def delete_chunks_by_document_name(self, document_name: str) -> int:
-        response = self.client.table("document_chunks").delete().eq("document_name", document_name).execute()
-        return len(response.data or [])
+        deleted_count = self.session.query(DocumentChunk).filter(DocumentChunk.document_name == document_name).delete(synchronize_session=False)
+        self.session.commit()
+        return deleted_count
 
-    def push_law_chunks(self, chunks: list[dict], batch_size: int = 25):
+    def push_law_chunks(self, chunks: list[dict], batch_size: int = 100):
         if not chunks:
             return None
 
-        response = None
-        for start in range(0, len(chunks), batch_size):
-            batch = chunks[start:start + batch_size]
-            response = self.client.table("law_chunks").insert(batch).execute()
-
-        return response
+        self.session.bulk_insert_mappings(LawChunk, chunks)
+        self.session.commit()
+        return {"data": chunks}
 
     def delete_law_chunks_by_law_name(self, law_name: str) -> int:
-        response = self.client.table("law_chunks").delete().eq("law_name", law_name).execute()
-        return len(response.data or [])
+        deleted_count = self.session.query(LawChunk).filter(LawChunk.law_name == law_name).delete(synchronize_session=False)
+        self.session.commit()
+        return deleted_count
+
+    def close(self):
+        self.session.close()
 
 
 
@@ -70,6 +71,10 @@ class DocumentChunk(Base):
 '''
 
 if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+    from models import DocumentChunk
+    
     load_dotenv()
     push_db = PushDB()
     response = push_db.push_chunk(
