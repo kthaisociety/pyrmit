@@ -23,6 +23,8 @@ _TRANSLATION_INSTRUCTION = (
 class BaseRAGAgent:
     """Base class providing shared embedding, retrieval, LLM, and JSON utilities."""
 
+    _source_label_column: str = ""
+
     def __init__(self, db: Session, openai_client: OpenAI, model_class, label: str):
         self.db = db
         self.client = openai_client
@@ -43,6 +45,18 @@ class BaseRAGAgent:
             .limit(k)
         )
         return [row[0] for row in self.db.execute(stmt).fetchall()]
+
+    def _retrieve_with_meta(self, query: str, k: int = 5) -> list[tuple[str, str]]:
+        """Retrieve top-k chunks as (content, source_label) tuples."""
+        embedding = self._embed(query)
+        source_col = getattr(self.model_class, self._source_label_column)
+        stmt = (
+            select(self.model_class.content, source_col)
+            .where(self.model_class.embedding.is_not(None))
+            .order_by(self.model_class.embedding.cosine_distance(embedding))
+            .limit(k)
+        )
+        return [(row[0], row[1] or "unknown") for row in self.db.execute(stmt).fetchall()]
 
     def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
         completion = self.client.chat.completions.create(

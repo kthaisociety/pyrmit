@@ -45,6 +45,8 @@ Be specific and cite the actual code sections. If information is missing, state 
 class LawAgent(BaseRAGAgent):
     """Agent that retrieves and interprets legal regulations."""
 
+    _source_label_column = "law_name"
+
     def __init__(self, db: Session, openai_client: OpenAI):
         super().__init__(db, openai_client, LawChunk, "Law Agent")
 
@@ -52,17 +54,19 @@ class LawAgent(BaseRAGAgent):
         logger.debug("Searching regulations for %d %s units in %s", units, project_type, location)
 
         search_query = f"{location} zoning {project_type} density {units} units maximum allowed"
-        docs = self._retrieve(search_query)
-        context = "\n\n".join(f"Document {i + 1}:\n{doc}" for i, doc in enumerate(docs))
+        docs = self._retrieve_with_meta(search_query)
+        context = "\n\n".join(f"Document {i + 1}:\n{content}" for i, (content, _) in enumerate(docs))
 
         user_prompt = _USER_TEMPLATE.format(
             context=context, location=location, project_type=project_type, units=units
         )
         response_text = self._call_llm(_SYSTEM_PROMPT, user_prompt)
 
+        sources = list(dict.fromkeys(label for _, label in docs))
         try:
             result = self._extract_json(response_text)
             logger.info("Found %d applicable laws", len(result.get("applicable_laws", [])))
+            result["sources"] = sources
             return result
         except Exception as e:
             logger.error("Error parsing LLM response", exc_info=True)
@@ -73,4 +77,5 @@ class LawAgent(BaseRAGAgent):
                 "conditions": [],
                 "special_provisions": response_text,
                 "confidence": 0.3,
+                "sources": sources,
             }

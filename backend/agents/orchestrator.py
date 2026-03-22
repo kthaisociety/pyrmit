@@ -25,6 +25,9 @@ class Orchestrator:
             document_result = doc_future.result()
         feasibility = self._determine_feasibility(units, law_result, document_result)
         logger.info("Feasibility verdict: %s (confidence: %s%%)", feasibility["status"], feasibility["confidence"])
+        sources = list(dict.fromkeys(
+            law_result.get("sources", []) + document_result.get("sources", [])
+        ))
         return {
             "feasibility": feasibility["status"],
             "confidence": feasibility["confidence"],
@@ -34,6 +37,7 @@ class Orchestrator:
             "requirements": self._extract_requirements(law_result, document_result),
             "timeline": document_result.get("typical_timeline_months", "Unknown"),
             "next_steps": self._generate_next_steps(feasibility),
+            "sources": sources,
         }
 
     def _determine_feasibility(

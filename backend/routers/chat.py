@@ -22,6 +22,13 @@ router = APIRouter()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+
+def _format_sources(sources: list[str]) -> str:
+    if not sources:
+        return ""
+    items = "\n".join(f"- {s}" for s in sources)
+    return f"\n\n---\n**Sources**\n{items}"
+
 @router.get("/sessions", response_model=list[schemas.ChatSession])
 def get_sessions(db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
     return db.query(models.ChatSession).filter(models.ChatSession.user_id == user.id).order_by(models.ChatSession.updated_at.desc()).all()
@@ -98,9 +105,14 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
         try:
             law_agent = LawAgent(db, client)
             document_agent = DocumentAgent(db, client)
-            law_chunks = law_agent._retrieve(translated_content, k=5)
-            doc_chunks = document_agent._retrieve(translated_content, k=5)
+            law_results = law_agent._retrieve_with_meta(translated_content, k=5)
+            doc_results = document_agent._retrieve_with_meta(translated_content, k=5)
+            law_chunks = [c for c, _ in law_results]
+            doc_chunks = [c for c, _ in doc_results]
             all_chunks = law_chunks + doc_chunks
+            sources = list(dict.fromkeys(
+                [label for _, label in law_results] + [label for _, label in doc_results]
+            ))
             if all_chunks:
                 context = "\n\n".join(
                     f"Source {i + 1}:\n{chunk}" for i, chunk in enumerate(all_chunks)
@@ -126,7 +138,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
                     ],
                     temperature=0,
                 )
-                ai_response_content = rag_response.choices[0].message.content
+                ai_response_content = rag_response.choices[0].message.content + _format_sources(sources)
             else:
                 ai_response_content = (
                     "I need a bit more information to run a full feasibility analysis.\n\n"
@@ -146,7 +158,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
             document_agent = DocumentAgent(db, client)
             orchestrator = Orchestrator(law_agent, document_agent)
             result = orchestrator.analyze(location, project_type, units)
-            ai_response_content = format_response(result)
+            ai_response_content = format_response(result) + _format_sources(result.get("sources", []))
         except Exception as e:
             logger.error("Multi-agent analysis failed", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
