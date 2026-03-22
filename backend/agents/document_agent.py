@@ -53,6 +53,8 @@ Focus on patterns and insights. If no similar cases found, state that clearly.""
 class DocumentAgent(BaseRAGAgent):
     """Agent that retrieves and analyzes detaljplan / planning documents."""
 
+    _source_label_column = "document_name"
+
     def __init__(self, db: Session, openai_client: OpenAI):
         super().__init__(db, openai_client, DocumentChunk, "Document Agent")
 
@@ -60,17 +62,19 @@ class DocumentAgent(BaseRAGAgent):
         logger.debug("Searching documents for %d %s units in %s", units, project_type, location)
 
         search_query = f"{location} {project_type} {units} units approved denied outcome"
-        docs = self._retrieve(search_query)
-        context = "\n\n".join(f"Document {i + 1}:\n{doc}" for i, doc in enumerate(docs))
+        docs = self._retrieve_with_meta(search_query)
+        context = "\n\n".join(f"Document {i + 1}:\n{content}" for i, (content, _) in enumerate(docs))
 
         user_prompt = _USER_TEMPLATE.format(
             context=context, location=location, project_type=project_type, units=units
         )
         response_text = self._call_llm(_SYSTEM_PROMPT, user_prompt)
 
+        sources = list(dict.fromkeys(label for _, label in docs))
         try:
             result = self._extract_json(response_text)
             logger.info("Found %d similar cases", len(result.get("similar_cases", [])))
+            result["sources"] = sources
             return result
         except Exception as e:
             logger.error("Error parsing LLM response", exc_info=True)
@@ -81,4 +85,5 @@ class DocumentAgent(BaseRAGAgent):
                 "typical_timeline_months": None,
                 "political_climate": response_text,
                 "confidence": 0.3,
+                "sources": sources,
             }
