@@ -80,6 +80,10 @@ class PushDB:
 
 
 if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+    from models import DocumentChunk
+    
     load_dotenv()
     push_db = PushDB()
     push_db.push_chunk(

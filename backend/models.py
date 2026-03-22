@@ -113,6 +113,7 @@ if __name__ == "__main__":
     DATABASE_URL = os.environ["DATABASE_URL"]
 
     # Create the engine using the Postgres protocol
+    DATABASE_URL = os.environ.get("DATABASE_URL")
     engine = create_engine(DATABASE_URL)
 
     # Use the metadata of your base class (usually Base) to create tables
