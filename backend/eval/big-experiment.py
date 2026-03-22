@@ -434,7 +434,7 @@ import requests
 
 def ollama_generate(prompt: str, model: str = "llama-3-8b-8192") -> str:
     # We are hijacking the function name so you don't have to change the rest of the script
-    api_key = ""
+    api_key = os.environ.get("GROQ_API_KEY")
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     data = {
@@ -746,7 +746,7 @@ def evaluate_strategy(
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pdfs", nargs="+", default=[], help="One or more PDF paths")
-    ap.add_argument("--pdf-dir", type=str, default="./data", help="Directory containing PDFs")
+    ap.add_argument("--pdf-dir", type=str, default="./chunking/data", help="Directory containing PDFs")
     ap.add_argument("--out", type=str, default="./out", help="Output directory")
     ap.add_argument("--run-name", type=str, default="run1", help="Subfolder name under --out")
 
@@ -757,7 +757,7 @@ def main():
 
     # Evalset
     ap.add_argument("--make-evalset", action="store_true", help="Generate evalset.json")
-    ap.add_argument("--evalset", type=str, default="", help="Use an existing evalset.json path")
+    ap.add_argument("--evalset", type=str, default="./eval/demo/evalset.json", help="Use an existing evalset.json path")
     ap.add_argument("--n-questions", type=int, default=60)
     ap.add_argument("--q-per-passage", type=int, default=2)
     ap.add_argument("--gemini-model", type=str, default="gemini-2.5-flash")

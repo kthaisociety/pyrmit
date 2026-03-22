@@ -1,0 +1,2 @@
+strategy_id,n_questions,n_chunks,hit_rate@k,mrr@k,ndcg@k,must_phrase_coverage@k,config
+chunk1200_ov200__hybrid_a0.65__K10,60,955,0.0,0.0,0.0,0.7525083612040134,"{'chunk_max_chars': 1200, 'chunk_overlap_chars': 200, 'retriever': 'hybrid', 'hybrid_alpha': 0.65, 'use_rerank': False, 'rerank_model': 'cross-encoder/ms-marco-MiniLM-L-6-v2', 'retrieve_k': 50, 'final_k': 10}"
