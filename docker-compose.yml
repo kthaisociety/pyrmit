@@ -25,8 +25,6 @@ services:
       - "8000:8000"
     env_file:
       - ./backend/.env
-    environment:
-      DATABASE_URL: postgresql://user:password@db:5432/pyrmit
     depends_on:
       db:
         condition: service_healthy

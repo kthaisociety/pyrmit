@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -8,8 +9,9 @@ import os
 from dotenv import load_dotenv
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
-
 from openai import OpenAI
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -79,7 +81,7 @@ def main():
         data_path = os.path.join(os.path.dirname(__file__), '..', 'data')
         documents = load_documents(data_path)
     except Exception as e:
-        print(f"Error loading documents: {e}")
+        logger.error("Error loading documents", exc_info=True)
         return
 
     splitter = SentenceSplitter(
@@ -90,7 +92,7 @@ def main():
     try:
         nodes = splitter.get_nodes_from_documents(documents)
     except Exception as e:
-        print(f"Error splitting documents: {e}")
+        logger.error("Error splitting documents", exc_info=True)
         return
 
     structured_chunks = []
@@ -123,11 +125,11 @@ def main():
                 })
 
             except Exception as e:
-                print(f"Error processing node {i}: {e}")
+                logger.error("Error processing node %d", i, exc_info=True)
                 continue
 
         # Second pass: generate embeddings in batches
-        print(f"Generating embeddings for {len(node_data)} chunks...")
+        logger.info("Generating embeddings for %d chunks...", len(node_data))
         contents = [item["content"] for item in node_data]
         embeddings = embed_texts_batch(contents)
 
@@ -159,20 +161,20 @@ def main():
                 db.add(db_chunk)
 
             except Exception as e:
-                print(f"Error creating chunk {i}: {e}")
+                logger.error("Error creating chunk %d", i, exc_info=True)
                 continue
 
         # Commit all chunks to database
         db.commit()
-        print(f"Saved {len(structured_chunks)} chunks to database")
+        logger.info("Saved %d chunks to database", len(structured_chunks))
 
         # Also save to JSON for backup
         with open("chunks.json", "w", encoding="utf-8") as f:
             json.dump(structured_chunks, f, indent=2, ensure_ascii=False)
-        print(f"Saved {len(structured_chunks)} chunks → chunks.json")
+        logger.info("Saved %d chunks to chunks.json", len(structured_chunks))
 
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error("Embedding pipeline failed", exc_info=True)
         db.rollback()
     finally:
         db.close()

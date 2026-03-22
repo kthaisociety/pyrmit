@@ -13,6 +13,12 @@ from sqlalchemy.sql import select
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
 OPENAI_CHAT_MODEL = "gpt-3.5-turbo"
 
+_TRANSLATION_INSTRUCTION = (
+    "Always respond in English. "
+    "When quoting source text that is in Swedish, include the original Swedish verbatim "
+    "and follow it with an English translation."
+)
+
 
 class BaseRAGAgent:
     """Base class providing shared embedding, retrieval, LLM, and JSON utilities."""
@@ -52,5 +58,8 @@ class BaseRAGAgent:
     @staticmethod
     def _extract_json(text: str) -> dict:
         """Parse JSON from a response that may be wrapped in markdown code fences."""
-        clean = re.sub(r"```(?:json)?\s*", "", text).strip().rstrip("`").strip()
-        return json.loads(clean)
+        try:
+            clean = re.sub(r"```(?:json)?\s*", "", text).strip().rstrip("`").strip()
+            return json.loads(clean)
+        except (json.JSONDecodeError, ValueError):
+            return {}

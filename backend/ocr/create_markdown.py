@@ -1,6 +1,9 @@
+import logging
 import os
 import base64
 from ocr.detaljplan_ocr import MistralOCR
+
+logger = logging.getLogger(__name__)
 
 class MarkdownCreator:
     def __init__(self, api_key: str):
@@ -31,7 +34,7 @@ class MarkdownCreator:
                 f.write(img_data)
             return image_path
         except Exception as e:
-            print(f"Error decoding image {filename}: {e}")
+            logger.error("Error decoding image %s", filename, exc_info=True)
             return None
 
     def convert_to_markdown(self, ocr_result) -> str:
@@ -81,4 +84,4 @@ if __name__ == "__main__":
     
     with open("output.md", "w", encoding="utf-8") as f:
         f.write(md_output)
-    print("Done! Open output.md to see the text and images.")
+    logging.info("Done! Open output.md to see the text and images.")

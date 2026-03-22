@@ -108,6 +108,10 @@ class ChatMessage(Base):
 if __name__ == "__main__":
     load_dotenv()
 
+    # Use the Connection String from Settings > Database
+    # It looks like: postgresql://postgres:[password]@db.[id].supabase.co:5432/postgres
+    DATABASE_URL = os.environ["DATABASE_URL"]
+
     # Create the engine using the Postgres protocol
     DATABASE_URL = os.environ.get("DATABASE_URL")
     engine = create_engine(DATABASE_URL)

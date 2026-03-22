@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import re
 from pathlib import Path
 
@@ -185,7 +186,7 @@ def main() -> None:
 
     chunker = DetaljplanChunker(max_chunk_chars=args.max_chars)
     chunks = chunker.chunk_file(args.input, args.output)
-    print(f"Created {len(chunks)} chunks -> {args.output}")
+    logging.info("Created %d chunks -> %s", len(chunks), args.output)
 
 
 if __name__ == "__main__":

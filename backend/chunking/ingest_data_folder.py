@@ -1,8 +1,11 @@
 import argparse
+import logging
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+logger = logging.getLogger(__name__)
 
 from chunking.ingest_pipeline import ingest_folder
 
@@ -21,16 +24,16 @@ def ingest_data_folder(
     )
 
     if result["documents_processed"] == 0:
-        print(f"No supported files found in {data_dir}")
+        logger.warning("No supported files found in %s", data_dir)
         return
 
     for item in result["items"]:
         source_name = Path(item["source_file"]).name
-        print(f"Ingested {source_name}: inserted={item['inserted']}, deleted={item['deleted']}")
+        logger.info("Ingested %s: inserted=%d, deleted=%d", source_name, item["inserted"], item["deleted"])
 
-    print(
-        f"Done. documents={result['documents_processed']} "
-        f"inserted={result['total_inserted']} deleted={result['total_deleted']}"
+    logger.info(
+        "Done. documents=%d inserted=%d deleted=%d",
+        result["documents_processed"], result["total_inserted"], result["total_deleted"],
     )
 
 

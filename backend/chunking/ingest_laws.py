@@ -1,10 +1,13 @@
 import argparse
+import logging
 import os
 import uuid
 from pathlib import Path
 import sys
 
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 from openai import OpenAI
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -35,7 +38,7 @@ def ingest_laws(
 
     law_files = sorted(p for p in laws_dir.iterdir() if p.is_file() and p.suffix.lower() == ".txt")
     if not law_files:
-        print(f"No law text files found in {laws_dir}")
+        logger.warning("No law text files found in %s", laws_dir)
         return
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -53,7 +56,7 @@ def ingest_laws(
         chunks = chunker.chunk_file(law_file, chunk_output)
 
         if not chunks:
-            print(f"Skipped {law_file.name}: no legal sections found")
+            logger.warning("Skipped %s: no legal sections found", law_file.name)
             continue
 
         deleted = 0
@@ -92,9 +95,9 @@ def ingest_laws(
 
         total_inserted += len(rows)
         total_deleted += deleted
-        print(f"Ingested {law_file.name}: inserted={len(rows)}, deleted={deleted}")
+        logger.info("Ingested %s: inserted=%d, deleted=%d", law_file.name, len(rows), deleted)
 
-    print(f"Done. laws={len(law_files)} inserted={total_inserted} deleted={total_deleted}")
+    logger.info("Done. laws=%d inserted=%d deleted=%d", len(law_files), total_inserted, total_deleted)
 
 
 def main() -> None:
