@@ -1,0 +1,470 @@
+[
+  {
+    "id": 1,
+    "question": "Hur bedöms konsekvenser avseende risknivå för olyckor om planen genomförs?",
+    "gold_passage_id": "441ee9adad83ea08",
+    "gold_page": 44,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "Konsekvenser avseende risknivå för olyckor",
+      "bedöms i första hand utifrån en absolut risknivå",
+      "i andra hand en bedömning av om risknivån",
+      "ökar eller minskar jämfört med nuläge"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 2,
+    "question": "Vilken typ av bedömning används vanligtvis för olycksrisker?",
+    "gold_passage_id": "441ee9adad83ea08",
+    "gold_page": 44,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "För olycksrisker används vanligtvis",
+      "en sammanvägd bedömning",
+      "sannolikhet och konsekvens"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 3,
+    "question": "Hur påverkas landskapet när jordbruksverksamhet och djurhållning försvinner i randzonen?",
+    "gold_passage_id": "db295c39cbe2f2a8",
+    "gold_page": 60,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "förlust av jordbruksverksamhet och djurhållning",
+      "försämrar förutsättningarna för att upprätthålla ett öppet landskap",
+      "livsmiljöer för många arter",
+      "landskapets kulturmiljökvaliteter fragmenteras"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 4,
+    "question": "Vad händer med små jordbruksföretag som inte längre är lönsamma?",
+    "gold_passage_id": "db295c39cbe2f2a8",
+    "gold_page": 60,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "små jordbruksföretag",
+      "inte längre lönsamt",
+      "de läggs ned",
+      "marken köps upp eller arrenderas av en större gård"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 5,
+    "question": "Vilka är de största branscherna enligt texten?",
+    "gold_passage_id": "7572723fa7cebaf7",
+    "gold_page": 13,
+    "gold_doc_id": 1,
+    "gold_doc_name": "2040vision.pdf",
+    "must_contain": [
+      "största branscherna",
+      "Verksamhet inom juridik, ekonomi, vetenskap och teknik",
+      "Byggverksamhet"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 6,
+    "question": "Hur många nya arbetstillfällen är ambitionen att skapa i Vallentuna kommun till år 2040, inom ramen för de regionala samarbetena?",
+    "gold_passage_id": "7572723fa7cebaf7",
+    "gold_page": 13,
+    "gold_doc_id": 1,
+    "gold_doc_name": "2040vision.pdf",
+    "must_contain": [
+      "nya arbetstillfällen",
+      "Vallentuna kommun",
+      "7000 av dessa",
+      "till år 2040",
+      "regionala samarbetena"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 7,
+    "question": "Hur många bostäder fanns det i Vallentuna kommun år 2015, och hur stor andel av dessa var småhus respektive lägenheter i flerbostadshus?",
+    "gold_passage_id": "587222abcf09b808",
+    "gold_page": 13,
+    "gold_doc_id": 1,
+    "gold_doc_name": "2040vision.pdf",
+    "must_contain": [
+      "År 2015 fanns det cirka 12500 bostäder",
+      "cirka 65 % utgjordes av småhus",
+      "cirka 35 % av lägenheter i flerbostadshus"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 8,
+    "question": "Vilka bostadstyper bedöms ha störst behov i Vallentuna kommun, och vad är grunden för denna bedömning?",
+    "gold_passage_id": "587222abcf09b808",
+    "gold_page": 13,
+    "gold_doc_id": 1,
+    "gold_doc_name": "2040vision.pdf",
+    "must_contain": [
+      "behovet vara som störst",
+      "små hyres- och bostadsrätter",
+      "bostadsbeståndet och den demografiska utvecklingen"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 9,
+    "question": "Hur är kommunens fornlämningar redovisade eller vad saknas i den nuvarande redovisningen?",
+    "gold_passage_id": "6bc4b0d02e8fcb12",
+    "gold_page": 70,
+    "gold_doc_id": 7,
+    "gold_doc_name": "samrad_2040.pdf",
+    "must_contain": [
+      "saknas det en redogörelse",
+      "kommunens fornlämningar",
+      "tydligt redovisad på en karta",
+      "digitala fornsökssystem FMIS"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 10,
+    "question": "Vilken lagstiftning ger skydd för fornlämningar, och vad krävs för utvecklingsområden som nämns i översiktsplanen?",
+    "gold_passage_id": "6bc4b0d02e8fcb12",
+    "gold_page": 70,
+    "gold_doc_id": 7,
+    "gold_doc_name": "samrad_2040.pdf",
+    "must_contain": [
+      "skydd i kulturmiljölagen",
+      "egen lagstiftning med skydd",
+      "utvecklingsområden som nämns",
+      "arkeologisk utredning",
+      "kommande detaljplaneplanering"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 11,
+    "question": "Vilken status har Vallentunasjön idag och vilka problem brottas sjön med?",
+    "gold_passage_id": "cbc52ddaa12cc83b",
+    "gold_page": 10,
+    "gold_doc_id": 6,
+    "gold_doc_name": "moerby_backe.pdf",
+    "must_contain": [
+      "Vallentunasjön har idag dålig ekologisk status",
+      "uppnår ej god kemisk status",
+      "problem med övergödning",
+      "miljögifter som kvicksilver, PFOS"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 12,
+    "question": "Vem fastställer miljökvalitetsnormer för vatten och inom vilken cykel?",
+    "gold_passage_id": "cbc52ddaa12cc83b",
+    "gold_page": 10,
+    "gold_doc_id": 6,
+    "gold_doc_name": "moerby_backe.pdf",
+    "must_contain": [
+      "Vattendelegationen vid vattenmyndigheten",
+      "fastställer miljökvalitetsnormer för vatten",
+      "sexårig förvaltningscykel"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 13,
+    "question": "Hur bedöms de riktlinjer som anges i översiktsplan 2010-2030, vilken är del av nollalternativet?",
+    "gold_passage_id": "88526ec267bf5309",
+    "gold_page": 62,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "Dessa riktlinjer bedöms",
+      "som vaga",
+      "del av nollalternativet"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 14,
+    "question": "Vilken typ av konsekvenser antas planförslaget medföra risk för?",
+    "gold_passage_id": "88526ec267bf5309",
+    "gold_page": 62,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "Planförslaget antas medföra risk för",
+      "Märkbara negativa konsekvenser"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 15,
+    "question": "Hur ser Länsstyrelsen på kommunens val att planera bebyggelse kring Roslagsbanan istället för Frösunda kyrka?",
+    "gold_passage_id": "3ec2107269e27009",
+    "gold_page": 64,
+    "gold_doc_id": 7,
+    "gold_doc_name": "samrad_2040.pdf",
+    "must_contain": [
+      "Länsstyrelsen positivt på att kommunen",
+      "planera bebyggelsen kring Roslagsbanan",
+      "istället för att förlägga all utbyggnad",
+      "Frösunda kyrka, som är helt omgiven av jordbruksmark"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 16,
+    "question": "Vad bör kommunen förtydliga gällande jordbruksmarken inom utbyggnadsområdet?",
+    "gold_passage_id": "3ec2107269e27009",
+    "gold_page": 64,
+    "gold_doc_id": 7,
+    "gold_doc_name": "samrad_2040.pdf",
+    "must_contain": [
+      "Kommunen bör dock förtydliga sitt ställningstagande",
+      "val av lokalisering inom utbyggnadsområdet",
+      "jordbruksmarken som finns där"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 17,
+    "question": "Vilka konsekvenser medför en ökad andel hårdgjorda ytor för vattenmiljön?",
+    "gold_passage_id": "64d6c1c0559ee258",
+    "gold_page": 6,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "ökad andel hårdgjorda ytor",
+      "ökad avrinning",
+      "ökad tillförsel av näringsämnen",
+      "mängd föroreningar",
+      "recipienterna"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 18,
+    "question": "Hur kan risken minskas för att vattenförekomstens status försämras eller miljökvalitetsnormerna äventyras?",
+    "gold_passage_id": "64d6c1c0559ee258",
+    "gold_page": 6,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "översiktsplanens planeringsinriktningar",
+      "Oxundaåns dagvattenpolicy",
+      "minskar risken för en försämring av vattenförekomstens status",
+      "miljökvalitetsnormerna äventyras"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 19,
+    "question": "Hur bör skolor och förskolor placeras, och vilken typ av miljö ska de uppmuntra?",
+    "gold_passage_id": "a52005a30379b1f2",
+    "gold_page": 36,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "skolor och förskolor placeras",
+      "enkelt, tryggt och säkert",
+      "gåendes, med cykel eller kollektivt färdmedel",
+      "uppmuntra utevistelse och lärande"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 20,
+    "question": "Enligt planen, hur ska lekplatser placeras och vilken är den maximala avståndsgränsen till en kommunal lekplats för majoriteten av barnen i tätorterna?",
+    "gold_passage_id": "a52005a30379b1f2",
+    "gold_page": 36,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "lekplatser placeras så att det är enkelt och säkert",
+      "gåendes eller med cykel",
+      "majoriteten av barnen i tätorterna",
+      "inte ha längre än 500 meter",
+      "närmaste kommunal lekplats"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 21,
+    "question": "Vilka ämnen behandlas under rubriken 'Miljökvalitetsnormer'?",
+    "gold_passage_id": "aceef4f882731634",
+    "gold_page": 2,
+    "gold_doc_id": 4,
+    "gold_doc_name": "kumla_stensta.pdf",
+    "must_contain": [
+      "3.2 Miljökvalitetsnormer",
+      "3.2.1 Luft",
+      "3.2.2 Vatten"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 22,
+    "question": "På vilken sida kan man hitta en beskrivning av vad en detaljplan är?",
+    "gold_passage_id": "aceef4f882731634",
+    "gold_page": 2,
+    "gold_doc_id": 4,
+    "gold_doc_name": "kumla_stensta.pdf",
+    "must_contain": [
+      "1.1 Vad är en detaljplan",
+      "5"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 23,
+    "question": "Vad anser Länsstyrelsen om att jordbruksmark tas i anspråk för bebyggelse i Molnby-Ubby?",
+    "gold_passage_id": "d7eff07d4fa38564",
+    "gold_page": 64,
+    "gold_doc_id": 7,
+    "gold_doc_name": "samrad_2040.pdf",
+    "must_contain": [
+      "Länsstyrelsen anser att kommunen bör se till att",
+      "exploatering på jordbruksmark undviks",
+      "Molnby-Ubby utpekas stora områden",
+      "utveckling av blandad bebyggelse"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 24,
+    "question": "Vilka risker är förknippade med att påbörja bebyggelse på oexploaterad jordbruksmark, och vad mer beaktas för sådana områden?",
+    "gold_passage_id": "d7eff07d4fa38564",
+    "gold_page": 64,
+    "gold_doc_id": 7,
+    "gold_doc_name": "samrad_2040.pdf",
+    "must_contain": [
+      "risk att bebyggelsen fortsätter breda ut sig",
+      "på bekostnad av jordbruksmarken",
+      "riksintresse för kulturmiljövården",
+      "samt fornlämningar"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 25,
+    "question": "På vilket sätt kan planförslaget bidra till att minska klimatpåverkan?",
+    "gold_passage_id": "a7218d971f6b3582",
+    "gold_page": 48,
+    "gold_doc_id": 6,
+    "gold_doc_name": "moerby_backe.pdf",
+    "must_contain": [
+      "begränsa klimatpåverkan",
+      "minskat användande av fossila bränslen",
+      "kollektivt och gå/cykla",
+      "gång- och cykelavstånd"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 26,
+    "question": "Vilka fördelar har förtätning och bostadsbyggande inom befintliga tätortsgränser när det gäller markanvändning?",
+    "gold_passage_id": "a7218d971f6b3582",
+    "gold_page": 48,
+    "gold_doc_id": 6,
+    "gold_doc_name": "moerby_backe.pdf",
+    "must_contain": [
+      "Förtätning och bostadsbyggande",
+      "tätortens befintliga gränser",
+      "naturområden och jordbruksmark",
+      "tas i anspråk och minskar i yta"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 27,
+    "question": "Vilka områden har protesterat mot kommunens utbyggnadsförslag?",
+    "gold_passage_id": "d0977db5246785ee",
+    "gold_page": 26,
+    "gold_doc_id": 7,
+    "gold_doc_name": "samrad_2040.pdf",
+    "must_contain": [
+      "kraftiga protester",
+      "boende i både Molnby och närliggande Snapptuna",
+      "det utbyggnadsförslag som kommunen presenterat"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 28,
+    "question": "Vilka program på Vallentuna Gymnasium fungerar bra i nuläget?",
+    "gold_passage_id": "d0977db5246785ee",
+    "gold_page": 26,
+    "gold_doc_id": 7,
+    "gold_doc_name": "samrad_2040.pdf",
+    "must_contain": [
+      "fungerar bra i dag",
+      "programmen för bygg och fordon",
+      "Vallentuna Gymnasium"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 29,
+    "question": "Vilka risker finns kopplade till trafikbuller i befintlig och planerad bebyggelse, och hur bedöms dessa risker kunna hanteras?",
+    "gold_passage_id": "b230481362cabb0f",
+    "gold_page": 41,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "risk för att riktvärden för trafikbuller överskrids",
+      "befintlig och inom planerad bebyggelse",
+      "möjliga att hantera",
+      "vidare planering och exploatering"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 30,
+    "question": "Vad framhäver översiktsplanen gällande bullerförordning vid nybyggnad av bostäder och trafikinfrastruktur?",
+    "gold_passage_id": "b230481362cabb0f",
+    "gold_page": 41,
+    "gold_doc_id": 5,
+    "gold_doc_name": "miljoe_miljoe.pdf",
+    "must_contain": [
+      "Översiktsplanen framhäver",
+      "bullerförordning för trafikbuller alltid ska eftersträvas",
+      "nybyggnad av bostäder",
+      "nybyggnad eller väsentlig ombyggnad av trafikinfrastruktur"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 31,
+    "question": "Vilka negativa konsekvenser har uppstått i Vallentuna Centrum efter ombyggnaden av torgytorna?",
+    "gold_passage_id": "6a7038ac14634c02",
+    "gold_page": 25,
+    "gold_doc_id": 7,
+    "gold_doc_name": "samrad_2040.pdf",
+    "must_contain": [
+      "utbudet försämrats",
+      "butikerna har gjorts om till mäklarkontor",
+      "väldigt få lekytor efter ombyggnaden"
+    ],
+    "type": "synthetic"
+  },
+  {
+    "id": 32,
+    "question": "Vilka brister gällande restauranger har lyfts fram i de senaste årens invånarenkäter?",
+    "gold_passage_id": "6a7038ac14634c02",
+    "gold_page": 25,
+    "gold_doc_id": 7,
+    "gold_doc_name": "samrad_2040.pdf",
+    "must_contain": [
+      "invånarenkäter som gjorts",
+      "bristen på bra restauranger",
+      "god mat och trevlig miljö"
+    ],
+    "type": "synthetic"
+  }
+]

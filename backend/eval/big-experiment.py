@@ -53,11 +53,14 @@ import random
 import re
 from dataclasses import dataclass, asdict
 from pathlib import Path
+import time
 from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
+from dotenv import load_dotenv
 
 import fitz  # PyMuPDF
 
@@ -433,18 +436,25 @@ def extract_json_from_text(s: str) -> Any:
 import requests
 
 def ollama_generate(prompt: str, model: str = "llama-3-8b-8192") -> str:
+    from google import genai
     # We are hijacking the function name so you don't have to change the rest of the script
-    api_key = os.environ.get("GROQ_API_KEY")
-    url = "https://api.groq.com/openai/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    data = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.1
-    }
-    res = requests.post(url, json=data, headers=headers)
-    res.raise_for_status()
-    return res.json()["choices"][0]["message"]["content"]
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GROQ_API_KEY")
+    url = ""
+    client = genai.Client(api_key=api_key)
+
+    # headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    # data = {
+    #     "model": model,
+    #     "messages": [{"role": "user", "content": prompt}],
+    #     "temperature": 0.1
+    # }
+    # res = requests.post(url, json=data, headers=headers)
+    # res.raise_for_status()
+    res = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+    )
+    return res.text
 
 def generate_evalset_from_passages_gemini(
     passages: List[Passage],
@@ -487,6 +497,10 @@ TEXT:
 
         out = None
         last_err = None
+        if qid % 5 == 0:
+            # sleep one minute every 5 passages to be nice to the API (and avoid rate limits)
+            tqdm.write("Sleeping for 60 seconds to avoid hitting API rate limits...")
+            time.sleep(60)
         for _ in range(3):
             try:
                 out = ollama_generate(prompt, model="llama-3.3-70b-versatile")
@@ -744,6 +758,8 @@ def evaluate_strategy(
 # ----------------------------
 
 def main():
+    load_dotenv()  # for GEMINI_API_KEY or GROQ_API_KEY
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--pdfs", nargs="+", default=[], help="One or more PDF paths")
     ap.add_argument("--pdf-dir", type=str, default="./chunking/data", help="Directory containing PDFs")
@@ -757,7 +773,7 @@ def main():
 
     # Evalset
     ap.add_argument("--make-evalset", action="store_true", help="Generate evalset.json")
-    ap.add_argument("--evalset", type=str, default="./eval/demo/evalset.json", help="Use an existing evalset.json path")
+    ap.add_argument("--evalset", type=str, default="", help="Use an existing evalset.json path")
     ap.add_argument("--n-questions", type=int, default=60)
     ap.add_argument("--q-per-passage", type=int, default=2)
     ap.add_argument("--gemini-model", type=str, default="gemini-2.5-flash")
@@ -807,6 +823,7 @@ def main():
         if args.no_gemini:
             eval_items = generate_evalset_simple(passages, n_questions=args.n_questions)
         else:
+            print("Generating mad questions")
             eval_items = generate_evalset_from_passages_gemini(
                 passages=passages,
                 n_questions=args.n_questions,
@@ -825,10 +842,10 @@ def main():
         return
 
     # Grid definition (feel free to tweak)
-    # chunk_sizes = [500, 900, 1400, 2000]
-    # overlaps = [0, 150, 250]
-    # retrievers = ["dense", "bm25", "hybrid"]
-    # alphas = [0.5, 0.65, 0.8]
+    chunk_sizes = [500, 900, 1400, 2000]
+    overlaps = [0, 150, 250]
+    retrievers = ["dense", "bm25", "hybrid"]
+    alphas = [0.5, 0.65, 0.8]
 
     # Grid definition - REDUCED FOR SPEED
     chunk_sizes = [1200]  # Just pick one middle-ground size
