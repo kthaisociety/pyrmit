@@ -78,13 +78,32 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
     db.commit()
     db.refresh(user_message)
 
-    # Translate user message to English before processing
+    # Translate and contextualize user message based on chat history
     original_content = last_message.content
+    
+    if len(request.messages) > 1:
+        # Build chat history for context (last 5 messages, excluding the current one)
+        history_msgs = request.messages[:-1][-5:]
+        history_str = "\n".join([f"{msg.role}: {msg.content}" for msg in history_msgs])
+        
+        context_prompt = f"""
+Given the following conversation history and the latest user message, rewrite the latest user message into a standalone query in English. 
+Ensure any location, number of units, or project type implicitly mentioned in the history is explicitly included in the standalone query.
+If the latest message is a completely new topic or just greetings, simply translate it to English.
+Return ONLY the standalone English query, without any prefix or explanation.
+
+Conversation History:
+{history_str}
+
+Latest User Message: {original_content}"""
+    else:
+        context_prompt = f"Translate the following user message to English (return only the translation, no explanation): {original_content}"
+
     try:
         translation_response = client.chat.completions.create(
             model=OPENAI_CHAT_MODEL,
             messages=[
-                {"role": "user", "content": f"Translate to English if not already in English (return only the translation, no explanation): {original_content}"}
+                {"role": "user", "content": context_prompt}
             ],
             temperature=0,
         )
@@ -117,25 +136,39 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
                 context = "\n\n".join(
                     f"Source {i + 1}:\n{chunk}" for i, chunk in enumerate(all_chunks)
                 )
+                
+                # Build context-aware messages array for the final chat completion
+                completion_messages = [
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a Swedish land law and urban planning expert. "
+                            "Answer in English based on the provided Swedish legal sources. "
+                            "When quoting Swedish source text directly, use this format:\n"
+                            "> **English:** [your English interpretation]\n"
+                            "> **Original (Swedish):** [exact Swedish text]\n"
+                            "Use markdown formatting for clarity."
+                        ),
+                    }
+                ]
+                
+                # Add up to 5 previous messages to give LLM conversation flow
+                if len(request.messages) > 1:
+                    for msg in request.messages[:-1][-5:]:
+                        completion_messages.append({
+                            "role": msg.role,
+                            "content": msg.content
+                        })
+                
+                # Add the final augmented prompt
+                completion_messages.append({
+                    "role": "user",
+                    "content": f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated_content}",
+                })
+
                 rag_response = client.chat.completions.create(
                     model=OPENAI_CHAT_MODEL,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are a Swedish land law and urban planning expert. "
-                                "Answer in English based on the provided Swedish legal sources. "
-                                "When quoting Swedish source text directly, use this format:\n"
-                                "> **English:** [your English interpretation]\n"
-                                "> **Original (Swedish):** [exact Swedish text]\n"
-                                "Use markdown formatting for clarity."
-                            ),
-                        },
-                        {
-                            "role": "user",
-                            "content": f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated_content}",
-                        },
-                    ],
+                    messages=completion_messages,
                     temperature=0,
                 )
                 ai_response_content = rag_response.choices[0].message.content + _format_sources(sources)
