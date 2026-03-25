@@ -48,7 +48,10 @@ class BaseRAGAgent:
 
     def _retrieve_with_meta(self, query: str, k: int = 5) -> list[tuple[str, str]]:
         """Retrieve top-k chunks as (content, source_label) tuples."""
-        embedding = self._embed(query)
+        return self._retrieve_with_meta_from_embedding(self._embed(query), k)
+
+    def _retrieve_with_meta_from_embedding(self, embedding: list[float], k: int = 5) -> list[tuple[str, str]]:
+        """Retrieve top-k chunks as (content, source_label) tuples from a pre-computed embedding."""
         source_col = getattr(self.model_class, self._source_label_column)
         stmt = (
             select(self.model_class.content, source_col)

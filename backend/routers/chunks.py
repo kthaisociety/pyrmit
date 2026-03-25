@@ -68,9 +68,9 @@ def ingest_detaljplan_chunks(request: schemas.ChunkIngestRequest):
             document_id=request.document_id,
             output_path=str(output_path) if output_path else None,
         )
+    except HTTPException:
+        raise
     except Exception as exc:
-        if isinstance(exc, HTTPException):
-            raise exc
         raise HTTPException(status_code=500, detail=f"Chunk ingestion failed: {exc}")
 
 
@@ -101,7 +101,7 @@ def ingest_data_folder_route(request: schemas.FolderIngestRequest):
             total_deleted=result["total_deleted"],
             items=items,
         )
+    except HTTPException:
+        raise
     except Exception as exc:
-        if isinstance(exc, HTTPException):
-            raise exc
         raise HTTPException(status_code=500, detail=f"Folder ingestion failed: {exc}")

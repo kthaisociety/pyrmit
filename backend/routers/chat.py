@@ -1,22 +1,23 @@
 import logging
-
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-
-logger = logging.getLogger(__name__)
-from db.database import get_db
-import models
-import schemas
 import os
 import uuid
+
+from fastapi import APIRouter, Depends, HTTPException
 from openai import OpenAI
+from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
-from dependencies import get_current_user
-from agents.law_agent import LawAgent
-from agents.document_agent import DocumentAgent
-from agents.orchestrator import Orchestrator
-from agents.parsers import parse_query, format_response
+
 from agents.base import OPENAI_CHAT_MODEL
+from agents.document_agent import DocumentAgent
+from agents.law_agent import LawAgent
+from agents.orchestrator import Orchestrator
+from agents.parsers import format_response, parse_query
+from db.database import get_db
+from dependencies import get_current_user
+import models
+import schemas
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -124,11 +125,10 @@ Latest User Message: {original_content}"""
         try:
             law_agent = LawAgent(db, client)
             document_agent = DocumentAgent(db, client)
-            law_results = law_agent._retrieve_with_meta(translated_content, k=5)
-            doc_results = document_agent._retrieve_with_meta(translated_content, k=5)
-            law_chunks = [c for c, _ in law_results]
-            doc_chunks = [c for c, _ in doc_results]
-            all_chunks = law_chunks + doc_chunks
+            embedding = law_agent._embed(translated_content)
+            law_results = law_agent._retrieve_with_meta_from_embedding(embedding, k=5)
+            doc_results = document_agent._retrieve_with_meta_from_embedding(embedding, k=5)
+            all_chunks = [c for c, _ in law_results] + [c for c, _ in doc_results]
             sources = list(dict.fromkeys(
                 [label for _, label in law_results] + [label for _, label in doc_results]
             ))
