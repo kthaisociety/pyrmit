@@ -3,7 +3,8 @@
     "allow": [
       "Bash(rtk git:*)",
       "Bash(find 'C:/Documents/KTH AIS/pyrmit' -maxdepth 1 -not -path */.*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(find backend:*)"
     ]
   }
 }

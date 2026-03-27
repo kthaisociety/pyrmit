@@ -24,6 +24,16 @@ router = APIRouter()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
+def _get_user_session(session_id: str, user_id: str, db: Session) -> models.ChatSession:
+    session = db.query(models.ChatSession).filter(
+        models.ChatSession.id == session_id,
+        models.ChatSession.user_id == user_id,
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
 def _format_sources(sources: list[str]) -> str:
     if not sources:
         return ""
@@ -36,12 +46,34 @@ def get_sessions(db: Session = Depends(get_db), user: models.User = Depends(get_
 
 @router.get("/sessions/{session_id}", response_model=list[schemas.MessageResponse])
 def get_session_history(session_id: str, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
-    # Verify session belongs to user
-    session = db.query(models.ChatSession).filter(models.ChatSession.id == session_id, models.ChatSession.user_id == user.id).first()
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
+    _get_user_session(session_id, user.id, db)
     return db.query(models.ChatMessage).filter(models.ChatMessage.session_id == session_id).order_by(models.ChatMessage.created_at).all()
+
+@router.delete("/sessions")
+def delete_all_sessions(db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    session_ids = [s.id for s in db.query(models.ChatSession.id).filter(models.ChatSession.user_id == user.id).all()]
+    if session_ids:
+        db.query(models.ChatMessage).filter(models.ChatMessage.session_id.in_(session_ids)).delete(synchronize_session=False)
+        count = db.query(models.ChatSession).filter(models.ChatSession.id.in_(session_ids)).delete(synchronize_session=False)
+        db.commit()
+    else:
+        count = 0
+    return {"status": "deleted", "count": count}
+
+@router.delete("/sessions/{session_id}")
+def delete_session(session_id: str, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    session = _get_user_session(session_id, user.id, db)
+    db.delete(session)
+    db.commit()
+    return {"status": "deleted"}
+
+@router.patch("/sessions/{session_id}", response_model=schemas.ChatSession)
+def update_session(session_id: str, request: schemas.UpdateSessionRequest, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    session = _get_user_session(session_id, user.id, db)
+    session.title = request.title
+    db.commit()
+    db.refresh(session)
+    return session
 
 @router.post("/chat", response_model=schemas.MessageResponse)
 def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
@@ -60,11 +92,7 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
         db.commit()
         db.refresh(new_session)
     else:
-        # Verify session exists and belongs to user
-        session = db.query(models.ChatSession).filter(models.ChatSession.id == session_id, models.ChatSession.user_id == user.id).first()
-        if not session:
-            raise HTTPException(status_code=404, detail="Session not found")
-        # Update timestamp
+        session = _get_user_session(session_id, user.id, db)
         session.updated_at = func.now()
     
     last_message = request.messages[-1]

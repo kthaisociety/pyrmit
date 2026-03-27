@@ -85,6 +85,15 @@ class SignInRequest(BaseModel):
     password: str = Field(min_length=8)
 
 
+class UpdateProfileRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=8)
+    new_password: str = Field(min_length=8)
+
+
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant", "system"]
     content: str
@@ -113,6 +122,10 @@ class MessageResponse(ChatMessage):
 
     class Config:
         from_attributes = True
+
+
+class UpdateSessionRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
 
 
 class ChunkIngestRequest(BaseModel):
