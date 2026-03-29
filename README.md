@@ -70,13 +70,21 @@ OPENAI_API_KEY=sk-your_actual_api_key_here
 # LLM_PROVIDER=openai
 
 DATABASE_URL=postgresql://user:password@db:5432/pyrmit
+JWT_SECRET_KEY=replace-with-openssl-rand-hex-32-output
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+DEV_ACCESS_PASSWORD=choose-a-shared-dev-password
 ```
 
 **Frontend** (`frontend/.env`):
 Configures the API endpoint.
 ```properties
 NEXT_PUBLIC_API_URL=http://localhost:8000
+DEV_ACCESS_PASSWORD=choose-a-shared-dev-password
 ```
+
+If `DEV_ACCESS_PASSWORD` is set in both apps, the environment is locked behind a temporary shared password. Users must enter it once in the frontend before they can reach `/auth`, `/`, or the backend API. The value must match in `backend/.env` and `frontend/.env`. For direct backend access outside the frontend, send the same value in the `x-dev-access-password` header.
+
+Auth now follows FastAPI's OAuth2 password flow with bearer JWTs. The frontend stores the access token in the browser and sends it as `Authorization: Bearer <token>` to protected API routes. In Swagger at `/docs`, use the built-in `Authorize` flow against `/api/auth/token`.
 
 ### 2. Running the Application
 

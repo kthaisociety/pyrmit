@@ -236,5 +236,11 @@ Latest User Message: {original_content}"""
     return ai_message
 
 @router.get("/history", response_model=list[schemas.MessageResponse])
-def get_history(db: Session = Depends(get_db)):
-    return db.query(models.ChatMessage).order_by(models.ChatMessage.created_at).all()
+def get_history(db: Session = Depends(get_db), _user: models.User = Depends(get_current_user)):
+    return (
+        db.query(models.ChatMessage)
+        .join(models.ChatSession, models.ChatSession.id == models.ChatMessage.session_id)
+        .filter(models.ChatSession.user_id == _user.id)
+        .order_by(models.ChatMessage.created_at)
+        .all()
+    )
