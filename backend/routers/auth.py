@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.orm import Session
 from db.database import get_db
@@ -11,6 +13,17 @@ from dependencies import get_current_user
 router = APIRouter()
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+
+
+def _cookie_secure() -> bool:
+    return str(os.getenv("COOKIE_SECURE", "false")).lower() in {"1", "true", "yes", "on"}
+
+
+def _cookie_samesite() -> str:
+    value = os.getenv("COOKIE_SAMESITE", "lax").lower()
+    if value not in {"lax", "strict", "none"}:
+        return "lax"
+    return value
 
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -77,8 +90,8 @@ def signup(request: schemas.SignUpRequest, response: Response, req: Request, db:
         value=session.token,
         httponly=True,
         max_age=30 * 24 * 60 * 60, # 30 days
-        samesite="lax",
-        secure=False # Set to True in production with HTTPS
+        samesite=_cookie_samesite(),
+        secure=_cookie_secure(),
     )
 
     return schemas.SessionResponse(
@@ -116,8 +129,8 @@ def signin(request: schemas.SignInRequest, response: Response, req: Request, db:
         value=session.token,
         httponly=True,
         max_age=30 * 24 * 60 * 60, # 30 days
-        samesite="lax",
-        secure=False 
+        samesite=_cookie_samesite(),
+        secure=_cookie_secure(),
     )
 
     return schemas.SessionResponse(
@@ -132,7 +145,11 @@ def signout(response: Response, req: Request, db: Session = Depends(get_db)):
         db.query(models.Session).filter(models.Session.token == token).delete()
         db.commit()
     
-    response.delete_cookie("session_token")
+    response.delete_cookie(
+        "session_token",
+        samesite=_cookie_samesite(),
+        secure=_cookie_secure(),
+    )
     return {"message": "Signed out successfully"}
 
 @router.get("/me", response_model=schemas.UserPublic)
