@@ -138,3 +138,24 @@ def signout(response: Response, req: Request, db: Session = Depends(get_db)):
 @router.get("/me", response_model=schemas.UserPublic)
 def get_me(user: models.User = Depends(get_current_user)):
     return schemas.UserPublic(id=user.id, name=user.name, email=user.email)
+
+@router.patch("/me", response_model=schemas.UserPublic)
+def update_profile(request: schemas.UpdateProfileRequest, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    user.name = request.name
+    db.commit()
+    db.refresh(user)
+    return schemas.UserPublic(id=user.id, name=user.name, email=user.email)
+
+@router.patch("/password")
+def change_password(request: schemas.ChangePasswordRequest, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    account = db.query(models.Account).filter(
+        models.Account.user_id == user.id,
+        models.Account.provider_id == "credentials"
+    ).first()
+    if not account or not account.password:
+        raise HTTPException(status_code=400, detail="No password-based account found")
+    if not verify_password(request.current_password, account.password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    account.password = get_password_hash(request.new_password)
+    db.commit()
+    return {"message": "Password changed successfully"}

@@ -85,6 +85,15 @@ class SignInRequest(BaseModel):
     password: str = Field(min_length=8)
 
 
+class UpdateProfileRequest(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=8)
+    new_password: str = Field(min_length=8)
+
+
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant", "system"]
     content: str
@@ -113,4 +122,68 @@ class MessageResponse(ChatMessage):
 
     class Config:
         from_attributes = True
+
+
+class UpdateSessionRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+
+
+class ChunkIngestRequest(BaseModel):
+    input_path: str = "output.md"
+    output_path: str | None = "chunks.json"
+    document_name: str = "kristineberg_detaljplan"
+    document_id: int = 1
+    max_chars: int = Field(default=1800, ge=200, le=8000)
+    clear_existing_for_document: bool = True
+
+
+class ChunkIngestResponse(BaseModel):
+    inserted: int
+    deleted: int
+    document_name: str
+    document_id: int
+    output_path: str | None = None
+
+
+class FolderIngestItem(BaseModel):
+    source_file: str
+    markdown_file: str
+    document_name: str
+    document_id: int
+    inserted: int
+    deleted: int
+
+
+class FolderIngestRequest(BaseModel):
+    data_dir: str = "chunking/data"
+    markdown_output_dir: str = "data/ocr_markdown"
+    max_chars: int = Field(default=1800, ge=200, le=8000)
+    clear_existing_for_document: bool = True
+
+
+class FolderIngestResponse(BaseModel):
+    documents_processed: int
+    total_inserted: int
+    total_deleted: int
+    items: list[FolderIngestItem]
+
+
+# --- Agent / Analyze schemas ---
+
+class AnalyzeRequest(BaseModel):
+    query: str | None = None
+    location: str | None = None
+    project_type: str | None = None
+    units: int | None = None
+
+
+class AnalyzeResponse(BaseModel):
+    feasibility: str
+    confidence: int
+    summary: str
+    law_findings: str
+    case_findings: str
+    requirements: list[str]
+    timeline: str | int | None = None
+    next_steps: list[str]
 

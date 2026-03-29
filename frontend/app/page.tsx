@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Chat from '@/components/Chat';
 import Sidebar from '@/components/Sidebar';
+import Settings from '@/components/Settings';
 
 interface User {
   id: string;
@@ -16,8 +17,9 @@ export default function Home() {
   const [refreshSidebarTrigger, setRefreshSidebarTrigger] = useState(0);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
   const router = useRouter();
-  
+
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   useEffect(() => {
@@ -50,6 +52,11 @@ export default function Home() {
     }
   };
 
+  const handleAllChatsCleared = () => {
+    setCurrentSessionId(null);
+    setRefreshSidebarTrigger(prev => prev + 1);
+  };
+
   if (loading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-zinc-900">
@@ -60,24 +67,33 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 overflow-hidden">
-      <Sidebar 
+      <Sidebar
         currentSessionId={currentSessionId}
-        onSelectSession={setCurrentSessionId}
-        onNewChat={() => setCurrentSessionId(null)}
+        onSelectSession={(id) => { setCurrentSessionId(id); setShowSettings(false); }}
+        onNewChat={() => { setCurrentSessionId(null); setShowSettings(false); }}
         refreshTrigger={refreshSidebarTrigger}
         user={user}
-        onLogout={handleLogout}
+        onOpenSettings={() => setShowSettings(true)}
       />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full relative min-w-0">
-        <Chat 
-          sessionId={currentSessionId} 
-          onSessionCreated={handleSessionCreated}
-          user={user}
-        />
+        {showSettings && user ? (
+          <Settings
+            user={user}
+            onBack={() => setShowSettings(false)}
+            onLogout={handleLogout}
+            onUserUpdated={(updated) => setUser(updated)}
+            onAllChatsCleared={handleAllChatsCleared}
+          />
+        ) : (
+          <Chat
+            sessionId={currentSessionId}
+            onSessionCreated={handleSessionCreated}
+            user={user}
+          />
+        )}
       </main>
     </div>
   );
 }
-

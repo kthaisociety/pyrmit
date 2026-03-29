@@ -1,6 +1,6 @@
 .DS_Store
 .env
-fronted/.next
+frontend/.next
 
 /.idea
 .local.env

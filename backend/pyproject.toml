@@ -1,0 +1,26 @@
+[project]
+name = "backend"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "argon2-cffi>=23.1.0",
+    "email-validator>=2.1.0",
+    "fastapi>=0.109.0",
+    "google-generativeai>=0.8.5",
+    "llama-index>=0.10.0",
+    "llama-index-core>=0.10.0",
+    "mistral>=21.0.0",
+    "mistralai>=1.12.0",
+    "openai>=1.10.0",
+    "passlib[argon2]>=1.7.4",
+    "pgvector>=0.4.0",
+    "psycopg2-binary>=2.9.9",
+    "pydantic>=2.6.0",
+    "python-dotenv>=1.0.0",
+    "python-multipart>=0.0.9",
+    "pyyaml>=6.0.0",
+    "requests>=2.31.0",
+    "sqlalchemy>=2.0.25",
+    "supabase>=2.28.0",
+    "uvicorn>=0.27.0",
+]

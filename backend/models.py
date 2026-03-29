@@ -4,6 +4,9 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from db.database import Base
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import create_engine
+import os
+from dotenv import load_dotenv
 
 class User(Base):
     __tablename__ = "users"
@@ -64,6 +67,21 @@ class DocumentChunk(Base):
     embedding = Column(Vector(3072), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+
+class LawChunk(Base):
+    __tablename__ = "law_chunks"
+
+    id = Column(String, primary_key=True, index=True)
+    law_name = Column(String, nullable=False, index=True)
+    source_file = Column(String, nullable=True)
+    chapter = Column(String, nullable=True)
+    chapter_title = Column(String, nullable=True)
+    section = Column(String, nullable=True, index=True)
+    chunk_index = Column(Integer, nullable=True)
+    content = Column(Text, nullable=True)
+    embedding = Column(Vector(3072), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
 
@@ -86,3 +104,20 @@ class ChatMessage(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("ChatSession", back_populates="messages")
+
+if __name__ == "__main__":
+    load_dotenv()
+
+    # Use the Connection String from Settings > Database
+    # It looks like: postgresql://postgres:[password]@db.[id].supabase.co:5432/postgres
+    DATABASE_URL = os.environ["DATABASE_URL"]
+
+    # Create the engine using the Postgres protocol
+    DATABASE_URL = os.environ.get("DATABASE_URL")
+    engine = create_engine(DATABASE_URL)
+
+    # Use the metadata of your base class (usually Base) to create tables
+    # If DocumentChunk is a class, use DocumentChunk.metadata
+    Base.metadata.create_all(engine)
+    
+    print("Tables created successfully!")
