@@ -84,7 +84,6 @@ export default function Home() {
         onOpenSettings={() => setShowSettings(true)}
       />
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col h-full relative min-w-0">
         {showSettings && user ? (
           <Settings

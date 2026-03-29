@@ -10,6 +10,7 @@ export default function DevAccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get('next') || '/';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -17,9 +18,10 @@ export default function DevAccessPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/dev-access', {
+      const response = await fetch(`${apiUrl}/api/access-gate/unlock`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ password }),
       });
 
@@ -42,12 +44,12 @@ export default function DevAccessPage() {
       <section className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900/90 p-8 shadow-2xl shadow-black/30">
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-zinc-500">
-            Development Access
+            Protected Access
           </p>
           <h1 className="text-3xl font-semibold text-white">Enter the shared password</h1>
           <p className="text-sm leading-6 text-zinc-400">
-            This environment is temporarily locked. You need the current development
-            password before you can reach the app or auth endpoints.
+            This deployed site is password protected. You need the shared access
+            password before you can enter the website or use its API.
           </p>
         </div>
 
@@ -63,7 +65,7 @@ export default function DevAccessPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-base text-white outline-none transition focus:border-blue-500"
-              placeholder="Enter development password"
+              placeholder="Enter access password"
               required
             />
           </div>

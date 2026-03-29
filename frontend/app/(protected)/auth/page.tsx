@@ -75,10 +75,10 @@ export default function AuthPage() {
       <div className="w-full max-w-md bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-8">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 relative rounded-full overflow-hidden mb-4 shadow-sm">
-            <Image 
-              src="/pyrmit_middle.jpg" 
-              alt="Pyrmit Logo" 
-              fill 
+            <Image
+              src="/pyrmit_middle.jpg"
+              alt="Pyrmit Logo"
+              fill
               className="object-cover"
             />
           </div>
@@ -103,7 +103,7 @@ export default function AuthPage() {
               />
             </div>
           )}
-          
+
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Email</label>
             <input
