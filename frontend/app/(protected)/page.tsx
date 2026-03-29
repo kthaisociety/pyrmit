@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Chat from '@/components/Chat';
 import Sidebar from '@/components/Sidebar';
 import Settings from '@/components/Settings';
+import { authFetch, clearAccessToken, getStoredAccessToken } from '@/lib/auth';
 
 interface User {
   id: string;
@@ -23,8 +24,12 @@ export default function Home() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   useEffect(() => {
-    // Check authentication
-    fetch(`${API_URL}/api/auth/me`, { credentials: 'include' })
+    if (!getStoredAccessToken()) {
+      router.replace('/auth');
+      return;
+    }
+
+    authFetch(`${API_URL}/api/auth/me`)
       .then((res) => {
         if (res.ok) return res.json();
         throw new Error('Not authenticated');
@@ -34,7 +39,8 @@ export default function Home() {
         setLoading(false);
       })
       .catch(() => {
-        router.push('/auth');
+        clearAccessToken();
+        router.replace('/auth');
       });
   }, [API_URL, router]);
 
@@ -45,10 +51,12 @@ export default function Home() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${API_URL}/api/auth/signout`, { method: 'POST', credentials: 'include' });
-      router.push('/auth');
+      await authFetch(`${API_URL}/api/auth/signout`, { method: 'POST' });
     } catch (error) {
       console.error('Logout failed', error);
+    } finally {
+      clearAccessToken();
+      router.replace('/auth');
     }
   };
 
@@ -76,7 +84,6 @@ export default function Home() {
         onOpenSettings={() => setShowSettings(true)}
       />
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col h-full relative min-w-0">
         {showSettings && user ? (
           <Settings

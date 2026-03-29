@@ -4,6 +4,7 @@ import { useState, useEffect, FormEvent, useRef } from 'react';
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import { Copy, Check } from 'lucide-react';
+import { authFetch } from '@/lib/auth';
 
 interface Message {
   role: string;
@@ -44,7 +45,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   useEffect(() => {
     if (sessionId) {
       setLoading(true);
-      fetch(`${API_URL}/api/sessions/${sessionId}`, { credentials: 'include' })
+      authFetch(`${API_URL}/api/sessions/${sessionId}`)
         .then((res) => res.json())
         .then((data: Message[]) => {
           setMessages(data);
@@ -80,14 +81,13 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_URL}/api/chat`, {
+      const res = await authFetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: newHistory,
           session_id: sessionId
         }),
-        credentials: 'include',
       });
 
       if (!res.ok) throw new Error('Failed to send message');
