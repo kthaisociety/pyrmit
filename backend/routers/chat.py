@@ -1,9 +1,7 @@
 import logging
-import os
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from openai import OpenAI
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
@@ -14,14 +12,13 @@ from agents.orchestrator import Orchestrator
 from agents.parsers import format_response, parse_query
 from db.database import get_db
 from dependencies import get_current_user
+from llm import get_openai_client
 import models
 import schemas
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def _get_user_session(session_id: str, user_id: str, db: Session) -> models.ChatSession:
@@ -79,6 +76,8 @@ def update_session(session_id: str, request: schemas.UpdateSessionRequest, db: S
 def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
+
+    client = get_openai_client()
 
     # Handle Session
     session_id = request.session_id

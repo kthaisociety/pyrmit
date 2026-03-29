@@ -1,8 +1,5 @@
-import os
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from openai import OpenAI
 
 from db.database import get_db
 from dependencies import get_current_user
@@ -10,12 +7,11 @@ from agents.law_agent import LawAgent
 from agents.document_agent import DocumentAgent
 from agents.orchestrator import Orchestrator
 from agents.parsers import parse_query
+from llm import get_openai_client
 import models
 import schemas
 
 router = APIRouter()
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 @router.post("/analyze", response_model=schemas.AnalyzeResponse)
@@ -25,6 +21,7 @@ def analyze(
     user: models.User = Depends(get_current_user),
 ):
     """Run multi-agent feasibility analysis on a development query."""
+    client = get_openai_client()
 
     location = request.location
     project_type = request.project_type

@@ -1,10 +1,10 @@
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from openai import OpenAI
 
 from chunking.ingest_pipeline import ensure_markdown_source, ingest_folder, ingest_markdown_document
 from db.push_db import PushDB
+from llm import get_openai_client
 import schemas
 
 
@@ -45,7 +45,7 @@ def ingest_detaljplan_chunks(request: schemas.ChunkIngestRequest):
         markdown_output_dir = Path(__file__).resolve().parent.parent / "data" / "ocr_markdown"
         source_markdown_path = ensure_markdown_source(input_path, markdown_output_dir)
         push_db = PushDB()
-        client = OpenAI()
+        client = get_openai_client()
 
         inserted, deleted = ingest_markdown_document(
             push_db=push_db,

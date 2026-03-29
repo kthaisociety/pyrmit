@@ -7,6 +7,7 @@ from openai import OpenAI
 
 from chunking.chunk_detaljplan import DetaljplanChunker
 from db.push_db import PushDB
+from llm import get_openai_client
 from ocr.detaljplan_ocr import MistralOCR
 
 
@@ -96,10 +97,6 @@ def ingest_folder(
     max_chars: int,
     clear_existing_for_document: bool,
 ) -> dict:
-    openai_key = os.getenv("OPENAI_API_KEY")
-    if not openai_key:
-        raise RuntimeError("OPENAI_API_KEY is not configured")
-
     supported_files = sorted(
         path for path in data_dir.iterdir() if path.is_file() and path.suffix.lower() in {".pdf", ".md", ".txt"}
     )
@@ -112,7 +109,7 @@ def ingest_folder(
         }
 
     push_db = PushDB()
-    client = OpenAI(api_key=openai_key)
+    client = get_openai_client()
 
     items: list[dict] = []
     total_inserted = 0

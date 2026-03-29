@@ -1,6 +1,5 @@
 import argparse
 import logging
-import os
 import uuid
 from pathlib import Path
 import sys
@@ -16,6 +15,7 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 from chunking.chunk_laws import LawChunker
 from db.push_db import PushDB
+from llm import get_openai_client
 
 
 def embed_texts_batch(client: OpenAI, texts: list[str], batch_size: int = 100) -> list[list[float]]:
@@ -33,9 +33,6 @@ def ingest_laws(
     max_chars: int,
     clear_existing_for_law: bool,
 ) -> None:
-    if not os.getenv("OPENAI_API_KEY"):
-        raise RuntimeError("OPENAI_API_KEY is not configured")
-
     law_files = sorted(p for p in laws_dir.iterdir() if p.is_file() and p.suffix.lower() == ".txt")
     if not law_files:
         logger.warning("No law text files found in %s", laws_dir)
@@ -45,7 +42,7 @@ def ingest_laws(
 
     chunker = LawChunker(max_chunk_chars=max_chars)
     push_db = PushDB()
-    client = OpenAI()
+    client = get_openai_client()
 
     total_inserted = 0
     total_deleted = 0

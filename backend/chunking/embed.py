@@ -9,7 +9,6 @@ import os
 from dotenv import load_dotenv
 from llama_index.core import SimpleDirectoryReader
 from llama_index.core.node_parser import SentenceSplitter
-from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +19,10 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from db.database import SessionLocal
+from llm import get_openai_client
 import models
 
-client = OpenAI()
+client = get_openai_client()
 
 def embed_text(text: str):
     response = client.embeddings.create(
@@ -182,4 +182,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

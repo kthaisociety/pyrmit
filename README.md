@@ -55,9 +55,20 @@ pyrmit/
 The project uses environment variables for configuration.
 
 **Backend** (`backend/.env`):
-Ensure the file exists and contains your OpenAI API key.
+Ensure the file exists and contains either direct OpenAI credentials or Cloudflare AI Gateway credentials.
 ```properties
+# Option 1: direct OpenAI
 OPENAI_API_KEY=sk-your_actual_api_key_here
+
+# Option 2: Cloudflare AI Gateway
+# CF_AIG_TOKEN=your_cloudflare_gateway_token
+# CF_ACCOUNT_ID=your_cloudflare_account_id
+# CF_GATEWAY_ID=your_gateway_id
+# Optional: use a non-default stored provider key alias
+# CF_AIG_BYOK_ALIAS=production
+# Optional: force provider selection ("openai" or "cloudflare")
+# LLM_PROVIDER=openai
+
 DATABASE_URL=postgresql://user:password@db:5432/pyrmit
 ```
 
