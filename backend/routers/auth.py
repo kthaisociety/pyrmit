@@ -108,6 +108,8 @@ def signin(request: schemas.SignInRequest, db: Session = Depends(get_db)):
 
 @router.post("/signout")
 def signout():
+    # JWTs are stateless in this implementation. Signing out only removes the
+    # token client-side; it does not revoke already issued tokens server-side.
     return {"message": "Signed out successfully"}
 
 @router.get("/me", response_model=schemas.UserPublic)

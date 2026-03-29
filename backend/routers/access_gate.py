@@ -1,3 +1,5 @@
+import hmac
+
 from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel
 
@@ -30,7 +32,7 @@ def unlock_access_gate(request: AccessGateUnlockRequest, response: Response):
     if not submitted_password:
         raise HTTPException(status_code=400, detail="Password is required")
 
-    if submitted_password != configured_password:
+    if not hmac.compare_digest(submitted_password, configured_password):
         raise HTTPException(status_code=401, detail="Invalid access password")
 
     response.set_cookie(

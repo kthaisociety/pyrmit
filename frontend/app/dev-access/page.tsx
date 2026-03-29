@@ -1,15 +1,15 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 export default function DevAccessPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get('next') || '/';
+  const rawNextPath = searchParams.get('next') ?? '/';
+  const nextPath = rawNextPath.startsWith('/') ? rawNextPath : '/';
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -30,8 +30,9 @@ export default function DevAccessPage() {
         throw new Error(data?.detail || 'Access denied.');
       }
 
-      router.replace(nextPath);
-      router.refresh();
+      // Force a document navigation so the server-side protected layout sees
+      // the newly issued httpOnly access-gate cookie on the next request.
+      window.location.assign(nextPath);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Access denied.');
     } finally {

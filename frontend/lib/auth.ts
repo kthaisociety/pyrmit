@@ -1,5 +1,7 @@
 const ACCESS_TOKEN_KEY = 'pyrmit_access_token';
 
+// Development trade-off: storing the bearer token in localStorage keeps the
+// frontend simple, but any XSS bug would make the token readable by scripts.
 export function getStoredAccessToken(): string | null {
   if (typeof window === 'undefined') {
     return null;
