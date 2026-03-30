@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 import { authFetch, storeAccessToken } from '@/lib/auth';
-import { API_URL } from '@/lib/config';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,7 +20,7 @@ export default function AuthPage() {
     body.set('username', emailValue);
     body.set('password', passwordValue);
 
-    const response = await authFetch(`${API_URL}/api/auth/token`, {
+    const response = await authFetch('/api/auth/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
@@ -45,7 +44,7 @@ export default function AuthPage() {
       if (isLogin) {
         await login(email, password);
       } else {
-        const signupResponse = await authFetch(`${API_URL}/api/auth/signup`, {
+        const signupResponse = await authFetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password, name }),

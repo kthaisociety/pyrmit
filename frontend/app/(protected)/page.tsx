@@ -6,7 +6,6 @@ import Chat from '@/components/Chat';
 import Sidebar from '@/components/Sidebar';
 import Settings from '@/components/Settings';
 import { authFetch, clearAccessToken, getStoredAccessToken } from '@/lib/auth';
-import { API_URL } from '@/lib/config';
 
 interface User {
   id: string;
@@ -28,7 +27,7 @@ export default function Home() {
       return;
     }
 
-    authFetch(`${API_URL}/api/auth/me`)
+    authFetch('/api/auth/me')
       .then((res) => {
         if (res.ok) return res.json();
         throw new Error('Not authenticated');
@@ -50,7 +49,7 @@ export default function Home() {
 
   const handleLogout = async () => {
     try {
-      await authFetch(`${API_URL}/api/auth/signout`, { method: 'POST' });
+      await authFetch('/api/auth/signout', { method: 'POST' });
     } catch (error) {
       console.error('Logout failed', error);
     } finally {

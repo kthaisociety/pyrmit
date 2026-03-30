@@ -81,17 +81,18 @@ ACCESS_GATE_PASSWORD=choose-a-shared-password
 ```
 
 **Frontend** (`frontend/.env`):
-Configures the API endpoint.
+Configures the shared access gate. The browser talks to same-origin `/api/*`, and Next.js proxies those requests to FastAPI.
 ```properties
-NEXT_PUBLIC_API_URL=http://localhost:8000
 ACCESS_GATE_PASSWORD=choose-a-shared-password
+# Build/server-side proxy target for Next.js rewrites
+API_PROXY_TARGET=http://localhost:8000
 ```
 
 If `ACCESS_GATE_PASSWORD` is set in both apps, the deployed website is password protected before users can reach `/`, `/auth`, or the backend API. The value must match in `backend/.env` and `frontend/.env`. For direct backend access outside the frontend, send the same value in the `x-access-gate-password` header. `DEV_ACCESS_PASSWORD` is still accepted as a backward-compatible fallback.
 
-The password form now talks directly to FastAPI at `/api/access-gate/unlock`; there is no Next.js API route involved. FastAPI issues the shared access cookie, and Next.js blocks protected routes with a server-side App Router layout instead of middleware.
+The password form and all auth/app requests use same-origin `/api/*` URLs. Next.js proxies those requests to FastAPI with a rewrite, so there is no Next.js API route layer and no client-side public API base URL to manage.
 
-`NEXT_PUBLIC_API_URL` is a build-time Next.js variable. In Docker deployments it must be available during the frontend image build, not only at container runtime. The Dockerfile accepts it as a build arg and injects it into the `next build` step.
+For Docker deployments, set `API_PROXY_TARGET` as a build arg for the frontend image so Next.js can compile the rewrite destination.
 
 Auth now follows FastAPI's OAuth2 password flow with bearer JWTs. The frontend stores the access token in the browser and sends it as `Authorization: Bearer <token>` to protected API routes. In Swagger at `/docs`, use the built-in `Authorize` flow against `/api/auth/token`.
 

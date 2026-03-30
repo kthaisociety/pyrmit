@@ -2,8 +2,6 @@
 
 import { FormEvent, useState } from 'react';
 
-import { API_URL } from '@/lib/config';
-
 type DevAccessFormProps = {
   nextPath: string;
 };
@@ -19,7 +17,7 @@ export default function DevAccessForm({ nextPath }: DevAccessFormProps) {
     setError('');
 
     try {
-      const response = await fetch(`${API_URL}/api/access-gate/unlock`, {
+      const response = await fetch('/api/access-gate/unlock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

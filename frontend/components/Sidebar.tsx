@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus, Settings, MessageSquare, Trash2, Check, X, Pencil } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
-import { API_URL } from '@/lib/config';
 
 interface ChatSession {
   id: string;
@@ -32,8 +31,9 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    authFetch(`${API_URL}/api/sessions`)
+    authFetch('/api/sessions')
       .then((res) => res.json())
       .then((data) => setSessions(data))
       .catch((err) => console.error('Failed to fetch sessions', err));
@@ -48,7 +48,7 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
 
   const handleDelete = async (sessionId: string) => {
     try {
-      const res = await authFetch(`${API_URL}/api/sessions/${sessionId}`, {
+      const res = await authFetch(`/api/sessions/${sessionId}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete session');
@@ -69,7 +69,7 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
       return;
     }
     try {
-      const res = await authFetch(`${API_URL}/api/sessions/${sessionId}`, {
+      const res = await authFetch(`/api/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: trimmed }),

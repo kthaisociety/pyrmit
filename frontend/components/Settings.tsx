@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { ArrowLeft, LogOut, Trash2, Check, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
-import { API_URL } from '@/lib/config';
 
 interface User {
   id: string;
@@ -43,7 +42,7 @@ export default function Settings({ user, onBack, onLogout, onUserUpdated, onAllC
     setNameError('');
     setNameSuccess(false);
     try {
-      const res = await authFetch(`${API_URL}/api/auth/me`, {
+      const res = await authFetch('/api/auth/me', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: trimmed }),
@@ -71,7 +70,7 @@ export default function Settings({ user, onBack, onLogout, onUserUpdated, onAllC
     setPasswordError('');
     setPasswordSuccess(false);
     try {
-      const res = await authFetch(`${API_URL}/api/auth/password`, {
+      const res = await authFetch('/api/auth/password', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
@@ -94,7 +93,7 @@ export default function Settings({ user, onBack, onLogout, onUserUpdated, onAllC
   const handleClearAllChats = async () => {
     setClearLoading(true);
     try {
-      const res = await authFetch(`${API_URL}/api/sessions`, {
+      const res = await authFetch('/api/sessions', {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to clear chats');
