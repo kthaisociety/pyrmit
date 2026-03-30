@@ -160,3 +160,4 @@ If you prefer to run the backend and frontend locally for faster development (ho
       ```bash
       bun run dev
       ```
+ 
