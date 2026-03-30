@@ -24,7 +24,7 @@ def parse_query(query: str) -> dict:
 
     # Extract number of units (English + Swedish)
     units_match = re.search(
-        r"(\d+)\s*[-\s]?(?:unit|lägenheter|bostäder|enheter|hus)",
+        r"(\d+)\s*[-\s]?(?:unit|units|apartment|apartments|flat|flats|lägenhet|lägenheter|bostad|bostäder|enhet|enheter|hus)",
         query, re.IGNORECASE,
     )
     if units_match:

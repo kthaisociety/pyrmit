@@ -18,7 +18,7 @@ from chunking.chunk_laws import LawChunker
 from db.push_db import PushDB
 
 
-def embed_texts_batch(client: OpenAI, texts: list[str], batch_size: int = 100) -> list[list[float]]:
+def embed_texts_batch(client, texts: list[str], batch_size: int = 100) -> list[list[float]]:
     all_embeddings: list[list[float]] = []
     for start in range(0, len(texts), batch_size):
         batch = texts[start:start + batch_size]

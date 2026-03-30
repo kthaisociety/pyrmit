@@ -11,6 +11,7 @@ from agents.document_agent import DocumentAgent
 from agents.orchestrator import Orchestrator
 from agents.parsers import parse_query
 import models
+from observability import get_openai_client
 import schemas
 
 router = APIRouter()

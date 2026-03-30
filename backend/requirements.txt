@@ -9,3 +9,4 @@ email-validator>=2.1.0
 passlib[argon2]>=1.7.4
 pgvector>=0.4.0
 mistralai>=1.0.0
+langfuse>=2.0.0

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from agents.base import BaseRAGAgent, _TRANSLATION_INSTRUCTION
 from models import DocumentChunk
+from observability import start_observation
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,23 @@ class DocumentAgent(BaseRAGAgent):
         logger.debug("Searching documents for %d %s units in %s", units, project_type, location)
 
         search_query = f"{location} {project_type} {units} units approved denied outcome"
-        docs = self._retrieve_with_meta(search_query)
+        debug_rows = self._retrieve_debug_rows(search_query)
+        self._log_retrieval(search_query, debug_rows)
+        sources = list(dict.fromkeys(row["source"] for row in debug_rows))
+        with start_observation(
+            "document_agent.retrieval",
+            input={"query": search_query},
+            metadata={
+                "location": location,
+                "project_type": project_type,
+                "units": units,
+                "matches": [
+                    {key: value for key, value in row.items() if key != "content"} for row in debug_rows
+                ],
+            },
+        ):
+            pass
+        docs = [(row["content"], row["source"]) for row in debug_rows]
         context = "\n\n".join(f"Document {i + 1}:\n{content}" for i, (content, _) in enumerate(docs))
 
         user_prompt = _USER_TEMPLATE.format(
@@ -70,7 +87,6 @@ class DocumentAgent(BaseRAGAgent):
         )
         response_text = self._call_llm(_SYSTEM_PROMPT, user_prompt)
 
-        sources = list(dict.fromkeys(label for _, label in docs))
         try:
             result = self._extract_json(response_text)
             logger.info("Found %d similar cases", len(result.get("similar_cases", [])))

@@ -9,6 +9,7 @@ dependencies = [
     "google-generativeai>=0.8.5",
     "llama-index>=0.10.0",
     "llama-index-core>=0.10.0",
+    "langfuse>=2.0.0",
     "mistral>=21.0.0",
     "mistralai>=1.12.0",
     "openai>=1.10.0",
