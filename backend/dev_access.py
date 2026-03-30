@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import os
 
 from fastapi import Request
@@ -54,7 +55,7 @@ def request_has_dev_access(request: Request) -> bool:
 
     expected_hash = dev_access_hash(password)
     cookie_value = request.cookies.get(DEV_ACCESS_COOKIE_NAME, "")
-    if cookie_value == expected_hash:
+    if cookie_value and hmac.compare_digest(cookie_value, expected_hash):
         return True
 
     header_value = ""
@@ -66,4 +67,6 @@ def request_has_dev_access(request: Request) -> bool:
     if not header_value:
         return False
 
-    return header_value == password or header_value == expected_hash
+    return hmac.compare_digest(header_value, password) or hmac.compare_digest(
+        header_value, expected_hash
+    )
