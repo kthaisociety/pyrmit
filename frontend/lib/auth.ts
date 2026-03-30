@@ -26,10 +26,34 @@ export function getAuthHeaders(headers?: HeadersInit): Headers {
   return nextHeaders;
 }
 
+function redirectToAccessGate() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (window.location.pathname === '/dev-access') {
+    return;
+  }
+
+  const next = `${window.location.pathname}${window.location.search}`;
+  const nextParam = next && next !== '/' ? `?next=${encodeURIComponent(next)}` : '';
+  window.location.assign(`/dev-access${nextParam}`);
+}
+
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  return fetch(input, {
+  const response = await fetch(input, {
     ...init,
     credentials: 'include',
     headers: getAuthHeaders(init.headers),
   });
+
+  if (response.status === 401 || response.status === 403) {
+    const clone = response.clone();
+    const data = await clone.json().catch(() => null);
+    if (data?.detail === 'Access password required') {
+      redirectToAccessGate();
+    }
+  }
+
+  return response;
 }
