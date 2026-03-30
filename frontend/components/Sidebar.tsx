@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Plus, Settings, MessageSquare, Trash2, Check, X, Pencil } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
+import { API_URL } from '@/lib/config';
 
 interface ChatSession {
   id: string;
@@ -31,14 +32,12 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
   useEffect(() => {
     authFetch(`${API_URL}/api/sessions`)
       .then((res) => res.json())
       .then((data) => setSessions(data))
       .catch((err) => console.error('Failed to fetch sessions', err));
-  }, [API_URL, refreshTrigger]);
+  }, [refreshTrigger]);
 
   useEffect(() => {
     if (editingId && editInputRef.current) {

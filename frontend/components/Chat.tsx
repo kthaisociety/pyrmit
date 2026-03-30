@@ -5,6 +5,7 @@ import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import { Copy, Check } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
+import { API_URL } from '@/lib/config';
 
 interface Message {
   role: string;
@@ -32,8 +33,6 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -58,7 +57,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     } else {
       setMessages([]);
     }
-  }, [API_URL, sessionId]);
+  }, [sessionId]);
 
   const handleCopy = async (content: string, index: number) => {
     try {

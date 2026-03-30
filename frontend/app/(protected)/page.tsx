@@ -6,6 +6,7 @@ import Chat from '@/components/Chat';
 import Sidebar from '@/components/Sidebar';
 import Settings from '@/components/Settings';
 import { authFetch, clearAccessToken, getStoredAccessToken } from '@/lib/auth';
+import { API_URL } from '@/lib/config';
 
 interface User {
   id: string;
@@ -20,8 +21,6 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const router = useRouter();
-
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   useEffect(() => {
     if (!getStoredAccessToken()) {
@@ -42,7 +41,7 @@ export default function Home() {
         clearAccessToken();
         router.replace('/auth');
       });
-  }, [API_URL, router]);
+  }, [router]);
 
   const handleSessionCreated = (newSessionId: string) => {
     setCurrentSessionId(newSessionId);

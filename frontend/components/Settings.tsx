@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowLeft, LogOut, Trash2, Check, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
+import { API_URL } from '@/lib/config';
 
 interface User {
   id: string;
@@ -32,8 +33,6 @@ export default function Settings({ user, onBack, onLogout, onUserUpdated, onAllC
 
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearLoading, setClearLoading] = useState(false);
-
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   const handleUpdateName = async (e: React.FormEvent) => {
     e.preventDefault();

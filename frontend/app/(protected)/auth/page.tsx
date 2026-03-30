@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
 import { authFetch, storeAccessToken } from '@/lib/auth';
+import { API_URL } from '@/lib/config';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,8 +15,6 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   const login = async (emailValue: string, passwordValue: string) => {
     const body = new URLSearchParams();

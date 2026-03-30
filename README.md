@@ -91,6 +91,8 @@ If `ACCESS_GATE_PASSWORD` is set in both apps, the deployed website is password 
 
 The password form now talks directly to FastAPI at `/api/access-gate/unlock`; there is no Next.js API route involved. FastAPI issues the shared access cookie, and Next.js blocks protected routes with a server-side App Router layout instead of middleware.
 
+`NEXT_PUBLIC_API_URL` is a build-time Next.js variable. In Docker deployments it must be available during the frontend image build, not only at container runtime. The Dockerfile accepts it as a build arg and injects it into the `next build` step.
+
 Auth now follows FastAPI's OAuth2 password flow with bearer JWTs. The frontend stores the access token in the browser and sends it as `Authorization: Bearer <token>` to protected API routes. In Swagger at `/docs`, use the built-in `Authorize` flow against `/api/auth/token`.
 
 ### 2. Running the Application

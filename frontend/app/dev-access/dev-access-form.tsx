@@ -2,6 +2,8 @@
 
 import { FormEvent, useState } from 'react';
 
+import { API_URL } from '@/lib/config';
+
 type DevAccessFormProps = {
   nextPath: string;
 };
@@ -10,7 +12,6 @@ export default function DevAccessForm({ nextPath }: DevAccessFormProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -18,7 +19,7 @@ export default function DevAccessForm({ nextPath }: DevAccessFormProps) {
     setError('');
 
     try {
-      const response = await fetch(`${apiUrl}/api/access-gate/unlock`, {
+      const response = await fetch(`${API_URL}/api/access-gate/unlock`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
