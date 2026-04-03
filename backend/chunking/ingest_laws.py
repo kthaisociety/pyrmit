@@ -22,7 +22,7 @@ def embed_texts_batch(client: OpenAI, texts: list[str], batch_size: int = 100) -
     all_embeddings: list[list[float]] = []
     for start in range(0, len(texts), batch_size):
         batch = texts[start:start + batch_size]
-        response = client.embeddings.create(model="text-embedding-3-large", input=batch)
+        response = client.embeddings.create(model="openai/text-embedding-3-large", input=batch)
         all_embeddings.extend(item.embedding for item in response.data)
     return all_embeddings
 

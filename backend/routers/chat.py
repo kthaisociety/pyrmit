@@ -1,7 +1,10 @@
+import json
 import logging
 import uuid
+from typing import Generator
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
@@ -36,6 +39,11 @@ def _format_sources(sources: list[str]) -> str:
         return ""
     items = "\n".join(f"- {s}" for s in sources)
     return f"\n\n---\n**Sources**\n{items}"
+
+
+def _sse(event: dict) -> str:
+    return f"data: {json.dumps(event)}\n\n"
+
 
 @router.get("/sessions", response_model=list[schemas.ChatSession])
 def get_sessions(db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
@@ -83,7 +91,6 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
     session_id = request.session_id
     if not session_id:
         session_id = str(uuid.uuid4())
-        # Create new session with title from first message
         first_msg_content = request.messages[-1].content
         title = (first_msg_content[:30] + '...') if len(first_msg_content) > 30 else first_msg_content
         new_session = models.ChatSession(id=session_id, title=title, user_id=user.id)
@@ -93,10 +100,9 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
     else:
         session = _get_user_session(session_id, user.id, db)
         session.updated_at = func.now()
-    
+
     last_message = request.messages[-1]
 
-    # Save user message
     user_message = models.ChatMessage(
         role=last_message.role,
         content=last_message.content,
@@ -106,16 +112,13 @@ def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: mode
     db.commit()
     db.refresh(user_message)
 
-    # Translate and contextualize user message based on chat history
     original_content = last_message.content
-    
+
     if len(request.messages) > 1:
-        # Build chat history for context (last 5 messages, excluding the current one)
         history_msgs = request.messages[:-1][-5:]
         history_str = "\n".join([f"{msg.role}: {msg.content}" for msg in history_msgs])
-        
         context_prompt = f"""
-Given the following conversation history and the latest user message, rewrite the latest user message into a standalone query in English. 
+Given the following conversation history and the latest user message, rewrite the latest user message into a standalone query in English.
 Ensure any location, number of units, or project type implicitly mentioned in the history is explicitly included in the standalone query.
 If the latest message is a completely new topic or just greetings, simply translate it to English.
 Return ONLY the standalone English query, without any prefix or explanation.
@@ -130,9 +133,7 @@ Latest User Message: {original_content}"""
     try:
         translation_response = client.chat.completions.create(
             model=OPENAI_CHAT_MODEL,
-            messages=[
-                {"role": "user", "content": context_prompt}
-            ],
+            messages=[{"role": "user", "content": context_prompt}],
             temperature=0,
         )
         translated_content = translation_response.choices[0].message.content.strip()
@@ -140,7 +141,6 @@ Latest User Message: {original_content}"""
         logger.warning("Translation failed, using original content", exc_info=True)
         translated_content = original_content
 
-    # Parse the (translated) user query for location, units, project_type
     parsed = parse_query(translated_content)
     location = parsed.get("location")
     units = parsed.get("units")
@@ -148,7 +148,6 @@ Latest User Message: {original_content}"""
 
     if not location or not units:
         logger.info("Missing location or units — falling back to general RAG")
-        # General RAG fallback: answer using retrieved law + document chunks
         try:
             law_agent = LawAgent(db, client)
             document_agent = DocumentAgent(db, client)
@@ -160,11 +159,7 @@ Latest User Message: {original_content}"""
                 [label for _, label in law_results] + [label for _, label in doc_results]
             ))
             if all_chunks:
-                context = "\n\n".join(
-                    f"Source {i + 1}:\n{chunk}" for i, chunk in enumerate(all_chunks)
-                )
-                
-                # Build context-aware messages array for the final chat completion
+                context = "\n\n".join(f"Source {i + 1}:\n{chunk}" for i, chunk in enumerate(all_chunks))
                 completion_messages = [
                     {
                         "role": "system",
@@ -178,21 +173,13 @@ Latest User Message: {original_content}"""
                         ),
                     }
                 ]
-                
-                # Add up to 5 previous messages to give LLM conversation flow
                 if len(request.messages) > 1:
                     for msg in request.messages[:-1][-5:]:
-                        completion_messages.append({
-                            "role": msg.role,
-                            "content": msg.content
-                        })
-                
-                # Add the final augmented prompt
+                        completion_messages.append({"role": msg.role, "content": msg.content})
                 completion_messages.append({
                     "role": "user",
                     "content": f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated_content}",
                 })
-
                 rag_response = client.chat.completions.create(
                     model=OPENAI_CHAT_MODEL,
                     messages=completion_messages,
@@ -212,7 +199,6 @@ Latest User Message: {original_content}"""
             raise HTTPException(status_code=500, detail=str(e))
     else:
         logger.info("Running multi-agent analysis: location=%s units=%s type=%s", location, units, project_type)
-        # Run full multi-agent feasibility analysis
         try:
             law_agent = LawAgent(db, client)
             document_agent = DocumentAgent(db, client)
@@ -223,9 +209,8 @@ Latest User Message: {original_content}"""
             logger.error("Multi-agent analysis failed", exc_info=True)
             raise HTTPException(status_code=500, detail=str(e))
 
-    # Save AI response
     ai_message = models.ChatMessage(
-        role="assistant", 
+        role="assistant",
         content=ai_response_content,
         session_id=session_id
     )
@@ -234,6 +219,202 @@ Latest User Message: {original_content}"""
     db.refresh(ai_message)
 
     return ai_message
+
+
+@router.post("/chat/stream")
+def chat_stream(
+    request: schemas.ChatRequest,
+    db: Session = Depends(get_db),
+    user: models.User = Depends(get_current_user),
+):
+    if not request.messages:
+        raise HTTPException(status_code=400, detail="No messages provided")
+
+    # All setup done eagerly so HTTPException can still be raised before streaming
+    client = get_openai_client()
+
+    session_id = request.session_id
+    is_new_session = not session_id
+    if is_new_session:
+        session_id = str(uuid.uuid4())
+        first_msg_content = request.messages[-1].content
+        title = (first_msg_content[:30] + "...") if len(first_msg_content) > 30 else first_msg_content
+        new_session = models.ChatSession(id=session_id, title=title, user_id=user.id)
+        db.add(new_session)
+        db.commit()
+    else:
+        session = _get_user_session(session_id, user.id, db)
+        session.updated_at = func.now()
+        db.commit()
+
+    last_message = request.messages[-1]
+    user_message = models.ChatMessage(role=last_message.role, content=last_message.content, session_id=session_id)
+    db.add(user_message)
+    db.commit()
+
+    # Capture for use inside generator
+    messages_snapshot = list(request.messages)
+    original_content = last_message.content
+
+    def generate() -> Generator[str, None, None]:
+        accumulated = ""
+
+        if is_new_session:
+            yield _sse({"type": "session_id", "session_id": session_id})
+
+        try:
+            # ── Step 1: translate / contextualize ──────────────────────────
+            yield _sse({"type": "thinking", "label": "Understanding your question"})
+
+            if len(messages_snapshot) > 1:
+                history_msgs = messages_snapshot[:-1][-5:]
+                history_str = "\n".join(f"{m.role}: {m.content}" for m in history_msgs)
+                context_prompt = (
+                    "Given the following conversation history and the latest user message, "
+                    "rewrite the latest user message into a standalone query in English. "
+                    "Ensure any location, number of units, or project type implicitly mentioned "
+                    "in the history is explicitly included in the standalone query. "
+                    "If the latest message is a completely new topic or just greetings, simply translate it. "
+                    "Return ONLY the standalone English query, no prefix or explanation.\n\n"
+                    f"Conversation History:\n{history_str}\n\n"
+                    f"Latest User Message: {original_content}"
+                )
+            else:
+                context_prompt = (
+                    f"Translate the following user message to English "
+                    f"(return only the translation, no explanation): {original_content}"
+                )
+
+            try:
+                tr = client.chat.completions.create(
+                    model=OPENAI_CHAT_MODEL,
+                    messages=[{"role": "user", "content": context_prompt}],
+                    temperature=0,
+                )
+                translated = tr.choices[0].message.content.strip()
+            except Exception:
+                logger.warning("Translation failed, using original", exc_info=True)
+                translated = original_content
+
+            # ── Step 2: parse intent ───────────────────────────────────────
+            yield _sse({"type": "thinking", "label": "Parsing intent"})
+            parsed = parse_query(translated)
+            location = parsed.get("location")
+            units = parsed.get("units")
+            project_type = parsed.get("project_type") or "residential"
+
+            if not location or not units:
+                # ── General RAG path ───────────────────────────────────────
+                yield _sse({"type": "tool_call", "name": "embed_query", "input": translated})
+                law_agent = LawAgent(db, client)
+                document_agent = DocumentAgent(db, client)
+                embedding = law_agent._embed(translated)
+                yield _sse({"type": "tool_result", "name": "embed_query", "result": "Embedding computed"})
+
+                yield _sse({"type": "tool_call", "name": "retrieve_law_chunks", "input": f"k=5"})
+                law_results = law_agent._retrieve_with_meta_from_embedding(embedding, k=5)
+                yield _sse({"type": "tool_result", "name": "retrieve_law_chunks", "result": f"{len(law_results)} chunks"})
+
+                yield _sse({"type": "tool_call", "name": "retrieve_document_chunks", "input": f"k=5"})
+                doc_results = document_agent._retrieve_with_meta_from_embedding(embedding, k=5)
+                yield _sse({"type": "tool_result", "name": "retrieve_document_chunks", "result": f"{len(doc_results)} chunks"})
+
+                all_chunks = [c for c, _ in law_results] + [c for c, _ in doc_results]
+                sources = list(dict.fromkeys(
+                    [label for _, label in law_results] + [label for _, label in doc_results]
+                ))
+
+                if not all_chunks:
+                    fallback = (
+                        "I need a bit more information to run a full feasibility analysis.\n\n"
+                        "Please provide:\n"
+                        "- **Location** — e.g. Södermalm, Vasastan, Kungsholmen\n"
+                        "- **Number of units** — e.g. 20 apartments\n\n"
+                        'Example: "Can I build 20 apartments in Södermalm?"'
+                    )
+                    accumulated = fallback
+                    yield _sse({"type": "token", "token": fallback})
+                else:
+                    context = "\n\n".join(f"Source {i+1}:\n{c}" for i, c in enumerate(all_chunks))
+                    completion_messages = [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are a Swedish land law and urban planning expert. "
+                                "Answer in English based on the provided Swedish legal sources. "
+                                "When quoting Swedish source text directly, use this format:\n"
+                                "> **English:** [your English interpretation]\n"
+                                "> **Original (Swedish):** [exact Swedish text]\n"
+                                "Use markdown formatting for clarity."
+                            ),
+                        }
+                    ]
+                    if len(messages_snapshot) > 1:
+                        for msg in messages_snapshot[:-1][-5:]:
+                            completion_messages.append({"role": msg.role, "content": msg.content})
+                    completion_messages.append({
+                        "role": "user",
+                        "content": f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated}",
+                    })
+
+                    yield _sse({"type": "thinking", "label": "Composing answer"})
+                    stream = client.chat.completions.create(
+                        model=OPENAI_CHAT_MODEL,
+                        messages=completion_messages,
+                        temperature=0,
+                        stream=True,
+                    )
+                    for chunk in stream:
+                        token = chunk.choices[0].delta.content or ""
+                        if token:
+                            accumulated += token
+                            yield _sse({"type": "token", "token": token})
+
+                    suffix = _format_sources(sources)
+                    if suffix:
+                        accumulated += suffix
+                        yield _sse({"type": "token", "token": suffix})
+
+            else:
+                # ── Multi-agent feasibility path ───────────────────────────
+                yield _sse({"type": "tool_call", "name": "law_agent", "input": f"location={location}, units={units}, type={project_type}"})
+                law_agent = LawAgent(db, client)
+                document_agent = DocumentAgent(db, client)
+                orchestrator = Orchestrator(law_agent, document_agent)
+
+                yield _sse({"type": "tool_call", "name": "document_agent", "input": f"location={location}"})
+                result = orchestrator.analyze(location, project_type, units)
+                yield _sse({"type": "tool_result", "name": "law_agent", "result": f"confidence={result.get('confidence', '?')}%"})
+                yield _sse({"type": "tool_result", "name": "document_agent", "result": result.get("feasibility", "unknown")})
+
+                yield _sse({"type": "thinking", "label": "Formatting analysis"})
+                full_text = format_response(result) + _format_sources(result.get("sources", []))
+
+                # Emit word-by-word so the frontend renders progressively
+                words = full_text.split(" ")
+                for i, word in enumerate(words):
+                    token = word if i == len(words) - 1 else word + " "
+                    accumulated += token
+                    yield _sse({"type": "token", "token": token})
+
+        except Exception as e:
+            logger.error("Stream generation failed", exc_info=True)
+            yield _sse({"type": "error", "message": str(e)})
+            return
+
+        # Persist assistant message
+        ai_message = models.ChatMessage(role="assistant", content=accumulated, session_id=session_id)
+        db.add(ai_message)
+        db.commit()
+
+        yield _sse({"type": "done", "session_id": session_id})
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
+    )
+
 
 @router.get("/history", response_model=list[schemas.MessageResponse])
 def get_history(db: Session = Depends(get_db), _user: models.User = Depends(get_current_user)):

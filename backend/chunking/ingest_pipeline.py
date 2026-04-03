@@ -24,16 +24,16 @@ def ensure_markdown_source(input_path: Path, markdown_output_dir: Path) -> Path:
     if suffix != ".pdf":
         raise ValueError(f"Unsupported file type: {input_path.suffix}")
 
-    mistral_key = os.getenv("MISTRAL_API_KEY")
+    mistral_key = os.getenv("MISTRAL_API_KEY") or os.getenv("AI_GATEWAY_API_KEY")
     if not mistral_key:
-        raise RuntimeError("MISTRAL_API_KEY is not configured")
+        raise RuntimeError("MISTRAL_API_KEY or AI_GATEWAY_API_KEY is required for PDF OCR")
 
     markdown_output_dir.mkdir(parents=True, exist_ok=True)
     md_path = markdown_output_dir / f"{input_path.stem}.md"
     if md_path.exists():
         return md_path
 
-    ocr = MistralOCR(api_key=mistral_key)
+    ocr = MistralOCR()
     ocr_result = ocr.main(str(input_path))
     markdown_text = "\n\n---\n\n".join(page.markdown for page in ocr_result.pages)
     md_path.write_text(markdown_text, encoding="utf-8")
@@ -44,7 +44,7 @@ def embed_texts_batch(client: OpenAI, texts: list[str], batch_size: int = 100) -
     all_embeddings: list[list[float]] = []
     for start in range(0, len(texts), batch_size):
         batch = texts[start:start + batch_size]
-        response = client.embeddings.create(model="text-embedding-3-large", input=batch)
+        response = client.embeddings.create(model="openai/text-embedding-3-large", input=batch)
         all_embeddings.extend(item.embedding for item in response.data)
     return all_embeddings
 

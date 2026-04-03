@@ -26,7 +26,7 @@ client = get_openai_client()
 
 def embed_text(text: str):
     response = client.embeddings.create(
-        model="text-embedding-3-large",
+        model="openai/text-embedding-3-large",
         input=text
     )
     return response.data[0].embedding
@@ -38,7 +38,7 @@ def embed_texts_batch(texts: list[str], batch_size: int = 100):
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i + batch_size]
         response = client.embeddings.create(
-            model="text-embedding-3-large",
+            model="openai/text-embedding-3-large",
             input=batch
         )
         all_embeddings.extend([item.embedding for item in response.data])

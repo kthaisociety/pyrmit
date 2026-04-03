@@ -10,8 +10,14 @@ from openai import OpenAI
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import select
 
-OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
-OPENAI_CHAT_MODEL = "gpt-3.5-turbo"
+import os
+
+OPENAI_EMBEDDING_MODEL = "openai/text-embedding-3-large"
+OPENAI_CHAT_MODEL = (
+    "openai/gpt-5.4-mini"
+    if os.getenv("APP_ENV", "development").strip().lower() == "production"
+    else "openai/gpt-5.4-nano"
+)
 
 _TRANSLATION_INSTRUCTION = (
     "Always respond in English. "

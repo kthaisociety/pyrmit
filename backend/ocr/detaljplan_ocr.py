@@ -9,8 +9,13 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 
 class MistralOCR:
-    def __init__(self, api_key: str):
-        self.client = Mistral(api_key=api_key)
+    def __init__(self, api_key: str | None = None):
+        resolved_key = api_key or os.getenv("MISTRAL_API_KEY") or os.getenv("AI_GATEWAY_API_KEY")
+        if not resolved_key:
+            raise RuntimeError(
+                "Mistral OCR requires a key. Set MISTRAL_API_KEY or AI_GATEWAY_API_KEY."
+            )
+        self.client = Mistral(api_key=resolved_key)
 
     def upload_pdf(self, file_path: str):
         with open(file_path, "rb") as f:
