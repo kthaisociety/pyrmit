@@ -15,7 +15,12 @@ from agents.orchestrator import Orchestrator
 from agents.parsers import format_response, parse_query
 from db.database import get_db
 from dependencies import get_current_user
-from llm import get_openai_client
+from llm import (
+    build_responses_input,
+    get_openai_client,
+    get_response_output_text,
+    resolve_model_name,
+)
 import models
 import schemas
 
@@ -43,6 +48,15 @@ def _format_sources(sources: list[str]) -> str:
 
 def _sse(event: dict) -> str:
     return f"data: {json.dumps(event)}\n\n"
+
+
+def _response_input_with_user_prompt(
+    messages: list[schemas.ChatMessage],
+    user_prompt: str,
+) -> list[dict[str, str]]:
+    response_input = build_responses_input(messages[:-1][-5:])
+    response_input.append({"role": "user", "content": user_prompt})
+    return response_input
 
 
 @router.get("/sessions", response_model=list[schemas.ChatSession])
@@ -131,12 +145,12 @@ Latest User Message: {original_content}"""
         context_prompt = f"Translate the following user message to English (return only the translation, no explanation): {original_content}"
 
     try:
-        translation_response = client.chat.completions.create(
-            model=OPENAI_CHAT_MODEL,
-            messages=[{"role": "user", "content": context_prompt}],
+        translation_response = client.responses.create(
+            model=resolve_model_name(OPENAI_CHAT_MODEL),
+            input=context_prompt,
             temperature=0,
         )
-        translated_content = translation_response.choices[0].message.content.strip()
+        translated_content = get_response_output_text(translation_response).strip() or original_content
     except Exception:
         logger.warning("Translation failed, using original content", exc_info=True)
         translated_content = original_content
@@ -160,32 +174,23 @@ Latest User Message: {original_content}"""
             ))
             if all_chunks:
                 context = "\n\n".join(f"Source {i + 1}:\n{chunk}" for i, chunk in enumerate(all_chunks))
-                completion_messages = [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a Swedish land law and urban planning expert. "
-                            "Answer in English based on the provided Swedish legal sources. "
-                            "When quoting Swedish source text directly, use this format:\n"
-                            "> **English:** [your English interpretation]\n"
-                            "> **Original (Swedish):** [exact Swedish text]\n"
-                            "Use markdown formatting for clarity."
-                        ),
-                    }
-                ]
-                if len(request.messages) > 1:
-                    for msg in request.messages[:-1][-5:]:
-                        completion_messages.append({"role": msg.role, "content": msg.content})
-                completion_messages.append({
-                    "role": "user",
-                    "content": f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated_content}",
-                })
-                rag_response = client.chat.completions.create(
-                    model=OPENAI_CHAT_MODEL,
-                    messages=completion_messages,
+                rag_response = client.responses.create(
+                    model=resolve_model_name(OPENAI_CHAT_MODEL),
+                    instructions=(
+                        "You are a Swedish land law and urban planning expert. "
+                        "Answer in English based on the provided Swedish legal sources. "
+                        "When quoting Swedish source text directly, use this format:\n"
+                        "> **English:** [your English interpretation]\n"
+                        "> **Original (Swedish):** [exact Swedish text]\n"
+                        "Use markdown formatting for clarity."
+                    ),
+                    input=_response_input_with_user_prompt(
+                        request.messages,
+                        f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated_content}",
+                    ),
                     temperature=0,
                 )
-                ai_response_content = rag_response.choices[0].message.content + _format_sources(sources)
+                ai_response_content = get_response_output_text(rag_response) + _format_sources(sources)
             else:
                 ai_response_content = (
                     "I need a bit more information to run a full feasibility analysis.\n\n"
@@ -258,6 +263,7 @@ def chat_stream(
 
     def generate() -> Generator[str, None, None]:
         accumulated = ""
+        yield ": connected\n\n"
 
         if is_new_session:
             yield _sse({"type": "session_id", "session_id": session_id})
@@ -286,12 +292,12 @@ def chat_stream(
                 )
 
             try:
-                tr = client.chat.completions.create(
-                    model=OPENAI_CHAT_MODEL,
-                    messages=[{"role": "user", "content": context_prompt}],
+                tr = client.responses.create(
+                    model=resolve_model_name(OPENAI_CHAT_MODEL),
+                    input=context_prompt,
                     temperature=0,
                 )
-                translated = tr.choices[0].message.content.strip()
+                translated = get_response_output_text(tr).strip() or original_content
             except Exception:
                 logger.warning("Translation failed, using original", exc_info=True)
                 translated = original_content
@@ -333,47 +339,40 @@ def chat_stream(
                         'Example: "Can I build 20 apartments in Södermalm?"'
                     )
                     accumulated = fallback
-                    yield _sse({"type": "token", "token": fallback})
+                    yield _sse({"type": "response.output_text.delta", "delta": fallback})
                 else:
                     context = "\n\n".join(f"Source {i+1}:\n{c}" for i, c in enumerate(all_chunks))
-                    completion_messages = [
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are a Swedish land law and urban planning expert. "
-                                "Answer in English based on the provided Swedish legal sources. "
-                                "When quoting Swedish source text directly, use this format:\n"
-                                "> **English:** [your English interpretation]\n"
-                                "> **Original (Swedish):** [exact Swedish text]\n"
-                                "Use markdown formatting for clarity."
-                            ),
-                        }
-                    ]
-                    if len(messages_snapshot) > 1:
-                        for msg in messages_snapshot[:-1][-5:]:
-                            completion_messages.append({"role": msg.role, "content": msg.content})
-                    completion_messages.append({
-                        "role": "user",
-                        "content": f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated}",
-                    })
-
                     yield _sse({"type": "thinking", "label": "Composing answer"})
-                    stream = client.chat.completions.create(
-                        model=OPENAI_CHAT_MODEL,
-                        messages=completion_messages,
+                    stream = client.responses.create(
+                        model=resolve_model_name(OPENAI_CHAT_MODEL),
+                        instructions=(
+                            "You are a Swedish land law and urban planning expert. "
+                            "Answer in English based on the provided Swedish legal sources. "
+                            "When quoting Swedish source text directly, use this format:\n"
+                            "> **English:** [your English interpretation]\n"
+                            "> **Original (Swedish):** [exact Swedish text]\n"
+                            "Use markdown formatting for clarity."
+                        ),
+                        input=_response_input_with_user_prompt(
+                            messages_snapshot,
+                            f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated}",
+                        ),
                         temperature=0,
                         stream=True,
                     )
-                    for chunk in stream:
-                        token = chunk.choices[0].delta.content or ""
-                        if token:
-                            accumulated += token
-                            yield _sse({"type": "token", "token": token})
+                    for event in stream:
+                        if event.type == "response.output_text.delta" and event.delta:
+                            accumulated += event.delta
+                            yield _sse({"type": event.type, "delta": event.delta})
+                        elif event.type == "response.failed":
+                            raise RuntimeError("Model response failed")
+                        elif event.type == "error":
+                            raise RuntimeError(event.message)
 
                     suffix = _format_sources(sources)
                     if suffix:
                         accumulated += suffix
-                        yield _sse({"type": "token", "token": suffix})
+                        yield _sse({"type": "response.output_text.delta", "delta": suffix})
 
             else:
                 # ── Multi-agent feasibility path ───────────────────────────
@@ -395,7 +394,7 @@ def chat_stream(
                 for i, word in enumerate(words):
                     token = word if i == len(words) - 1 else word + " "
                     accumulated += token
-                    yield _sse({"type": "token", "token": token})
+                    yield _sse({"type": "response.output_text.delta", "delta": token})
 
         except Exception as e:
             logger.error("Stream generation failed", exc_info=True)
@@ -407,12 +406,17 @@ def chat_stream(
         db.add(ai_message)
         db.commit()
 
+        yield _sse({"type": "response.completed"})
         yield _sse({"type": "done", "session_id": session_id})
 
     return StreamingResponse(
         generate(),
         media_type="text/event-stream",
-        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
+        headers={
+            "X-Accel-Buffering": "no",
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+        },
     )
 
 

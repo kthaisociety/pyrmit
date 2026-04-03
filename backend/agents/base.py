@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import select
 
 import os
+from llm import get_response_output_text, resolve_model_name
 
 OPENAI_EMBEDDING_MODEL = "openai/text-embedding-3-large"
 OPENAI_CHAT_MODEL = (
@@ -39,7 +40,8 @@ class BaseRAGAgent:
 
     def _embed(self, text: str) -> list[float]:
         return self.client.embeddings.create(
-            model=OPENAI_EMBEDDING_MODEL, input=text
+            model=resolve_model_name(OPENAI_EMBEDDING_MODEL),
+            input=text,
         ).data[0].embedding
 
     def _retrieve(self, query: str, k: int = 5) -> list[str]:
@@ -68,15 +70,13 @@ class BaseRAGAgent:
         return [(row[0], row[1] or "unknown") for row in self.db.execute(stmt).fetchall()]
 
     def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
-        completion = self.client.chat.completions.create(
-            model=OPENAI_CHAT_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+        response = self.client.responses.create(
+            model=resolve_model_name(OPENAI_CHAT_MODEL),
+            instructions=system_prompt,
+            input=user_prompt,
             temperature=0,
         )
-        return completion.choices[0].message.content
+        return get_response_output_text(response)
 
     @staticmethod
     def _extract_json(text: str) -> dict:
