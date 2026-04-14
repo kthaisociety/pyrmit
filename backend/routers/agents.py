@@ -2,8 +2,6 @@ import os
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from openai import OpenAI
-
 from db.database import get_db
 from dependencies import get_current_user
 from agents.law_agent import LawAgent
@@ -16,7 +14,7 @@ import schemas
 
 router = APIRouter()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = get_openai_client()
 
 
 @router.post("/analyze", response_model=schemas.AnalyzeResponse)

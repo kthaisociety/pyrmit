@@ -3,7 +3,6 @@ import os
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from openai import OpenAI
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import func
 
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = get_openai_client()
 
 
 def _get_user_session(session_id: str, user_id: str, db: Session) -> models.ChatSession:

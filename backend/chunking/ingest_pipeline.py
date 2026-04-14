@@ -3,10 +3,9 @@ import re
 import uuid
 from pathlib import Path
 
-from openai import OpenAI
-
 from chunking.chunk_detaljplan import DetaljplanChunker
 from db.push_db import PushDB
+from ocr.detaljplan_ocr import MistralOCR
 
 def slugify_document_name(name: str) -> str:
     normalized = re.sub(r"[^a-zA-Z0-9\-_\.]+", "_", name.strip().lower())
@@ -25,8 +24,6 @@ def ensure_markdown_source(input_path: Path, markdown_output_dir: Path) -> Path:
     if not mistral_key:
         raise RuntimeError("MISTRAL_API_KEY is not configured")
 
-    from ocr.detaljplan_ocr import MistralOCR
-
     markdown_output_dir.mkdir(parents=True, exist_ok=True)
     md_path = markdown_output_dir / f"{input_path.stem}.md"
     if md_path.exists():
@@ -39,7 +36,7 @@ def ensure_markdown_source(input_path: Path, markdown_output_dir: Path) -> Path:
     return md_path
 
 
-def embed_texts_batch(client, texts: list[str], batch_size: int = 100) -> list[list[float]]:
+def embed_texts_batch(client: OpenAI, texts: list[str], batch_size: int = 100) -> list[list[float]]:
     all_embeddings: list[list[float]] = []
     for start in range(0, len(texts), batch_size):
         batch = texts[start:start + batch_size]
@@ -50,7 +47,7 @@ def embed_texts_batch(client, texts: list[str], batch_size: int = 100) -> list[l
 
 def ingest_markdown_document(
     push_db: PushDB,
-    client,
+    client: OpenAI,
     markdown_path: Path,
     output_path: Path | None,
     document_name: str,
