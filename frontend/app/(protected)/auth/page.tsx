@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
+import { authFetch, storeAccessToken } from '@/lib/auth';
+
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -13,31 +15,52 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const login = async (emailValue: string, passwordValue: string) => {
+    const body = new URLSearchParams();
+    body.set('username', emailValue);
+    body.set('password', passwordValue);
+
+    const response = await authFetch('/api/auth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      throw new Error(data?.detail || 'Authentication failed');
+    }
+
+    const token = await response.json();
+    storeAccessToken(token.access_token);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    const endpoint = isLogin ? '/api/auth/signin' : '/api/auth/signup';
-    const body = isLogin ? { email, password } : { email, password, name };
-
     try {
-      const res = await fetch(`${API_URL}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        credentials: 'include',
-      });
+      if (isLogin) {
+        await login(email, password);
+      } else {
+        const signupResponse = await authFetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password, name }),
+        });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || 'Authentication failed');
+        if (!signupResponse.ok) {
+          const data = await signupResponse.json().catch(() => null);
+          throw new Error(data?.detail || 'Authentication failed');
+        }
+
+        const token = await signupResponse.json();
+        storeAccessToken(token.access_token);
       }
 
-      // Redirect to chat
-      router.push('/');
+      router.replace('/');
+      router.refresh();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -50,10 +73,10 @@ export default function AuthPage() {
       <div className="w-full max-w-md bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-8">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 relative rounded-full overflow-hidden mb-4 shadow-sm">
-            <Image 
-              src="/pyrmit_middle.jpg" 
-              alt="Pyrmit Logo" 
-              fill 
+            <Image
+              src="/pyrmit_middle.jpg"
+              alt="Pyrmit Logo"
+              fill
               className="object-cover"
             />
           </div>
@@ -78,7 +101,7 @@ export default function AuthPage() {
               />
             </div>
           )}
-          
+
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Email</label>
             <input

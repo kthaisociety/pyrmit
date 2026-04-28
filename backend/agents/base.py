@@ -12,10 +12,16 @@ from openai import OpenAI
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import select
 
+import os
+from llm import get_response_output_text, resolve_model_name
 from observability import create_chat_completion, create_embedding
 
-OPENAI_EMBEDDING_MODEL = "text-embedding-3-large"
-OPENAI_CHAT_MODEL = "gpt-3.5-turbo"
+OPENAI_EMBEDDING_MODEL = "openai/text-embedding-3-large"
+OPENAI_CHAT_MODEL = (
+    "openai/gpt-5.4-mini"
+    if os.getenv("APP_ENV", "development").strip().lower() == "production"
+    else "openai/gpt-5.4-nano"
+)
 
 _TRANSLATION_INSTRUCTION = (
     "Always respond in English. "
@@ -31,7 +37,7 @@ class BaseRAGAgent:
 
     _source_label_column: str = ""
 
-    def __init__(self, db: Session, openai_client: Any, model_class, label: str):
+    def __init__(self, db: Session, openai_client: OpenAI, model_class, label: str):
         self.db = db
         self.client = openai_client
         self.model_class = model_class
@@ -40,7 +46,8 @@ class BaseRAGAgent:
     def _embed(self, text: str) -> list[float]:
         return create_embedding(
             self.client,
-            model=OPENAI_EMBEDDING_MODEL, input=text
+            model=resolve_model_name(OPENAI_EMBEDDING_MODEL),
+            input=text,
         ).data[0].embedding
 
     def _retrieve(self, query: str, k: int = 5) -> list[str]:
@@ -67,7 +74,8 @@ class BaseRAGAgent:
 
     def _retrieve_debug_rows_from_embedding(self, embedding: list[float], k: int = 5) -> list[dict[str, Any]]:
         """Retrieve top-k chunks with source, chunk index, distance, and preview."""
-        source_col = getattr(self.model_class, self._source_label_column)
+        source_attr = self._source_label_column or "source"
+        source_col = getattr(self.model_class, source_attr)
         distance_col = self.model_class.embedding.cosine_distance(embedding).label("distance")
         stmt = (
             select(self.model_class.content, source_col, self.model_class.chunk_index, distance_col)
@@ -104,14 +112,12 @@ class BaseRAGAgent:
     def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
         completion = create_chat_completion(
             self.client,
-            model=OPENAI_CHAT_MODEL,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+            model=resolve_model_name(OPENAI_CHAT_MODEL),
+            instructions=system_prompt,
+            input=user_prompt,
             temperature=0,
         )
-        return completion.choices[0].message.content
+        return get_response_output_text(completion)
 
     @staticmethod
     def _extract_json(text: str) -> dict:

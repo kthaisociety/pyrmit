@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Plus, Settings, MessageSquare, Trash2, Check, X, Pencil } from 'lucide-react';
+import { authFetch } from '@/lib/auth';
 
 interface ChatSession {
   id: string;
@@ -30,14 +31,13 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
   useEffect(() => {
-    fetch(`${API_URL}/api/sessions`, { credentials: 'include' })
+    authFetch('/api/sessions')
       .then((res) => res.json())
       .then((data) => setSessions(data))
       .catch((err) => console.error('Failed to fetch sessions', err));
-  }, [API_URL, refreshTrigger]);
+  }, [refreshTrigger]);
 
   useEffect(() => {
     if (editingId && editInputRef.current) {
@@ -48,9 +48,8 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
 
   const handleDelete = async (sessionId: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/sessions/${sessionId}`, {
+      const res = await authFetch(`/api/sessions/${sessionId}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to delete session');
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
@@ -70,11 +69,10 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
       return;
     }
     try {
-      const res = await fetch(`${API_URL}/api/sessions/${sessionId}`, {
+      const res = await authFetch(`/api/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: trimmed }),
-        credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to rename session');
       setSessions((prev) =>

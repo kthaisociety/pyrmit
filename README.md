@@ -55,17 +55,46 @@ pyrmit/
 The project uses environment variables for configuration.
 
 **Backend** (`backend/.env`):
-Ensure the file exists and contains your OpenAI API key.
+Ensure the file exists and contains either direct OpenAI credentials or Cloudflare AI Gateway credentials.
 ```properties
+# Option 1: direct OpenAI
 OPENAI_API_KEY=sk-your_actual_api_key_here
+
+# Option 2: Cloudflare AI Gateway
+# CF_AIG_TOKEN=your_cloudflare_gateway_token
+# CF_ACCOUNT_ID=your_cloudflare_account_id
+# CF_GATEWAY_ID=your_gateway_id
+# Optional: use a non-default stored provider key alias
+# CF_AIG_BYOK_ALIAS=production
+# Optional: force provider selection ("openai" or "cloudflare")
+# LLM_PROVIDER=openai
+
 DATABASE_URL=postgresql://user:password@db:5432/pyrmit
+JWT_SECRET_KEY=replace-with-openssl-rand-hex-32-output
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+ACCESS_GATE_PASSWORD=choose-a-shared-password
+# Needed when frontend/backend are on different subdomains, e.g. .example.com
+# ACCESS_GATE_COOKIE_DOMAIN=.example.com
+# Use "none" with secure cookies if your deployment requires cross-site cookie behavior
+# ACCESS_GATE_COOKIE_SAMESITE=lax
+# ACCESS_GATE_COOKIE_SECURE=true
 ```
 
 **Frontend** (`frontend/.env`):
-Configures the API endpoint.
+Configures the shared access gate. The browser talks to same-origin `/api/*`, and Next.js proxies those requests to FastAPI.
 ```properties
-NEXT_PUBLIC_API_URL=http://localhost:8000
+ACCESS_GATE_PASSWORD=choose-a-shared-password
+# Build/server-side proxy target for Next.js rewrites
+API_PROXY_TARGET=http://localhost:8000
 ```
+
+If `ACCESS_GATE_PASSWORD` is set in both apps, the deployed website is password protected before users can reach `/`, `/auth`, or the backend API. The value must match in `backend/.env` and `frontend/.env`. For direct backend access outside the frontend, send the same value in the `x-access-gate-password` header. `DEV_ACCESS_PASSWORD` is still accepted as a backward-compatible fallback.
+
+The password form and all auth/app requests use same-origin `/api/*` URLs. Next.js proxies those requests to FastAPI with a rewrite, so there is no Next.js API route layer and no client-side public API base URL to manage.
+
+For Docker deployments, set `API_PROXY_TARGET` as a build arg for the frontend image so Next.js can compile the rewrite destination.
+
+Auth now follows FastAPI's OAuth2 password flow with bearer JWTs. The frontend stores the access token in the browser and sends it as `Authorization: Bearer <token>` to protected API routes. In Swagger at `/docs`, use the built-in `Authorize` flow against `/api/auth/token`.
 
 ### 2. Running the Application
 
@@ -134,3 +163,6 @@ If you prefer to run the backend and frontend locally for faster development (ho
       ```bash
       bun run dev
       ```
+      
+
+'

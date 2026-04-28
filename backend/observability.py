@@ -3,6 +3,8 @@ import logging
 import os
 from typing import Any
 
+from llm import VERCEL_AI_GATEWAY_BASE_URL
+
 logger = logging.getLogger(__name__)
 
 _LANGFUSE_EXTRA_KEYS = {
@@ -37,11 +39,13 @@ def _strip_langfuse_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_openai_client():
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("AI_GATEWAY_API_KEY") or os.getenv("OPENAI_API_KEY")
     if api_key:
         _openai_client.api_key = api_key
 
     base_url = os.getenv("OPENAI_BASE_URL")
+    if os.getenv("AI_GATEWAY_API_KEY"):
+        base_url = VERCEL_AI_GATEWAY_BASE_URL
     if base_url:
         _openai_client.base_url = base_url
 
@@ -83,6 +87,8 @@ def propagate_trace_attributes(*, user_id: str | None = None, session_id: str | 
 
 
 def create_chat_completion(client: Any, **kwargs):
+    if hasattr(client, "responses"):
+        return client.responses.create(**_strip_langfuse_kwargs(kwargs))
     return client.chat.completions.create(**_strip_langfuse_kwargs(kwargs))
 
 

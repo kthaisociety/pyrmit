@@ -1,10 +1,12 @@
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
-from openai import OpenAI
+from fastapi import APIRouter, Depends, HTTPException
 
 from chunking.ingest_pipeline import ensure_markdown_source, ingest_folder, ingest_markdown_document
+from dependencies import get_current_user
 from db.push_db import PushDB
+from llm import get_openai_client
+import models
 import schemas
 
 
@@ -32,7 +34,10 @@ def _resolve_workspace_path(path_value: str) -> Path:
 
 
 @router.post("/chunks/ingest-detaljplan", response_model=schemas.ChunkIngestResponse)
-def ingest_detaljplan_chunks(request: schemas.ChunkIngestRequest):
+def ingest_detaljplan_chunks(
+    request: schemas.ChunkIngestRequest,
+    _user: models.User = Depends(get_current_user),
+):
     input_path = _resolve_workspace_path(request.input_path)
     if not input_path.exists():
         raise HTTPException(status_code=404, detail=f"Input file not found: {input_path}")
@@ -45,7 +50,7 @@ def ingest_detaljplan_chunks(request: schemas.ChunkIngestRequest):
         markdown_output_dir = Path(__file__).resolve().parent.parent / "data" / "ocr_markdown"
         source_markdown_path = ensure_markdown_source(input_path, markdown_output_dir)
         push_db = PushDB()
-        client = OpenAI()
+        client = get_openai_client()
 
         inserted, deleted = ingest_markdown_document(
             push_db=push_db,
@@ -75,7 +80,10 @@ def ingest_detaljplan_chunks(request: schemas.ChunkIngestRequest):
 
 
 @router.post("/chunks/ingest-data-folder", response_model=schemas.FolderIngestResponse)
-def ingest_data_folder_route(request: schemas.FolderIngestRequest):
+def ingest_data_folder_route(
+    request: schemas.FolderIngestRequest,
+    _user: models.User = Depends(get_current_user),
+):
     data_dir = _resolve_workspace_path(request.data_dir)
     if not data_dir.exists() or not data_dir.is_dir():
         raise HTTPException(status_code=404, detail=f"Data directory not found: {data_dir}")

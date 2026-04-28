@@ -69,9 +69,9 @@ class UserPublic(BaseModel):
     email: EmailStr
 
 
-class SessionResponse(BaseModel):
-    session_id: str
-    user: UserPublic
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 
 class SignUpRequest(BaseModel):
@@ -186,4 +186,3 @@ class AnalyzeResponse(BaseModel):
     requirements: list[str]
     timeline: str | int | None = None
     next_steps: list[str]
-

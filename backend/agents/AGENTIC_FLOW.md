@@ -161,16 +161,17 @@ DocumentAgent → BaseRAGAgent(db, client, DocumentChunk, "Document Agent")
 
 ## Calling the API
 
-### Authenticated request (session cookie required)
+### Authenticated request (bearer token required)
 
 ```bash
-# Sign in first to get the session cookie
-curl -c cookies.txt -X POST http://localhost:8000/api/auth/signin \
-  -H "Content-Type: application/json" \
-  -d '{"email": "you@example.com", "password": "secret"}'
+# Get a bearer token first
+TOKEN=$(curl -s -X POST http://localhost:8000/api/auth/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=you@example.com&password=secret" | jq -r '.access_token')
 
 # Run feasibility analysis
-curl -b cookies.txt -X POST http://localhost:8000/api/analyze \
+curl -X POST http://localhost:8000/api/analyze \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "location": "Södermalm",
@@ -182,7 +183,8 @@ curl -b cookies.txt -X POST http://localhost:8000/api/analyze \
 ### Free-text query
 
 ```bash
-curl -b cookies.txt -X POST http://localhost:8000/api/analyze \
+curl -X POST http://localhost:8000/api/analyze \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query": "Can I build 20 apartment units in Södermalm?"}'
 ```

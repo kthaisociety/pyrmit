@@ -1,44 +1,55 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from datetime import timedelta
+import uuid
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+
 from db.database import get_db
 import models
 import schemas
-from passlib.context import CryptContext
-import uuid
-from datetime import datetime, timedelta
 from dependencies import get_current_user
+from security import (
+    DUMMY_PASSWORD_HASH,
+    create_access_token,
+    get_access_token_expire_minutes,
+    get_password_hash,
+    verify_password,
+)
 
 router = APIRouter()
 
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
-def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+def _authenticate_user(db: Session, email: str, password: str) -> models.User | None:
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if user is None:
+        verify_password(password, DUMMY_PASSWORD_HASH)
+        return None
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
+    account = db.query(models.Account).filter(
+        models.Account.user_id == user.id,
+        models.Account.provider_id == "credentials",
+    ).first()
+    if account is None or not account.password:
+        verify_password(password, DUMMY_PASSWORD_HASH)
+        return None
 
-def create_session(db: Session, user_id: str, ip_address: str = None, user_agent: str = None):
-    session_id = str(uuid.uuid4())
-    token = str(uuid.uuid4())
-    expires_at = datetime.utcnow() + timedelta(days=30)
-    
-    db_session = models.Session(
-        id=session_id,
-        user_id=user_id,
-        token=token,
-        expires_at=expires_at,
-        ip_address=ip_address,
-        user_agent=user_agent
+    if not verify_password(password, account.password):
+        return None
+
+    return user
+
+
+def _issue_access_token(user: models.User) -> schemas.Token:
+    access_token = create_access_token(
+        subject=f"user:{user.id}",
+        expires_delta=timedelta(minutes=get_access_token_expire_minutes()),
     )
-    db.add(db_session)
-    db.commit()
-    db.refresh(db_session)
-    return db_session
+    return schemas.Token(access_token=access_token, token_type="bearer")
 
-@router.post("/signup", response_model=schemas.SessionResponse)
-def signup(request: schemas.SignUpRequest, response: Response, req: Request, db: Session = Depends(get_db)):
-    # Check if user exists
+
+@router.post("/signup", response_model=schemas.Token, status_code=status.HTTP_201_CREATED)
+def signup(request: schemas.SignUpRequest, db: Session = Depends(get_db)):
     existing_user = db.query(models.User).filter(models.User.email == request.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -66,73 +77,39 @@ def signup(request: schemas.SignUpRequest, response: Response, req: Request, db:
     db.commit()
     db.refresh(new_user)
 
-    # Create Session
-    client_ip = req.client.host
-    user_agent = req.headers.get("user-agent")
-    session = create_session(db, user_id, client_ip, user_agent)
+    return _issue_access_token(new_user)
 
-    # Set cookie
-    response.set_cookie(
-        key="session_token",
-        value=session.token,
-        httponly=True,
-        max_age=30 * 24 * 60 * 60, # 30 days
-        samesite="lax",
-        secure=False # Set to True in production with HTTPS
-    )
 
-    return schemas.SessionResponse(
-        session_id=session.id,
-        user=schemas.UserPublic(id=new_user.id, name=new_user.name, email=new_user.email)
-    )
+@router.post("/token", response_model=schemas.Token)
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    user = _authenticate_user(db, form_data.username, form_data.password)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return _issue_access_token(user)
 
-@router.post("/signin", response_model=schemas.SessionResponse)
-def signin(request: schemas.SignInRequest, response: Response, req: Request, db: Session = Depends(get_db)):
-    # Find User
-    user = db.query(models.User).filter(models.User.email == request.email).first()
-    if not user:
-        raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    # Find Account
-    account = db.query(models.Account).filter(
-        models.Account.user_id == user.id,
-        models.Account.provider_id == "credentials"
-    ).first()
-
-    if not account or not account.password:
-        raise HTTPException(status_code=400, detail="Invalid credentials or social login used")
-
-    if not verify_password(request.password, account.password):
-        raise HTTPException(status_code=400, detail="Invalid credentials")
-
-    # Create Session
-    client_ip = req.client.host
-    user_agent = req.headers.get("user-agent")
-    session = create_session(db, user.id, client_ip, user_agent)
-
-    # Set cookie
-    response.set_cookie(
-        key="session_token",
-        value=session.token,
-        httponly=True,
-        max_age=30 * 24 * 60 * 60, # 30 days
-        samesite="lax",
-        secure=False 
-    )
-
-    return schemas.SessionResponse(
-        session_id=session.id,
-        user=schemas.UserPublic(id=user.id, name=user.name, email=user.email)
-    )
+@router.post("/signin", response_model=schemas.Token)
+def signin(request: schemas.SignInRequest, db: Session = Depends(get_db)):
+    user = _authenticate_user(db, request.email, request.password)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return _issue_access_token(user)
 
 @router.post("/signout")
-def signout(response: Response, req: Request, db: Session = Depends(get_db)):
-    token = req.cookies.get("session_token")
-    if token:
-        db.query(models.Session).filter(models.Session.token == token).delete()
-        db.commit()
-    
-    response.delete_cookie("session_token")
+def signout():
+    # JWTs are stateless in this implementation. Signing out only removes the
+    # token client-side; it does not revoke already issued tokens server-side.
     return {"message": "Signed out successfully"}
 
 @router.get("/me", response_model=schemas.UserPublic)
