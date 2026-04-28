@@ -3,6 +3,8 @@ import re
 import uuid
 from pathlib import Path
 
+from openai import OpenAI
+
 from chunking.chunk_detaljplan import DetaljplanChunker
 from db.push_db import PushDB
 from llm import get_openai_client

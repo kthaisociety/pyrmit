@@ -404,6 +404,30 @@ def chat_stream(
                     law_agent._log_retrieval(translated, law_debug_rows)
                     document_agent._log_retrieval(translated, doc_debug_rows)
 
+                    with start_observation(
+                            "law_agent.retrieval",
+                            input={"query": translated},
+                            metadata={
+                                "matches": [
+                                    {key: value for key, value in row.items() if key != "content"} for row in
+                                    law_debug_rows
+                                ],
+                            },
+                    ):
+                        pass
+
+                    with start_observation(
+                            "document_agent.retrieval",
+                            input={"query": translated},
+                            metadata={
+                                "matches": [
+                                    {key: value for key, value in row.items() if key != "content"} for row in
+                                    doc_debug_rows
+                                ],
+                            },
+                    ):
+                        pass
+
                     law_results = law_agent._retrieve_with_meta_from_embedding(embedding, k=5)
                     yield _sse(
                         {"type": "tool_result", "name": "retrieve_law_chunks", "result": f"{len(law_results)} chunks"})
@@ -417,6 +441,22 @@ def chat_stream(
                     sources = list(dict.fromkeys(
                         [label for _, label in law_results] + [label for _, label in doc_results]
                     ))
+
+                    with start_observation(
+                            "chat.general_rag_retrieval",
+                            metadata={
+                                "query": translated,
+                                "law_matches": [
+                                    {key: value for key, value in row.items() if key != "content"} for row in
+                                    law_debug_rows
+                                ],
+                                "document_matches": [
+                                    {key: value for key, value in row.items() if key != "content"} for row in
+                                    doc_debug_rows
+                                ],
+                            },
+                    ):
+                        pass
 
                     if not all_chunks:
                         fallback = (
