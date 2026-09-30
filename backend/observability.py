@@ -47,7 +47,11 @@ def get_openai_client():
     if os.getenv("AI_GATEWAY_API_KEY"):
         base_url = VERCEL_AI_GATEWAY_BASE_URL
     if base_url:
-        _openai_client.base_url = base_url
+        # Setting base_url on an already-constructed client bypasses the SDK's
+        # own trailing-slash normalization (which only runs in OpenAI.__init__),
+        # so without this the request path gets concatenated with no separator
+        # (e.g. ".../v1responses" instead of ".../v1/responses").
+        _openai_client.base_url = base_url.rstrip("/") + "/"
 
     return _openai_client
 

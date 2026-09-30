@@ -31,6 +31,21 @@ _TRANSLATION_INSTRUCTION = (
 
 logger = logging.getLogger(__name__)
 
+_direct_openai_client: OpenAI | None = None
+
+
+def _get_direct_openai_client() -> OpenAI:
+    # Embeddings go straight to OpenAI regardless of AI_GATEWAY_API_KEY: the
+    # Gateway's free tier doesn't offer embedding models, so chat completions
+    # can stay on the Gateway while embeddings use a funded OpenAI key.
+    global _direct_openai_client
+    if _direct_openai_client is None:
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY is required for embeddings")
+        _direct_openai_client = OpenAI(api_key=api_key)
+    return _direct_openai_client
+
 
 class BaseRAGAgent:
     """Base class providing shared embedding, retrieval, LLM, and JSON utilities."""
@@ -43,15 +58,24 @@ class BaseRAGAgent:
         self.model_class = model_class
         self.label = label
 
-    def _embed(self, text: str) -> list[float]:
-        return create_embedding(
-            self.client,
-            model=resolve_model_name(OPENAI_EMBEDDING_MODEL),
-            input=text,
-        ).data[0].embedding
+    def _embed(self, text: str) -> list[float] | None:
+        # Embeddings can be unavailable independently of chat completions (e.g. a
+        # Vercel AI Gateway free-tier account that only allows certain chat models).
+        # Degrade to no-retrieval instead of failing the whole request.
+        try:
+            return create_embedding(
+                _get_direct_openai_client(),
+                model=OPENAI_EMBEDDING_MODEL.removeprefix("openai/"),
+                input=text,
+            ).data[0].embedding
+        except Exception:
+            logger.warning("Embedding call failed; continuing without retrieval", exc_info=True)
+            return None
 
     def _retrieve(self, query: str, k: int = 5) -> list[str]:
         embedding = self._embed(query)
+        if embedding is None:
+            return []
         stmt = (
             select(self.model_class.content)
             .where(self.model_class.embedding.is_not(None))
@@ -72,8 +96,10 @@ class BaseRAGAgent:
     def _retrieve_debug_rows(self, query: str, k: int = 5) -> list[dict[str, Any]]:
         return self._retrieve_debug_rows_from_embedding(self._embed(query), k)
 
-    def _retrieve_debug_rows_from_embedding(self, embedding: list[float], k: int = 5) -> list[dict[str, Any]]:
+    def _retrieve_debug_rows_from_embedding(self, embedding: list[float] | None, k: int = 5) -> list[dict[str, Any]]:
         """Retrieve top-k chunks with source, chunk index, distance, and preview."""
+        if embedding is None:
+            return []
         source_attr = self._source_label_column or "source"
         source_col = getattr(self.model_class, source_attr)
         distance_col = self.model_class.embedding.cosine_distance(embedding).label("distance")
