@@ -55,7 +55,7 @@ I'd recommend to explore to codebase first, understand the structure and how it'
 
 **Gotchas:**
 - Loosening the regex can create false matches (e.g. "looking **for** information" isn't a location) — write a few should-NOT-match test cases too, not just should-match ones.
-- Even after fixing this, questions with no unit count mentioned (like "is there a height restriction for X?") will *still* take the simpler answer path — units are required too, and that part isn't being changed here. That's expected, not a sign the fix didn't work.
+
 
 **Questions:**
 - *"Does it actually matter if we get an answer either way?"* 
@@ -65,11 +65,15 @@ I'd recommend to explore to codebase first, understand the structure and how it'
 
 ## Task 2 — Make "sign out" actually do something
 
-**Problem:** There's a whole `Session` table already set up in the database (login token, expiry, IP, device info) — but nothing ever writes to it. Logging in never creates a row there, and "Sign Out" doesn't invalidate anything — it just deletes the token from your browser
+**Problem:** Click "Sign Out" today and it does log you out — but only because the browser throws away its login token (`clearAccessToken()` in `frontend/lib/auth.ts`) and sends you back to the login page.
+ The actual server call behind it, `POST /api/auth/signout` (`backend/routers/auth.py`), does nothing: no arguments, no database check, it just always replies "Signed out successfully" no matter who calls
+it or with what token. That old token stays perfectly valid on the server until it naturally expires (30 minutes by default) — if someone had a copy of it, clicking sign-out wouldn't stop them from using i
+t. There's already a `Session` table in `models.py` built for exactly this (token, expiry, IP, device info) — it's just never written to, on signin or anywhere else. That's the gap: sign-out currently only
+ happens in the browser, never on the server.
 
-**What you're building:** Either make it real — write a session row on login, check it's still valid on every request, actually delete it on sign-out — or, if the group decides it's not worth it, cleanly remove the unused table. Both are valid outcomes; the discussion itself is useful.
+**What you're building:** Either make it real — write a session row on login, check it's still valid on every request, actually delete it on sign-out — or, if the group decides it's not worth it, cleanly remove the unused table
 
-**Why it matters:** Right now, if a login token ever leaked, there's no way to shut it down early — it just works until it naturally expires. This task is also a good way to walk through the whole login flow end to end.
+**Why it matters:** Right now, if a login token ever leaked, there's no way to shut it down early — it just works until it naturally expires
 
 **Files that might help:**
 - `backend/models.py` — the `Session` model (already defined, unused)
