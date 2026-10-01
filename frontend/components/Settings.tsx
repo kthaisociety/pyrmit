@@ -14,11 +14,13 @@ interface SettingsProps {
   user: User;
   onBack: () => void;
   onLogout: () => void;
+  logoutLoading: boolean;
+  logoutError: string;
   onUserUpdated: (user: User) => void;
   onAllChatsCleared: () => void;
 }
 
-export default function Settings({ user, onBack, onLogout, onUserUpdated, onAllChatsCleared }: SettingsProps) {
+export default function Settings({ user, onBack, onLogout, logoutLoading, logoutError, onUserUpdated, onAllChatsCleared }: SettingsProps) {
   const [name, setName] = useState(user.name);
   const [nameLoading, setNameLoading] = useState(false);
   const [nameSuccess, setNameSuccess] = useState(false);
@@ -259,14 +261,16 @@ export default function Settings({ user, onBack, onLogout, onUserUpdated, onAllC
                 </div>
                 <button
                   onClick={onLogout}
-                  className="px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-medium rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                  disabled={logoutLoading}
+                  className="px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-medium rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
                 >
                   <span className="flex items-center gap-1.5">
                     <LogOut size={12} />
-                    Sign Out
+                    {logoutLoading ? 'Signing out…' : 'Sign Out'}
                   </span>
                 </button>
               </div>
+              {logoutError && <p role="alert" className="text-xs text-red-600">{logoutError}</p>}
             </div>
           </section>
 

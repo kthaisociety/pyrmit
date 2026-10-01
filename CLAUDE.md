@@ -18,7 +18,7 @@ Pyrmit is a Swedish legal RAG (Retrieval-Augmented Generation) chat assistant fo
 ```
 User (browser)
     |
-    | HTTP (fetch with credentials/cookies)
+    | HTTP (Authorization: Bearer JWT; separate access-gate cookie)
     v
 Next.js Frontend (frontend/ -- port 3000)
     |
@@ -52,7 +52,7 @@ PostgreSQL + pgvector (db -- port 5432)
 | Name              | Location             | Type               | Purpose                                                              |
 | ----------------- | -------------------- | ------------------ | -------------------------------------------------------------------- |
 | `backend`         | `backend/`           | Python (FastAPI)   | REST API, auth, chat with RAG, chunking ingestion, DB models         |
-| `frontend`        | `frontend/`          | TypeScript (Next.js) | Chat UI with sidebar session list, auth pages, cookie-based auth   |
+| `frontend`        | `frontend/`          | TypeScript (Next.js) | Chat UI with sidebar session list, auth pages, JWT bearer auth   |
 | `agents`          | `backend/agents/`    | Python (FastAPI)     | Multi-agent RAG: LawAgent + DocumentAgent + Orchestrator            |
 
 ---
@@ -103,7 +103,7 @@ PostgreSQL + pgvector (db -- port 5432)
 
 ```
 1. POST /api/chat { messages, session_id? }
-2. auth middleware: validate session cookie -> get user
+2. auth dependency: validate JWT and database login session -> get user
 3. Create/lookup ChatSession in DB
 4. Save user message to chat_messages
 5. parse_query(message) -> extract location, units, project_type
@@ -119,11 +119,18 @@ PostgreSQL + pgvector (db -- port 5432)
 ### Auth Flow
 
 ```
-1. POST /api/auth/signup -> creates User + Account + Session, sets session cookie
-2. POST /api/auth/signin -> verifies password (argon2), creates Session, sets session cookie
-3. GET  /api/auth/me     -> validates session cookie -> returns User
-4. POST /api/auth/signout -> deletes Session, clears cookie
+1. POST /api/auth/signup -> creates User + Account + Session in one transaction, returns JWT
+2. POST /api/auth/token (form) or /signin (JSON) -> verifies password, creates Session, returns JWT
+3. Frontend stores JWT in localStorage; authFetch sends Authorization: Bearer
+4. get_current_session validates JWT sub/sid/exp, session ownership and expiry; get_current_user returns User
+5. POST /api/auth/signout -> deletes current Session and commits; frontend clears JWT and opens /auth
 ```
+
+JWT `sid` references `sessions.id`; JWT and session share the same UTC expiry.
+The legacy `sessions.token` column is unused. Tokens without `sid` require a new login.
+Protected-request 401s clear the local JWT; access-gate errors redirect separately to `/dev-access`.
+Network/server errors preserve the JWT and allow retry. Expired rows are not automatically deleted.
+Revocation applies to subsequent requests; already authorized chat streams are not interrupted.
 
 ---
 
@@ -132,8 +139,9 @@ PostgreSQL + pgvector (db -- port 5432)
 | Method | Path                              | Auth | Purpose                                      |
 | ------ | --------------------------------- | ---- | -------------------------------------------- |
 | POST   | `/api/auth/signup`                | No   | Register new user                            |
-| POST   | `/api/auth/signin`                | No   | Sign in, set session cookie                  |
-| POST   | `/api/auth/signout`               | Yes  | Sign out, clear cookie                       |
+| POST   | `/api/auth/token`                 | No   | Form login, create session and return JWT    |
+| POST   | `/api/auth/signin`                | No   | JSON login, create session and return JWT    |
+| POST   | `/api/auth/signout`               | Yes  | Revoke current login session                 |
 | GET    | `/api/auth/me`                    | Yes  | Get current user                             |
 | GET    | `/api/sessions`                   | Yes  | List chat sessions for user                  |
 | GET    | `/api/sessions/{session_id}`      | Yes  | Get message history for a session            |
@@ -207,7 +215,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 - `backend/main.py` -- FastAPI app entry, CORS, router registration
 - `backend/models.py` -- SQLAlchemy ORM models (User, Session, ChatSession, ChatMessage, DocumentChunk, LawChunk)
 - `backend/schemas.py` -- Pydantic request/response schemas
-- `backend/dependencies.py` -- `get_current_user` auth dependency (reads session cookie)
+- `backend/dependencies.py` -- `get_current_session` validates bearer JWT and DB session; `get_current_user` returns its user
 - `backend/routers/auth.py` -- Signup, signin, signout, /me endpoints
 - `backend/routers/chat.py` -- Chat endpoint: embed -> RAG -> OpenAI -> save to DB
 - `backend/routers/queryDB.py` -- `RAG()` function: pgvector cosine distance retrieval
@@ -243,7 +251,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 > If a bug occurs, you should always be able to answer:
 > **"Is this a data/retrieval bug (backend) or a display/UX bug (frontend)?"**
 
-- **Auth bugs**: Session cookie not set/expired, 401s -> investigate `backend/routers/auth.py`, `backend/dependencies.py`
+- **Auth bugs**: Missing/expired JWT or revoked DB session, 401s -> investigate `backend/security.py`, `backend/routers/auth.py`, `backend/dependencies.py`
 - **RAG quality bugs**: Wrong or irrelevant chunks returned -> investigate `backend/routers/queryDB.py`, embedding model, chunk size
 - **Ingestion bugs**: Chunks not appearing in DB -> investigate `backend/chunking/ingest_pipeline.py`, `backend/db/push_db.py`
 - **Chat bugs**: Wrong answer, missing context -> investigate `backend/routers/chat.py` prompt construction and RAG call
