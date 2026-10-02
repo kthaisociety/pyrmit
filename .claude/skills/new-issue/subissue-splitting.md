@@ -13,14 +13,14 @@ If a proposed sub-issue cannot be demoed end-to-end without one of the others sh
 
 ## Filling the body
 
-Every sub-issue uses the task ticket shape, the same as the parent. See `ticket-shapes.md`.
+Every sub-issue uses the task issue shape, the same as the parent. See `issue-shapes.md`.
 
 Per sub-issue:
 - **Goal** describes the slice end-to-end at behaviour level, with no file paths and no code.
 - **Expected behaviour** is user-visible outcomes specific to this slice.
 - **Out of scope** names the neighbouring slices this one does not deliver.
 
-Parentage and blocking are **not** body sections. They are wired natively via the GitHub API. See *Native wiring* in `ticket-shapes.md`.
+Parentage and blocking are **not** body sections. They are wired natively via the GitHub API. See *Native wiring* in `issue-shapes.md`.
 
 ## Two-tier coverage check
 

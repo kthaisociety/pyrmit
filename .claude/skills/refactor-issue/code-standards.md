@@ -1,6 +1,6 @@
 # Code standards
 
-The baseline `refactor-ticket` refactors against, in three groups: **code smells**, which are local, **bad architecture**, which is structural, and **test rules**, which are report only. Every entry cites the section of Leif Lindbäck's *A First Course in Object-Oriented Development* it comes from, so a finding can be checked against the source.
+The baseline `refactor-issue` refactors against, in three groups: **code smells**, which are local, **bad architecture**, which is structural, and **test rules**, which are report only. Every entry cites the section of Leif Lindbäck's *A First Course in Object-Oriented Development* it comes from, so a finding can be checked against the source.
 
 ## Gates
 

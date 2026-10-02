@@ -39,7 +39,7 @@ No hedged third outcome. If it half-holds, the half that holds is the idea and t
 
 The grill usually settles something worth keeping. Propose it, and never write silently:
 
-- A rule that constrains future work becomes a **new** ADR in `docs/adr/`, per [`../architect-ticket/RECORD-FORMAT.md`](../architect-ticket/RECORD-FORMAT.md), which you read at runtime. Existing records are not yours to touch; a PCR in the way goes to the route table below.
+- A rule that constrains future work becomes a **new** ADR in `docs/adr/`, per [`../architect-issue/RECORD-FORMAT.md`](../architect-issue/RECORD-FORMAT.md), which you read at runtime. Existing records are not yours to touch; a PCR in the way goes to the route table below.
 - A term the grill pinned down or renamed becomes an entry in `CONTEXT.md`.
 
 Propose nothing when the grill settled nothing durable; a killed idea can still be worth an ADR recording why not.
@@ -54,10 +54,9 @@ Only if it holds. Name one route and state the reason, so the user can override 
 |---|---|
 | Is blocked by a convention recorded in `docs/pcr/` | `/challenge-pcr`, and nothing else happens until that session does |
 | Is one change with one test suite and no architecture question | Implement inline, in this session, once the user says go |
-| Is one coherent behaviour, and no epic covers it | `/new-ticket` |
-| Is a goal that has to be sliced into several tickets | `/map-epic` |
-| Is a whole new product, or the repo has no `CONTEXT.md` or epic issues yet | `/project-planning` |
+| Is one coherent behaviour, and no epic covers it | `/new-issue` |
+| Is a goal that has to be sliced into several issues, with or without an epic yet | `/map-epic` |
 
-Route to the smallest thing that fits. "This is one file and one test, no ticket earns its keep here" is a complete justification.
+Route to the smallest thing that fits. "This is one file and one test, no issue earns its keep here" is a complete justification.
 
 Every route except the inline row is user-invoked, so you cannot start it and must not try. Name it and stop; the routed skill runs its own grill on the surviving idea. Inline still waits for the user to say go.

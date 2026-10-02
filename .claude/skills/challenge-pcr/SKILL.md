@@ -8,11 +8,11 @@ disable-model-invocation: true
 
 **A PCR stands until a challenge beats it.** You are not here to update a document, you are here to find out whether a project-wide convention someone chose still holds, and most of the time it does.
 
-This is the only way a PCR in `docs/pcr/` changes or retires, and it takes a whole session to do it. Read [`../architect-ticket/RECORD-FORMAT.md`](../architect-ticket/RECORD-FORMAT.md) before writing anything.
+This is the only way a PCR in `docs/pcr/` changes or retires, and it takes a whole session to do it. Read [`../architect-issue/RECORD-FORMAT.md`](../architect-issue/RECORD-FORMAT.md) before writing anything.
 
 **The burden is on the challenge, and it is heavy.** A PCR binds every file in the project, so moving one is a project adaption, not an edit: swapping a stack for a better fit, a comment convention that has proven unreadable, a naming rule the whole team trips on. "This is inconvenient", "the current code doesn't do this", and "I'd have chosen differently" are not arguments, they are the friction the PCR was written to create. Overturning one takes a case that the whole project gets better and that the ripple is worth paying. Anything else and the PCR stands.
 
-ADRs are not challenged here. `architect-ticket` and `refactor-ticket` amend those in-session when the work gives them a reason.
+ADRs are not challenged here. `architect-issue` and `refactor-issue` amend those in-session when the work gives them a reason.
 
 ---
 
@@ -42,7 +42,7 @@ Weigh the challenge against the recorded convention, out loud, and lead with you
 
 **Stands.** The default, and the most common. The Reason still holds, or the challenge is convenience rather than a project adaption. Say which and stop. Nothing is written.
 
-- If the **code** has drifted from a convention that stands, the code is what's wrong. Report the breach and hand it to the user or to `refactor-ticket`. Never amend a PCR to match code that wandered off.
+- If the **code** has drifted from a convention that stands, the code is what's wrong. Report the breach and hand it to the user or to `refactor-issue`. Never amend a PCR to match code that wandered off.
 
 **Amend.** The convention changes, and the project is better for it. Grill the user into the new Decision, Reason, and Consequence before touching the file. Then edit in place:
 
@@ -64,7 +64,7 @@ Three lines, nothing after:
 ```
 PCR-0002  no-orm
 Verdict   amended, ORM allowed in reporting/ only
-Ripple    41 files, ADR-0009 needs amending, handed to refactor-ticket
+Ripple    41 files, ADR-0009 needs amending, handed to refactor-issue
 ```
 
 If the verdict is **stands**, the Ripple line names what the user has to do instead.

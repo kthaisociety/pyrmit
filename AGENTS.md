@@ -154,6 +154,7 @@ Frontend (`frontend/.env`):
 ### Team Skills
 
 - `.claude/skills/` -- shared Claude Code skills, copied from the committed state of the Custom-skills repo. Update by re-copying from that repo, not by editing here.
+- `docs/skills-tutorial.html` -- team tutorial for the skills: board, git flow, prompts per skill
 
 ---
 
