@@ -1,12 +1,5 @@
 # AGENTS.md
 
-## Hard Constraints
-
-- **Do not make any git-related actions** (no commits, no pushes, no branch operations)
-- **Do not create documentation files** unless explicitly requested
-
----
-
 ## Project Knowledge
 
 Load these only when the task needs them:
