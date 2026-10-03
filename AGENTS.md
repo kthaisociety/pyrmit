@@ -17,7 +17,7 @@ Load these only when the task needs them:
 | ---------- | ----------------- | -------------------- | ------------------------------------------------------------ |
 | `backend`  | `backend/`        | Python (FastAPI)     | REST API, auth, chat with RAG, ingestion, DB models          |
 | `frontend` | `frontend/`       | TypeScript (Next.js) | Chat UI with sidebar session list, auth page, access gate    |
-| `agents`   | `backend/agents/` | Python               | Multi-agent RAG: LawAgent + DocumentAgent + Orchestrator     |
+| `agents`   | `backend/src/agents/` | Python               | Multi-agent RAG: LawAgent + DocumentAgent + Orchestrator     |
 
 ---
 
@@ -56,7 +56,7 @@ Load these only when the task needs them:
 | `document_chunks`  | id, document_id, document_name, chunk_index, content, embedding (3072)  |
 | `law_chunks`       | id, law_name, source_file, chapter, section, chunk_index, content, embedding (3072) |
 
-Migrations/init: `backend/db/init.sql`. Match functions (pgvector): `backend/db/match_functions.sql`.
+Migrations/init: `backend/src/db/init.sql`. Match functions (pgvector): `backend/src/db/match_functions.sql`.
 
 ---
 
@@ -67,13 +67,16 @@ Migrations/init: `backend/db/init.sql`. Match functions (pgvector): `backend/db/
 docker-compose up --build
 
 # Backend only (dev, requires local .env)
-cd backend && uvicorn main:app --reload --port 8000
+cd backend && uvicorn main:app --app-dir src --reload --port 8000
 
 # Frontend only (dev)
 cd frontend && npm install && npm run dev
 
+# Backend unit tests (pytest config in backend/pyproject.toml)
+cd backend && python -m pytest
+
 # Ingest law chunks (run once after DB is up)
-cd backend && python chunking/ingest_laws.py
+cd backend && python src/chunking/ingest_laws.py
 
 # Ingest a detaljplan PDF via API
 curl -X POST http://localhost:8000/api/chunks/ingest-detaljplan \
@@ -103,26 +106,26 @@ Frontend (`frontend/.env`):
 
 ### Backend (Python / FastAPI)
 
-- `backend/main.py` -- FastAPI app entry, CORS, router registration
-- `backend/llm.py` -- OpenAI client and model name resolution, AI Gateway switch (PCR-0003)
-- `backend/models.py` -- SQLAlchemy ORM models
-- `backend/schemas.py` -- Pydantic request/response schemas
-- `backend/security.py` -- JWT creation/decoding, password hashing
-- `backend/dependencies.py` -- `get_current_user` auth dependency (reads bearer token)
-- `backend/routers/access_gate.py` -- Access gate unlock
-- `backend/routers/auth.py` -- Signup, signin, token, signout, /me, profile, password
-- `backend/routers/chat.py` -- Chat and streaming chat endpoints, chat session CRUD
-- `backend/routers/chunks.py` -- Ingestion endpoints
-- `backend/chunking/ingest_pipeline.py` -- Core ingestion: OCR, chunk, embed, push
-- `backend/chunking/chunk_detaljplan.py` -- Detaljplan chunker
-- `backend/chunking/chunk_laws.py` -- Law TXT chunker (chapter/section aware)
-- `backend/chunking/ingest_laws.py` -- CLI script to ingest all law TXT files
-- `backend/chunking/embed.py` -- Embedding helpers
-- `backend/ocr/` -- Mistral OCR, PDF to Markdown
-- `backend/db/database.py` -- SQLAlchemy engine + `get_db` session factory
-- `backend/db/push_db.py` -- `PushDB` class: psycopg2 inserts into chunk tables
-- `backend/db/init.sql` -- DB initialisation (pgvector extension, table creation)
-- `backend/prompts/land_law_prompt.yaml` -- Prompt that rewrites user questions into Swedish legal search terms
+- `backend/src/main.py` -- FastAPI app entry, CORS, router registration
+- `backend/src/llm.py` -- OpenAI client and model name resolution, AI Gateway switch (PCR-0003)
+- `backend/src/models.py` -- SQLAlchemy ORM models
+- `backend/src/schemas.py` -- Pydantic request/response schemas
+- `backend/src/security.py` -- JWT creation/decoding, password hashing
+- `backend/src/dependencies.py` -- `get_current_user` auth dependency (reads bearer token)
+- `backend/src/routers/access_gate.py` -- Access gate unlock
+- `backend/src/routers/auth.py` -- Signup, signin, token, signout, /me, profile, password
+- `backend/src/routers/chat.py` -- Chat and streaming chat endpoints, chat session CRUD
+- `backend/src/routers/chunks.py` -- Ingestion endpoints
+- `backend/src/chunking/ingest_pipeline.py` -- Core ingestion: OCR, chunk, embed, push
+- `backend/src/chunking/chunk_detaljplan.py` -- Detaljplan chunker
+- `backend/src/chunking/chunk_laws.py` -- Law TXT chunker (chapter/section aware)
+- `backend/src/chunking/ingest_laws.py` -- CLI script to ingest all law TXT files
+- `backend/src/chunking/embed.py` -- Embedding helpers
+- `backend/src/ocr/` -- Mistral OCR, PDF to Markdown
+- `backend/src/db/database.py` -- SQLAlchemy engine + `get_db` session factory
+- `backend/src/db/push_db.py` -- `PushDB` class: psycopg2 inserts into chunk tables
+- `backend/src/db/init.sql` -- DB initialisation (pgvector extension, table creation)
+- `backend/src/prompts/land_law_prompt.yaml` -- Prompt that rewrites user questions into Swedish legal search terms
 
 ### Frontend (TypeScript / Next.js)
 
@@ -136,13 +139,18 @@ Frontend (`frontend/.env`):
 
 ### Agents (Multi-Agent RAG)
 
-- `backend/agents/base.py` -- `BaseRAGAgent`: shared embedding, pgvector retrieval, LLM call
-- `backend/agents/law_agent.py` -- LawAgent on law_chunks
-- `backend/agents/document_agent.py` -- DocumentAgent on document_chunks
-- `backend/agents/orchestrator.py` -- Combines both into the verdict
-- `backend/agents/parsers.py` -- `parse_query`, `format_response`
-- `backend/agents/AGENTIC_FLOW.md` -- Detailed agent flow
-- `backend/routers/agents.py` -- POST /api/analyze endpoint
+- `backend/src/agents/base.py` -- `BaseRAGAgent`: shared embedding, pgvector retrieval, LLM call
+- `backend/src/agents/law_agent.py` -- LawAgent on law_chunks
+- `backend/src/agents/document_agent.py` -- DocumentAgent on document_chunks
+- `backend/src/agents/orchestrator.py` -- Combines both into the verdict
+- `backend/src/agents/parsers.py` -- `parse_query`, `format_response`
+- `backend/src/agents/AGENTIC_FLOW.md` -- Detailed agent flow
+- `backend/src/routers/agents.py` -- POST /api/analyze endpoint
+
+### Tests
+
+- `backend/tests/unit/` -- pytest unit tests, one file per module in `backend/src/`, same folder layout. Most files hold only a docstring so far.
+- `frontend/tests/unit/` -- one `*.test.ts(x)` file per module in `components/` and `lib/`. Empty: no test runner is installed yet (Vitest or Jest, undecided).
 
 ### Team Skills
 
@@ -156,10 +164,10 @@ Frontend (`frontend/.env`):
 > If a bug occurs, you should always be able to answer:
 > **"Is this a data/retrieval bug (backend) or a display/UX bug (frontend)?"**
 
-- **Auth bugs**: Missing/expired bearer token, 401s -> investigate `backend/routers/auth.py`, `backend/security.py`, `backend/dependencies.py`. Redirects to the access gate -> `backend/routers/access_gate.py`, `frontend/lib/`
-- **RAG quality bugs**: Wrong or irrelevant chunks returned -> investigate `backend/agents/base.py`, embedding model, chunk size
-- **Ingestion bugs**: Chunks not appearing in DB -> investigate `backend/chunking/ingest_pipeline.py`, `backend/db/push_db.py`
-- **Chat bugs**: Wrong answer, missing context -> investigate `backend/routers/chat.py` prompt construction and retrieval call
+- **Auth bugs**: Missing/expired bearer token, 401s -> investigate `backend/src/routers/auth.py`, `backend/src/security.py`, `backend/src/dependencies.py`. Redirects to the access gate -> `backend/src/routers/access_gate.py`, `frontend/lib/`
+- **RAG quality bugs**: Wrong or irrelevant chunks returned -> investigate `backend/src/agents/base.py`, embedding model, chunk size
+- **Ingestion bugs**: Chunks not appearing in DB -> investigate `backend/src/chunking/ingest_pipeline.py`, `backend/src/db/push_db.py`
+- **Chat bugs**: Wrong answer, missing context -> investigate `backend/src/routers/chat.py` prompt construction and retrieval call
 - **Frontend bugs**: UI not updating, session not switching, auth redirect loop -> investigate `frontend/components/`
 
 ---

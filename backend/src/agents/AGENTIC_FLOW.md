@@ -221,7 +221,7 @@ print(format_response(result))
 
 ## Adding a New Agent
 
-1. Create `backend/agents/my_agent.py` subclassing `BaseRAGAgent`.
+1. Create `backend/src/agents/my_agent.py` subclassing `BaseRAGAgent`.
 2. Pass the target SQLAlchemy model class to `super().__init__()`.
 3. Implement `query(location, project_type, units) -> dict`.
 4. Wire into `Orchestrator.__init__` and `Orchestrator.analyze`.

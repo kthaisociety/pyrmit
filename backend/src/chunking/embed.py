@@ -13,7 +13,7 @@ from llama_index.core.node_parser import SentenceSplitter
 logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 
 # Add parent directory to path to import from backend
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -78,7 +78,7 @@ def load_documents(path: str):
 def main():
     try:
         # Path relative to the backend directory
-        data_path = os.path.join(os.path.dirname(__file__), '..', 'data')
+        data_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data')
         documents = load_documents(data_path)
     except Exception as e:
         logger.error("Error loading documents", exc_info=True)

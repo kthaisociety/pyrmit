@@ -39,7 +39,7 @@ def ingest_data_folder(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ingest all files in chunking/data into document_chunks")
-    parser.add_argument("--data-dir", type=Path, default=Path("chunking/data"))
+    parser.add_argument("--data-dir", type=Path, default=Path("src/chunking/data"))
     parser.add_argument("--markdown-output-dir", type=Path, default=Path("data/ocr_markdown"))
     parser.add_argument("--max-chars", type=int, default=1800)
     parser.add_argument("--keep-existing", action="store_true")

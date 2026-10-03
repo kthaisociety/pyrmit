@@ -5,7 +5,6 @@ Run from backend/: python -m pytest tests/ -v
 
 import json
 import sys
-import os
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -21,8 +20,6 @@ for _mod in _STUBS:
 
 # models must be stubbed before it's imported by the agent modules
 sys.modules.setdefault("models", MagicMock())
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agents.base import BaseRAGAgent
 from agents.law_agent import LawAgent

@@ -1,8 +1,8 @@
 # ADR-0001: Auth uses stateless JWT bearer tokens
 
-**Decision:** Authenticated routes MUST resolve the user from a JWT bearer token through `get_current_user` in `backend/dependencies.py`, and MUST NOT look up server-side session rows.
+**Decision:** Authenticated routes MUST resolve the user from a JWT bearer token through `get_current_user` in `backend/src/dependencies.py`, and MUST NOT look up server-side session rows.
 
-**Scope:** `backend/routers/auth.py`, `backend/security.py`, `backend/dependencies.py`
+**Scope:** `backend/src/routers/auth.py`, `backend/src/security.py`, `backend/src/dependencies.py`
 
 **Reason:** TODO(owner): name the alternative that was weighed and why it lost.
 

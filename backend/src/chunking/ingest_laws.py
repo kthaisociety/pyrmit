@@ -11,7 +11,7 @@ from openai import OpenAI
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 from chunking.chunk_laws import LawChunker
 from db.push_db import PushDB
@@ -99,7 +99,7 @@ def ingest_laws(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Chunk, embed and ingest law texts into law_chunks")
-    parser.add_argument("--laws-dir", type=Path, default=Path("chunking/laws"))
+    parser.add_argument("--laws-dir", type=Path, default=Path("src/chunking/laws"))
     parser.add_argument("--output-dir", type=Path, default=Path("data/law_chunks"))
     parser.add_argument("--max-chars", type=int, default=2400)
     parser.add_argument("--keep-existing", action="store_true")

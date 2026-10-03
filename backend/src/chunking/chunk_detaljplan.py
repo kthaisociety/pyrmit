@@ -166,13 +166,13 @@ def main() -> None:
     parser.add_argument(
         "--input",
         type=Path,
-        default=Path(__file__).resolve().parent.parent / "output.md",
+        default=Path(__file__).resolve().parent.parent.parent / "output.md",
         help="Path to markdown file (default: backend/output.md)",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path(__file__).resolve().parent.parent / "chunks.json",
+        default=Path(__file__).resolve().parent.parent.parent / "chunks.json",
         help="Path to output JSON (default: backend/chunks.json)",
     )
     parser.add_argument(

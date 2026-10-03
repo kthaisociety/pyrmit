@@ -18,7 +18,7 @@ def _resolve_workspace_path(path_value: str) -> Path:
     if candidate.is_absolute():
         return candidate
 
-    backend_root = Path(__file__).resolve().parent.parent
+    backend_root = Path(__file__).resolve().parent.parent.parent
     repo_root = backend_root.parent
     search_paths = [
         Path.cwd() / candidate,
@@ -47,7 +47,7 @@ def ingest_detaljplan_chunks(
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        markdown_output_dir = Path(__file__).resolve().parent.parent / "data" / "ocr_markdown"
+        markdown_output_dir = Path(__file__).resolve().parent.parent.parent / "data" / "ocr_markdown"
         source_markdown_path = ensure_markdown_source(input_path, markdown_output_dir)
         push_db = PushDB()
         client = get_openai_client()
