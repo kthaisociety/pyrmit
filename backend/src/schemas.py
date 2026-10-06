@@ -155,7 +155,7 @@ class FolderIngestItem(BaseModel):
 
 
 class FolderIngestRequest(BaseModel):
-    data_dir: str = "chunking/data"
+    data_dir: str = "src/chunking/data"
     markdown_output_dir: str = "data/ocr_markdown"
     max_chars: int = Field(default=1800, ge=200, le=8000)
     clear_existing_for_document: bool = True

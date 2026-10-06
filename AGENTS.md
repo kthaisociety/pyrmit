@@ -81,7 +81,8 @@ cd frontend && bun run test
 cd frontend && bun run test:coverage
 cd frontend && bun run lint
 
-# Ingest law chunks (run once after DB is up)
+# Ingest law chunks (run once after DB is up). Input .txt files go in backend/src/chunking/laws/,
+# detaljplan files in backend/src/chunking/data/. Neither folder is tracked, create them locally.
 cd backend && uv run python src/chunking/ingest_laws.py
 
 # Ingest a detaljplan PDF via API

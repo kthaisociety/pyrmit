@@ -53,5 +53,5 @@ class MistralOCR:
 if __name__ == "__main__":
     api_key = os.environ["MISTRAL_API_KEY"]
     ocr_processor = MistralOCR(api_key=api_key)
-    result = ocr_processor.main("chunking/data/kristineberg_etapp1.pdf")
+    result = ocr_processor.main("src/chunking/data/kristineberg_etapp1.pdf")
     logger.debug("OCR result: %s", result)

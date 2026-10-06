@@ -80,7 +80,7 @@ class MarkdownCreator:
 if __name__ == "__main__":
     api_key = os.environ["MISTRAL_API_KEY"]
     creator = MarkdownCreator(api_key=api_key)
-    md_output = creator.create_markdown("chunking/data/kristineberg_etapp1.pdf")
+    md_output = creator.create_markdown("src/chunking/data/kristineberg_etapp1.pdf")
     
     with open("output.md", "w", encoding="utf-8") as f:
         f.write(md_output)
