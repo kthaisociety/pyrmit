@@ -1,2 +1,4 @@
 // Unit tests for components/Settings.tsx.
-export {};
+import { it } from 'vitest';
+
+it.todo('cover components/Settings.tsx');

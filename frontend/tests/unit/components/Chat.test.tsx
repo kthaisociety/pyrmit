@@ -1,2 +1,4 @@
 // Unit tests for components/Chat.tsx.
-export {};
+import { it } from 'vitest';
+
+it.todo('cover components/Chat.tsx');

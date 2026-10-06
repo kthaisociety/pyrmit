@@ -1,2 +1,4 @@
 // Unit tests for lib/dev-access.ts.
-export {};
+import { it } from 'vitest';
+
+it.todo('cover lib/dev-access.ts');

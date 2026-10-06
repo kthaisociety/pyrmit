@@ -1,0 +1,47 @@
+name: Frontend
+
+# No path filter: every PR into dev or main runs every check, so required checks always report (PCR-0010).
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  lint:
+    name: frontend / lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.8
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+
+  test:
+    name: frontend / test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.8
+      - run: bun install --frozen-lockfile
+      # Coverage is printed for information only, there is no threshold.
+      - run: bun run test:coverage
+
+  docker:
+    name: frontend / docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Builds the production image without publishing it, so a broken Dockerfile fails the PR.
+      - run: docker build -t pyrmit-frontend --build-arg API_PROXY_TARGET=http://backend:8000 .

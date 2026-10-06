@@ -1,0 +1,40 @@
+name: Backend
+
+# No path filter: every PR into dev or main runs every check, so required checks always report (PCR-0010).
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  lint:
+    name: backend / lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - run: uv sync --frozen --only-dev
+      - run: uv run --no-sync ruff check
+
+  test:
+    name: backend / test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - run: uv sync --frozen
+      - run: uv run --no-sync pytest
+
+  docker:
+    name: backend / docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # Builds the production image without publishing it, so a broken Dockerfile fails the PR.
+      - run: docker build -t pyrmit-backend .
+      - run: docker run --rm pyrmit-backend python -c "import fastapi, mistralai, llama_index.core, pgvector"

@@ -66,17 +66,23 @@ Migrations/init: `backend/src/db/init.sql`. Match functions (pgvector): `backend
 # Start all services (db, backend, frontend) via Docker
 docker-compose up --build
 
-# Backend only (dev, requires local .env)
-cd backend && uvicorn main:app --app-dir src --reload --port 8000
+# Backend only (dev, requires local .env). uv installs from uv.lock (PCR-0009)
+cd backend && uv sync && uv run uvicorn main:app --app-dir src --reload --port 8000
 
-# Frontend only (dev)
-cd frontend && npm install && npm run dev
+# Frontend only (dev). Bun installs from bun.lock (PCR-0009)
+cd frontend && bun install && bun run dev
 
-# Backend unit tests (pytest config in backend/pyproject.toml)
-cd backend && python -m pytest
+# Backend tests and lint (config in backend/pyproject.toml)
+cd backend && uv run pytest
+cd backend && uv run ruff check
+
+# Frontend tests and lint
+cd frontend && bun run test
+cd frontend && bun run test:coverage
+cd frontend && bun run lint
 
 # Ingest law chunks (run once after DB is up)
-cd backend && python src/chunking/ingest_laws.py
+cd backend && uv run python src/chunking/ingest_laws.py
 
 # Ingest a detaljplan PDF via API
 curl -X POST http://localhost:8000/api/chunks/ingest-detaljplan \
@@ -149,8 +155,17 @@ Frontend (`frontend/.env`):
 
 ### Tests
 
-- `backend/tests/unit/` -- pytest unit tests, one file per module in `backend/src/`, same folder layout. Most files hold only a docstring so far.
-- `frontend/tests/unit/` -- one `*.test.ts(x)` file per module in `components/` and `lib/`. Empty: no test runner is installed yet (Vitest or Jest, undecided).
+- `backend/tests/unit/` -- pytest unit tests, one file per module in `backend/src/`, same folder layout. No real database or model calls (PCR-0011). Most files hold only a docstring so far. Known failures are marked `xfail` with a linked issue.
+- `frontend/tests/unit/` -- Vitest + jsdom + React Testing Library, one `*.test.ts(x)` file per module in `components/` and `lib/` (PCR-0007). `lib/auth.test.ts` and `components/Sidebar.test.tsx` are the reference examples; the rest are `it.todo` placeholders.
+- `frontend/tests/mocks/handlers.ts` -- MSW fake backend shared by all frontend tests; override per test with `server.use(...)` (PCR-0008). Unhandled requests fail the test.
+- `frontend/tests/setup.ts`, `frontend/vitest.config.mts` -- test setup and Vitest config.
+- `backend/pyproject.toml` `[tool.ruff.lint.per-file-ignores]` -- ruff baseline of pre-existing problems. Shrink only (PCR-0012).
+
+### CI
+
+- `.github/workflows/frontend.yml` -- `frontend / lint`, `frontend / test`, `frontend / docker` (builds the image, does not publish)
+- `.github/workflows/backend.yml` -- `backend / lint`, `backend / test`, `backend / docker` (builds the image and checks key imports)
+- Both run on every PR into and push to `dev` and `main`, with no path filter. All six are required checks via the "CI green" ruleset (PCR-0010).
 
 ### Team Skills
 

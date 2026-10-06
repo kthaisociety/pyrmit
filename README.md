@@ -31,7 +31,8 @@ pyrmit/
 │   │   ├── models.py       # SQLAlchemy database models
 │   │   └── schemas.py      # Pydantic data models
 │   ├── tests/unit/         # pytest unit tests, mirrors src/
-│   ├── requirements.txt    # Python dependencies
+│   ├── pyproject.toml      # Python dependencies, pytest and ruff config
+│   ├── uv.lock             # Exact dependency versions
 │   └── Dockerfile
 ├── frontend/                # Next.js application
 │   ├── app/                # App Router source code
@@ -147,13 +148,11 @@ If you prefer to run the backend and frontend locally for faster development (ho
     - Install dependencies:
       ```bash
       cd backend
-      uv venv
-      source .venv/bin/activate
-      uv pip install -r requirements.txt
+      uv sync
       ```
     - Run server:
       ```bash
-      uvicorn main:app --app-dir src --reload
+      uv run uvicorn main:app --app-dir src --reload
       ```
 
 3.  **Frontend Setup:**
