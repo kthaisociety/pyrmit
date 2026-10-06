@@ -4,7 +4,9 @@ Eliminates duplicated embedding, retrieval, LLM-call, and JSON-parsing logic.
 """
 
 import json
+import logging
 import re
+from typing import Any
 
 from openai import OpenAI
 from sqlalchemy.orm import Session
@@ -12,6 +14,7 @@ from sqlalchemy.sql import select
 
 import os
 from llm import get_response_output_text, resolve_model_name
+from observability import create_chat_completion, create_embedding
 
 OPENAI_EMBEDDING_MODEL = "openai/text-embedding-3-large"
 OPENAI_CHAT_MODEL = (
@@ -26,6 +29,23 @@ _TRANSLATION_INSTRUCTION = (
     "and follow it with an English translation."
 )
 
+logger = logging.getLogger(__name__)
+
+_direct_openai_client: OpenAI | None = None
+
+
+def _get_direct_openai_client() -> OpenAI:
+    # Embeddings go straight to OpenAI regardless of AI_GATEWAY_API_KEY: the
+    # Gateway's free tier doesn't offer embedding models, so chat completions
+    # can stay on the Gateway while embeddings use a funded OpenAI key.
+    global _direct_openai_client
+    if _direct_openai_client is None:
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
+        if not api_key:
+            raise RuntimeError("OPENAI_API_KEY is required for embeddings")
+        _direct_openai_client = OpenAI(api_key=api_key)
+    return _direct_openai_client
+
 
 class BaseRAGAgent:
     """Base class providing shared embedding, retrieval, LLM, and JSON utilities."""
@@ -38,14 +58,24 @@ class BaseRAGAgent:
         self.model_class = model_class
         self.label = label
 
-    def _embed(self, text: str) -> list[float]:
-        return self.client.embeddings.create(
-            model=resolve_model_name(OPENAI_EMBEDDING_MODEL),
-            input=text,
-        ).data[0].embedding
+    def _embed(self, text: str) -> list[float] | None:
+        # Embeddings can be unavailable independently of chat completions (e.g. a
+        # Vercel AI Gateway free-tier account that only allows certain chat models).
+        # Degrade to no-retrieval instead of failing the whole request.
+        try:
+            return create_embedding(
+                _get_direct_openai_client(),
+                model=OPENAI_EMBEDDING_MODEL.removeprefix("openai/"),
+                input=text,
+            ).data[0].embedding
+        except Exception:
+            logger.warning("Embedding call failed; continuing without retrieval", exc_info=True)
+            return None
 
     def _retrieve(self, query: str, k: int = 5) -> list[str]:
         embedding = self._embed(query)
+        if embedding is None:
+            return []
         stmt = (
             select(self.model_class.content)
             .where(self.model_class.embedding.is_not(None))
@@ -60,23 +90,60 @@ class BaseRAGAgent:
 
     def _retrieve_with_meta_from_embedding(self, embedding: list[float], k: int = 5) -> list[tuple[str, str]]:
         """Retrieve top-k chunks as (content, source_label) tuples from a pre-computed embedding."""
-        source_col = getattr(self.model_class, self._source_label_column)
+        rows = self._retrieve_debug_rows_from_embedding(embedding, k)
+        return [(row["content"], row["source"]) for row in rows]
+
+    def _retrieve_debug_rows(self, query: str, k: int = 5) -> list[dict[str, Any]]:
+        return self._retrieve_debug_rows_from_embedding(self._embed(query), k)
+
+    def _retrieve_debug_rows_from_embedding(self, embedding: list[float] | None, k: int = 5) -> list[dict[str, Any]]:
+        """Retrieve top-k chunks with source, chunk index, distance, and preview."""
+        if embedding is None:
+            return []
+        source_attr = self._source_label_column or "source"
+        source_col = getattr(self.model_class, source_attr)
+        distance_col = self.model_class.embedding.cosine_distance(embedding).label("distance")
         stmt = (
-            select(self.model_class.content, source_col)
+            select(self.model_class.content, source_col, self.model_class.chunk_index, distance_col)
             .where(self.model_class.embedding.is_not(None))
-            .order_by(self.model_class.embedding.cosine_distance(embedding))
+            .order_by(distance_col)
             .limit(k)
         )
-        return [(row[0], row[1] or "unknown") for row in self.db.execute(stmt).fetchall()]
+        rows = []
+        for content, source, chunk_index, distance in self.db.execute(stmt).fetchall():
+            rows.append(
+                {
+                    "source": source or "unknown",
+                    "chunk_index": chunk_index,
+                    "distance": None if distance is None else round(float(distance), 6),
+                    "content": content,
+                    "preview": content[:220].replace("\n", " "),
+                }
+            )
+        return rows
+
+    def _log_retrieval(self, query: str, rows: list[dict[str, Any]]) -> None:
+        logger.info("%s retrieval query=%r matches=%d", self.label, query, len(rows))
+        for idx, row in enumerate(rows, start=1):
+            logger.info(
+                "%s match %d source=%s chunk_index=%s distance=%s preview=%r",
+                self.label,
+                idx,
+                row["source"],
+                row["chunk_index"],
+                row["distance"],
+                row["preview"],
+            )
 
     def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
-        response = self.client.responses.create(
+        completion = create_chat_completion(
+            self.client,
             model=resolve_model_name(OPENAI_CHAT_MODEL),
             instructions=system_prompt,
             input=user_prompt,
             temperature=0,
         )
-        return get_response_output_text(response)
+        return get_response_output_text(completion)
 
     @staticmethod
     def _extract_json(text: str) -> dict:

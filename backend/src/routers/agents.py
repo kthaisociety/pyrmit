@@ -9,6 +9,7 @@ from agents.orchestrator import Orchestrator
 from agents.parsers import parse_query
 from llm import get_openai_client
 import models
+from observability import get_openai_client
 import schemas
 
 router = APIRouter()

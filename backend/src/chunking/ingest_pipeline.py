@@ -10,7 +10,6 @@ from db.push_db import PushDB
 from llm import get_openai_client
 from ocr.detaljplan_ocr import MistralOCR
 
-
 def slugify_document_name(name: str) -> str:
     normalized = re.sub(r"[^a-zA-Z0-9\-_\.]+", "_", name.strip().lower())
     return normalized.strip("_") or "document"

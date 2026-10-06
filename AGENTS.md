@@ -97,6 +97,8 @@ Backend (`backend/.env`), names as read by the code:
 - `DATABASE_URL`
 - `AI_GATEWAY_API_KEY` (if set, model calls go through the Vercel AI Gateway) or `OPENAI_API_KEY`
 - `MISTRAL_API_KEY` -- PDF OCR
+- `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` -- optional, turn on Langfuse tracing of model calls
+- `OPENAI_BASE_URL` -- optional override of the OpenAI endpoint
 - `JWT_SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`
 - `ACCESS_GATE_PASSWORD`, `ACCESS_GATE_COOKIE_DOMAIN`, `ACCESS_GATE_COOKIE_SAMESITE`, `ACCESS_GATE_COOKIE_SECURE`
 - `DEV_ACCESS_PASSWORD`, `APP_ENV`, `CORS_ALLOWED_ORIGINS`, `COOKIE_SAMESITE`, `COOKIE_SECURE`
@@ -114,6 +116,7 @@ Frontend (`frontend/.env`):
 
 - `backend/src/main.py` -- FastAPI app entry, CORS, router registration
 - `backend/src/llm.py` -- OpenAI client and model name resolution, AI Gateway switch (PCR-0003)
+- `backend/src/observability.py` -- Langfuse tracing wrappers for chat and embedding calls, no-op when Langfuse is not configured
 - `backend/src/models.py` -- SQLAlchemy ORM models
 - `backend/src/schemas.py` -- Pydantic request/response schemas
 - `backend/src/security.py` -- JWT creation/decoding, password hashing
