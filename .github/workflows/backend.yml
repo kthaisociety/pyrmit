@@ -26,6 +26,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # The acceptance file is temporary and refactor-issue folds it into the unit suite (PCR-0011).
+      - run: |
+          if [ -e tests/test_acceptance.py ]; then
+            echo "::error file=backend/tests/test_acceptance.py::Fold the acceptance file into tests/unit/ and delete it"
+            exit 1
+          fi
       - uses: astral-sh/setup-uv@v10.2.0
       - run: uv sync --frozen
       - run: uv run --no-sync pytest
