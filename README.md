@@ -24,18 +24,22 @@
 ```
 pyrmit/
 ├── backend/                 # FastAPI application
-│   ├── routers/            # API route definitions
-│   ├── database.py         # Database connection & session
-│   ├── main.py             # App entry point
-│   ├── models.py           # SQLAlchemy database models
-│   ├── schemas.py          # Pydantic data models
-│   ├── requirements.txt    # Python dependencies
+│   ├── src/                # All backend code
+│   │   ├── routers/        # API route definitions
+│   │   ├── db/             # Database connection, SQL init and match functions
+│   │   ├── main.py         # App entry point
+│   │   ├── models.py       # SQLAlchemy database models
+│   │   └── schemas.py      # Pydantic data models
+│   ├── tests/unit/         # pytest unit tests, mirrors src/
+│   ├── pyproject.toml      # Python dependencies, pytest and ruff config
+│   ├── uv.lock             # Exact dependency versions
 │   └── Dockerfile
 ├── frontend/                # Next.js application
 │   ├── app/                # App Router source code
 │   │   ├── page.tsx        # Main chat page
 │   │   ├── layout.tsx      # Root layout
 │   │   └── globals.css     # Global styles
+│   ├── tests/unit/         # Unit tests for components/ and lib/ (no runner yet)
 │   ├── next.config.js      # Next.js configuration
 │   ├── package.json        # Node dependencies
 │   └── Dockerfile
@@ -144,13 +148,11 @@ If you prefer to run the backend and frontend locally for faster development (ho
     - Install dependencies:
       ```bash
       cd backend
-      uv venv
-      source .venv/bin/activate
-      uv pip install -r requirements.txt
+      uv sync
       ```
     - Run server:
       ```bash
-      uvicorn main:app --reload
+      uv run uvicorn main:app --app-dir src --reload
       ```
 
 3.  **Frontend Setup:**

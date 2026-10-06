@@ -7,7 +7,7 @@ services:
       POSTGRES_DB: pyrmit
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backend/src/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     healthcheck:
@@ -18,7 +18,7 @@ services:
 
   backend:
     build: ./backend
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn main:app --app-dir src --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./backend:/app
     ports:

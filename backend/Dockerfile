@@ -1,13 +1,17 @@
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+# Install outside /app so docker-compose's source mount doesn't hide the environment.
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
+
+COPY pyproject.toml uv.lock .python-version ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system -r requirements.txt
+    uv sync --frozen --no-dev --no-install-project
 
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/src
 COPY . .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--app-dir", "src", "--host", "0.0.0.0", "--port", "8000"]

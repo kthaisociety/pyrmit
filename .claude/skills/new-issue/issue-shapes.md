@@ -1,0 +1,131 @@
+# Issue shapes
+
+The single source of truth for every issue this system publishes, whether `new-issue` files it standalone or `map-epic` files it under an epic. Body shape, title, label, branch slug, the AI disclaimer, gh preflight, the publish loop, and native wiring all live here. Neither skill restates them.
+
+## The two shapes
+
+Every issue is one of two bodies, and nothing else.
+
+- **Task issue**, `template_task_issue.md`. Goal, Expected behaviour, Out of scope, Branch. Used for a deliverable: a standalone feature, a standalone bug fix, or an epic task.
+
+  **Expected behaviour is user-visible and nothing else.** It says what someone can do once this ships, in the language of the product. It is not a checklist an implementer ticks off, and it never names a function, a file, or a test. `architect-issue` or `autopilot-issue` turns it into the exact tests the implementation has to pass.
+- **Question issue**, `template_question_issue.md`. A Question and nothing more. Used for research and prototype issues, which exist to be answered in their own session, not implemented.
+
+Read the template file at publish time. Do not reconstruct either body from this document.
+
+## Title format
+
+`<id> <type prefix> <short title>`, where the id is present only for epic tasks.
+
+- **Type prefix** is lowercase and bracketed: `[feature]`, `[bug]`, `[research]`, `[prototype]`.
+- **Id** is `(N.M)` on epic task issues only, assigned by `map-epic`. Standalone issues, research issues, and prototype issues carry no id, since nothing is implemented from them and the GitHub issue number identifies them.
+- **70 characters total**, counting id and prefix.
+- Sub-issues of a standalone parent inherit the parent's type prefix.
+- No `[parent]` marker. Parentage is visible through GitHub's native sub-issue list.
+
+## Labels
+
+`<scope>:<type>`. Scope records where the issue came from, and type records which station picks it up.
+
+| | task | autopilot | research | prototype |
+|---|---|---|---|---|
+| **filed under an epic** | `epic:task` | `epic:autopilot` | `epic:research` | `epic:prototype` |
+| **filed standalone** | `issue:task` | `issue:autopilot` | `issue:research` | `issue:prototype` |
+
+A feature and a bug both label as `task` or `autopilot`. The `[feature]` or `[bug]` prefix in the title carries that distinction.
+
+`task` goes to `architect-issue` and the three-station chain. `autopilot` uses the same task body and goes to `autopilot-issue`, which runs all three legs unattended and opens a PR. Decide between them with the autopilot criteria below, once per task issue, at publish time.
+
+Labels must exist before use, so create the ones this session needs, idempotently, once:
+
+```
+gh label create epic:task --color 1D76DB || true
+gh label create epic:autopilot --color FBCA04 || true
+gh label create epic:research --color 5319E7 || true
+gh label create epic:prototype --color 0E8A16 || true
+gh label create issue:task --color 1D76DB || true
+gh label create issue:autopilot --color FBCA04 || true
+gh label create issue:research --color 5319E7 || true
+gh label create issue:prototype --color 0E8A16 || true
+```
+
+## Autopilot criteria
+
+A task issue is `autopilot` when settling the contract up front would cost more than reading the finished diff. That holds when all three are true, and the issue is `task` when any one is false:
+
+1. **No public signature changes.** Nothing outside the files the issue touches calls a name, parameter, or return value the change adds or alters. Internals are free.
+2. **No record is touched or needed.** No decision in `docs/pcr/` or `docs/adr/` is in the way, and the change makes no call a future reader could undo by accident.
+3. **`git revert` of the merged PR undoes it completely.** No migration, no external resource, no data written that a revert leaves behind.
+
+Small refactors, bug fixes, and implementation swaps behind a stable interface usually pass. An issue whose Expected behaviour can't all be reached by automated tests fails, because `autopilot-issue` has no other bar to check against. The label is a guess made before anyone read the code, so `autopilot-issue` re-checks it and halts if it was wrong.
+
+## Branch slug
+
+**The issue names its own branch.** Fill `## Branch` on every task issue before its first preview. `architect-issue` and `autopilot-issue` derive a slug from the title when an issue arrives without one, so filling it here is what keeps the slug deliberate rather than guessed. Question issues have no branch, since nothing is implemented from them.
+
+- **2 to 4 words, kebab-case, no articles**, derived from the title. `[feature] Add OAuth login for admin dashboard` gives `oauth-admin-login`.
+- **Slug only.** No issue number, since the issue does not exist yet and the station that opens the branch prepends it. No `feature/` prefix, no type prefix.
+
+## AI disclaimer
+
+Every published body starts with:
+
+```
+> *This was generated by AI during an issue grill session.*
+```
+
+Both templates already carry it, along with the standing branch footer on the task template. Do not strip either during inline edits.
+
+## gh preflight
+
+Before any grilling or publishing, confirm `gh` is installed, authenticated, and pointed at a real repo. Run, in order:
+
+1. `gh --version`
+2. `gh auth status`
+3. `gh repo view`
+
+Remediation:
+
+- **`gh --version` fails.** `gh` is not installed. On macOS, run `brew install gh`. On other platforms, see https://cli.github.com/. Stop and wait for the user to install it.
+- **`gh auth status` fails.** Tell the user to run `gh auth login`, and wait for them to confirm before proceeding.
+- **`gh repo view` fails.** Ask the user which repo to file against, capture `owner/name`, and pass `--repo owner/name` to every later `gh` call this session.
+
+Do not proceed until preflight passes or the `--repo` fallback is captured.
+
+## Publish loop
+
+Every issue goes through the same loop: **preview, edit, approve, publish.**
+
+1. **Preview the rendered title and body** as the chat message, showing the full title including id and type prefix, and the full body markdown. The user sees it before any `gh` call. A fenced code block is fine if it reads better.
+2. **Accept natural-language inline edits**, such as "reword behaviour 3 as X", "drop the Out of scope bullet about Y", or "tighten the goal". Apply, re-render title and body in full, and offer the next cycle.
+3. **Publish only on explicit approval.** Never assume it, and never publish silently.
+
+```
+gh issue create --title "<title>" --body "$(cat ...rendered...)" --label "<scope>:<type>"
+```
+
+Capture the issue number and URL from the output. Every wiring call needs the **numeric database id**, not the number:
+
+```
+gh api repos/{owner}/{repo}/issues/<issue-number> --jq .id
+```
+
+## Native wiring
+
+Parentage and blocking are **GitHub-native, never body text**.
+
+Attach an issue to its parent, whether that parent is an epic map issue or a standalone parent issue:
+
+```
+gh api repos/{owner}/{repo}/issues/<parent-issue-number>/sub_issues -X POST -F sub_issue_id=<child-numeric-id>
+```
+
+For each confirmed blocking edge, `X blocked by Y`:
+
+```
+gh api repos/{owner}/{repo}/issues/<X-issue-number>/dependencies/blocked_by -X POST -F issue_id=<Y-numeric-id>
+```
+
+Publish in **dependency order**, so a blocking edge always points at an issue that already exists. Start with issues that have no blockers, and publish an issue only once everything it is blocked by exists. A cycle in the graph means the split is wrong, so re-slice until it is acyclic.
+
+Surface the parent URL and every child URL to the user once the wiring calls are done.
