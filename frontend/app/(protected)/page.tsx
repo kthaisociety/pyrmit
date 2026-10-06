@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Chat from '@/components/Chat';
 import Sidebar from '@/components/Sidebar';
 import Settings from '@/components/Settings';
+import DatabaseBrowser from '@/components/DatabaseBrowser';
 import { authFetch, clearAccessToken, getStoredAccessToken } from '@/lib/auth';
 
 interface User {
@@ -18,7 +19,7 @@ export default function Home() {
   const [refreshSidebarTrigger, setRefreshSidebarTrigger] = useState(0);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
+  const [view, setView] = useState<'chat' | 'settings' | 'database'>('chat');
   const router = useRouter();
 
   useEffect(() => {
@@ -75,22 +76,25 @@ export default function Home() {
     <div className="flex h-screen w-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 overflow-hidden">
       <Sidebar
         currentSessionId={currentSessionId}
-        onSelectSession={(id) => { setCurrentSessionId(id); setShowSettings(false); }}
-        onNewChat={() => { setCurrentSessionId(null); setShowSettings(false); }}
+        onSelectSession={(id) => { setCurrentSessionId(id); setView('chat'); }}
+        onNewChat={() => { setCurrentSessionId(null); setView('chat'); }}
         refreshTrigger={refreshSidebarTrigger}
         user={user}
-        onOpenSettings={() => setShowSettings(true)}
+        onOpenSettings={() => setView('settings')}
+        onOpenDatabase={() => setView('database')}
       />
 
       <main className="flex-1 flex flex-col h-full relative min-w-0">
-        {showSettings && user ? (
+        {view === 'settings' && user ? (
           <Settings
             user={user}
-            onBack={() => setShowSettings(false)}
+            onBack={() => setView('chat')}
             onLogout={handleLogout}
             onUserUpdated={(updated) => setUser(updated)}
             onAllChatsCleared={handleAllChatsCleared}
           />
+        ) : view === 'database' ? (
+          <DatabaseBrowser onBack={() => setView('chat')} />
         ) : (
           <Chat
             sessionId={currentSessionId}

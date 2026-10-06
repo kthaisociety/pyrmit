@@ -9,6 +9,7 @@ from openai import OpenAI
 from sqlalchemy.orm import Session
 
 from agents.base import BaseRAGAgent, _TRANSLATION_INSTRUCTION
+from pipeline_trace import CallRecorder
 from models import DocumentChunk
 from observability import start_observation
 
@@ -56,8 +57,8 @@ class DocumentAgent(BaseRAGAgent):
 
     _source_label_column = "document_name"
 
-    def __init__(self, db: Session, openai_client: OpenAI):
-        super().__init__(db, openai_client, DocumentChunk, "Document Agent")
+    def __init__(self, db: Session, openai_client: OpenAI, recorder: CallRecorder | None = None):
+        super().__init__(db, openai_client, DocumentChunk, "Document Agent", recorder)
 
     def query(self, location: str, project_type: str, units: int) -> dict:
         logger.debug("Searching documents for %d %s units in %s", units, project_type, location)
@@ -86,11 +87,13 @@ class DocumentAgent(BaseRAGAgent):
             context=context, location=location, project_type=project_type, units=units
         )
         response_text = self._call_llm(_SYSTEM_PROMPT, user_prompt)
+        retrieval = {"query": search_query, "matches": self._trace_rows(debug_rows)}
 
         try:
             result = self._extract_json(response_text)
             logger.info("Found %d similar cases", len(result.get("similar_cases", [])))
             result["sources"] = sources
+            result["retrieval"] = retrieval
             return result
         except Exception as e:
             logger.error("Error parsing LLM response", exc_info=True)
@@ -102,4 +105,5 @@ class DocumentAgent(BaseRAGAgent):
                 "political_climate": response_text,
                 "confidence": 0.3,
                 "sources": sources,
+                "retrieval": retrieval,
             }

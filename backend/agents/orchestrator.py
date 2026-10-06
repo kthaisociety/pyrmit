@@ -38,6 +38,8 @@ class Orchestrator:
             "timeline": document_result.get("typical_timeline_months", "Unknown"),
             "next_steps": self._generate_next_steps(feasibility),
             "sources": sources,
+            # Raw agent outputs (incl. retrieval traces) for the pipeline inspector
+            "agent_outputs": {"law": law_result, "document": document_result},
         }
 
     def _determine_feasibility(

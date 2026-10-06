@@ -119,6 +119,7 @@ class MessageResponse(ChatMessage):
     id: int
     session_id: str | None = None
     created_at: datetime
+    trace: list[dict] | None = None
 
     class Config:
         from_attributes = True
@@ -186,3 +187,61 @@ class AnalyzeResponse(BaseModel):
     requirements: list[str]
     timeline: str | int | None = None
     next_steps: list[str]
+
+
+# --- Database browser schemas ---
+
+ChunkTableName = Literal["law", "document"]
+
+
+class SourceCount(BaseModel):
+    name: str
+    count: int
+
+
+class ChunkTableOverview(BaseModel):
+    total: int
+    with_embedding: int
+    sources: list[SourceCount]
+
+
+class DbOverview(BaseModel):
+    law: ChunkTableOverview
+    document: ChunkTableOverview
+
+
+class ChunkRow(BaseModel):
+    id: str
+    source: str
+    chunk_index: int | None = None
+    chapter: str | None = None
+    chapter_title: str | None = None
+    section: str | None = None
+    content: str
+    has_embedding: bool
+    created_at: datetime | None = None
+
+
+class ChunkPage(BaseModel):
+    total: int
+    offset: int
+    limit: int
+    items: list[ChunkRow]
+
+
+class ChunkSearchRequest(BaseModel):
+    query: str = Field(min_length=1)
+    k: int = Field(default=5, ge=1, le=50)
+
+
+class ChunkSearchMatch(BaseModel):
+    source: str
+    chunk_index: int | None = None
+    distance: float | None = None
+    content: str
+
+
+class ChunkSearchResponse(BaseModel):
+    embedding_ok: bool
+    law: list[ChunkSearchMatch]
+    document: list[ChunkSearchMatch]

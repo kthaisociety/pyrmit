@@ -4,7 +4,6 @@ import { useState, useEffect, FormEvent, ReactNode, useRef } from 'react';
 import Image from 'next/image';
 import ReactMarkdown from 'react-markdown';
 import {
-  Brain,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -12,9 +11,12 @@ import {
   Copy,
   FileSearch,
   Loader2,
+  Microscope,
   Wrench,
 } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
+import ChunkCard from '@/components/ChunkCard';
+import PipelineTrace, { type PipelineEvent, type RetrievedChunk } from '@/components/PipelineTrace';
 
 interface Message {
   id?: number;
@@ -23,6 +25,8 @@ interface Message {
   session_id?: string;
   created_at?: string;
   steps?: Step[];
+  pipeline?: PipelineEvent[];
+  trace?: PipelineEvent[] | null; // saved pipeline events, from the history endpoint
 }
 
 interface Step {
@@ -44,6 +48,8 @@ interface StreamEvent {
   input?: string;
   result?: string;
   message?: string;
+  stage?: string;
+  data?: Record<string, unknown>;
 }
 
 interface ChatProps {
@@ -270,49 +276,140 @@ function CollapsibleMetaSection({
   );
 }
 
-function AssistantTelemetry({
-  steps,
-  sources,
-  streaming,
-}: {
-  steps: Step[];
-  sources: string[];
-  streaming: boolean;
-}) {
-  const reasoning = getReasoningSteps(steps);
-  const tools = getToolTraces(steps);
+const TABLE_LABELS: Record<string, string> = {
+  law: 'Law',
+  document: 'Planning document',
+};
 
-  if (reasoning.length === 0 && tools.length === 0 && sources.length === 0) {
+interface SourceChunk extends RetrievedChunk {
+  agent: string;
+}
+
+function getRetrievedChunksBySource(pipeline: PipelineEvent[]): Map<string, SourceChunk[]> {
+  const bySource = new Map<string, SourceChunk[]>();
+  const seen = new Set<string>();
+
+  for (const event of pipeline) {
+    if (event.stage !== 'retrieval') continue;
+    const agent = String(event.data.agent ?? '');
+    for (const match of (event.data.matches as RetrievedChunk[] | undefined) ?? []) {
+      const key = `${agent}:${match.source}:${match.chunk_index}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      bySource.set(match.source, [...(bySource.get(match.source) ?? []), { ...match, agent }]);
+    }
+  }
+
+  for (const chunks of bySource.values()) {
+    chunks.sort((a, b) => (a.distance ?? 1) - (b.distance ?? 1));
+  }
+  return bySource;
+}
+
+function SourceList({ sources, pipeline }: { sources: string[]; pipeline: PipelineEvent[] }) {
+  const [selected, setSelected] = useState<string | null>(null);
+  const chunksBySource = getRetrievedChunksBySource(pipeline);
+  const selectedChunks = selected ? chunksBySource.get(selected) ?? [] : [];
+
+  return (
+    <div className="space-y-3 pt-1">
+      <div className="flex flex-wrap gap-2">
+        {sources.map((source, index) => {
+          const count = chunksBySource.get(source)?.length ?? 0;
+          const active = selected === source;
+          return (
+            <button
+              key={`${source}-${index}`}
+              onClick={() => setSelected(active ? null : source)}
+              className={`rounded-full border px-2.5 py-1 text-[11px] transition-colors ${
+                active
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-950/60 dark:text-blue-300'
+                  : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:border-zinc-500'
+              }`}
+            >
+              {source}
+              {count > 0 && <span className="ml-1 opacity-60">· {count}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {selected && (
+        selectedChunks.length > 0 ? (
+          <div className="space-y-1.5">
+            {selectedChunks.map((chunk, i) => (
+              <ChunkCard
+                key={`${chunk.agent}-${chunk.chunk_index}-${i}`}
+                source={chunk.source}
+                chunkIndex={chunk.chunk_index}
+                distance={chunk.distance}
+                content={chunk.content}
+                meta={[TABLE_LABELS[chunk.agent] ?? chunk.agent]}
+                defaultOpen={selectedChunks.length === 1}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs italic text-zinc-500">
+            No chunk details were recorded for this answer (it was generated before pipeline tracing was added).
+          </p>
+        )
+      )}
+    </div>
+  );
+}
+
+// Inspection panels shown under a finished answer
+function AnswerDetails({ sources, pipeline }: { sources: string[]; pipeline: PipelineEvent[] }) {
+  const chunkCount = pipeline
+    .filter((event) => event.stage === 'retrieval')
+    .reduce((total, event) => total + ((event.data.matches as unknown[] | undefined)?.length ?? 0), 0);
+
+  if (pipeline.length === 0 && sources.length === 0) {
     return null;
   }
 
   return (
-    <div className="mb-4 space-y-3">
+    <div className="mt-4 space-y-3">
+      {pipeline.length > 0 && (
+        <CollapsibleMetaSection
+          badge={`${chunkCount} chunks`}
+          icon={<Microscope size={14} />}
+          title="Inspect pipeline"
+        >
+          <PipelineTrace events={pipeline} />
+        </CollapsibleMetaSection>
+      )}
+
       {sources.length > 0 && (
         <CollapsibleMetaSection
           badge={`${sources.length}`}
           icon={<FileSearch size={14} />}
           title="Sources"
         >
-          <div className="flex flex-wrap gap-2 pt-1">
-            {sources.map((source, index) => (
-              <div
-                key={`${source}-${index}`}
-                className="rounded-full border border-zinc-200 bg-white px-2.5 py-1 text-[11px] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300"
-              >
-                {source}
-              </div>
-            ))}
-          </div>
+          <SourceList sources={sources} pipeline={pipeline} />
         </CollapsibleMetaSection>
       )}
+    </div>
+  );
+}
 
+// Live progress shown while the answer is being generated
+function LiveProgress({ steps }: { steps: Step[] }) {
+  const reasoning = getReasoningSteps(steps);
+  const tools = getToolTraces(steps);
+
+  if (reasoning.length === 0 && tools.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mb-4 space-y-3">
       {reasoning.length > 0 && (
         <CollapsibleMetaSection
-          badge={streaming ? 'Thinking' : `${reasoning.length} steps`}
-          defaultOpen={streaming}
-          forceOpen={streaming}
-          icon={streaming ? <Loader2 size={14} className="animate-spin" /> : <Brain size={14} />}
+          badge="Thinking"
+          forceOpen
+          icon={<Loader2 size={14} className="animate-spin" />}
           title="Reasoning"
         >
           <div className="space-y-2 pt-1">
@@ -335,9 +432,8 @@ function AssistantTelemetry({
 
       {tools.length > 0 && (
         <CollapsibleMetaSection
-          badge={streaming ? 'Working' : `${tools.length} steps`}
-          defaultOpen={streaming}
-          forceOpen={streaming}
+          badge="Working"
+          forceOpen
           icon={<Wrench size={14} />}
           title="Process"
         >
@@ -404,7 +500,7 @@ function AssistantBubble({
         )}
       </div>
 
-      <AssistantTelemetry sources={sources} steps={steps} streaming={isStreaming} />
+      {isStreaming && <LiveProgress steps={steps} />}
 
       {hasBody ? (
         <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
@@ -420,6 +516,8 @@ function AssistantBubble({
           </div>
         </div>
       )}
+
+      {!isStreaming && <AnswerDetails sources={sources} pipeline={message.pipeline ?? []} />}
     </div>
   );
 }
@@ -432,6 +530,9 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pendingSessionIdRef = useRef<string | null>(null);
+  // Session we just created ourselves: its messages are already in state (with
+  // live-only pipeline data), so the history refetch must not overwrite them.
+  const createdSessionIdRef = useRef<string | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -442,12 +543,16 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   }, [messages]);
 
   useEffect(() => {
+    if (sessionId && sessionId === createdSessionIdRef.current) {
+      createdSessionIdRef.current = null;
+      return;
+    }
     if (sessionId) {
       setLoading(true);
       authFetch(`/api/sessions/${sessionId}`)
         .then((res) => res.json())
         .then((data: Message[]) => {
-          setMessages(data);
+          setMessages(data.map((msg) => ({ ...msg, pipeline: msg.trace ?? undefined })));
           setLoading(false);
         })
         .catch((err) => {
@@ -545,6 +650,16 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
             }));
             break;
 
+          case 'pipeline':
+            if (event.stage && event.data) {
+              const pipelineEvent: PipelineEvent = { stage: event.stage, data: event.data };
+              updateLast((msg) => ({
+                ...msg,
+                pipeline: [...(msg.pipeline ?? []), pipelineEvent],
+              }));
+            }
+            break;
+
           case 'response.output_text.delta':
             if (event.delta) {
               updateLast((msg) => ({
@@ -580,6 +695,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
             if (!sessionId) {
               const createdSessionId = event.session_id ?? pendingSessionIdRef.current;
               if (createdSessionId) {
+                createdSessionIdRef.current = createdSessionId;
                 onSessionCreated(createdSessionId);
               }
             }

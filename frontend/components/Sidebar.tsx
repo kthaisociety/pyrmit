@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Settings, MessageSquare, Trash2, Check, X, Pencil } from 'lucide-react';
+import { Plus, Settings, MessageSquare, Trash2, Check, X, Pencil, Database } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
 
 interface ChatSession {
@@ -23,9 +23,10 @@ interface SidebarProps {
   refreshTrigger: number;
   user: User | null;
   onOpenSettings: () => void;
+  onOpenDatabase: () => void;
 }
 
-export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, refreshTrigger, user, onOpenSettings }: SidebarProps) {
+export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, refreshTrigger, user, onOpenSettings, onOpenDatabase }: SidebarProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -204,6 +205,13 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
             <p className="text-xs text-zinc-500 truncate">{user?.email}</p>
           </div>
         </div>
+        <button
+          onClick={onOpenDatabase}
+          className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-900 rounded-lg transition-colors text-zinc-700 dark:text-zinc-300"
+        >
+          <Database size={16} />
+          <span>Database</span>
+        </button>
         <button
           onClick={onOpenSettings}
           className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-900 rounded-lg transition-colors text-zinc-700 dark:text-zinc-300"

@@ -9,6 +9,7 @@ from openai import OpenAI
 from sqlalchemy.orm import Session
 
 from agents.base import BaseRAGAgent, _TRANSLATION_INSTRUCTION
+from pipeline_trace import CallRecorder
 from models import LawChunk
 from observability import start_observation
 
@@ -48,8 +49,8 @@ class LawAgent(BaseRAGAgent):
 
     _source_label_column = "law_name"
 
-    def __init__(self, db: Session, openai_client: OpenAI):
-        super().__init__(db, openai_client, LawChunk, "Law Agent")
+    def __init__(self, db: Session, openai_client: OpenAI, recorder: CallRecorder | None = None):
+        super().__init__(db, openai_client, LawChunk, "Law Agent", recorder)
 
     def query(self, location: str, project_type: str, units: int) -> dict:
         logger.debug("Searching regulations for %d %s units in %s", units, project_type, location)
@@ -78,11 +79,13 @@ class LawAgent(BaseRAGAgent):
             context=context, location=location, project_type=project_type, units=units
         )
         response_text = self._call_llm(_SYSTEM_PROMPT, user_prompt)
+        retrieval = {"query": search_query, "matches": self._trace_rows(debug_rows)}
 
         try:
             result = self._extract_json(response_text)
             logger.info("Found %d applicable laws", len(result.get("applicable_laws", [])))
             result["sources"] = sources
+            result["retrieval"] = retrieval
             return result
         except Exception as e:
             logger.error("Error parsing LLM response", exc_info=True)
@@ -94,4 +97,5 @@ class LawAgent(BaseRAGAgent):
                 "special_provisions": response_text,
                 "confidence": 0.3,
                 "sources": sources,
+                "retrieval": retrieval,
             }
