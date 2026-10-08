@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 import jwt
 from fastapi import HTTPException, status
@@ -39,11 +39,8 @@ def get_password_hash(password: str) -> str:
     return password_hash.hash(password)
 
 
-def create_access_token(subject: str, expires_delta: timedelta | None = None) -> str:
-    expire = datetime.now(timezone.utc) + (
-        expires_delta or timedelta(minutes=get_access_token_expire_minutes())
-    )
-    payload = {"sub": subject, "exp": expire}
+def create_access_token(subject: str, session_id: str, expires_at: datetime) -> str:
+    payload = {"sub": subject, "sid": session_id, "exp": expires_at}
     return jwt.encode(payload, get_jwt_secret_key(), algorithm=ALGORITHM)
 
 
@@ -54,6 +51,9 @@ def decode_access_token(token: str) -> dict:
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        return jwt.decode(token, get_jwt_secret_key(), algorithms=[ALGORITHM])
+        return jwt.decode(
+            token, get_jwt_secret_key(), algorithms=[ALGORITHM],
+            options={"require": ["sub", "sid", "exp"]},
+        )
     except InvalidTokenError as exc:
         raise credentials_exception from exc

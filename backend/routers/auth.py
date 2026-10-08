@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 import models
 import schemas
-from dependencies import get_current_user
+from dependencies import get_current_session, get_current_user
 from security import (
     DUMMY_PASSWORD_HASH,
     create_access_token,
@@ -40,11 +40,18 @@ def _authenticate_user(db: Session, email: str, password: str) -> models.User | 
     return user
 
 
-def _issue_access_token(user: models.User) -> schemas.Token:
+def _issue_access_token(user: models.User, db: Session) -> schemas.Token:
+    session_id = str(uuid.uuid4())
+    expires_at = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(
+        minutes=get_access_token_expire_minutes()
+    )
     access_token = create_access_token(
         subject=f"user:{user.id}",
-        expires_delta=timedelta(minutes=get_access_token_expire_minutes()),
+        session_id=session_id,
+        expires_at=expires_at,
     )
+    db.add(models.Session(id=session_id, user_id=user.id, expires_at=expires_at))
+    db.commit()
     return schemas.Token(access_token=access_token, token_type="bearer")
 
 
@@ -74,10 +81,8 @@ def signup(request: schemas.SignUpRequest, db: Session = Depends(get_db)):
         password=get_password_hash(request.password)
     )
     db.add(new_account)
-    db.commit()
-    db.refresh(new_user)
 
-    return _issue_access_token(new_user)
+    return _issue_access_token(new_user, db)
 
 
 @router.post("/token", response_model=schemas.Token)
@@ -92,7 +97,7 @@ def login_for_access_token(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return _issue_access_token(user)
+    return _issue_access_token(user, db)
 
 
 @router.post("/signin", response_model=schemas.Token)
@@ -104,12 +109,15 @@ def signin(request: schemas.SignInRequest, db: Session = Depends(get_db)):
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return _issue_access_token(user)
+    return _issue_access_token(user, db)
 
 @router.post("/signout")
-def signout():
-    # JWTs are stateless in this implementation. Signing out only removes the
-    # token client-side; it does not revoke already issued tokens server-side.
+def signout(
+    session: models.Session = Depends(get_current_session),
+    db: Session = Depends(get_db),
+):
+    db.delete(session)
+    db.commit()
     return {"message": "Signed out successfully"}
 
 @router.get("/me", response_model=schemas.UserPublic)
