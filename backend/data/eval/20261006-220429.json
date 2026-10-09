@@ -1,0 +1,5070 @@
+{
+ "summary": {
+  "st-kblab-swedish | dense-en": {
+   "recall@1": 0.2222222222222222,
+   "recall@5": 0.5972222222222222,
+   "recall@10": 0.6944444444444444,
+   "complete@5": 0.5555555555555556,
+   "mrr": 0.38136554803221473,
+   "kommun": 1.0
+  },
+  "st-kblab-swedish | dense-sv": {
+   "recall@1": 0.5,
+   "recall@5": 0.7361111111111112,
+   "recall@10": 0.8333333333333334,
+   "complete@5": 0.6111111111111112,
+   "mrr": 0.6039737654320989,
+   "kommun": 0.9722222222222222
+  },
+  "st-kblab-swedish | dense-both": {
+   "recall@1": 0.375,
+   "recall@5": 0.6666666666666666,
+   "recall@10": 0.8194444444444444,
+   "complete@5": 0.6111111111111112,
+   "mrr": 0.4941137566137566,
+   "kommun": 0.9722222222222222
+  },
+  "- | bm25-en": {
+   "recall@1": 0.0,
+   "recall@5": 0.027777777777777776,
+   "recall@10": 0.05555555555555555,
+   "complete@5": 0.027777777777777776,
+   "mrr": 0.01573667966211826,
+   "kommun": 1.0
+  },
+  "- | bm25-sv-stem": {
+   "recall@1": 0.5138888888888888,
+   "recall@5": 0.6944444444444444,
+   "recall@10": 0.8055555555555556,
+   "complete@5": 0.6111111111111112,
+   "mrr": 0.5993011039886039,
+   "kommun": 0.9722222222222222
+  },
+  "- | bm25-sv": {
+   "recall@1": 0.5138888888888888,
+   "recall@5": 0.7361111111111112,
+   "recall@10": 0.7916666666666666,
+   "complete@5": 0.6111111111111112,
+   "mrr": 0.6167498396665064,
+   "kommun": 0.9722222222222222
+  },
+  "st-kblab-swedish | hybrid": {
+   "recall@1": 0.4166666666666667,
+   "recall@5": 0.7222222222222222,
+   "recall@10": 0.7777777777777778,
+   "complete@5": 0.6111111111111112,
+   "mrr": 0.550555463055463,
+   "kommun": 0.9722222222222222
+  },
+  "st-kblab-swedish | hybrid-both": {
+   "recall@1": 0.4861111111111111,
+   "recall@5": 0.7638888888888888,
+   "recall@10": 0.8472222222222222,
+   "complete@5": 0.6666666666666666,
+   "mrr": 0.6117068502485169,
+   "kommun": 0.9722222222222222
+  }
+ },
+ "details": {
+  "st-kblab-swedish | dense-en": [
+   {
+    "id": "v-permit-process",
+    "ranks": [
+     1,
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "0ed4af8f6262b02a",
+     "819a2807cc4c4e95",
+     "d8501bafe7eb3595"
+    ],
+    "top_law": [
+     "31b2689f87836085",
+     "f087410d0b46f78a",
+     "5d3d8f2cba8bc679"
+    ]
+   },
+   {
+    "id": "v-change-zoning",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fc65a9967a5b9ca9",
+     "8e7609adc447bfe5",
+     "c18e125970eb1af9"
+    ],
+    "top_law": [
+     "dc86501055526fea",
+     "aa4e7d555c327c96",
+     "b08ddacbffe43be8"
+    ]
+   },
+   {
+    "id": "v-height",
+    "ranks": [
+     2,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9cf5b97d17e9112f",
+     "b7897ea4a5ab4335",
+     "92278cd6bf87706a"
+    ],
+    "top_law": [
+     "4b4e7f5424854266",
+     "0d3117883102554b",
+     "774b10defc268ef4"
+    ]
+   },
+   {
+    "id": "v-height-veda",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9cf5b97d17e9112f",
+     "6527e43c168d17d5",
+     "c8a28013e8626ba4"
+    ],
+    "top_law": [
+     "0d3117883102554b",
+     "4b4e7f5424854266",
+     "39f935d13db74313"
+    ]
+   },
+   {
+    "id": "v-lookup-zoning",
+    "ranks": [
+     5
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "4321be77ba9c08c8",
+     "bd5fd2eadb9f3046",
+     "cf5ef3dcba044f7f"
+    ],
+    "top_law": [
+     "c822401ae1136304",
+     "887714cc9cf7009d",
+     "c379be06b8cf2f5c"
+    ]
+   },
+   {
+    "id": "v-permit-time",
+    "ranks": [
+     null,
+     6
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "88bcc053ba934b74",
+     "3a79c0bae9a10e0e",
+     "9cef77b73fa5571e"
+    ],
+    "top_law": [
+     "3839424b0d2cc19d",
+     "5d3d8f2cba8bc679",
+     "c259ea32eacdf3c5"
+    ]
+   },
+   {
+    "id": "v-permit-cost",
+    "ranks": [
+     1,
+     12
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9a748b819d5c9175",
+     "9c5cb3c11602a23c",
+     "88bcc053ba934b74"
+    ],
+    "top_law": [
+     "f6340dadf4a5bc63",
+     "ddcc5e75a5c5c5e1",
+     "e1e830b363984271"
+    ]
+   },
+   {
+    "id": "v-contact",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fd58f3b0d632c658",
+     "8450bd10fbb47bbe",
+     "819a2807cc4c4e95"
+    ],
+    "top_law": [
+     "44bb92439f75fc36",
+     "f9f038e62a772cb3",
+     "3253a4fd92485703"
+    ]
+   },
+   {
+    "id": "v-septic-requirements",
+    "ranks": [
+     1,
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e55c1b5db84d07ec",
+     "a53c20ffd30c17b7",
+     "fd278c45a433d123"
+    ],
+    "top_law": [
+     "54ac9de908292952",
+     "5ad3694cc417eb29",
+     "77a8d1a8c06f9247"
+    ]
+   },
+   {
+    "id": "v-septic-cost",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3000889d6c84cedc",
+     "a3a791031cd8333a",
+     "a06b283f2374b553"
+    ],
+    "top_law": [
+     "3b31c476a3e57fb9",
+     "33aeab9c02055a06",
+     "d58d48e8eabadb66"
+    ]
+   },
+   {
+    "id": "v-connect-va",
+    "ranks": [
+     18
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e2bcc34a6a20b091",
+     "7c639c738d10c5ac",
+     "34386182cd7d3628"
+    ],
+    "top_law": [
+     "bdb7fa15327d3bd7",
+     "3812800a18c2edb6",
+     "f6077ec895f76d29"
+    ]
+   },
+   {
+    "id": "v-attefall",
+    "ranks": [
+     5,
+     11
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5ebb73256d252c5e",
+     "55dfe721174d2876",
+     "819a2807cc4c4e95"
+    ],
+    "top_law": [
+     "bab24eaf474250a8",
+     "751393d66058335a",
+     "6ee185be3811726f"
+    ]
+   },
+   {
+    "id": "v-lindholmen-homes",
+    "ranks": [
+     6
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "7371cb3ed433aa55",
+     "22061b9c77b19f19",
+     "1a72ba98432a03a5"
+    ],
+    "top_law": [
+     "f24eaaae0cee7a8d",
+     "f258f05cbeb66430",
+     "7b27a5609da8f6e5"
+    ]
+   },
+   {
+    "id": "v-ongoing-plans",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "6fb5b52b324349d7",
+     "38b307225ebe138b",
+     "210c4a74766317ab"
+    ],
+    "top_law": [
+     "a6b62ea304a63ab2",
+     "23043dc758469360",
+     "a002cf7498c1bd90"
+    ]
+   },
+   {
+    "id": "v-shoreline",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "acfd2a23af4efd68",
+     "b34edf510c13d171",
+     "35abf5be9749db78"
+    ],
+    "top_law": [
+     "9bc642ec3595e6c7",
+     "8378dc48cd9b01c2",
+     "cdd6997b629f745b"
+    ]
+   },
+   {
+    "id": "v-fence",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "4fb42a8f0e3dafa0",
+     "8cdfcc2de1ddfa91",
+     "8aae07911629b219"
+    ],
+    "top_law": [
+     "feeb5df459312bb3",
+     "9170d7738fee2dd6",
+     "95705d9c2d40d335"
+    ]
+   },
+   {
+    "id": "v-after-permit",
+    "ranks": [
+     5,
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "f5d46f420613c03c",
+     "c53d4ba2952e60dc",
+     "5071cb03c00edd25"
+    ],
+    "top_law": [
+     "ad548dd3db4281b8",
+     "11527a363cc7d400",
+     "f8721e335f9c3e3b"
+    ]
+   },
+   {
+    "id": "v-subdivide",
+    "ranks": [
+     1,
+     5
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "4321be77ba9c08c8",
+     "f41393c6117c6bcd"
+    ],
+    "top_law": [
+     "1cd6262663a25f85",
+     "a0fb8360ae621c45",
+     "95871e5f9f7bab78"
+    ]
+   },
+   {
+    "id": "v-ecovillage",
+    "ranks": [
+     null,
+     16
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "97ba03b4bd9b25a9",
+     "c8b6b96c00f94d58",
+     "987e9fb52b9e8dfc"
+    ],
+    "top_law": [
+     "c2d653130c524879",
+     "94e36feee0a2982d",
+     "6c9a1b4f0e89dbd5"
+    ]
+   },
+   {
+    "id": "nat-farmland",
+    "ranks": [
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "049f71b815b8b9c5",
+     "33179576dfa7cc30",
+     "4754855480c2518a"
+    ],
+    "top_law": [
+     "b6db3adc73037f1a",
+     "fdac981260fb87d6",
+     "38b3347f4bcf66f3"
+    ]
+   },
+   {
+    "id": "nat-shared-facility",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "d50d5cff12769f15",
+     "a5dc441e4117c971",
+     "b36c9b93816d0eb1"
+    ],
+    "top_law": [
+     "5380583d298c434b",
+     "fd81953b03f02e2b",
+     "a16ec502131f2eaf"
+    ]
+   },
+   {
+    "id": "nat-shore-distance",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "49b1fa5757289cfe",
+     "060b7668a0e4341a",
+     "aab90a4483a06ff7"
+    ],
+    "top_law": [
+     "1c7f86f64f72c90e",
+     "44262c14cbeecbe6",
+     "1ac78c2d983b23b5"
+    ]
+   },
+   {
+    "id": "nat-advance-ruling",
+    "ranks": [
+     13
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "30a9c8ad9ae8ff9d",
+     "c0002028cedab24e",
+     "1a056780e7c8d979"
+    ],
+    "top_law": [
+     "59e5bac508736b1a",
+     "6ee185be3811726f",
+     "535b01eb5d90aa11"
+    ]
+   },
+   {
+    "id": "nat-plan-validity",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "64736b2663026a45",
+     "0e3af9fc2df52273",
+     "fdf25a5ac45690fd"
+    ],
+    "top_law": [
+     "b75521877bfa350e",
+     "86616737452d4a8c",
+     "9a9dd893d1c30177"
+    ]
+   },
+   {
+    "id": "nat-new-subdivision",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "adad72632728f8e7",
+     "dff51097cf9ba85b"
+    ],
+    "top_law": [
+     "9c2701bd8b12da08",
+     "aa4e7d555c327c96",
+     "9cedce33a7f5f3ba"
+    ]
+   },
+   {
+    "id": "n-planbesked-cost",
+    "ranks": [
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "b838ecac769823a3",
+     "05a1878150c65d07",
+     "7db9ea55fee5b006"
+    ],
+    "top_law": [
+     "23836072fd1ecc64",
+     "f7741a74e4c3df37",
+     "bec5df0460e73822"
+    ]
+   },
+   {
+    "id": "n-plan-priority",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "315ec999e4400d0f",
+     "b54424b47922da64",
+     "c8ea44de48c05e9b"
+    ],
+    "top_law": [
+     "c26278735bb1b646",
+     "6555c90659e516da",
+     "44bb92439f75fc36"
+    ]
+   },
+   {
+    "id": "n-plan-process",
+    "ranks": [
+     9
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "c781abb3742662a2",
+     "3a1b613058016e8e",
+     "823f801ff0e25e62"
+    ],
+    "top_law": [
+     "7915f174445a81ce",
+     "5b4639d7c24044ff",
+     "9495a2b6847e5521"
+    ]
+   },
+   {
+    "id": "n-holiday-homes",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5f788ca9670ca049",
+     "75a4613073d28d92",
+     "edb7c7af9bac12ea"
+    ],
+    "top_law": [
+     "8c9fffdd2c5d9088",
+     "09fae8b824082b5e",
+     "64240153c91709ef"
+    ]
+   },
+   {
+    "id": "n-lookup-zoning",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "34e3ea46b3b653c0",
+     "7928c4d365ae5a2b",
+     "03cbb1045f6a8226"
+    ],
+    "top_law": [
+     "25ecc23707ab1ad6",
+     "967db54dbba37745",
+     "aa4908381369e021"
+    ]
+   },
+   {
+    "id": "n-stormwater",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "a86a33601cfd8131",
+     "89d2203eb7933c77",
+     "97d99e4040cc4dc7"
+    ],
+    "top_law": [
+     "0789df46ea5adb00",
+     "eda0e862f37363ba",
+     "779c137eaf2aff5b"
+    ]
+   },
+   {
+    "id": "y-septic-apply",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5230d51c7a41f853",
+     "db23bd274a4d3e18",
+     "d82918bc6c0d949b"
+    ],
+    "top_law": [
+     "5ad3694cc417eb29",
+     "b32ace33c5a247d8",
+     "e9d220df85a37d41"
+    ]
+   },
+   {
+    "id": "y-septic-start",
+    "ranks": [
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e5fb7d088f2f0c56",
+     "5230d51c7a41f853",
+     "a17299c4ccc18795"
+    ],
+    "top_law": [
+     "43d301b1c50d9e42",
+     "5ad3694cc417eb29",
+     "11de3e4bcf588df9"
+    ]
+   },
+   {
+    "id": "y-shoreline",
+    "ranks": [
+     7,
+     18
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "6b122f485e7b6296",
+     "96b9f035d64baa89",
+     "e9c63ea29d77b49e"
+    ],
+    "top_law": [
+     "b26426ddf206527c",
+     "e196f3b2f4276d6b",
+     "d993f7f22b42014a"
+    ]
+   },
+   {
+    "id": "y-demolition",
+    "ranks": [
+     8,
+     16
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1a056780e7c8d979",
+     "c0002028cedab24e",
+     "85e05409c2707ab9"
+    ],
+    "top_law": [
+     "6ee185be3811726f",
+     "86f7fcfb2dc9d80e",
+     "59f28716e118a867"
+    ]
+   },
+   {
+    "id": "y-new-op",
+    "ranks": [
+     11
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "dab867ba2bf5829a",
+     "c39d89798b2eb7b2",
+     "473c9dfc3118a597"
+    ],
+    "top_law": [
+     "86616737452d4a8c",
+     "b75521877bfa350e",
+     "b9432906fe0bd8cf"
+    ]
+   }
+  ],
+  "st-kblab-swedish | dense-sv": [
+   {
+    "id": "v-permit-process",
+    "ranks": [
+     1,
+     8
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "0ed4af8f6262b02a",
+     "8450bd10fbb47bbe",
+     "fe2a2a300f0fa8a9"
+    ],
+    "top_law": [
+     "b890c71dc871664a",
+     "c63973726190e393",
+     "31b2689f87836085"
+    ]
+   },
+   {
+    "id": "v-change-zoning",
+    "ranks": [
+     null,
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9a6e3d5180d6c9e0",
+     "0236873ab36e3d24",
+     "ddd64f158f1d7000"
+    ],
+    "top_law": [
+     "2cea9c5563d62926",
+     "5d4056bb69443369",
+     "72b182d1aced1865"
+    ]
+   },
+   {
+    "id": "v-height",
+    "ranks": [
+     2,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9cf5b97d17e9112f",
+     "92278cd6bf87706a",
+     "83323193fe267788"
+    ],
+    "top_law": [
+     "4b4e7f5424854266",
+     "39f935d13db74313",
+     "4ce2a2f5ef9d7bfc"
+    ]
+   },
+   {
+    "id": "v-height-veda",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": false,
+    "top_local": [],
+    "top_law": [
+     "4b4e7f5424854266",
+     "4ce2a2f5ef9d7bfc",
+     "39f935d13db74313"
+    ]
+   },
+   {
+    "id": "v-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "022fdba9e2bb081e",
+     "c7321e2bee718f42",
+     "54847a6128f75387"
+    ],
+    "top_law": [
+     "d5d4dd922df532d5",
+     "c0416d8bc554cf63",
+     "66170c144f55c277"
+    ]
+   },
+   {
+    "id": "v-permit-time",
+    "ranks": [
+     null,
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9cef77b73fa5571e",
+     "3a79c0bae9a10e0e",
+     "e64eddc7ca1f7198"
+    ],
+    "top_law": [
+     "c259ea32eacdf3c5",
+     "3839424b0d2cc19d",
+     "23061ff0af788e31"
+    ]
+   },
+   {
+    "id": "v-permit-cost",
+    "ranks": [
+     1,
+     5
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9c5cb3c11602a23c",
+     "9a748b819d5c9175",
+     "729586ee37dfe74c"
+    ],
+    "top_law": [
+     "23836072fd1ecc64",
+     "a235561eff06b8d9",
+     "7ba40871ef270cb9"
+    ]
+   },
+   {
+    "id": "v-contact",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fd58f3b0d632c658",
+     "8450bd10fbb47bbe",
+     "3263a93141dcab1e"
+    ],
+    "top_law": [
+     "44bb92439f75fc36",
+     "f9f038e62a772cb3",
+     "9d6827a7b00036a5"
+    ]
+   },
+   {
+    "id": "v-septic-requirements",
+    "ranks": [
+     1,
+     10
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e55c1b5db84d07ec",
+     "3000889d6c84cedc",
+     "a53c20ffd30c17b7"
+    ],
+    "top_law": [
+     "83a85eddb974458c",
+     "3715d8d8fd0c5fda",
+     "ba2183f55d3ab359"
+    ]
+   },
+   {
+    "id": "v-septic-cost",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3000889d6c84cedc",
+     "7fdb00292b8763e0",
+     "a06b283f2374b553"
+    ],
+    "top_law": [
+     "33aeab9c02055a06",
+     "6cd083e34b7a78ce",
+     "fd27fbe6fdcc0414"
+    ]
+   },
+   {
+    "id": "v-connect-va",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e2bcc34a6a20b091",
+     "7c639c738d10c5ac",
+     "376ec66c613daea4"
+    ],
+    "top_law": [
+     "bdb7fa15327d3bd7",
+     "a16ec502131f2eaf",
+     "ab7ed0751cdea1c0"
+    ]
+   },
+   {
+    "id": "v-attefall",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "a1cbd51fb395f18a",
+     "819a2807cc4c4e95",
+     "5ebb73256d252c5e"
+    ],
+    "top_law": [
+     "9821607343973fde",
+     "bab24eaf474250a8",
+     "c153b69d1648f70b"
+    ]
+   },
+   {
+    "id": "v-lindholmen-homes",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "7371cb3ed433aa55",
+     "1a72ba98432a03a5",
+     "22061b9c77b19f19"
+    ],
+    "top_law": [
+     "275dd2eb546fd83c",
+     "434d14d194c3e548",
+     "f24eaaae0cee7a8d"
+    ]
+   },
+   {
+    "id": "v-ongoing-plans",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "6fcbc4fae7dc74ee",
+     "779e524834611724",
+     "e881c08a6a66cfd8"
+    ],
+    "top_law": [
+     "e459ca7b7762cd0e",
+     "86b083e2bbd63cc3",
+     "bd9a0506aaaa15d9"
+    ]
+   },
+   {
+    "id": "v-shoreline",
+    "ranks": [
+     12,
+     5
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fa92b6547d6fdea9",
+     "01264cbc691758a2",
+     "e105b166c9f2563e"
+    ],
+    "top_law": [
+     "1ac78c2d983b23b5",
+     "36f926e2f42abe4f",
+     "38b3347f4bcf66f3"
+    ]
+   },
+   {
+    "id": "v-fence",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "4fb42a8f0e3dafa0",
+     "f016a01efe894b0a",
+     "819a2807cc4c4e95"
+    ],
+    "top_law": [
+     "95705d9c2d40d335",
+     "9170d7738fee2dd6",
+     "16ab6da2f1a9c09f"
+    ]
+   },
+   {
+    "id": "v-after-permit",
+    "ranks": [
+     5,
+     20
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "be2795deccb8b3c7",
+     "0a714bc890f77a62",
+     "b4087ce40d304769"
+    ],
+    "top_law": [
+     "ac08cc5ca0a59702",
+     "31b2689f87836085",
+     "3e8b5ae588324467"
+    ]
+   },
+   {
+    "id": "v-subdivide",
+    "ranks": [
+     1,
+     9
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "fc65a9967a5b9ca9",
+     "bd5fd2eadb9f3046"
+    ],
+    "top_law": [
+     "9cedce33a7f5f3ba",
+     "9416873b475232e9",
+     "3476753234d836ed"
+    ]
+   },
+   {
+    "id": "v-ecovillage",
+    "ranks": [
+     12,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "4cb664425072e3a7",
+     "c723eebea17794c7",
+     "ca3b680806b77278"
+    ],
+    "top_law": [
+     "95509dff3dd6f65b",
+     "28ce5bfa91d6b35c",
+     "10780f3cccfd3661"
+    ]
+   },
+   {
+    "id": "nat-farmland",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8375824adb464a57",
+     "33179576dfa7cc30",
+     "3b482d32abcb9bac"
+    ],
+    "top_law": [
+     "e89757f95eb26b49",
+     "94e36feee0a2982d",
+     "91be61715b583a5e"
+    ]
+   },
+   {
+    "id": "nat-shared-facility",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "d50d5cff12769f15",
+     "f91b1c8b5409fc92",
+     "6de6ee27a09605ed"
+    ],
+    "top_law": [
+     "5380583d298c434b",
+     "a965e3c58bcb6a1b",
+     "fc53fc6a32209a2a"
+    ]
+   },
+   {
+    "id": "nat-shore-distance",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "171ff4c79e2da4fa",
+     "49b1fa5757289cfe",
+     "060b7668a0e4341a"
+    ],
+    "top_law": [
+     "44262c14cbeecbe6",
+     "05d15e5e693dc97f",
+     "1c7f86f64f72c90e"
+    ]
+   },
+   {
+    "id": "nat-advance-ruling",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "30a9c8ad9ae8ff9d",
+     "c0002028cedab24e",
+     "85e05409c2707ab9"
+    ],
+    "top_law": [
+     "f8ca2403503664cf",
+     "62d9608f5974bad1",
+     "b0dbf056f7966c02"
+    ]
+   },
+   {
+    "id": "nat-plan-validity",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "64736b2663026a45",
+     "0e3af9fc2df52273",
+     "f8da78b1a8c64c50"
+    ],
+    "top_law": [
+     "9a9dd893d1c30177",
+     "68e76c7c6d725a3f",
+     "27aea19bf84798cf"
+    ]
+   },
+   {
+    "id": "nat-new-subdivision",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9fc88c5d61e3da14",
+     "51ba99d892c34d7d",
+     "7592af6c8496bdc3"
+    ],
+    "top_law": [
+     "abc145117054581e",
+     "31b2689f87836085",
+     "ccaf89937a8cfb44"
+    ]
+   },
+   {
+    "id": "n-planbesked-cost",
+    "ranks": [
+     6
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "05a1878150c65d07",
+     "b838ecac769823a3",
+     "d44549620b346803"
+    ],
+    "top_law": [
+     "23836072fd1ecc64",
+     "033c3a537a227289",
+     "bec5df0460e73822"
+    ]
+   },
+   {
+    "id": "n-plan-priority",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "c8ea44de48c05e9b",
+     "da9d25103be234b7",
+     "f66542899e351098"
+    ],
+    "top_law": [
+     "7915f174445a81ce",
+     "b74ed17051b0bb80",
+     "a6b62ea304a63ab2"
+    ]
+   },
+   {
+    "id": "n-plan-process",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e805c3aac8a98f73",
+     "87ef6d04edf6a271",
+     "e62010ae13cd3340"
+    ],
+    "top_law": [
+     "da819a2782e29bf3",
+     "2cea9c5563d62926",
+     "1577e81bc095e100"
+    ]
+   },
+   {
+    "id": "n-holiday-homes",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "75a4613073d28d92",
+     "a4cd5c7c8c652779",
+     "b62296c81c8267d4"
+    ],
+    "top_law": [
+     "38b3347f4bcf66f3",
+     "d90ffdff7336b08a",
+     "abc145117054581e"
+    ]
+   },
+   {
+    "id": "n-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "7928c4d365ae5a2b",
+     "4cac245c816b2eae",
+     "34e3ea46b3b653c0"
+    ],
+    "top_law": [
+     "a19fa409276f65a2",
+     "54d1b737d5241943",
+     "5e9f0f763b2bd3fb"
+    ]
+   },
+   {
+    "id": "n-stormwater",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "36aebe1f1938d311",
+     "e4a0533bb29257ea",
+     "4e9bbcd20bdbad23"
+    ],
+    "top_law": [
+     "b93e8aa092b0214a",
+     "5f93e6248c6c7621",
+     "0789df46ea5adb00"
+    ]
+   },
+   {
+    "id": "y-septic-apply",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5230d51c7a41f853",
+     "a17299c4ccc18795",
+     "db23bd274a4d3e18"
+    ],
+    "top_law": [
+     "5ad3694cc417eb29",
+     "5f93e6248c6c7621",
+     "a16ec502131f2eaf"
+    ]
+   },
+   {
+    "id": "y-septic-start",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5230d51c7a41f853",
+     "a17299c4ccc18795",
+     "e5fb7d088f2f0c56"
+    ],
+    "top_law": [
+     "11d9262b91a24800",
+     "5ad3694cc417eb29",
+     "e9d220df85a37d41"
+    ]
+   },
+   {
+    "id": "y-shoreline",
+    "ranks": [
+     2,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "b11e61fe59a9c6a5",
+     "c9005947d5d433d0",
+     "d4b1ce1350586db1"
+    ],
+    "top_law": [
+     "3e4a7d963f63707f",
+     "d993f7f22b42014a",
+     "b26426ddf206527c"
+    ]
+   },
+   {
+    "id": "y-demolition",
+    "ranks": [
+     2,
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "c0002028cedab24e",
+     "c7a7dddcd8de7c5e",
+     "9e969a523907e3a6"
+    ],
+    "top_law": [
+     "8e4ac0cc6fb4946b",
+     "0d65737ef59dfa72",
+     "6ee185be3811726f"
+    ]
+   },
+   {
+    "id": "y-new-op",
+    "ranks": [
+     6
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "473c9dfc3118a597",
+     "c39d89798b2eb7b2",
+     "dab867ba2bf5829a"
+    ],
+    "top_law": [
+     "86616737452d4a8c",
+     "da819a2782e29bf3",
+     "5b4639d7c24044ff"
+    ]
+   }
+  ],
+  "st-kblab-swedish | dense-both": [
+   {
+    "id": "v-permit-process",
+    "ranks": [
+     1,
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "0ed4af8f6262b02a",
+     "be2795deccb8b3c7",
+     "8450bd10fbb47bbe"
+    ],
+    "top_law": [
+     "31b2689f87836085",
+     "b890c71dc871664a",
+     "c63973726190e393"
+    ]
+   },
+   {
+    "id": "v-change-zoning",
+    "ranks": [
+     null,
+     6
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "129572c6c07bf843",
+     "1acc1d68a6d04abc",
+     "ff2f8e3de05b5114"
+    ],
+    "top_law": [
+     "dc86501055526fea",
+     "2cea9c5563d62926",
+     "aa4e7d555c327c96"
+    ]
+   },
+   {
+    "id": "v-height",
+    "ranks": [
+     2,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9cf5b97d17e9112f",
+     "92278cd6bf87706a",
+     "b7897ea4a5ab4335"
+    ],
+    "top_law": [
+     "4b4e7f5424854266",
+     "39f935d13db74313",
+     "4ce2a2f5ef9d7bfc"
+    ]
+   },
+   {
+    "id": "v-height-veda",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": false,
+    "top_local": [],
+    "top_law": [
+     "4b4e7f5424854266",
+     "0d3117883102554b",
+     "4ce2a2f5ef9d7bfc"
+    ]
+   },
+   {
+    "id": "v-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "022fdba9e2bb081e",
+     "87d94e30ecb632e7",
+     "440715fb0c4ff71f"
+    ],
+    "top_law": [
+     "d5d4dd922df532d5",
+     "c822401ae1136304",
+     "25ecc23707ab1ad6"
+    ]
+   },
+   {
+    "id": "v-permit-time",
+    "ranks": [
+     null,
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9cef77b73fa5571e",
+     "3a79c0bae9a10e0e",
+     "88bcc053ba934b74"
+    ],
+    "top_law": [
+     "3839424b0d2cc19d",
+     "c259ea32eacdf3c5",
+     "23061ff0af788e31"
+    ]
+   },
+   {
+    "id": "v-permit-cost",
+    "ranks": [
+     1,
+     8
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9a748b819d5c9175",
+     "9c5cb3c11602a23c",
+     "88bcc053ba934b74"
+    ],
+    "top_law": [
+     "033c3a537a227289",
+     "f6340dadf4a5bc63",
+     "23836072fd1ecc64"
+    ]
+   },
+   {
+    "id": "v-contact",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fd58f3b0d632c658",
+     "8450bd10fbb47bbe",
+     "3263a93141dcab1e"
+    ],
+    "top_law": [
+     "44bb92439f75fc36",
+     "f9f038e62a772cb3",
+     "9d6827a7b00036a5"
+    ]
+   },
+   {
+    "id": "v-septic-requirements",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e55c1b5db84d07ec",
+     "a53c20ffd30c17b7",
+     "fd278c45a433d123"
+    ],
+    "top_law": [
+     "5ad3694cc417eb29",
+     "83a85eddb974458c",
+     "5f93e6248c6c7621"
+    ]
+   },
+   {
+    "id": "v-septic-cost",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3000889d6c84cedc",
+     "a06b283f2374b553",
+     "a3a791031cd8333a"
+    ],
+    "top_law": [
+     "33aeab9c02055a06",
+     "fd27fbe6fdcc0414",
+     "d58d48e8eabadb66"
+    ]
+   },
+   {
+    "id": "v-connect-va",
+    "ranks": [
+     8
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e2bcc34a6a20b091",
+     "7c639c738d10c5ac",
+     "34386182cd7d3628"
+    ],
+    "top_law": [
+     "bdb7fa15327d3bd7",
+     "a16ec502131f2eaf",
+     "f6077ec895f76d29"
+    ]
+   },
+   {
+    "id": "v-attefall",
+    "ranks": [
+     3,
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5ebb73256d252c5e",
+     "819a2807cc4c4e95",
+     "a1cbd51fb395f18a"
+    ],
+    "top_law": [
+     "bab24eaf474250a8",
+     "9821607343973fde",
+     "751393d66058335a"
+    ]
+   },
+   {
+    "id": "v-lindholmen-homes",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "7371cb3ed433aa55",
+     "22061b9c77b19f19",
+     "1a72ba98432a03a5"
+    ],
+    "top_law": [
+     "f24eaaae0cee7a8d",
+     "434d14d194c3e548",
+     "275dd2eb546fd83c"
+    ]
+   },
+   {
+    "id": "v-ongoing-plans",
+    "ranks": [
+     20
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "6fb5b52b324349d7",
+     "779e524834611724",
+     "210c4a74766317ab"
+    ],
+    "top_law": [
+     "bd9a0506aaaa15d9",
+     "275dd2eb546fd83c",
+     "a6b62ea304a63ab2"
+    ]
+   },
+   {
+    "id": "v-shoreline",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fa92b6547d6fdea9",
+     "b34edf510c13d171",
+     "35abf5be9749db78"
+    ],
+    "top_law": [
+     "1ac78c2d983b23b5",
+     "8378dc48cd9b01c2",
+     "38b3347f4bcf66f3"
+    ]
+   },
+   {
+    "id": "v-fence",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "4fb42a8f0e3dafa0",
+     "819a2807cc4c4e95",
+     "8aae07911629b219"
+    ],
+    "top_law": [
+     "95705d9c2d40d335",
+     "9170d7738fee2dd6",
+     "16ab6da2f1a9c09f"
+    ]
+   },
+   {
+    "id": "v-after-permit",
+    "ranks": [
+     4,
+     6
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "be2795deccb8b3c7",
+     "0a714bc890f77a62",
+     "5071cb03c00edd25"
+    ],
+    "top_law": [
+     "11527a363cc7d400",
+     "31b2689f87836085",
+     "ad548dd3db4281b8"
+    ]
+   },
+   {
+    "id": "v-subdivide",
+    "ranks": [
+     1,
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "f41393c6117c6bcd",
+     "bd5fd2eadb9f3046"
+    ],
+    "top_law": [
+     "9416873b475232e9",
+     "3476753234d836ed",
+     "8b9e2f8d261b7b62"
+    ]
+   },
+   {
+    "id": "v-ecovillage",
+    "ranks": [
+     8,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "4cb664425072e3a7",
+     "987e9fb52b9e8dfc",
+     "ca3b680806b77278"
+    ],
+    "top_law": [
+     "10780f3cccfd3661",
+     "434d14d194c3e548",
+     "7dfa3b216c355da8"
+    ]
+   },
+   {
+    "id": "nat-farmland",
+    "ranks": [
+     12
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "33179576dfa7cc30",
+     "8375824adb464a57",
+     "3b482d32abcb9bac"
+    ],
+    "top_law": [
+     "91be61715b583a5e",
+     "e89757f95eb26b49",
+     "94e36feee0a2982d"
+    ]
+   },
+   {
+    "id": "nat-shared-facility",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "d50d5cff12769f15",
+     "8aea61b866cb8e6f",
+     "b36c9b93816d0eb1"
+    ],
+    "top_law": [
+     "5380583d298c434b",
+     "fd81953b03f02e2b",
+     "a965e3c58bcb6a1b"
+    ]
+   },
+   {
+    "id": "nat-shore-distance",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "171ff4c79e2da4fa",
+     "09a599aef7cc8336",
+     "49b1fa5757289cfe"
+    ],
+    "top_law": [
+     "44262c14cbeecbe6",
+     "1c7f86f64f72c90e",
+     "05d15e5e693dc97f"
+    ]
+   },
+   {
+    "id": "nat-advance-ruling",
+    "ranks": [
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "30a9c8ad9ae8ff9d",
+     "c0002028cedab24e",
+     "1a056780e7c8d979"
+    ],
+    "top_law": [
+     "6ee185be3811726f",
+     "62d9608f5974bad1",
+     "f8ca2403503664cf"
+    ]
+   },
+   {
+    "id": "nat-plan-validity",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "64736b2663026a45",
+     "0e3af9fc2df52273",
+     "f8da78b1a8c64c50"
+    ],
+    "top_law": [
+     "9a9dd893d1c30177",
+     "68e76c7c6d725a3f",
+     "27aea19bf84798cf"
+    ]
+   },
+   {
+    "id": "nat-new-subdivision",
+    "ranks": [
+     8
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "96e9e53e4d417634",
+     "5383c0c10c99c926",
+     "c9ef53a1ec4dd015"
+    ],
+    "top_law": [
+     "ccaf89937a8cfb44",
+     "86dbdb35593539c3",
+     "b73bd713a70da663"
+    ]
+   },
+   {
+    "id": "n-planbesked-cost",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "b838ecac769823a3",
+     "05a1878150c65d07",
+     "d44549620b346803"
+    ],
+    "top_law": [
+     "23836072fd1ecc64",
+     "bec5df0460e73822",
+     "033c3a537a227289"
+    ]
+   },
+   {
+    "id": "n-plan-priority",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "c8ea44de48c05e9b",
+     "315ec999e4400d0f",
+     "b54424b47922da64"
+    ],
+    "top_law": [
+     "a19fa409276f65a2",
+     "6555c90659e516da",
+     "c31ccf815baec16b"
+    ]
+   },
+   {
+    "id": "n-plan-process",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "ebd8ed272a3bdb5f",
+     "c781abb3742662a2",
+     "e62010ae13cd3340"
+    ],
+    "top_law": [
+     "7915f174445a81ce",
+     "166056cea5687dad",
+     "45b8e8b60126add1"
+    ]
+   },
+   {
+    "id": "n-holiday-homes",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "75a4613073d28d92",
+     "5f788ca9670ca049",
+     "edb7c7af9bac12ea"
+    ],
+    "top_law": [
+     "38b3347f4bcf66f3",
+     "8c9fffdd2c5d9088",
+     "d90ffdff7336b08a"
+    ]
+   },
+   {
+    "id": "n-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "7928c4d365ae5a2b",
+     "34e3ea46b3b653c0",
+     "4cac245c816b2eae"
+    ],
+    "top_law": [
+     "25ecc23707ab1ad6",
+     "a19fa409276f65a2",
+     "ee59c72342a87dfa"
+    ]
+   },
+   {
+    "id": "n-stormwater",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "b32dd832e1dda734",
+     "d5ee5555a6d25c60",
+     "121d474f4e800c0e"
+    ],
+    "top_law": [
+     "0789df46ea5adb00",
+     "779c137eaf2aff5b",
+     "5f93e6248c6c7621"
+    ]
+   },
+   {
+    "id": "y-septic-apply",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5230d51c7a41f853",
+     "db23bd274a4d3e18",
+     "a17299c4ccc18795"
+    ],
+    "top_law": [
+     "5ad3694cc417eb29",
+     "5f93e6248c6c7621",
+     "a16ec502131f2eaf"
+    ]
+   },
+   {
+    "id": "y-septic-start",
+    "ranks": [
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5230d51c7a41f853",
+     "e5fb7d088f2f0c56",
+     "a17299c4ccc18795"
+    ],
+    "top_law": [
+     "5ad3694cc417eb29",
+     "11d9262b91a24800",
+     "11de3e4bcf588df9"
+    ]
+   },
+   {
+    "id": "y-shoreline",
+    "ranks": [
+     7,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "6b122f485e7b6296",
+     "d4b1ce1350586db1",
+     "e9c63ea29d77b49e"
+    ],
+    "top_law": [
+     "b26426ddf206527c",
+     "3e4a7d963f63707f",
+     "d993f7f22b42014a"
+    ]
+   },
+   {
+    "id": "y-demolition",
+    "ranks": [
+     4,
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "c0002028cedab24e",
+     "85e05409c2707ab9",
+     "9e969a523907e3a6"
+    ],
+    "top_law": [
+     "6ee185be3811726f",
+     "86f7fcfb2dc9d80e",
+     "28ce5bfa91d6b35c"
+    ]
+   },
+   {
+    "id": "y-new-op",
+    "ranks": [
+     8
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "dab867ba2bf5829a",
+     "473c9dfc3118a597",
+     "c39d89798b2eb7b2"
+    ],
+    "top_law": [
+     "86616737452d4a8c",
+     "a002cf7498c1bd90",
+     "bd9a0506aaaa15d9"
+    ]
+   }
+  ],
+  "- | bm25-en": [
+   {
+    "id": "v-permit-process",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1963dab993123438",
+     "e76a8d29b036d6ab",
+     "7ad0c7b272540f33"
+    ],
+    "top_law": [
+     "c59efbf9fac7feac",
+     "15c0c0dd9df4118c",
+     "f0210d30108cbd0b"
+    ]
+   },
+   {
+    "id": "v-change-zoning",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1963dab993123438",
+     "e76a8d29b036d6ab",
+     "7ad0c7b272540f33"
+    ],
+    "top_law": [
+     "c59efbf9fac7feac",
+     "15c0c0dd9df4118c",
+     "f0210d30108cbd0b"
+    ]
+   },
+   {
+    "id": "v-height",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5e54d382c8df758f",
+     "8952bd60c9d3c31f",
+     "7ad0c7b272540f33"
+    ],
+    "top_law": [
+     "2c607004ad4a09a2",
+     "47ea8320dbeec1d1",
+     "4224f4726abaa0a2"
+    ]
+   },
+   {
+    "id": "v-height-veda",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8952bd60c9d3c31f",
+     "5e54d382c8df758f",
+     "1963dab993123438"
+    ],
+    "top_law": [
+     "2c607004ad4a09a2",
+     "47ea8320dbeec1d1",
+     "4224f4726abaa0a2"
+    ]
+   },
+   {
+    "id": "v-lookup-zoning",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "010c884adb1eb5ea",
+     "bd44b43583f6b8a4",
+     "a985a7dabb599eef"
+    ],
+    "top_law": [
+     "f3c3c7a00abc2b81",
+     "b70188fdbfc6b0da",
+     "8e51f2049d82d163"
+    ]
+   },
+   {
+    "id": "v-permit-time",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1963dab993123438",
+     "b4ac92857b723c13",
+     "38cbccf688a3161c"
+    ],
+    "top_law": [
+     "61746658e695ccc5",
+     "0d3117883102554b",
+     "7d7e6b80d8c0dd3e"
+    ]
+   },
+   {
+    "id": "v-permit-cost",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "685d707f7958bfde",
+     "35fb29d796adde7d",
+     "010c884adb1eb5ea"
+    ],
+    "top_law": [
+     "b44a35bd4b420657",
+     "48489d4ca6efb8fe",
+     "47d0ee8667e4c61a"
+    ]
+   },
+   {
+    "id": "v-contact",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1963dab993123438",
+     "a682d96a9e97e821",
+     "a95ae102463a0343"
+    ],
+    "top_law": [
+     "8affc00af13eee22",
+     "b44a35bd4b420657",
+     "48489d4ca6efb8fe"
+    ]
+   },
+   {
+    "id": "v-septic-requirements",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1963dab993123438",
+     "57b41e6ed84a5459",
+     "d5725393315cfcec"
+    ],
+    "top_law": [
+     "1e6a0095d20d0586",
+     "b44a35bd4b420657",
+     "48489d4ca6efb8fe"
+    ]
+   },
+   {
+    "id": "v-septic-cost",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1963dab993123438",
+     "b4ac92857b723c13",
+     "38cbccf688a3161c"
+    ],
+    "top_law": [
+     "b44a35bd4b420657",
+     "48489d4ca6efb8fe",
+     "47d0ee8667e4c61a"
+    ]
+   },
+   {
+    "id": "v-connect-va",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1963dab993123438",
+     "a95ae102463a0343",
+     "a682d96a9e97e821"
+    ],
+    "top_law": [
+     "8affc00af13eee22",
+     "948b3caf4f8f518c",
+     "b44a35bd4b420657"
+    ]
+   },
+   {
+    "id": "v-attefall",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "685d707f7958bfde",
+     "35fb29d796adde7d",
+     "010c884adb1eb5ea"
+    ],
+    "top_law": [
+     "b44a35bd4b420657",
+     "48489d4ca6efb8fe",
+     "47d0ee8667e4c61a"
+    ]
+   },
+   {
+    "id": "v-lindholmen-homes",
+    "ranks": [
+     19
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "284bc211a0955abf",
+     "a0378ead38e752db",
+     "860e16bc50eabaf8"
+    ],
+    "top_law": [
+     "5b63079e22d81813",
+     "b65faa8c1c76f52c",
+     "f6340dadf4a5bc63"
+    ]
+   },
+   {
+    "id": "v-ongoing-plans",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "f8b79c0980d6479f",
+     "7e308d66bca309fd",
+     "7950df276380c0fd"
+    ],
+    "top_law": [
+     "b65faa8c1c76f52c",
+     "5b63079e22d81813",
+     "faed53ae226e9038"
+    ]
+   },
+   {
+    "id": "v-shoreline",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1963dab993123438",
+     "06461081a3a32638",
+     "c8969ce42ab0a123"
+    ],
+    "top_law": [
+     "41d62facf37fb50d",
+     "b2c722b88e18c072",
+     "7f03ab8566e033b3"
+    ]
+   },
+   {
+    "id": "v-fence",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "685d707f7958bfde",
+     "35fb29d796adde7d",
+     "010c884adb1eb5ea"
+    ],
+    "top_law": [
+     "b44a35bd4b420657",
+     "48489d4ca6efb8fe",
+     "47d0ee8667e4c61a"
+    ]
+   },
+   {
+    "id": "v-after-permit",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e7abf4446016b438",
+     "7ad0c7b272540f33",
+     "e881c08a6a66cfd8"
+    ],
+    "top_law": [
+     "b28f42b29cfd7a6b",
+     "b44a35bd4b420657",
+     "48489d4ca6efb8fe"
+    ]
+   },
+   {
+    "id": "v-subdivide",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1963dab993123438",
+     "685d707f7958bfde",
+     "35fb29d796adde7d"
+    ],
+    "top_law": [
+     "b44a35bd4b420657",
+     "48489d4ca6efb8fe",
+     "47d0ee8667e4c61a"
+    ]
+   },
+   {
+    "id": "v-ecovillage",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1963dab993123438",
+     "f8b79c0980d6479f",
+     "10f3cab7b00eea5d"
+    ],
+    "top_law": [
+     "6702ffb98321950f",
+     "95705d9c2d40d335",
+     "f7c4e35ed1364138"
+    ]
+   },
+   {
+    "id": "nat-farmland",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "96e99184845e13bb",
+     "11be44b3b5ad9836",
+     "ae82460fb6c5c821"
+    ],
+    "top_law": [
+     "8543c8340d3fe470",
+     "e66de0e0f1ddc6a3",
+     "7b90adf98c71ba44"
+    ]
+   },
+   {
+    "id": "nat-shared-facility",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e3de925ae850e23e",
+     "9e1da22693d09e1c",
+     "47d0914ead402277"
+    ],
+    "top_law": [
+     "6210d568b56d12b8",
+     "11cfcf906b07758f",
+     "2727b910cdef563e"
+    ]
+   },
+   {
+    "id": "nat-shore-distance",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9e1da22693d09e1c",
+     "e3de925ae850e23e",
+     "11be44b3b5ad9836"
+    ],
+    "top_law": [
+     "861d38cc2e9e4f5d",
+     "4f29137dc8386994",
+     "d49ddf16048dd2fd"
+    ]
+   },
+   {
+    "id": "nat-advance-ruling",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "11be44b3b5ad9836",
+     "1963dab993123438",
+     "96e99184845e13bb"
+    ],
+    "top_law": [
+     "36be6db0d0ee3a37",
+     "f877e480c13fe825",
+     "b23c590258f8ed0c"
+    ]
+   },
+   {
+    "id": "nat-plan-validity",
+    "ranks": [
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "7d1ba73bb287d31e",
+     "60ad7416c992967e",
+     "4e598ad24e065d9c"
+    ],
+    "top_law": [
+     "100779bf1c5ad885",
+     "186ade2584e09d7b",
+     "68e76c7c6d725a3f"
+    ]
+   },
+   {
+    "id": "nat-new-subdivision",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3fc5953e2688ef0b",
+     "c5cad8e9f48d86ab",
+     "8af8631f94e7cc88"
+    ],
+    "top_law": [
+     "1ce86c4b6a93574e",
+     "da303bea04c03d78",
+     "5287e3e90abd7d61"
+    ]
+   },
+   {
+    "id": "n-planbesked-cost",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "cc42b33971cbb986",
+     "d9df69ebf805e66f",
+     "315ec999e4400d0f"
+    ],
+    "top_law": [
+     "b44a35bd4b420657",
+     "48489d4ca6efb8fe",
+     "47d0ee8667e4c61a"
+    ]
+   },
+   {
+    "id": "n-plan-priority",
+    "ranks": [
+     8
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8405c4915196d8b4",
+     "11be44b3b5ad9836",
+     "89a2634d05972638"
+    ],
+    "top_law": [
+     "186ade2584e09d7b",
+     "68e76c7c6d725a3f",
+     "548b9cfd4df1301d"
+    ]
+   },
+   {
+    "id": "n-plan-process",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "11be44b3b5ad9836",
+     "13fdaba389b73c00",
+     "48bc1e91ad20d47e"
+    ],
+    "top_law": [
+     "b65faa8c1c76f52c",
+     "5b63079e22d81813",
+     "faed53ae226e9038"
+    ]
+   },
+   {
+    "id": "n-holiday-homes",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "eca6016aa4b7f3a2",
+     "ed921c2957979ea4",
+     "b3fc49422cfbba08"
+    ],
+    "top_law": [
+     "acea8f9adbe36948",
+     "094daa354a368899",
+     "39449e93f04c98d8"
+    ]
+   },
+   {
+    "id": "n-lookup-zoning",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "964c737210fdd48f",
+     "bfd0dda4edbad9d6",
+     "ce13e801d51996fc"
+    ],
+    "top_law": [
+     "48489d4ca6efb8fe",
+     "e05bc2cd3cd0e56c",
+     "3caf25412dc4f35d"
+    ]
+   },
+   {
+    "id": "n-stormwater",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "7d1ba73bb287d31e",
+     "dcdf8953791236db",
+     "47c124aee946da25"
+    ],
+    "top_law": [
+     "55ed2c5e9a43cf32",
+     "b66d4c95b7ab8907",
+     "483548b54c8b4635"
+    ]
+   },
+   {
+    "id": "y-septic-apply",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "a3d0af7f4c2f7318",
+     "edc1e22ee5adca6e",
+     "1a4c085041f5ebe4"
+    ],
+    "top_law": [
+     "3afc2b0d0323bc41",
+     "e5025ae737f874ca",
+     "a070bac534c4c048"
+    ]
+   },
+   {
+    "id": "y-septic-start",
+    "ranks": [
+     18
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "a3d0af7f4c2f7318",
+     "ff0eb0a19e32cb77",
+     "edc1e22ee5adca6e"
+    ],
+    "top_law": [
+     "3afc2b0d0323bc41",
+     "e5025ae737f874ca",
+     "a070bac534c4c048"
+    ]
+   },
+   {
+    "id": "y-shoreline",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "31f937aee9c30797",
+     "0d8515d26a55c6ba",
+     "8e7dabbd7238da13"
+    ],
+    "top_law": [
+     "20bbed79f6535785",
+     "61746658e695ccc5",
+     "3e501acbbd0c24dd"
+    ]
+   },
+   {
+    "id": "y-demolition",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "198f1550e8a97fb6",
+     "9a36f9bde9a935e6",
+     "ab3c7556db7c9aa5"
+    ],
+    "top_law": [
+     "145a8ed54db830ce",
+     "b44a35bd4b420657",
+     "48489d4ca6efb8fe"
+    ]
+   },
+   {
+    "id": "y-new-op",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "a33027fffcbc5d54",
+     "4dc465447c609488",
+     "374335b58da8c2f5"
+    ],
+    "top_law": [
+     "186ade2584e09d7b",
+     "68e76c7c6d725a3f",
+     "548b9cfd4df1301d"
+    ]
+   }
+  ],
+  "- | bm25-sv-stem": [
+   {
+    "id": "v-permit-process",
+    "ranks": [
+     1,
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "0ed4af8f6262b02a",
+     "f5d46f420613c03c",
+     "8bf371449a5d2f25"
+    ],
+    "top_law": [
+     "ccd4e7e04f8855a1",
+     "c63973726190e393",
+     "11527a363cc7d400"
+    ]
+   },
+   {
+    "id": "v-change-zoning",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "70a668f2f5048ba5",
+     "15ef0485dae8d691",
+     "1acc1d68a6d04abc"
+    ],
+    "top_law": [
+     "72b182d1aced1865",
+     "3950f313f913ae2f",
+     "5465bd6ea243d262"
+    ]
+   },
+   {
+    "id": "v-height",
+    "ranks": [
+     1,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "92278cd6bf87706a",
+     "83323193fe267788",
+     "807669871e724339"
+    ],
+    "top_law": [
+     "4b4e7f5424854266",
+     "83ae6a36ac93e3d7",
+     "95509dff3dd6f65b"
+    ]
+   },
+   {
+    "id": "v-height-veda",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": false,
+    "top_local": [],
+    "top_law": [
+     "4b4e7f5424854266",
+     "0ef2e53557d278c0",
+     "c11879f221c91c74"
+    ]
+   },
+   {
+    "id": "v-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "022fdba9e2bb081e",
+     "8e7609adc447bfe5",
+     "54847a6128f75387"
+    ],
+    "top_law": [
+     "d4366b2d68afc873",
+     "c0416d8bc554cf63",
+     "3385cb03ab2645f6"
+    ]
+   },
+   {
+    "id": "v-permit-time",
+    "ranks": [
+     2,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "af3a63cb3286a082",
+     "fe2a2a300f0fa8a9",
+     "4b424d8478b785b6"
+    ],
+    "top_law": [
+     "cb4739529cf7ed43",
+     "751393d66058335a",
+     "1f3785cdaff91268"
+    ]
+   },
+   {
+    "id": "v-permit-cost",
+    "ranks": [
+     1,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9847319d8d30e54d",
+     "d9258c2d80271553",
+     "6346fd4636dcd779"
+    ],
+    "top_law": [
+     "751393d66058335a",
+     "1f3785cdaff91268",
+     "69654f25438b7cde"
+    ]
+   },
+   {
+    "id": "v-contact",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fd58f3b0d632c658",
+     "3263a93141dcab1e",
+     "54847a6128f75387"
+    ],
+    "top_law": [
+     "68e76c7c6d725a3f",
+     "0ec86db91509ae6b",
+     "ab7176fbd7446802"
+    ]
+   },
+   {
+    "id": "v-septic-requirements",
+    "ranks": [
+     1,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3000889d6c84cedc",
+     "b237e0e6b55cc2d3",
+     "fe2a2a300f0fa8a9"
+    ],
+    "top_law": [
+     "ff88a37bc488ece2",
+     "1dbb67ffad694f73",
+     "10a343bfc196f75c"
+    ]
+   },
+   {
+    "id": "v-septic-cost",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3000889d6c84cedc",
+     "aee076ec846cd0e4",
+     "70a668f2f5048ba5"
+    ],
+    "top_law": [
+     "a224f1a5d658f940",
+     "2a70e9c499b55980",
+     "8ffc9f9528573f3a"
+    ]
+   },
+   {
+    "id": "v-connect-va",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5383da7e176bfb60",
+     "e2bcc34a6a20b091",
+     "7c639c738d10c5ac"
+    ],
+    "top_law": [
+     "ab7ed0751cdea1c0",
+     "c6e91d9e1f08f605",
+     "abc145117054581e"
+    ]
+   },
+   {
+    "id": "v-attefall",
+    "ranks": [
+     2,
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "54847a6128f75387",
+     "a1cbd51fb395f18a",
+     "7498d1ce621cb549"
+    ],
+    "top_law": [
+     "1d15f447dd106635",
+     "1d3d3e588b5a00f6",
+     "c153b69d1648f70b"
+    ]
+   },
+   {
+    "id": "v-lindholmen-homes",
+    "ranks": [
+     13
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5c6f7a6c2578486d",
+     "dd1f0b9e32d17eb7",
+     "58f7b700a2105282"
+    ],
+    "top_law": [
+     "e30bdbdf7ea73163",
+     "7ad27dc9c7a29416",
+     "62a070047dfd4e9a"
+    ]
+   },
+   {
+    "id": "v-ongoing-plans",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "97bb4bf7f1f50013",
+     "ae2fd741aff2c18e",
+     "269a540dde744188"
+    ],
+    "top_law": [
+     "315d61ae1d16583b",
+     "65adb23d8ae54859",
+     "a89e5e8352f8b989"
+    ]
+   },
+   {
+    "id": "v-shoreline",
+    "ranks": [
+     null,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "ffdaa59334fd01ab",
+     "56219fff76d3a06a",
+     "6736f641f3876a07"
+    ],
+    "top_law": [
+     "f841a82e89625948",
+     "c2c21ac0f7aaa4a1",
+     "0b01a9378c62bff2"
+    ]
+   },
+   {
+    "id": "v-fence",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "4fb42a8f0e3dafa0",
+     "f016a01efe894b0a",
+     "f93c5c1c6865766d"
+    ],
+    "top_law": [
+     "95705d9c2d40d335",
+     "9170d7738fee2dd6",
+     "16ab6da2f1a9c09f"
+    ]
+   },
+   {
+    "id": "v-after-permit",
+    "ranks": [
+     16,
+     6
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "be2795deccb8b3c7",
+     "d9258c2d80271553",
+     "8f6651cb2a917a56"
+    ],
+    "top_law": [
+     "1f59e8579601b6b5",
+     "851b8414990ff133",
+     "3e8b5ae588324467"
+    ]
+   },
+   {
+    "id": "v-subdivide",
+    "ranks": [
+     1,
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "c25df6249df13e84",
+     "be0f33d8750e1acc"
+    ],
+    "top_law": [
+     "9416873b475232e9",
+     "0c5969cf4a11a69b",
+     "456bdea2573d6b4a"
+    ]
+   },
+   {
+    "id": "v-ecovillage",
+    "ranks": [
+     10,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "4463112e3a73206d",
+     "7f426774d27457a7",
+     "98680d590e4b535f"
+    ],
+    "top_law": [
+     "ec3b397aa66b7d92",
+     "95705d9c2d40d335",
+     "b93e8aa092b0214a"
+    ]
+   },
+   {
+    "id": "nat-farmland",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "33179576dfa7cc30",
+     "8375824adb464a57",
+     "4e7279894fb620e1"
+    ],
+    "top_law": [
+     "5e037b653f0fcde5",
+     "cf6505587272a109",
+     "6820001ff58dfdfb"
+    ]
+   },
+   {
+    "id": "nat-shared-facility",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "6de6ee27a09605ed",
+     "9bf10ac0ced5ae9f",
+     "50cab5ade3a31882"
+    ],
+    "top_law": [
+     "ea15354e5138a68e",
+     "5380583d298c434b",
+     "09e9dd60b6a8032a"
+    ]
+   },
+   {
+    "id": "nat-shore-distance",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "b4da2c1db618474d",
+     "242415e9f8510532",
+     "5515d14b6f916e8f"
+    ],
+    "top_law": [
+     "1c7f86f64f72c90e",
+     "130259844c9d8106",
+     "934e9a39604c08a8"
+    ]
+   },
+   {
+    "id": "nat-advance-ruling",
+    "ranks": [
+     6
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "4ddcc11e343c713a",
+     "4cac245c816b2eae"
+    ],
+    "top_law": [
+     "62d9608f5974bad1",
+     "d0875a14d8e489b7",
+     "4de1526b3cfd92b7"
+    ]
+   },
+   {
+    "id": "nat-plan-validity",
+    "ranks": [
+     8
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "64736b2663026a45",
+     "0e3af9fc2df52273",
+     "4cac245c816b2eae"
+    ],
+    "top_law": [
+     "9a9dd893d1c30177",
+     "27aea19bf84798cf",
+     "8312b5346386488e"
+    ]
+   },
+   {
+    "id": "nat-new-subdivision",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "964d0083755dea4e",
+     "d93d97a013f4e50c",
+     "21bf64415caeb01d"
+    ],
+    "top_law": [
+     "abc145117054581e",
+     "ccaf89937a8cfb44",
+     "dc86501055526fea"
+    ]
+   },
+   {
+    "id": "n-planbesked-cost",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "05a1878150c65d07",
+     "7db9ea55fee5b006",
+     "b838ecac769823a3"
+    ],
+    "top_law": [
+     "3950f313f913ae2f",
+     "5465bd6ea243d262",
+     "abc559ade86bbe20"
+    ]
+   },
+   {
+    "id": "n-plan-priority",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "f66542899e351098",
+     "b8e307fd4664d8f9",
+     "b54424b47922da64"
+    ],
+    "top_law": [
+     "c0416d8bc554cf63",
+     "b686a5cda8f2131d",
+     "c59efbf9fac7feac"
+    ]
+   },
+   {
+    "id": "n-plan-process",
+    "ranks": [
+     8
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fb8d1909a551202e",
+     "2aea4fb4d1dd4e92",
+     "28141743fdaaa886"
+    ],
+    "top_law": [
+     "11e3d921098d0aea",
+     "15d8efd481d30888",
+     "b2852d3abbaeeb84"
+    ]
+   },
+   {
+    "id": "n-holiday-homes",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "75a4613073d28d92",
+     "8313448fb968191a",
+     "397d6f39aa448896"
+    ],
+    "top_law": [
+     "dec229cbd4a21aae",
+     "5ca25e3c45aa1f14",
+     "b93e8aa092b0214a"
+    ]
+   },
+   {
+    "id": "n-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "7928c4d365ae5a2b",
+     "843948edf7080626",
+     "925f749ae172bfe4"
+    ],
+    "top_law": [
+     "3385cb03ab2645f6",
+     "130259844c9d8106",
+     "27aea19bf84798cf"
+    ]
+   },
+   {
+    "id": "n-stormwater",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "964d0083755dea4e",
+     "566b8ad6a19a2d73",
+     "43e82e1e1e233249"
+    ],
+    "top_law": [
+     "994b69c2e6f8adcb",
+     "d59c55ffa6d89496",
+     "0d5ac2f6ea9d9465"
+    ]
+   },
+   {
+    "id": "y-septic-apply",
+    "ranks": [
+     1,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3066ddc4744aa360",
+     "1623ca71bbca3e95",
+     "500859b4a47f8de8"
+    ],
+    "top_law": [
+     "3509f499769d6209",
+     "1dbb67ffad694f73",
+     "c4573ee9d21accd5"
+    ]
+   },
+   {
+    "id": "y-septic-start",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "a17299c4ccc18795",
+     "5230d51c7a41f853",
+     "e5fb7d088f2f0c56"
+    ],
+    "top_law": [
+     "23463d44ebe1d030",
+     "fd81953b03f02e2b",
+     "5434c4040c85694a"
+    ]
+   },
+   {
+    "id": "y-shoreline",
+    "ranks": [
+     1,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3066ddc4744aa360",
+     "90530fb39d8d5fd7",
+     "500859b4a47f8de8"
+    ],
+    "top_law": [
+     "1dbb67ffad694f73",
+     "f95df3a61b5dbd5e",
+     "8bbf1c3a2adea7c2"
+    ]
+   },
+   {
+    "id": "y-demolition",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "2a60677da1acc8d0",
+     "c7a7dddcd8de7c5e",
+     "320dfe3377397c58"
+    ],
+    "top_law": [
+     "0d65737ef59dfa72",
+     "52e3de52219744a4",
+     "418562ed2dbb5f90"
+    ]
+   },
+   {
+    "id": "y-new-op",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1ca85ab755a220d6",
+     "435bad1fb4e5a1ce",
+     "473c9dfc3118a597"
+    ],
+    "top_law": [
+     "86616737452d4a8c",
+     "17ba800e6f39bf71",
+     "7915f174445a81ce"
+    ]
+   }
+  ],
+  "- | bm25-sv": [
+   {
+    "id": "v-permit-process",
+    "ranks": [
+     2,
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "f44edb5d53e8a3ee",
+     "0ed4af8f6262b02a",
+     "8bf371449a5d2f25"
+    ],
+    "top_law": [
+     "469c8cef127fdb5c",
+     "f8721e335f9c3e3b",
+     "11527a363cc7d400"
+    ]
+   },
+   {
+    "id": "v-change-zoning",
+    "ranks": [
+     18,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "779e524834611724",
+     "1acc1d68a6d04abc",
+     "0bfe7879d550fa68"
+    ],
+    "top_law": [
+     "72b182d1aced1865",
+     "3950f313f913ae2f",
+     "5465bd6ea243d262"
+    ]
+   },
+   {
+    "id": "v-height",
+    "ranks": [
+     1,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "92278cd6bf87706a",
+     "9cf5b97d17e9112f",
+     "83323193fe267788"
+    ],
+    "top_law": [
+     "4b4e7f5424854266",
+     "95509dff3dd6f65b",
+     "0d3117883102554b"
+    ]
+   },
+   {
+    "id": "v-height-veda",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": false,
+    "top_local": [],
+    "top_law": [
+     "5591d7f41c073174",
+     "51b0f5b49e17fd06",
+     "c3e71855b680e063"
+    ]
+   },
+   {
+    "id": "v-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "022fdba9e2bb081e",
+     "6537c7d98ce38e51",
+     "8e7609adc447bfe5"
+    ],
+    "top_law": [
+     "3385cb03ab2645f6",
+     "c59efbf9fac7feac",
+     "c0416d8bc554cf63"
+    ]
+   },
+   {
+    "id": "v-permit-time",
+    "ranks": [
+     12,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "af3a63cb3286a082",
+     "3b15a0a78eb3d4c6",
+     "8442ed3f38e0d795"
+    ],
+    "top_law": [
+     "cb4739529cf7ed43",
+     "1b53fcabfeaa6bdc",
+     "744e22bfff635ec2"
+    ]
+   },
+   {
+    "id": "v-permit-cost",
+    "ranks": [
+     1,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9847319d8d30e54d",
+     "10f3cab7b00eea5d",
+     "1e888a9ea25786eb"
+    ],
+    "top_law": [
+     "751393d66058335a",
+     "9170d7738fee2dd6",
+     "69654f25438b7cde"
+    ]
+   },
+   {
+    "id": "v-contact",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fd58f3b0d632c658",
+     "3263a93141dcab1e",
+     "54847a6128f75387"
+    ],
+    "top_law": [
+     "8ffc9f9528573f3a",
+     "cf5a9f8c0212a3b4",
+     "d5843cdbb8adb029"
+    ]
+   },
+   {
+    "id": "v-septic-requirements",
+    "ranks": [
+     6,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fe2a2a300f0fa8a9",
+     "8a40c96b4d7b15d1",
+     "015a9c1bf35710e6"
+    ],
+    "top_law": [
+     "b93e8aa092b0214a",
+     "9c42ca4ff7396a42",
+     "6166b7f1fc3d5973"
+    ]
+   },
+   {
+    "id": "v-septic-cost",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3000889d6c84cedc",
+     "4e35cd56957aba59",
+     "20a847c596cff987"
+    ],
+    "top_law": [
+     "8ffc9f9528573f3a",
+     "2077e44b0c318b6b",
+     "a16de8281ede4af2"
+    ]
+   },
+   {
+    "id": "v-connect-va",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5383da7e176bfb60",
+     "e2bcc34a6a20b091",
+     "7c639c738d10c5ac"
+    ],
+    "top_law": [
+     "b08ddacbffe43be8",
+     "7ca3b7dcaa97e756",
+     "0d4264e16090013e"
+    ]
+   },
+   {
+    "id": "v-attefall",
+    "ranks": [
+     15,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "ab68b74a9b428972",
+     "d3b3688d320f0fdf",
+     "016005b1a666e4ba"
+    ],
+    "top_law": [
+     "9821607343973fde",
+     "c153b69d1648f70b",
+     "330abfd22d93caa6"
+    ]
+   },
+   {
+    "id": "v-lindholmen-homes",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5c6f7a6c2578486d",
+     "bfbbffb4b1d4837e",
+     "5d29cc6b93e63a4c"
+    ],
+    "top_law": [
+     "a002cf7498c1bd90",
+     "87b3020c93ca6a4c",
+     "7ad27dc9c7a29416"
+    ]
+   },
+   {
+    "id": "v-ongoing-plans",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "022fdba9e2bb081e",
+     "1a72ba98432a03a5",
+     "f5d46f420613c03c"
+    ],
+    "top_law": [
+     "28db4dc63f7600bb",
+     "3385cb03ab2645f6",
+     "c59efbf9fac7feac"
+    ]
+   },
+   {
+    "id": "v-shoreline",
+    "ranks": [
+     11,
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "434c0483488486cc",
+     "56219fff76d3a06a",
+     "de392c16ed4f86e9"
+    ],
+    "top_law": [
+     "b4dd74e1398d4435",
+     "b26426ddf206527c",
+     "a1c7f3f11ae547c3"
+    ]
+   },
+   {
+    "id": "v-fence",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "4fb42a8f0e3dafa0",
+     "f016a01efe894b0a",
+     "32af6609011d0731"
+    ],
+    "top_law": [
+     "95705d9c2d40d335",
+     "9170d7738fee2dd6",
+     "16ab6da2f1a9c09f"
+    ]
+   },
+   {
+    "id": "v-after-permit",
+    "ranks": [
+     null,
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "be2795deccb8b3c7",
+     "d9258c2d80271553",
+     "55dfe721174d2876"
+    ],
+    "top_law": [
+     "1f59e8579601b6b5",
+     "f8721e335f9c3e3b",
+     "d6eaae1213f6c839"
+    ]
+   },
+   {
+    "id": "v-subdivide",
+    "ranks": [
+     1,
+     12
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "c25df6249df13e84",
+     "f434ba26a360eece"
+    ],
+    "top_law": [
+     "200be91544075307",
+     "0c5969cf4a11a69b",
+     "5e5f87df60abf591"
+    ]
+   },
+   {
+    "id": "v-ecovillage",
+    "ranks": [
+     7,
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e3472667270fba58",
+     "ab04e37a880fc697",
+     "fe36931f5c9a6fa0"
+    ],
+    "top_law": [
+     "10dac4e4d328e52a",
+     "6820001ff58dfdfb",
+     "5e037b653f0fcde5"
+    ]
+   },
+   {
+    "id": "nat-farmland",
+    "ranks": [
+     5
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "33179576dfa7cc30",
+     "8375824adb464a57",
+     "4e7279894fb620e1"
+    ],
+    "top_law": [
+     "6820001ff58dfdfb",
+     "5ff487a4cf21124e",
+     "19806057de680962"
+    ]
+   },
+   {
+    "id": "nat-shared-facility",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "6de6ee27a09605ed",
+     "50cab5ade3a31882",
+     "9bf10ac0ced5ae9f"
+    ],
+    "top_law": [
+     "09e9dd60b6a8032a",
+     "5380583d298c434b",
+     "691487d2c65ee058"
+    ]
+   },
+   {
+    "id": "nat-shore-distance",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "242415e9f8510532",
+     "171ff4c79e2da4fa",
+     "09a599aef7cc8336"
+    ],
+    "top_law": [
+     "44262c14cbeecbe6",
+     "934e9a39604c08a8",
+     "1c7f86f64f72c90e"
+    ]
+   },
+   {
+    "id": "nat-advance-ruling",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "fd278c45a433d123",
+     "9546b5331ceea26e"
+    ],
+    "top_law": [
+     "f8ca2403503664cf",
+     "8e6bb7c987dedcc4",
+     "52ebff091b569a01"
+    ]
+   },
+   {
+    "id": "nat-plan-validity",
+    "ranks": [
+     5
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "64736b2663026a45",
+     "0e3af9fc2df52273",
+     "4cac245c816b2eae"
+    ],
+    "top_law": [
+     "27aea19bf84798cf",
+     "9a9dd893d1c30177",
+     "b9ab214f4ba82a98"
+    ]
+   },
+   {
+    "id": "nat-new-subdivision",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "b42635415bd40a50",
+     "d9797bc80d067ff1",
+     "0a714bc890f77a62"
+    ],
+    "top_law": [
+     "abc145117054581e",
+     "3b2397d5c6d9a013",
+     "858c6416da57339c"
+    ]
+   },
+   {
+    "id": "n-planbesked-cost",
+    "ranks": [
+     6
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "f8da78b1a8c64c50",
+     "ebd8ed272a3bdb5f",
+     "b838ecac769823a3"
+    ],
+    "top_law": [
+     "5465bd6ea243d262",
+     "3950f313f913ae2f",
+     "abc559ade86bbe20"
+    ]
+   },
+   {
+    "id": "n-plan-priority",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "f66542899e351098",
+     "b8e307fd4664d8f9",
+     "a71cc70160cf3512"
+    ],
+    "top_law": [
+     "17e9c87d2aae928d",
+     "c0416d8bc554cf63",
+     "51429fa8e0b141fe"
+    ]
+   },
+   {
+    "id": "n-plan-process",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "87ef6d04edf6a271",
+     "e805c3aac8a98f73",
+     "43be9164e142f066"
+    ],
+    "top_law": [
+     "b7cf1c30a6bb8d8b",
+     "2cea9c5563d62926",
+     "c8bf6f530cd8d09b"
+    ]
+   },
+   {
+    "id": "n-holiday-homes",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "75a4613073d28d92",
+     "8313448fb968191a",
+     "edb7c7af9bac12ea"
+    ],
+    "top_law": [
+     "38b3347f4bcf66f3",
+     "5ca25e3c45aa1f14",
+     "78ab6c0704078b1d"
+    ]
+   },
+   {
+    "id": "n-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "7928c4d365ae5a2b",
+     "843948edf7080626",
+     "4cac245c816b2eae"
+    ],
+    "top_law": [
+     "3385cb03ab2645f6",
+     "c59efbf9fac7feac",
+     "b476f3a0ca6bebac"
+    ]
+   },
+   {
+    "id": "n-stormwater",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "ed0b87208067fc9f",
+     "4904abb1ab351b6d",
+     "fa10b74f0529d8c5"
+    ],
+    "top_law": [
+     "fa03b08f635a4d97",
+     "f24eaaae0cee7a8d",
+     "8ffda00246669640"
+    ]
+   },
+   {
+    "id": "y-septic-apply",
+    "ranks": [
+     1,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3066ddc4744aa360",
+     "1623ca71bbca3e95",
+     "500859b4a47f8de8"
+    ],
+    "top_law": [
+     "1dbb67ffad694f73",
+     "3509f499769d6209",
+     "c4573ee9d21accd5"
+    ]
+   },
+   {
+    "id": "y-septic-start",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5230d51c7a41f853",
+     "a17299c4ccc18795",
+     "db23bd274a4d3e18"
+    ],
+    "top_law": [
+     "ecf68657a4dc91ee",
+     "fd81953b03f02e2b",
+     "5434c4040c85694a"
+    ]
+   },
+   {
+    "id": "y-shoreline",
+    "ranks": [
+     1,
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "978f3d2d73c0b5e9",
+     "dc82eea2c649bd94",
+     "5c8aa6b96983547e"
+    ],
+    "top_law": [
+     "b4dd74e1398d4435",
+     "f39fa6bdc26c081d",
+     "b26426ddf206527c"
+    ]
+   },
+   {
+    "id": "y-demolition",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "2a60677da1acc8d0",
+     "eecd4f94c9ee2fa1",
+     "9eb57d6d30baff5b"
+    ],
+    "top_law": [
+     "0d65737ef59dfa72",
+     "52e3de52219744a4",
+     "f05f9123317825d1"
+    ]
+   },
+   {
+    "id": "y-new-op",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1ca85ab755a220d6",
+     "ac27969d2d4dd42d",
+     "e9b78c84a9153351"
+    ],
+    "top_law": [
+     "7915f174445a81ce",
+     "86616737452d4a8c",
+     "a002cf7498c1bd90"
+    ]
+   }
+  ],
+  "st-kblab-swedish | hybrid": [
+   {
+    "id": "v-permit-process",
+    "ranks": [
+     1,
+     10
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "0ed4af8f6262b02a",
+     "be2795deccb8b3c7",
+     "8450bd10fbb47bbe"
+    ],
+    "top_law": [
+     "c63973726190e393",
+     "11527a363cc7d400",
+     "f087410d0b46f78a"
+    ]
+   },
+   {
+    "id": "v-change-zoning",
+    "ranks": [
+     null,
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1acc1d68a6d04abc",
+     "0bfe7879d550fa68",
+     "12def8eaa3950cd4"
+    ],
+    "top_law": [
+     "dc86501055526fea",
+     "72b182d1aced1865",
+     "aa4e7d555c327c96"
+    ]
+   },
+   {
+    "id": "v-height",
+    "ranks": [
+     2,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9cf5b97d17e9112f",
+     "92278cd6bf87706a",
+     "83323193fe267788"
+    ],
+    "top_law": [
+     "4b4e7f5424854266",
+     "0d3117883102554b",
+     "b857042be26d1baa"
+    ]
+   },
+   {
+    "id": "v-height-veda",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": false,
+    "top_local": [],
+    "top_law": [
+     "370af9af8942d15b",
+     "0d3117883102554b",
+     "5591d7f41c073174"
+    ]
+   },
+   {
+    "id": "v-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "022fdba9e2bb081e",
+     "bd5fd2eadb9f3046",
+     "8aa63cd74159b587"
+    ],
+    "top_law": [
+     "1ce8a81fbd62e5a1",
+     "c822401ae1136304",
+     "3385cb03ab2645f6"
+    ]
+   },
+   {
+    "id": "v-permit-time",
+    "ranks": [
+     null,
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9a748b819d5c9175",
+     "88bcc053ba934b74",
+     "af3a63cb3286a082"
+    ],
+    "top_law": [
+     "f087410d0b46f78a",
+     "23061ff0af788e31",
+     "b163429936a5bad4"
+    ]
+   },
+   {
+    "id": "v-permit-cost",
+    "ranks": [
+     1,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "434c0483488486cc",
+     "10f3cab7b00eea5d",
+     "9582caa5bdb829b3"
+    ],
+    "top_law": [
+     "751393d66058335a",
+     "a235561eff06b8d9",
+     "5d3d8f2cba8bc679"
+    ]
+   },
+   {
+    "id": "v-contact",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fd58f3b0d632c658",
+     "3263a93141dcab1e",
+     "8450bd10fbb47bbe"
+    ],
+    "top_law": [
+     "44bb92439f75fc36",
+     "8ffc9f9528573f3a",
+     "f9f038e62a772cb3"
+    ]
+   },
+   {
+    "id": "v-septic-requirements",
+    "ranks": [
+     1,
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e55c1b5db84d07ec",
+     "3000889d6c84cedc",
+     "9fc88c5d61e3da14"
+    ],
+    "top_law": [
+     "b93e8aa092b0214a",
+     "54ac9de908292952",
+     "5ad3694cc417eb29"
+    ]
+   },
+   {
+    "id": "v-septic-cost",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3000889d6c84cedc",
+     "9a748b819d5c9175",
+     "4e35cd56957aba59"
+    ],
+    "top_law": [
+     "23836072fd1ecc64",
+     "3b31c476a3e57fb9",
+     "8ffc9f9528573f3a"
+    ]
+   },
+   {
+    "id": "v-connect-va",
+    "ranks": [
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e2bcc34a6a20b091",
+     "7c639c738d10c5ac",
+     "5383da7e176bfb60"
+    ],
+    "top_law": [
+     "bdb7fa15327d3bd7",
+     "fd81953b03f02e2b",
+     "ab7ed0751cdea1c0"
+    ]
+   },
+   {
+    "id": "v-attefall",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "a1cbd51fb395f18a",
+     "07b484740b4a9b61",
+     "b82d0d82ce12eb2e"
+    ],
+    "top_law": [
+     "9821607343973fde",
+     "c153b69d1648f70b",
+     "05a5a3c545857fb7"
+    ]
+   },
+   {
+    "id": "v-lindholmen-homes",
+    "ranks": [
+     14
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "cf5ef3dcba044f7f",
+     "dd1f0b9e32d17eb7",
+     "96e5a7493f2f07d7"
+    ],
+    "top_law": [
+     "bd9a0506aaaa15d9",
+     "7ad27dc9c7a29416",
+     "df5a2847484202a3"
+    ]
+   },
+   {
+    "id": "v-ongoing-plans",
+    "ranks": [
+     7
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "38b307225ebe138b",
+     "b22e67368b0364c5",
+     "316b1a23c347b353"
+    ],
+    "top_law": [
+     "a6b62ea304a63ab2",
+     "28db4dc63f7600bb",
+     "1577e81bc095e100"
+    ]
+   },
+   {
+    "id": "v-shoreline",
+    "ranks": [
+     null,
+     12
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "35abf5be9749db78",
+     "fa92b6547d6fdea9",
+     "957755ede8addb78"
+    ],
+    "top_law": [
+     "1ac78c2d983b23b5",
+     "8378dc48cd9b01c2",
+     "ce5ff1ab99b8ad78"
+    ]
+   },
+   {
+    "id": "v-fence",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "4fb42a8f0e3dafa0",
+     "57b9c81788ab79d0",
+     "f63a22a2e2664f08"
+    ],
+    "top_law": [
+     "95705d9c2d40d335",
+     "9170d7738fee2dd6",
+     "16ab6da2f1a9c09f"
+    ]
+   },
+   {
+    "id": "v-after-permit",
+    "ranks": [
+     11,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "be2795deccb8b3c7",
+     "f5d46f420613c03c",
+     "d9258c2d80271553"
+    ],
+    "top_law": [
+     "f8721e335f9c3e3b",
+     "11527a363cc7d400",
+     "325f222504873414"
+    ]
+   },
+   {
+    "id": "v-subdivide",
+    "ranks": [
+     1,
+     5
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "f41393c6117c6bcd",
+     "c25df6249df13e84"
+    ],
+    "top_law": [
+     "25c56247fbcc11c3",
+     "0d4264e16090013e",
+     "4d9f110723dd9b36"
+    ]
+   },
+   {
+    "id": "v-ecovillage",
+    "ranks": [
+     4,
+     12
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "ebf66f041ba8bab8",
+     "c8b6b96c00f94d58",
+     "1440a7cca5adae0b"
+    ],
+    "top_law": [
+     "10780f3cccfd3661",
+     "8f76fb82bf950155",
+     "a9f43024c03bbcaa"
+    ]
+   },
+   {
+    "id": "nat-farmland",
+    "ranks": [
+     13
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "33179576dfa7cc30",
+     "049f71b815b8b9c5",
+     "8375824adb464a57"
+    ],
+    "top_law": [
+     "10dac4e4d328e52a",
+     "91be61715b583a5e",
+     "b51aa65227f30574"
+    ]
+   },
+   {
+    "id": "nat-shared-facility",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "d50d5cff12769f15",
+     "49a656463746af18",
+     "2eef106861f01dbb"
+    ],
+    "top_law": [
+     "5380583d298c434b",
+     "ae8de25be77bca00",
+     "a965e3c58bcb6a1b"
+    ]
+   },
+   {
+    "id": "nat-shore-distance",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "09a599aef7cc8336",
+     "171ff4c79e2da4fa",
+     "83c374d8bae9f518"
+    ],
+    "top_law": [
+     "44262c14cbeecbe6",
+     "1c7f86f64f72c90e",
+     "934e9a39604c08a8"
+    ]
+   },
+   {
+    "id": "nat-advance-ruling",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "4cac245c816b2eae",
+     "8450bd10fbb47bbe"
+    ],
+    "top_law": [
+     "6ee185be3811726f",
+     "f8ca2403503664cf",
+     "62d9608f5974bad1"
+    ]
+   },
+   {
+    "id": "nat-plan-validity",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "64736b2663026a45",
+     "0e3af9fc2df52273",
+     "4cac245c816b2eae"
+    ],
+    "top_law": [
+     "9a9dd893d1c30177",
+     "27aea19bf84798cf",
+     "b9ab214f4ba82a98"
+    ]
+   },
+   {
+    "id": "nat-new-subdivision",
+    "ranks": [
+     12
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "fc65a9967a5b9ca9",
+     "96e9e53e4d417634"
+    ],
+    "top_law": [
+     "fd4f6a406c831ed9",
+     "9c2701bd8b12da08",
+     "dc86501055526fea"
+    ]
+   },
+   {
+    "id": "n-planbesked-cost",
+    "ranks": [
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "b838ecac769823a3",
+     "05a1878150c65d07",
+     "7db9ea55fee5b006"
+    ],
+    "top_law": [
+     "1373dc8cf25b2cd2",
+     "5465bd6ea243d262",
+     "abc559ade86bbe20"
+    ]
+   },
+   {
+    "id": "n-plan-priority",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "315ec999e4400d0f",
+     "c8ea44de48c05e9b",
+     "da9d25103be234b7"
+    ],
+    "top_law": [
+     "c59efbf9fac7feac",
+     "7be726537141dedf",
+     "a19fa409276f65a2"
+    ]
+   },
+   {
+    "id": "n-plan-process",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e805c3aac8a98f73",
+     "87ef6d04edf6a271",
+     "ebd8ed272a3bdb5f"
+    ],
+    "top_law": [
+     "b2852d3abbaeeb84",
+     "166056cea5687dad",
+     "c59efbf9fac7feac"
+    ]
+   },
+   {
+    "id": "n-holiday-homes",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "75a4613073d28d92",
+     "edb7c7af9bac12ea",
+     "5f788ca9670ca049"
+    ],
+    "top_law": [
+     "38b3347f4bcf66f3",
+     "64207604d7566f04",
+     "78ab6c0704078b1d"
+    ]
+   },
+   {
+    "id": "n-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "7928c4d365ae5a2b",
+     "4cac245c816b2eae",
+     "7d4f6eb4dfca7e82"
+    ],
+    "top_law": [
+     "1ce8a81fbd62e5a1",
+     "a6b62ea304a63ab2",
+     "c0416d8bc554cf63"
+    ]
+   },
+   {
+    "id": "n-stormwater",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "ed0b87208067fc9f",
+     "89d2203eb7933c77",
+     "a86a33601cfd8131"
+    ],
+    "top_law": [
+     "0789df46ea5adb00",
+     "fa03b08f635a4d97",
+     "eda0e862f37363ba"
+    ]
+   },
+   {
+    "id": "y-septic-apply",
+    "ranks": [
+     1,
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5230d51c7a41f853",
+     "1623ca71bbca3e95",
+     "d82918bc6c0d949b"
+    ],
+    "top_law": [
+     "ab7ed0751cdea1c0",
+     "ca3cc9c94e94c4cb",
+     "5f93e6248c6c7621"
+    ]
+   },
+   {
+    "id": "y-septic-start",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5230d51c7a41f853",
+     "a17299c4ccc18795",
+     "db23bd274a4d3e18"
+    ],
+    "top_law": [
+     "11de3e4bcf588df9",
+     "5ad3694cc417eb29",
+     "fd81953b03f02e2b"
+    ]
+   },
+   {
+    "id": "y-shoreline",
+    "ranks": [
+     2,
+     6
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "d4b1ce1350586db1",
+     "242415e9f8510532",
+     "96b9f035d64baa89"
+    ],
+    "top_law": [
+     "b26426ddf206527c",
+     "a1c7f3f11ae547c3",
+     "00ec41fdf90976ee"
+    ]
+   },
+   {
+    "id": "y-demolition",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "c7a7dddcd8de7c5e",
+     "320dfe3377397c58",
+     "2a60677da1acc8d0"
+    ],
+    "top_law": [
+     "0d65737ef59dfa72",
+     "e9d269e045bc18ee",
+     "52e3de52219744a4"
+    ]
+   },
+   {
+    "id": "y-new-op",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "ac27969d2d4dd42d",
+     "473c9dfc3118a597",
+     "f0bbccbea1630a3a"
+    ],
+    "top_law": [
+     "86616737452d4a8c",
+     "b75521877bfa350e",
+     "a002cf7498c1bd90"
+    ]
+   }
+  ],
+  "st-kblab-swedish | hybrid-both": [
+   {
+    "id": "v-permit-process",
+    "ranks": [
+     1,
+     10
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "0ed4af8f6262b02a",
+     "be2795deccb8b3c7",
+     "8450bd10fbb47bbe"
+    ],
+    "top_law": [
+     "c63973726190e393",
+     "11527a363cc7d400",
+     "3e8b5ae588324467"
+    ]
+   },
+   {
+    "id": "v-change-zoning",
+    "ranks": [
+     null,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "1acc1d68a6d04abc",
+     "12def8eaa3950cd4",
+     "ff2f8e3de05b5114"
+    ],
+    "top_law": [
+     "72b182d1aced1865",
+     "54d1b737d5241943",
+     "a19fa409276f65a2"
+    ]
+   },
+   {
+    "id": "v-height",
+    "ranks": [
+     2,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9cf5b97d17e9112f",
+     "92278cd6bf87706a",
+     "83323193fe267788"
+    ],
+    "top_law": [
+     "4b4e7f5424854266",
+     "0d3117883102554b",
+     "b857042be26d1baa"
+    ]
+   },
+   {
+    "id": "v-height-veda",
+    "ranks": [
+     null
+    ],
+    "kommun_ok": false,
+    "top_local": [],
+    "top_law": [
+     "4b4e7f5424854266",
+     "0d3117883102554b",
+     "4ce2a2f5ef9d7bfc"
+    ]
+   },
+   {
+    "id": "v-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "022fdba9e2bb081e",
+     "8aa63cd74159b587",
+     "bd5fd2eadb9f3046"
+    ],
+    "top_law": [
+     "d5d4dd922df532d5",
+     "c0416d8bc554cf63",
+     "c822401ae1136304"
+    ]
+   },
+   {
+    "id": "v-permit-time",
+    "ranks": [
+     null,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "9a748b819d5c9175",
+     "9cef77b73fa5571e",
+     "3a79c0bae9a10e0e"
+    ],
+    "top_law": [
+     "23061ff0af788e31",
+     "f087410d0b46f78a",
+     "b163429936a5bad4"
+    ]
+   },
+   {
+    "id": "v-permit-cost",
+    "ranks": [
+     1,
+     11
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "434c0483488486cc",
+     "9582caa5bdb829b3",
+     "10f3cab7b00eea5d"
+    ],
+    "top_law": [
+     "a235561eff06b8d9",
+     "751393d66058335a",
+     "5d3d8f2cba8bc679"
+    ]
+   },
+   {
+    "id": "v-contact",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fd58f3b0d632c658",
+     "3263a93141dcab1e",
+     "8450bd10fbb47bbe"
+    ],
+    "top_law": [
+     "44bb92439f75fc36",
+     "f9f038e62a772cb3",
+     "9d6827a7b00036a5"
+    ]
+   },
+   {
+    "id": "v-septic-requirements",
+    "ranks": [
+     1,
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e55c1b5db84d07ec",
+     "3000889d6c84cedc",
+     "aee076ec846cd0e4"
+    ],
+    "top_law": [
+     "b93e8aa092b0214a",
+     "5ad3694cc417eb29",
+     "83a85eddb974458c"
+    ]
+   },
+   {
+    "id": "v-septic-cost",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "3000889d6c84cedc",
+     "9a748b819d5c9175",
+     "a06b283f2374b553"
+    ],
+    "top_law": [
+     "23836072fd1ecc64",
+     "33aeab9c02055a06",
+     "fd27fbe6fdcc0414"
+    ]
+   },
+   {
+    "id": "v-connect-va",
+    "ranks": [
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e2bcc34a6a20b091",
+     "7c639c738d10c5ac",
+     "5383da7e176bfb60"
+    ],
+    "top_law": [
+     "bdb7fa15327d3bd7",
+     "fd81953b03f02e2b",
+     "ab7ed0751cdea1c0"
+    ]
+   },
+   {
+    "id": "v-attefall",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "a1cbd51fb395f18a",
+     "a9424fe267e525db",
+     "07b484740b4a9b61"
+    ],
+    "top_law": [
+     "9821607343973fde",
+     "c153b69d1648f70b",
+     "05a5a3c545857fb7"
+    ]
+   },
+   {
+    "id": "v-lindholmen-homes",
+    "ranks": [
+     6
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "dd1f0b9e32d17eb7",
+     "cf5ef3dcba044f7f",
+     "7371cb3ed433aa55"
+    ],
+    "top_law": [
+     "bd9a0506aaaa15d9",
+     "7ad27dc9c7a29416",
+     "df5a2847484202a3"
+    ]
+   },
+   {
+    "id": "v-ongoing-plans",
+    "ranks": [
+     9
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "38b307225ebe138b",
+     "316b1a23c347b353",
+     "b22e67368b0364c5"
+    ],
+    "top_law": [
+     "a6b62ea304a63ab2",
+     "28db4dc63f7600bb",
+     "bd9a0506aaaa15d9"
+    ]
+   },
+   {
+    "id": "v-shoreline",
+    "ranks": [
+     10,
+     14
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "fa92b6547d6fdea9",
+     "35abf5be9749db78",
+     "957755ede8addb78"
+    ],
+    "top_law": [
+     "1ac78c2d983b23b5",
+     "8378dc48cd9b01c2",
+     "36f926e2f42abe4f"
+    ]
+   },
+   {
+    "id": "v-fence",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "4fb42a8f0e3dafa0",
+     "f63a22a2e2664f08",
+     "f016a01efe894b0a"
+    ],
+    "top_law": [
+     "95705d9c2d40d335",
+     "9170d7738fee2dd6",
+     "16ab6da2f1a9c09f"
+    ]
+   },
+   {
+    "id": "v-after-permit",
+    "ranks": [
+     2,
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "be2795deccb8b3c7",
+     "0ed4af8f6262b02a",
+     "aa876e0b575eca2f"
+    ],
+    "top_law": [
+     "11527a363cc7d400",
+     "f8721e335f9c3e3b",
+     "325f222504873414"
+    ]
+   },
+   {
+    "id": "v-subdivide",
+    "ranks": [
+     1,
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "8e7609adc447bfe5",
+     "f41393c6117c6bcd",
+     "c25df6249df13e84"
+    ],
+    "top_law": [
+     "9416873b475232e9",
+     "0d4264e16090013e",
+     "25c56247fbcc11c3"
+    ]
+   },
+   {
+    "id": "v-ecovillage",
+    "ranks": [
+     2,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "ebf66f041ba8bab8",
+     "ca3b680806b77278",
+     "c723eebea17794c7"
+    ],
+    "top_law": [
+     "10780f3cccfd3661",
+     "701183a84b4afc0f",
+     "a9f43024c03bbcaa"
+    ]
+   },
+   {
+    "id": "nat-farmland",
+    "ranks": [
+     16
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "33179576dfa7cc30",
+     "8375824adb464a57",
+     "4754855480c2518a"
+    ],
+    "top_law": [
+     "91be61715b583a5e",
+     "10dac4e4d328e52a",
+     "4697449333d83155"
+    ]
+   },
+   {
+    "id": "nat-shared-facility",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "d50d5cff12769f15",
+     "49a656463746af18",
+     "2eef106861f01dbb"
+    ],
+    "top_law": [
+     "5380583d298c434b",
+     "a965e3c58bcb6a1b",
+     "ae8de25be77bca00"
+    ]
+   },
+   {
+    "id": "nat-shore-distance",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "171ff4c79e2da4fa",
+     "09a599aef7cc8336",
+     "060b7668a0e4341a"
+    ],
+    "top_law": [
+     "44262c14cbeecbe6",
+     "1c7f86f64f72c90e",
+     "934e9a39604c08a8"
+    ]
+   },
+   {
+    "id": "nat-advance-ruling",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "30a9c8ad9ae8ff9d",
+     "c0002028cedab24e",
+     "4cac245c816b2eae"
+    ],
+    "top_law": [
+     "f8ca2403503664cf",
+     "6ee185be3811726f",
+     "62d9608f5974bad1"
+    ]
+   },
+   {
+    "id": "nat-plan-validity",
+    "ranks": [
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "64736b2663026a45",
+     "0e3af9fc2df52273",
+     "2aea4fb4d1dd4e92"
+    ],
+    "top_law": [
+     "9a9dd893d1c30177",
+     "27aea19bf84798cf",
+     "68e76c7c6d725a3f"
+    ]
+   },
+   {
+    "id": "nat-new-subdivision",
+    "ranks": [
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "96e9e53e4d417634",
+     "4a64e951011db151",
+     "af3869d0f604ae46"
+    ],
+    "top_law": [
+     "ccaf89937a8cfb44",
+     "86dbdb35593539c3",
+     "b73bd713a70da663"
+    ]
+   },
+   {
+    "id": "n-planbesked-cost",
+    "ranks": [
+     3
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "b838ecac769823a3",
+     "05a1878150c65d07",
+     "7db9ea55fee5b006"
+    ],
+    "top_law": [
+     "1373dc8cf25b2cd2",
+     "711ab697b4b1d04f",
+     "5465bd6ea243d262"
+    ]
+   },
+   {
+    "id": "n-plan-priority",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "c8ea44de48c05e9b",
+     "315ec999e4400d0f",
+     "da9d25103be234b7"
+    ],
+    "top_law": [
+     "c59efbf9fac7feac",
+     "a19fa409276f65a2",
+     "7be726537141dedf"
+    ]
+   },
+   {
+    "id": "n-plan-process",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "e805c3aac8a98f73",
+     "87ef6d04edf6a271",
+     "ebd8ed272a3bdb5f"
+    ],
+    "top_law": [
+     "166056cea5687dad",
+     "c59efbf9fac7feac",
+     "622e3566e97a521a"
+    ]
+   },
+   {
+    "id": "n-holiday-homes",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "75a4613073d28d92",
+     "5f788ca9670ca049",
+     "edb7c7af9bac12ea"
+    ],
+    "top_law": [
+     "38b3347f4bcf66f3",
+     "da6ecaaf146a9aea",
+     "78ab6c0704078b1d"
+    ]
+   },
+   {
+    "id": "n-lookup-zoning",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "7928c4d365ae5a2b",
+     "4cac245c816b2eae",
+     "7d4f6eb4dfca7e82"
+    ],
+    "top_law": [
+     "ee59c72342a87dfa",
+     "c0416d8bc554cf63",
+     "9ea9202b220efab9"
+    ]
+   },
+   {
+    "id": "n-stormwater",
+    "ranks": [
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "d5ee5555a6d25c60",
+     "b3d1b7acfbe7f042",
+     "7d0a148b37dfd03f"
+    ],
+    "top_law": [
+     "0789df46ea5adb00",
+     "779c137eaf2aff5b",
+     "5f93e6248c6c7621"
+    ]
+   },
+   {
+    "id": "y-septic-apply",
+    "ranks": [
+     1,
+     4
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5230d51c7a41f853",
+     "db23bd274a4d3e18",
+     "1623ca71bbca3e95"
+    ],
+    "top_law": [
+     "ab7ed0751cdea1c0",
+     "5f93e6248c6c7621",
+     "ca3cc9c94e94c4cb"
+    ]
+   },
+   {
+    "id": "y-septic-start",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "5230d51c7a41f853",
+     "a17299c4ccc18795",
+     "db23bd274a4d3e18"
+    ],
+    "top_law": [
+     "5ad3694cc417eb29",
+     "11de3e4bcf588df9",
+     "fd81953b03f02e2b"
+    ]
+   },
+   {
+    "id": "y-shoreline",
+    "ranks": [
+     2,
+     null
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "d4b1ce1350586db1",
+     "90530fb39d8d5fd7",
+     "242415e9f8510532"
+    ],
+    "top_law": [
+     "b26426ddf206527c",
+     "00ec41fdf90976ee",
+     "3e4a7d963f63707f"
+    ]
+   },
+   {
+    "id": "y-demolition",
+    "ranks": [
+     1,
+     1
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "c7a7dddcd8de7c5e",
+     "320dfe3377397c58",
+     "2a60677da1acc8d0"
+    ],
+    "top_law": [
+     "0d65737ef59dfa72",
+     "8e4ac0cc6fb4946b",
+     "e9d269e045bc18ee"
+    ]
+   },
+   {
+    "id": "y-new-op",
+    "ranks": [
+     2
+    ],
+    "kommun_ok": true,
+    "top_local": [
+     "473c9dfc3118a597",
+     "1ca85ab755a220d6",
+     "ac27969d2d4dd42d"
+    ],
+    "top_law": [
+     "86616737452d4a8c",
+     "a002cf7498c1bd90",
+     "7915f174445a81ce"
+    ]
+   }
+  ]
+ }
+}

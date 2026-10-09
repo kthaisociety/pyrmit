@@ -2,7 +2,6 @@
 
 import { useState, useEffect, FormEvent, ReactNode, useRef } from 'react';
 import Image from 'next/image';
-import ReactMarkdown from 'react-markdown';
 import {
   Check,
   CheckCircle2,
@@ -17,6 +16,8 @@ import {
 import { authFetch } from '@/lib/auth';
 import ChunkCard from '@/components/ChunkCard';
 import PipelineTrace, { type PipelineEvent, type RetrievedChunk } from '@/components/PipelineTrace';
+import SourceViewer, { type Citation } from '@/components/SourceViewer';
+import CitedMarkdown from '@/components/CitedMarkdown';
 
 interface Message {
   id?: number;
@@ -27,6 +28,7 @@ interface Message {
   steps?: Step[];
   pipeline?: PipelineEvent[];
   trace?: PipelineEvent[] | null; // saved pipeline events, from the history endpoint
+  status?: string | null; // assistant messages from the history: "streaming" | "done" | "error"
 }
 
 interface Step {
@@ -112,10 +114,15 @@ function parseAssistantContent(content: string): { body: string; sources: string
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.startsWith('- '))
-    .map((line) => line.slice(2).trim())
+    .map((line) => line.slice(2).trim().replace(/^\[\d+\]\s*/, '')) // agent answers: "- [n] label"
     .filter(Boolean);
 
   return { body, sources };
+}
+
+function getCitations(pipeline: PipelineEvent[]): Citation[] {
+  const event = pipeline.find((item) => item.stage === 'citations');
+  return ((event?.data.items as Citation[] | undefined) ?? []);
 }
 
 function getReasoningSteps(steps: Step[]): string[] {
@@ -359,8 +366,34 @@ function SourceList({ sources, pipeline }: { sources: string[]; pipeline: Pipeli
   );
 }
 
+// Numbered sources of an agent answer: the same numbers as the [n] in the text, each opens the source panel
+function CitationList({ citations, onOpen }: { citations: Citation[]; onOpen: (citation: Citation) => void }) {
+  return (
+    <div className="space-y-1.5 pt-1">
+      {citations.map((citation) => (
+        <button
+          key={citation.n}
+          onClick={() => onOpen(citation)}
+          className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800"
+        >
+          <span className="mt-px rounded bg-blue-100 px-1.5 font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+            {citation.n}
+          </span>
+          <span className="min-w-0 flex-1">{citation.label}</span>
+          <span className="text-zinc-400">{citation.chunks.length} passage{citation.chunks.length > 1 ? 's' : ''}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Inspection panels shown under a finished answer
-function AnswerDetails({ sources, pipeline }: { sources: string[]; pipeline: PipelineEvent[] }) {
+function AnswerDetails({ sources, pipeline, citations, onOpenCitation }: {
+  sources: string[];
+  pipeline: PipelineEvent[];
+  citations: Citation[];
+  onOpenCitation: (citation: Citation) => void;
+}) {
   const chunkCount = pipeline
     .filter((event) => event.stage === 'retrieval')
     .reduce((total, event) => total + ((event.data.matches as unknown[] | undefined)?.length ?? 0), 0);
@@ -381,7 +414,11 @@ function AnswerDetails({ sources, pipeline }: { sources: string[]; pipeline: Pip
         </CollapsibleMetaSection>
       )}
 
-      {sources.length > 0 && (
+      {citations.length > 0 ? (
+        <CollapsibleMetaSection badge={`${citations.length}`} icon={<FileSearch size={14} />} title="Sources">
+          <CitationList citations={citations} onOpen={onOpenCitation} />
+        </CollapsibleMetaSection>
+      ) : sources.length > 0 && (
         <CollapsibleMetaSection
           badge={`${sources.length}`}
           icon={<FileSearch size={14} />}
@@ -483,7 +520,15 @@ function AssistantBubble({
 }) {
   const { body, sources } = parseAssistantContent(message.content);
   const hasBody = Boolean(body.trim());
+  const citations = getCitations(message.pipeline ?? []);
+  const [openCitation, setOpenCitation] = useState<Citation | null>(null);
   const steps = message.steps ?? [];
+  // Answer still being generated on the server (the user left and came back): refreshed by polling
+  const inBackground = !isStreaming && message.status === 'streaming';
+  // Agent answers saved mid-run: their trace already holds the tool calls made so far
+  const backgroundToolCalls = (message.pipeline ?? []).filter(
+    (event) => event.stage === 'call' && (event.data as { kind?: string }).kind === 'tool',
+  ).length;
 
   return (
     <div className="relative max-w-[85%] rounded-2xl border border-zinc-200 bg-white px-5 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
@@ -501,23 +546,39 @@ function AssistantBubble({
       </div>
 
       {isStreaming && <LiveProgress steps={steps} />}
+      {inBackground && hasBody && (
+        <div className="mb-2 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+          <Loader2 size={12} className="animate-spin" />
+          Still generating, this updates automatically
+        </div>
+      )}
 
       {hasBody ? (
         <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
           <div className="prose prose-sm max-w-none dark:prose-invert">
-            <ReactMarkdown>{body}</ReactMarkdown>
+            <CitedMarkdown body={body} citations={citations} onOpen={setOpenCitation} />
           </div>
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-zinc-300 px-4 py-4 dark:border-zinc-700">
           <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
             <Loader2 size={14} className="animate-spin" />
-            Writing the answer
+            {inBackground && backgroundToolCalls > 0
+              ? `Exploring the documents (${backgroundToolCalls} tool calls so far)`
+              : 'Writing the answer'}
           </div>
         </div>
       )}
 
-      {!isStreaming && <AnswerDetails sources={sources} pipeline={message.pipeline ?? []} />}
+      {!isStreaming && !inBackground && (
+        <AnswerDetails
+          sources={sources}
+          pipeline={message.pipeline ?? []}
+          citations={citations}
+          onOpenCitation={setOpenCitation}
+        />
+      )}
+      {openCitation && <SourceViewer citation={openCitation} onClose={() => setOpenCitation(null)} />}
     </div>
   );
 }
@@ -533,6 +594,12 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   // Session we just created ourselves: its messages are already in state (with
   // live-only pipeline data), so the history refetch must not overwrite them.
   const createdSessionIdRef = useRef<string | null>(null);
+  // The in-flight stream and the session it belongs to: opening another chat aborts the local stream only;
+  // the server keeps generating and saving the answer in the history.
+  const abortRef = useRef<AbortController | null>(null);
+  const streamSessionRef = useRef<string | null>(null);
+  const sessionIdRef = useRef<string | null>(sessionId);
+  sessionIdRef.current = sessionId;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -542,27 +609,46 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     scrollToBottom();
   }, [messages]);
 
+  const loadHistory = (id: string, showLoading: boolean) => {
+    if (showLoading) setLoading(true);
+    authFetch(`/api/sessions/${id}`)
+      .then((res) => res.json())
+      .then((data: Message[]) => {
+        if (sessionIdRef.current !== id) return; // the user moved to another chat meanwhile
+        setMessages(data.map((msg) => ({ ...msg, pipeline: msg.trace ?? undefined })));
+      })
+      .catch((err) => console.error('Failed to fetch history', err))
+      .finally(() => {
+        if (showLoading) setLoading(false);
+      });
+  };
+
   useEffect(() => {
+    if (abortRef.current && sessionId !== streamSessionRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+      setStreaming(false);
+    }
     if (sessionId && sessionId === createdSessionIdRef.current) {
       createdSessionIdRef.current = null;
       return;
     }
     if (sessionId) {
-      setLoading(true);
-      authFetch(`/api/sessions/${sessionId}`)
-        .then((res) => res.json())
-        .then((data: Message[]) => {
-          setMessages(data.map((msg) => ({ ...msg, pipeline: msg.trace ?? undefined })));
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error('Failed to fetch history', err);
-          setLoading(false);
-        });
+      loadHistory(sessionId, true);
     } else {
       setMessages([]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
+
+  // An answer generated in the background (the user left during streaming): refresh until it is finished
+  const hasBackgroundAnswer = messages.some((msg) => msg.status === 'streaming');
+  useEffect(() => {
+    if (streaming || !sessionId || !hasBackgroundAnswer) return;
+    const timer = setTimeout(() => loadHistory(sessionId, false), 2000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, streaming, sessionId, hasBackgroundAnswer]);
 
   const handleCopy = async (content: string, index: number) => {
     try {
@@ -587,12 +673,25 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     setLoading(true);
     setStreaming(true);
     pendingSessionIdRef.current = null;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    streamSessionRef.current = sessionId;
+    let announced = false;
+    // A new chat shows up in the sidebar as soon as the server created it, not only at the end
+    const announceSession = (createdSessionId: string | null | undefined) => {
+      if (sessionId || announced || !createdSessionId) return;
+      announced = true;
+      streamSessionRef.current = createdSessionId;
+      createdSessionIdRef.current = createdSessionId;
+      onSessionCreated(createdSessionId);
+    };
 
     try {
       const res = await authFetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: newHistory, session_id: sessionId }),
+        signal: controller.signal,
       });
 
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
@@ -689,16 +788,11 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
 
           case 'session_id':
             pendingSessionIdRef.current = event.session_id ?? null;
+            announceSession(event.session_id);
             break;
 
           case 'done':
-            if (!sessionId) {
-              const createdSessionId = event.session_id ?? pendingSessionIdRef.current;
-              if (createdSessionId) {
-                createdSessionIdRef.current = createdSessionId;
-                onSessionCreated(createdSessionId);
-              }
-            }
+            announceSession(event.session_id ?? pendingSessionIdRef.current);
             pendingSessionIdRef.current = null;
             break;
 
@@ -731,11 +825,16 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
         handleStreamEvent(event);
       }
     } catch (error) {
+      // Aborted because the user opened another chat: the server finishes the answer in the history
+      if (controller.signal.aborted) return;
       console.error('Error sending message:', error);
       setMessages((prev) => prev.slice(0, -1));
     } finally {
-      setLoading(false);
-      setStreaming(false);
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setLoading(false);
+        setStreaming(false);
+      }
       pendingSessionIdRef.current = null;
     }
   };

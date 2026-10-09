@@ -7,6 +7,18 @@ import ChunkCard from '@/components/ChunkCard';
 
 type TableName = 'law' | 'document';
 type Tab = TableName | 'search';
+// neon: pgvector tables used by RETRIEVAL_BACKEND=pgvector; local: offline corpus (RETRIEVAL_BACKEND=local)
+type Store = 'neon' | 'local';
+
+const STORE_LABELS: Record<Store, { name: string; law: string; document: string; note: string }> = {
+  neon: { name: 'Neon (pgvector)', law: 'law_chunks', document: 'document_chunks', note: 'RAG chunk tables' },
+  local: {
+    name: 'Local corpus',
+    law: 'Laws (Riksdagen)',
+    document: 'Kommun pages & PDFs',
+    note: 'data/corpus/chunks.jsonl, indexed chunks only',
+  },
+};
 
 interface SourceCount {
   name: string;
@@ -51,6 +63,7 @@ interface SearchMatch {
 
 interface SearchResponse {
   embedding_ok: boolean;
+  kommuner?: string[];
   law: SearchMatch[];
   document: SearchMatch[];
 }
@@ -66,7 +79,7 @@ const TAB_LABELS: Record<Tab, string> = {
 function chunkMeta(row: ChunkRow): string[] {
   const meta: string[] = [];
   if (row.chapter) meta.push(`kap. ${row.chapter}${row.chapter_title ? ` — ${row.chapter_title}` : ''}`);
-  if (row.section) meta.push(`§ ${row.section}`);
+  if (row.section) meta.push(row.section.includes("§") ? row.section : `§ ${row.section}`);
   if (!row.has_embedding) meta.push('no embedding');
   return meta;
 }
@@ -87,7 +100,7 @@ function StatCard({ label, overview }: { label: string; overview?: TableOverview
   );
 }
 
-function ChunkTableView({ table, sources }: { table: TableName; sources: SourceCount[] }) {
+function ChunkTableView({ table, sources, store }: { table: TableName; sources: SourceCount[]; store: Store }) {
   const [source, setSource] = useState('');
   const [textInput, setTextInput] = useState('');
   const [text, setText] = useState('');
@@ -96,7 +109,7 @@ function ChunkTableView({ table, sources }: { table: TableName; sources: SourceC
   const [loadedQuery, setLoadedQuery] = useState('');
   const [error, setError] = useState('');
 
-  const params = new URLSearchParams({ table, offset: String(offset), limit: String(PAGE_SIZE) });
+  const params = new URLSearchParams({ table, store, offset: String(offset), limit: String(PAGE_SIZE) });
   if (source) params.set('source', source);
   if (text) params.set('q', text);
   const query = params.toString();
@@ -196,7 +209,7 @@ function ChunkTableView({ table, sources }: { table: TableName; sources: SourceC
   );
 }
 
-function SemanticSearchView() {
+function SemanticSearchView({ store }: { store: Store }) {
   const [query, setQuery] = useState('');
   const [k, setK] = useState(5);
   const [result, setResult] = useState<SearchResponse | null>(null);
@@ -212,7 +225,7 @@ function SemanticSearchView() {
       const res = await authFetch('/api/db/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query.trim(), k }),
+        body: JSON.stringify({ query: query.trim(), k, store }),
       });
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
       setResult(await res.json());
@@ -233,8 +246,9 @@ function SemanticSearchView() {
   return (
     <div className="space-y-4">
       <p className="text-xs text-zinc-500">
-        Runs the same embedding + cosine-distance retrieval as the chat, without calling the LLM. Tip: the chat
-        searches with the English rewrite of your question (see the pipeline inspector).
+        {store === 'local'
+          ? 'Runs the local retrieval (embeddings on the GPU, kommun filter from the place names in the query), without calling the LLM. Type the query in Swedish: the chat searches with the Swedish rewrite of your question.'
+          : 'Runs the same embedding + cosine-distance retrieval as the chat, without calling the LLM. Tip: the chat searches with the English rewrite of your question (see the pipeline inspector).'}
       </p>
       <form onSubmit={runSearch} className="flex flex-wrap gap-2">
         <input
@@ -266,6 +280,11 @@ function SemanticSearchView() {
       </form>
 
       {error && <div className="text-sm text-red-500">{error}</div>}
+      {result?.kommuner !== undefined && store === 'local' && (
+        <div className="text-xs text-zinc-500">
+          Kommun filter: {result.kommuner.length > 0 ? result.kommuner.join(', ') : 'none detected (all kommuner)'}
+        </div>
+      )}
       {result && !result.embedding_ok && (
         <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/50 dark:text-red-300">
           Embedding failed — check OPENAI_API_KEY on the backend.
@@ -297,18 +316,26 @@ function SemanticSearchView() {
 
 export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<Tab>('law');
+  const [store, setStore] = useState<Store>('local');
   const [overview, setOverview] = useState<Overview | null>(null);
+  const [loadedStore, setLoadedStore] = useState<Store | null>(null);
   const [error, setError] = useState('');
+  const labels = STORE_LABELS[store];
+  const currentOverview = loadedStore === store ? overview : null;
 
   useEffect(() => {
-    authFetch('/api/db/overview')
+    authFetch(`/api/db/overview?store=${store}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Request failed: ${res.status}`);
         return res.json();
       })
-      .then((data: Overview) => setOverview(data))
-      .catch((err) => setError(String(err)));
-  }, []);
+      .then((data: Overview) => {
+        setOverview(data);
+        setError('');
+      })
+      .catch((err) => setError(String(err)))
+      .finally(() => setLoadedStore(store));
+  }, [store]);
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -320,7 +347,22 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-lg font-semibold">Database</h1>
-        <span className="text-xs text-zinc-500">read-only · RAG chunk tables</span>
+        <span className="text-xs text-zinc-500">read-only · {labels.note}</span>
+        <div className="ml-auto flex rounded-lg border border-zinc-300 p-0.5 text-xs dark:border-zinc-700">
+          {(Object.keys(STORE_LABELS) as Store[]).map((key) => (
+            <button
+              key={key}
+              onClick={() => setStore(key)}
+              className={`rounded-md px-3 py-1 transition-colors ${
+                store === key
+                  ? 'bg-blue-600 font-medium text-white'
+                  : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+              }`}
+            >
+              {STORE_LABELS[key].name}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -328,8 +370,8 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
           {error && <div className="text-sm text-red-500">{error}</div>}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <StatCard label="law_chunks" overview={overview?.law} />
-            <StatCard label="document_chunks" overview={overview?.document} />
+            <StatCard label={labels.law} overview={currentOverview?.law} />
+            <StatCard label={labels.document} overview={currentOverview?.document} />
           </div>
 
           <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
@@ -343,15 +385,20 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
                     : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
                 }`}
               >
-                {TAB_LABELS[key]}
+                {key === 'search' ? TAB_LABELS.search : labels[key]}
               </button>
             ))}
           </div>
 
           {tab === 'search' ? (
-            <SemanticSearchView />
+            <SemanticSearchView key={store} store={store} />
           ) : (
-            <ChunkTableView key={tab} table={tab} sources={overview?.[tab].sources ?? []} />
+            <ChunkTableView
+              key={`${store}-${tab}`}
+              table={tab}
+              store={store}
+              sources={currentOverview?.[tab].sources ?? []}
+            />
           )}
         </div>
       </div>

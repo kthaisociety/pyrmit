@@ -1,5 +1,5 @@
 """
-Records LLM and embedding calls made while answering a chat message, so the
+Records LLM calls made while answering a chat message, so the
 frontend pipeline inspector can show the exact prompts, outputs and timings.
 """
 
@@ -8,15 +8,24 @@ import time
 from typing import Any
 
 from llm import get_response_output_text
-from observability import create_chat_completion, create_embedding
+from observability import create_chat_completion, reasoning_effort
 
 
-def response_usage(response: Any) -> dict[str, int] | None:
+def response_usage(response: Any) -> dict[str, float] | None:
     usage = getattr(response, "usage", None)
     if usage is None:
         return None
     fields = ("input_tokens", "output_tokens", "total_tokens", "prompt_tokens", "completion_tokens")
-    values = {field: getattr(usage, field) for field in fields if isinstance(getattr(usage, field, None), int)}
+    values: dict[str, float] = {
+        field: getattr(usage, field) for field in fields if isinstance(getattr(usage, field, None), int)
+    }
+    details = getattr(usage, "output_tokens_details", None)
+    if isinstance(getattr(details, "reasoning_tokens", None), int):
+        values["reasoning_tokens"] = details.reasoning_tokens
+    # OpenRouter reports the billed price of each call (USD)
+    cost = getattr(usage, "cost", None)
+    if isinstance(cost, (int, float)):
+        values["cost"] = float(cost)
     return values or None
 
 
@@ -51,6 +60,7 @@ def recorded_chat_completion(recorder: CallRecorder | None, client: Any, *, name
         "name": name,
         "model": kwargs.get("model"),
         "temperature": kwargs.get("temperature"),
+        "reasoning_effort": reasoning_effort(name) or None,
         "instructions": kwargs.get("instructions"),
         "input": kwargs.get("input"),
     }
@@ -67,22 +77,3 @@ def recorded_chat_completion(recorder: CallRecorder | None, client: Any, *, name
     )
     return response
 
-
-def recorded_embedding(recorder: CallRecorder | None, client: Any, *, name: str, **kwargs) -> Any:
-    if recorder is None:
-        return create_embedding(client, **kwargs)
-
-    started = time.perf_counter()
-    call = {"kind": "embedding", "name": name, "model": kwargs.get("model"), "input": kwargs.get("input")}
-    try:
-        response = create_embedding(client, **kwargs)
-    except Exception as exc:
-        recorder.record(**call, error=str(exc), duration_ms=round((time.perf_counter() - started) * 1000))
-        raise
-    recorder.record(
-        **call,
-        dimensions=len(response.data[0].embedding) if response.data else None,
-        usage=response_usage(response),
-        duration_ms=round((time.perf_counter() - started) * 1000),
-    )
-    return response

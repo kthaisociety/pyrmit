@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from db.database import Base
+from embeddings import embedding_dim
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import create_engine
 import os
@@ -64,7 +65,7 @@ class DocumentChunk(Base):
     document_name = Column(String, nullable=True)
     chunk_index = Column(Integer, nullable=True)
     content = Column(Text, nullable=True)
-    embedding = Column(Vector(3072), nullable=True)
+    embedding = Column(Vector(embedding_dim()), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -79,7 +80,7 @@ class LawChunk(Base):
     section = Column(String, nullable=True, index=True)
     chunk_index = Column(Integer, nullable=True)
     content = Column(Text, nullable=True)
-    embedding = Column(Vector(3072), nullable=True)
+    embedding = Column(Vector(embedding_dim()), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class ChatSession(Base):
@@ -103,6 +104,8 @@ class ChatMessage(Base):
     content = Column(Text)
     # Pipeline inspector events (prompts, API calls, retrieved chunks) for assistant messages
     trace = Column(JSONB, nullable=True)
+    # Assistant messages: "streaming" while the answer is generated in the background, then "done" or "error"
+    status = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("ChatSession", back_populates="messages")

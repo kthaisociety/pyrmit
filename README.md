@@ -3,7 +3,7 @@
 <table>
   <tr>
     <td valign="middle">
-      Pyrmit is an intelligent building permit agent designed to assist with permit-related queries. The user is able to input their own legal documents and chunk, embed and store them in an SQL database. The agent can then be used to provide an action plan to fast-track the building permit process.
+      Pyrmit answers questions about Swedish building permits and land-use planning (<i>Plan- och bygglagen</i>, detaljplaner, bygglov, enskilt avlopp...). A tool-calling agent searches a local corpus — 15 consolidated statutes and the planning pages and PDFs of 286 kommun websites — and answers in English, quoting the Swedish sources with clickable citations that open the original document at the passage.
     </td>
     <td valign="middle">
       <img src="frontend/public/pyrmit_middle.jpg" alt="Pyrmit Logo" width="300" />
@@ -11,158 +11,177 @@
   </tr>
 </table>
 
-## Tech Stack
+**Stack**: Next.js (frontend), FastAPI (backend), SQLite + NumPy vectors (local corpus), Neon Postgres (users and chats), OpenRouter (agent model), Snowflake arctic-embed-l-v2 (embeddings, GPU or CPU).
 
-### Frontend
-![Next JS](https://img.shields.io/badge/Next-black?style=for-the-badge&logo=next.js&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+Architecture, data flow and every module are described in [`CLAUDE.md`](CLAUDE.md).
 
-### Backend
-![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi) ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white) ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)
+---
 
-## Project Structure
+## Quick start (with the shared data)
+
+### Requirements
+
+| | Why |
+|---|---|
+| Python 3.13 + [uv](https://docs.astral.sh/uv/) | Backend |
+| [Bun](https://bun.sh/) | Frontend (lockfile is `bun.lock`) |
+| 8 GB RAM | Embedding model (0.9–1.7 GB) + store + backend |
+| 2 GB disk (+18.4 GB with the PDFs) | Local corpus (see [Data](#data)) |
+| NVIDIA GPU (optional) | Faster query embeddings; **required only to rebuild the corpus** |
+| `backend/.env` | API keys, Neon `DATABASE_URL`, `JWT_SECRET_KEY`, access-gate password. Ask a maintainer; never commit it. Template: `backend/.env.example` |
+
+### Install
+
+```bash
+git clone https://github.com/kthaisociety/pyrmit.git && cd pyrmit/backend
+uv venv --python 3.13
+uv pip install -r requirements.txt
+
+# torch BEFORE the local extras, so nothing pulls the wrong build
+uv pip install torch --index-url https://download.pytorch.org/whl/cu128   # NVIDIA GPU
+uv pip install torch --index-url https://download.pytorch.org/whl/cpu     # no GPU (Linux; on Windows/macOS plain `uv pip install torch`)
+
+uv pip install -e ".[local]"     # sentence-transformers, onnxruntime, bm25s, PyMuPDF, crawler deps
+
+cd ../frontend && bun install
+```
+
+### Add the data and the config
+
+1. Unpack the data archive into `backend/data/` (paths must match, e.g. `backend/data/index/store/st-arctic-l-v2/corpus.sqlite`).
+2. Put `.env` in `backend/`. The local agent setup needs at least:
+
+   ```properties
+   CHAT_MODE=agent
+   RETRIEVAL_BACKEND=local
+   LOCAL_RAG_MODEL=st-arctic-l-v2
+   LLM_PROVIDER=openrouter
+   OPENROUTER_KEY=...            # agent model (openai/gpt-6-luna by default)
+   DATABASE_URL=postgresql://... # Neon: users and chats
+   JWT_SECRET_KEY=...
+   ACCESS_GATE_PASSWORD=...
+   HF_HUB_DISABLE_XET=1          # Hugging Face downloads can hang on Windows without it
+   ```
+
+### Run
+
+```bash
+# backend (from backend/) — Windows path shown; .venv/bin/python on Linux/macOS
+.venv/Scripts/python.exe -m uvicorn main:app --port 8000
+# frontend (from frontend/)
+bun run dev
+```
+
+Open <http://localhost:3000>, enter the access-gate password, then sign up. The first start downloads the embedding model from Hugging Face (2.3 GB on a GPU, 570 MB on a CPU), then preloads the store in about 30–60 s.
+
+> `docker-compose.yml` predates the local corpus (no data mount, no GPU): use the manual setup above.
+
+---
+
+## Embeddings: GPU or CPU, chosen automatically
+
+The query embedding model is `Snowflake/snowflake-arctic-embed-l-v2.0` (568M parameters, 1024 dims, multilingual). `EMBEDDING_RUNTIME` (default `auto`) picks how it runs:
+
+| Hardware | Runtime | Query time | Model RAM | Recall (R@5 / R@10) |
+|---|---|---|---|---|
+| CUDA GPU | torch fp16 | 23 ms | 1.7 GB | 0.944 / 0.956 |
+| CPU only | **ONNX int8** (official export, `onnxruntime`) | 34 ms | 0.9 GB | 0.944 / 0.956 |
+| (for reference) CPU with torch fp32 | `EMBEDDING_RUNTIME=torch` | 141 ms | 3.4 GB | 0.944 / 0.956 |
+
+- Force a runtime with `EMBEDDING_RUNTIME=torch` or `EMBEDDING_RUNTIME=onnx`.
+- The int8 query vectors are compatible with the index built on the GPU: recall is unchanged on the 45-question eval.
+- Measured on an i7-12700H / RTX 4060 Laptop.
+
+**Why this model?** On our eval (45 labelled questions, `backend/localrag/eval.py`), arctic matched the best API models at recall@5 (gemini-embedding-001 0.93, Qwen3-8B 0.91, bge-m3 0.91) with the best R@1 and MRR. It runs locally for free and is not available on OpenRouter. Translating the question to Swedish before searching matters most (bge-m3: 0.63 → 0.91). BM25 fusion and a reranker did not help.
+
+---
+
+## Data
+
+Everything lives in `backend/data/` (not in git, except the benchmark results in `data/agentic/` and the retrieval evals in `data/eval/`).
+
+| Pack | Paths (under `backend/data/`) | Size | Needed for |
+|---|---|---|---|
+| **Minimum** | `index/store/st-arctic-l-v2/`, `corpus/municipalities.json`, `corpus/plans.jsonl` | **1.5 GB** | The app: search (SQLite + FTS5 BM25 + vectors), kommun detection, plan registry |
+| **PDFs** | `corpus/raw/web/*/pdf/`, `corpus/raw/web/*/ocr/` | **18.4 GB** | Opening a cited PDF at the passage; the agent reading plankartor (`view_map_area`, `view_pdf_page`) |
+| Rebuild only | `corpus/chunks.jsonl`, `corpus/documents.jsonl`, `index/dense/st-arctic-l-v2/`, `corpus/raw/web/*/pages` + `manifest.jsonl` | 1.8 GB | Re-chunking, incremental re-indexing, resuming the crawl |
+
+Without the PDFs the app works fully, except that PDF sources show the cited chunks only, and the map tools return an error.
+
+**Sending the data**: pack it with `tar` (built into Windows 10+, macOS and Linux), from `backend/`:
+
+```bash
+tar -cf pyrmit-data-min.tar data/index/store/st-arctic-l-v2 data/corpus/municipalities.json data/corpus/plans.jsonl
+tar -cf pyrmit-data-pdfs.tar data/corpus/raw/web/*/pdf data/corpus/raw/web/*/ocr
+# unpack from backend/: tar -xf pyrmit-data-min.tar
+```
+
+| Service (free plan) | Limit | Fits |
+|---|---|---|
+| WeTransfer | 3 GB per 30 days, 10 transfers | Minimum pack only |
+| **SwissTransfer** | 50 GB per transfer, kept 15 days, no account | Everything |
+| Smash | No size limit (transfers over 2 GB are queued) | Everything |
+| Google Drive | 15 GB | Minimum pack only |
+
+---
+
+## Rebuilding the local corpus (GPU machine)
+
+From `backend/`. Each step reads the previous step's output. Times and sizes come from the October 2026 run (i7-12700H, RTX 4060, 286 kommuner).
+
+| # | Command | Time | Output | Why |
+|---|---|---|---|---|
+| 1 | `python -m corpus.municipalities` | 1 min | `corpus/municipalities.json` (0.25 MB) | 290 kommuner + 10k localities from Wikidata: crawl seeds, and detecting the kommun in a question |
+| 2 | `python -m corpus.laws` | 1 min | `corpus/raw/laws/` (2 MB) | 15 consolidated statutes (PBL, PBF, MB...) from Riksdagen open data, always current |
+| 3 | `python -m corpus.crawl` | **3–4 h** | `corpus/raw/web/` (18.6 GB) | Planning pages and PDFs (detaljplaner, taxor, översiktsplan) of each kommun. Slow on purpose: robots.txt, 1 request/s per site. Resumable |
+| 4 | `python -m corpus.ocr` (optional) | **~18 h** | `raw/web/*/ocr/` (8 MB) | 777 scanned PDFs (mostly old plankartor) have no text layer. EasyOCR on the GPU |
+| 5 | `python -m corpus.extract` | ~5 min | `corpus/documents.jsonl` (394 MB) | Text blocks from HTML and PDFs (PyMuPDF; OCR text when available) |
+| 6 | `python -m corpus.chunk` | < 1 min | `corpus/chunks.jsonl` (496 MB) | 348k chunks: one per law §, about 1,500 characters for documents, with a context header |
+| 7 | `python -m localrag.index --model st-arctic-l-v2` | **1–1.5 h** | `index/dense/st-arctic-l-v2/` (690 MB) | Embeddings (93 chunks/s on the GPU; about 53 h on a CPU). Incremental: only new chunks are embedded |
+| 8 | `python -m localrag.store --model st-arctic-l-v2` | ~2 min | `index/store/st-arctic-l-v2/` (1.46 GB) | What the app serves: SQLite (chunks, FTS5 BM25, places) + float16 vectors |
+| 9 | `python -m corpus.plans` | ~30 s | `corpus/plans.jsonl` (8.7 MB) | Detaljplan registry + planbestämmelser for the agent's `plans` / `plan_rules` tools |
+
+- **Total: about 5 h, or about 1 day with OCR.** Add 5–15 min for the model download and about 15 min to install CUDA torch on a fresh machine.
+- **Incremental runs are fast.** Finished kommuner are skipped (`--force` recrawls them), and chunk ids include a text hash, so step 7 only embeds what changed.
+- After OCR, rerun steps 5 to 9. Restart the backend after step 8.
+- Rebuild on a GPU, then share the result: re-indexing on a CPU takes about 53 h and OCR takes days.
+
+---
+
+## Benchmarks
+
+| | Command | Cost |
+|---|---|---|
+| Retrieval eval (45 questions, recall@k / MRR) | `python -m localrag.eval --models st-arctic-l-v2 --setups dense-sv` | free (local models) |
+| Agent benchmark (feasibility, case-law and plankarta cases) | `python -m agentic.bench ...` (see `agentic/bench.py`) | **spends API credits** (about $0.01 per answer) |
+| Grounding of the answers | `python -m agentic.grounding <results.json>` | API credits |
+| PDF reports | `python -m agentic.report`, `python -m agentic.report_technical` | free (reads the result files) |
+
+Cases are in `backend/agentic/cases*.jsonl`. Past results are in `backend/data/agentic/` (versioned, about 50 MB) and can be browsed in the app's **Benchmark** tab.
+
+---
+
+## Cost and hosting (summary)
+
+- **LLM**: about $0.007–0.011 per agent answer (GPT-6 Luna via OpenRouter, medium effort), so about $10 per 1,000 questions. It is the main cost.
+- **Hosting**: the simplest setup is one VPS (4 vCPU / 8 GB / 80 GB, about €7–15 per month) with the store and the PDFs on disk, using the ONNX CPU runtime. Neon free tier keeps users and chats, and Vercel or the same VPS serves the frontend.
+- **Later, at scale**: corpus on Neon pgvector (about 2.5–3 GB) and PDFs on Cloudflare R2 (about $0.13 per month). This needs the store ported to Postgres.
+
+---
+
+## Project layout
 
 ```
 pyrmit/
-├── backend/                 # FastAPI application
-│   ├── routers/            # API route definitions
-│   ├── database.py         # Database connection & session
-│   ├── main.py             # App entry point
-│   ├── models.py           # SQLAlchemy database models
-│   ├── schemas.py          # Pydantic data models
-│   ├── requirements.txt    # Python dependencies
-│   └── Dockerfile
-├── frontend/                # Next.js application
-│   ├── app/                # App Router source code
-│   │   ├── page.tsx        # Main chat page
-│   │   ├── layout.tsx      # Root layout
-│   │   └── globals.css     # Global styles
-│   ├── next.config.js      # Next.js configuration
-│   ├── package.json        # Node dependencies
-│   └── Dockerfile
-├── docker-compose.yml      # Service orchestration
-└── README.md
+├── backend/
+│   ├── main.py            # FastAPI app, access gate, routers, store preload
+│   ├── embeddings.py      # embedding providers + GPU/ONNX runtime selection
+│   ├── routers/           # auth, chat (SSE), docs (open cited PDFs), benchmark, db browser...
+│   ├── agentic/           # tool-calling agent, tools, benchmark, cases, reports
+│   ├── localrag/          # disk store, retriever, BM25 analyzer, gazetteer, eval, models.toml
+│   ├── corpus/            # pipeline: municipalities, laws, crawl, ocr, extract, chunk, plans, caselaw
+│   ├── agents/, chunking/ # earlier pgvector RAG + feasibility agents (RETRIEVAL_BACKEND=pgvector)
+│   └── data/              # corpus, index, benchmark results (mostly gitignored)
+├── frontend/              # Next.js: chat, sources viewer, pipeline inspector, database & benchmark views
+└── CLAUDE.md              # detailed architecture and gotchas
 ```
-
-## Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed
-- An [OpenAI API Key](https://platform.openai.com/api-keys)
-
-## Getting Started
-
-### 1. Configuration
-
-The project uses environment variables for configuration.
-
-**Backend** (`backend/.env`):
-Ensure the file exists and contains either direct OpenAI credentials or Cloudflare AI Gateway credentials.
-```properties
-# Option 1: direct OpenAI
-OPENAI_API_KEY=sk-your_actual_api_key_here
-
-# Option 2: Cloudflare AI Gateway
-# CF_AIG_TOKEN=your_cloudflare_gateway_token
-# CF_ACCOUNT_ID=your_cloudflare_account_id
-# CF_GATEWAY_ID=your_gateway_id
-# Optional: use a non-default stored provider key alias
-# CF_AIG_BYOK_ALIAS=production
-# Optional: force provider selection ("openai" or "cloudflare")
-# LLM_PROVIDER=openai
-
-DATABASE_URL=postgresql://user:password@db:5432/pyrmit
-JWT_SECRET_KEY=replace-with-openssl-rand-hex-32-output
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-ACCESS_GATE_PASSWORD=choose-a-shared-password
-# Needed when frontend/backend are on different subdomains, e.g. .example.com
-# ACCESS_GATE_COOKIE_DOMAIN=.example.com
-# Use "none" with secure cookies if your deployment requires cross-site cookie behavior
-# ACCESS_GATE_COOKIE_SAMESITE=lax
-# ACCESS_GATE_COOKIE_SECURE=true
-```
-
-**Frontend** (`frontend/.env`):
-Configures the shared access gate. The browser talks to same-origin `/api/*`, and Next.js proxies those requests to FastAPI.
-```properties
-ACCESS_GATE_PASSWORD=choose-a-shared-password
-# Build/server-side proxy target for Next.js rewrites
-API_PROXY_TARGET=http://localhost:8000
-```
-
-If `ACCESS_GATE_PASSWORD` is set in both apps, the deployed website is password protected before users can reach `/`, `/auth`, or the backend API. The value must match in `backend/.env` and `frontend/.env`. For direct backend access outside the frontend, send the same value in the `x-access-gate-password` header. `DEV_ACCESS_PASSWORD` is still accepted as a backward-compatible fallback.
-
-The password form and all auth/app requests use same-origin `/api/*` URLs. Next.js proxies those requests to FastAPI with a rewrite, so there is no Next.js API route layer and no client-side public API base URL to manage.
-
-For Docker deployments, set `API_PROXY_TARGET` as a build arg for the frontend image so Next.js can compile the rewrite destination.
-
-Auth now follows FastAPI's OAuth2 password flow with bearer JWTs. The frontend stores the access token in the browser and sends it as `Authorization: Bearer <token>` to protected API routes. In Swagger at `/docs`, use the built-in `Authorize` flow against `/api/auth/token`.
-
-### 2. Running the Application
-
-Start the entire stack using Docker Compose:
-
-```bash
-docker-compose up --build
-```
-
-This command will:
-- Start the PostgreSQL database.
-- Build and start the Backend service (available at port 8000).
-- Build and start the Frontend service (available at port 3000).
-
-### 3. Accessing the App
-
-- **User Interface**: Open [http://localhost:3000](http://localhost:3000) to chat with the agent.
-- **API Documentation**: Open [http://localhost:8000/docs](http://localhost:8000/docs) to explore the backend API via Swagger UI.
-
-## Development
-
-To stop the application, press `Ctrl+C` in the terminal where docker-compose is running, or run:
-
-```bash
-docker-compose down
-```
-
-### Data Persistence
-
-Database data is persisted in a Docker volume named `postgres_data`. To reset the database, you can remove this volume:
-
-```bash
-docker-compose down -v
-```
-
-### Alternative: Running Locally (Hybrid Mode)
-
-If you prefer to run the backend and frontend locally for faster development (hot-reloading, debugging) while keeping the database in Docker:
-
-1.  **Start only the Database:**
-    ```bash
-    docker-compose up -d db
-    ```
-
-2.  **Backend Setup:**
-    - Update `backend/.env`: Set `DATABASE_URL=postgresql://user:password@localhost:5432/pyrmit`
-    - Install dependencies:
-      ```bash
-      cd backend
-      uv venv
-      source .venv/bin/activate
-      uv pip install -r requirements.txt
-      ```
-    - Run server:
-      ```bash
-      uvicorn main:app --reload
-      ```
-
-3.  **Frontend Setup:**
-    - Install dependencies:
-      ```bash
-      cd frontend
-      bun install
-      ```
-    - Run dev server:
-      ```bash
-      bun run dev
-      ```
-      
-
-'

@@ -1,0 +1,97 @@
+# Embedding models for `python -m benchmark.run`. Keys map to EmbeddingConfig
+# (embeddings.py): provider, model, dim, base_url, api_key, query_prefix,
+# document_prefix, batch_size, st_kwargs. `skip = true` excludes a model unless
+# it is named with --models.
+#
+# Asymmetric models need their prefixes, otherwise they are unfairly penalised:
+#   E5:    "query: " / "passage: "
+#   Qwen3: an instruction on the query side only
+#
+# Cost of embedding the corpus once (~4.6k chunks, ~0.8M tokens) at OpenRouter
+# prices: under $0.02 for most models, ~$0.10 for text-embedding-3-large, ~$0.15
+# for gemini-embedding. Local models are free but need sentence-transformers + torch.
+
+# --- Direct OpenAI (OPENAI_API_KEY) -------------------------------------------
+
+[models.te3-large]
+provider = "openai"
+model = "text-embedding-3-large"
+notes = "current production model"
+
+[models.te3-small]
+provider = "openai"
+model = "text-embedding-3-small"
+
+# --- OpenRouter (OPENROUTER_API_KEY) ------------------------------------------
+
+[models.or-qwen3-8b]
+provider = "openrouter"
+model = "qwen/qwen3-embedding-8b"
+query_prefix = "Instruct: Given a question about Swedish land law or urban planning, retrieve the passage that answers it\nQuery: "
+
+[models.or-qwen3-4b]
+provider = "openrouter"
+model = "qwen/qwen3-embedding-4b"
+query_prefix = "Instruct: Given a question about Swedish land law or urban planning, retrieve the passage that answers it\nQuery: "
+
+[models.or-bge-m3]
+provider = "openrouter"
+model = "baai/bge-m3"
+
+[models.or-me5-large]
+provider = "openrouter"
+model = "intfloat/multilingual-e5-large"
+query_prefix = "query: "
+document_prefix = "passage: "
+
+[models.or-gemini-001]
+provider = "openrouter"
+model = "google/gemini-embedding-001"
+
+[models.or-voyage-4]
+provider = "openrouter"
+model = "voyageai/voyage-4"
+
+[models.or-mistral-embed]
+provider = "openrouter"
+model = "mistralai/mistral-embed-2312"
+
+[models."or-pplx-0.6b"]
+provider = "openrouter"
+model = "perplexity/pplx-embed-v1-0.6b"
+
+# --- Local, in-process from Hugging Face (uv pip install -e ".[local]") --------
+
+[models.st-bge-m3]
+provider = "st"
+model = "BAAI/bge-m3"
+batch_size = 16
+skip = true
+
+[models.st-me5-large]
+provider = "st"
+model = "intfloat/multilingual-e5-large"
+query_prefix = "query: "
+document_prefix = "passage: "
+skip = true
+
+[models."st-qwen3-0.6b"]
+provider = "st"
+model = "Qwen/Qwen3-Embedding-0.6B"
+query_prefix = "Instruct: Given a question about Swedish land law or urban planning, retrieve the passage that answers it\nQuery: "
+batch_size = 16
+skip = true
+
+[models.st-kblab-swedish]
+provider = "st"
+model = "KBLab/sentence-bert-swedish-cased"
+notes = "Swedish-only: expect weak results on English questions, compare with --lang sv"
+skip = true
+
+# --- Local, OpenAI-compatible server (Ollama, HF TEI, vLLM, LM Studio) ---------
+
+[models.ollama-bge-m3]
+provider = "local"
+base_url = "http://localhost:11434/v1"
+model = "bge-m3"
+skip = true

@@ -120,6 +120,7 @@ class MessageResponse(ChatMessage):
     session_id: str | None = None
     created_at: datetime
     trace: list[dict] | None = None
+    status: str | None = None
 
     class Config:
         from_attributes = True
@@ -192,6 +193,8 @@ class AnalyzeResponse(BaseModel):
 # --- Database browser schemas ---
 
 ChunkTableName = Literal["law", "document"]
+# "neon": pgvector tables; "local": the offline corpus served by localrag (data/corpus/chunks.jsonl)
+ChunkStore = Literal["neon", "local"]
 
 
 class SourceCount(BaseModel):
@@ -232,6 +235,7 @@ class ChunkPage(BaseModel):
 class ChunkSearchRequest(BaseModel):
     query: str = Field(min_length=1)
     k: int = Field(default=5, ge=1, le=50)
+    store: ChunkStore = "neon"
 
 
 class ChunkSearchMatch(BaseModel):
@@ -243,5 +247,6 @@ class ChunkSearchMatch(BaseModel):
 
 class ChunkSearchResponse(BaseModel):
     embedding_ok: bool
+    kommuner: list[str] = []
     law: list[ChunkSearchMatch]
     document: list[ChunkSearchMatch]

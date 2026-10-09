@@ -3,11 +3,9 @@ import re
 import uuid
 from pathlib import Path
 
-from openai import OpenAI
-
 from chunking.chunk_detaljplan import DetaljplanChunker
 from db.push_db import PushDB
-from llm import get_openai_client
+from embeddings import get_embedder
 from ocr.detaljplan_ocr import MistralOCR
 
 def slugify_document_name(name: str) -> str:
@@ -39,18 +37,8 @@ def ensure_markdown_source(input_path: Path, markdown_output_dir: Path) -> Path:
     return md_path
 
 
-def embed_texts_batch(client: OpenAI, texts: list[str], batch_size: int = 100) -> list[list[float]]:
-    all_embeddings: list[list[float]] = []
-    for start in range(0, len(texts), batch_size):
-        batch = texts[start:start + batch_size]
-        response = client.embeddings.create(model="openai/text-embedding-3-large", input=batch)
-        all_embeddings.extend(item.embedding for item in response.data)
-    return all_embeddings
-
-
 def ingest_markdown_document(
     push_db: PushDB,
-    client: OpenAI,
     markdown_path: Path,
     output_path: Path | None,
     document_name: str,
@@ -68,7 +56,7 @@ def ingest_markdown_document(
         f"Section: {chunk.get('section', 'Document')}\n\n{chunk['content']}"
         for chunk in chunks
     ]
-    embeddings = embed_texts_batch(client, texts_for_embedding)
+    embeddings = get_embedder().embed_documents(texts_for_embedding)
 
     deleted = 0
     if clear_existing_for_document:
@@ -108,7 +96,6 @@ def ingest_folder(
         }
 
     push_db = PushDB()
-    client = get_openai_client()
 
     items: list[dict] = []
     total_inserted = 0
@@ -121,7 +108,6 @@ def ingest_folder(
 
         inserted, deleted = ingest_markdown_document(
             push_db=push_db,
-            client=client,
             markdown_path=markdown_path,
             output_path=chunk_output_path,
             document_name=document_name,

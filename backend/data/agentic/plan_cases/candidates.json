@@ -1,0 +1,3309 @@
+[
+ {
+  "id": "plan-800ef0b3-5-1",
+  "kommun": [
+   "0513"
+  ],
+  "kommun_name": "Kinda",
+  "plan_id": "800ef0b32134a3b3",
+  "plan_name": "Håkantorp 1:21 , 3:2 och 5:1 - A different Kinda life - en del av Sjöriket Kinda!",
+  "doc_id": "pdf:0513:c26e66e489379811",
+  "property": "Håkantorp 5:1",
+  "label": "5:1",
+  "codes_near": [
+   "e1",
+   "d1",
+   "h1",
+   "h2",
+   "h5",
+   "o1",
+   "b1",
+   "b2",
+   "n1",
+   "b3",
+   "p1"
+  ],
+  "definitions": {
+   "e1": "Största bygnadsarea är 150 kvm per fastighet",
+   "d1": "Minsta fastighetsstorlek är 1000 kvm",
+   "n1": "Markarbeten får ej ske som kan skada trädet (utanför planområdet)"
+  },
+  "decisive_codes": [
+   "e1",
+   "f6"
+  ],
+  "image": "plan-800ef0b3-5-1.png"
+ },
+ {
+  "id": "plan-0d4bb26f-51-52",
+  "kommun": [
+   "1264"
+  ],
+  "kommun_name": "Skurup",
+  "plan_id": "0d4bb26f926c24cc",
+  "plan_name": "534 ädp skurup 51.52",
+  "doc_id": "pdf:1264:ed472a067f5133af",
+  "property": "property 51:52",
+  "label": "51:52",
+  "codes_near": [
+   "e1",
+   "p1",
+   "f1",
+   "f2"
+  ],
+  "definitions": {
+   "e1": "Högsta utnyttjandegrad i byggnadsarea per fastighet är 30%",
+   "p1": "Huvudbyggnad ska placeras minst 4 meter från fastighetsgräns. Komplementbyggnad får placeras 1 meter från fastighetsgräns",
+   "f1": "Endast friliggande byggnader",
+   "f2": "Huvudbyggnad ska utföras med fasad i stenmaterial, tegel eller puts. Inslag av annat material, maximalt 30% av fasadytan, kan tillåtas"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2"
+  ],
+  "image": "plan-0d4bb26f-51-52.png"
+ },
+ {
+  "id": "plan-f7b1fd25-15-5",
+  "kommun": [
+   "0885"
+  ],
+  "kommun_name": "Borgholm",
+  "plan_id": "f7b1fd253a2025f9",
+  "plan_name": "Detaljplan för del av",
+  "doc_id": "pdf:0885:b8493afd1cf586d5",
+  "property": "property 15:5",
+  "label": "15:5",
+  "codes_near": [
+   "a2",
+   "f4",
+   "o1",
+   "e2",
+   "d1",
+   "f1",
+   "f2",
+   "f3",
+   "f5",
+   "b1",
+   "h1",
+   "a1"
+  ],
+  "definitions": {
+   "o1": "14,0 e1 170,0 e2 240,0 d1 600,0p1 p2p3f1f2f3f4f5b1",
+   "e2": "240,0 d1 600,0p1p2p3"
+  },
+  "decisive_codes": [
+   "e2",
+   "o1"
+  ],
+  "image": "plan-f7b1fd25-15-5.png"
+ },
+ {
+  "id": "plan-f936d8d2-237-78",
+  "kommun": [
+   "1270"
+  ],
+  "kommun_name": "Tomelilla",
+  "plan_id": "f936d8d21567130d",
+  "plan_name": "Detaljplan för del av Tomelilla 237:82 m.fl. (Hannelunds",
+  "doc_id": "pdf:1270:ac7eaabd50d775ea",
+  "property": "property 237:78",
+  "label": "237:78",
+  "codes_near": [
+   "h2",
+   "n1",
+   "p1",
+   "d1",
+   "o1",
+   "o2",
+   "b1",
+   "e1",
+   "e2",
+   "h1",
+   "n2"
+  ],
+  "definitions": {
+   "h2": "Högsta nockhöjd är 9 meter.",
+   "n1": "Marken får inte användas för parkering.",
+   "p1": "Byggnad ska placeras minst 4 meter från fastighetsgräns",
+   "d1": "Minsta fastighetsstorlek är 2000 m²",
+   "o1": "Största takvinkel är 25 grader.",
+   "o2": "Största takvinkel är 45 grader.",
+   "b1": "Minst 20 % av fastighetsarean ska vara genomsläpplig.",
+   "e1": "Största byggnadsarea är 40 % av fastighetsarean inom användningsområdet.",
+   "e2": "Största byggnadsarea är 30 % av fastighetsarean inom användningsområdet.",
+   "h1": "Högsta nockhöjd är 15 meter.",
+   "n2": "Parkering ska anordnas inom området"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "h1",
+   "h2"
+  ],
+  "image": "plan-f936d8d2-237-78.png"
+ },
+ {
+  "id": "plan-0758dcae-1-36",
+  "kommun": [
+   "2085"
+  ],
+  "kommun_name": "Ludvika",
+  "plan_id": "0758dcae95166393",
+  "plan_name": "detaljplan för Del av Gonäs 1:36 med flera ”Väsmansbacken” I Ludvika kommun Upprättad i december 2021 Rev",
+  "doc_id": "pdf:2085:ad1794d206f6d706",
+  "property": "property 1:36",
+  "label": "1:36",
+  "codes_near": [
+   "e1",
+   "e2",
+   "p1",
+   "p2",
+   "d3",
+   "d2",
+   "n2",
+   "a2",
+   "a3",
+   "f1",
+   "n1",
+   "n3",
+   "a5",
+   "a1",
+   "b1",
+   "m1"
+  ],
+  "definitions": {
+   "e1": "Största byggnadsarea 20% av fastighetsarean inom användningsområdet. Komplementbyggnaders nockhöjd får maximalt vara 4 meter",
+   "e2": "Största byggnadsarea 20% av fastighetsarean inom användningsområdet",
+   "p1": "Bostadsbyggnad ska placeras minst 4 meter från fastighetsgräns",
+   "p2": "Bostadsbyggnad ska placeras minst 20 meter från den södra",
+   "d3": "Minsta fastighetsstorlek är 700 kvadratmeter",
+   "d2": "Minsta fastighetsstorlek är 500 kvadratmeter",
+   "n2": "Staket eller häck ska finnas i gräns mot allmän plats NATUR",
+   "a2": "Marklov krävs även för trädfällning",
+   "a3": "Huvudmannaskapet är enskilt för den allmänna platsen",
+   "f1": "Entréer ska placeras i nära anslutning till gatan",
+   "n1": "Parkering ska anordnas och placeras så att det blir en minst 6m lång plats framför eventuell carport/garage",
+   "n3": "Staket eller häck ska finnas i gräns mot allmän plats NATUR och SKYDD",
+   "a5": "Startbesked får inte ges för bostadshus förrän anläggning för trafik, vatten och avlopp som kommunen inte ska vara huvudman för har kommit till stånd",
+   "a1": "Strandskyddet är upphävt",
+   "b1": "Bostadshus ska utföras radonsäkert",
+   "m1": "Om bostaden har en eller flera uteplatser ska ljudnivån vid minst en uteplats vara högst 50 dBA ekvivalent ljudnivå och högst 70 dBA maximal ljudnivå"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3"
+  ],
+  "image": "plan-0758dcae-1-36.png"
+ },
+ {
+  "id": "plan-6b1901dd-4-1",
+  "kommun": [
+   "0160"
+  ],
+  "kommun_name": "Täby",
+  "plan_id": "6b1901ddb4d67f3e",
+  "plan_name": "Detaljplan för Bromsen 11 m.fl. i Skarpäng",
+  "doc_id": "pdf:0160:d5be2722887f4ef4",
+  "property": "Bromsen 4:1",
+  "label": "4:1",
+  "codes_near": [
+   "f1",
+   "r1",
+   "h4",
+   "h5",
+   "o2",
+   "o1",
+   "h3",
+   "n3",
+   "k1",
+   "a1",
+   "ö1",
+   "q1",
+   "e3",
+   "e4",
+   "f2",
+   "f3",
+   "h2",
+   "e1",
+   "f4",
+   "n1",
+   "s1",
+   "n4",
+   "b1",
+   "n2",
+   "n6"
+  ],
+  "definitions": {
+   "f1": "Endast radhus",
+   "r1": "Byggnad får inte rivas",
+   "o2": "Minsta takvinkel är 55 grader",
+   "o1": "Minsta takvinkel är 45 grader",
+   "k1": "Fasader ska vara i lockläktpanel avfärgad med röd",
+   "a1": "Marklov krävs även för fällning av träd markerat med n2.",
+   "ö1": "Marken får endast förses med komplementbyggnad",
+   "q1": "Ursprungliga fönster ska bevaras. Nya fönster får",
+   "e3": "Största byggnadsarea är 450 m²",
+   "e4": "Största byggnadsarea är 585 m²",
+   "f2": "Fasader ska vara i lockläktpanel eller timmer avfärgad med röd slamfärg f3 Byggnad ska utformas med sadeltak",
+   "e1": "Största byggnadsarea är 40 m²",
+   "f4": "Byggnad ska utformas med förskjutet fasadliv",
+   "n1": "Parkering för boende får endast anordnas i underjordiskt garage. Parkering för rörelsehindrade får anordnas ovan mark. (Begränsas av användningsgräns) n2 Parkering för besökare får endast anordnas ovan mark. (Begränsas av användningsgräns) n3 Trädet får endast fällas om det är sjukt eller utgör en säkerhetsrisk n4 Marken inom fastigheten ska anordnas med ytor",
+   "s1": "Minst hälften av bostadsrummen i varje bostad ska orienteras mot en ljuddämpad sida",
+   "b1": "Minst 70 % av fastighetsarean ska vara genomsläpplig"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "h1"
+  ],
+  "image": "plan-6b1901dd-4-1.png"
+ },
+ {
+  "id": "plan-5c5cfe6f-5-1",
+  "kommun": [
+   "0665"
+  ],
+  "kommun_name": "Vaggeryd",
+  "plan_id": "5c5cfe6f051a9719",
+  "plan_name": "högabråten 1 3",
+  "doc_id": "pdf:0665:beb8c19ffbd1639e",
+  "property": "Högabråten 5:1",
+  "label": "5:1",
+  "codes_near": [
+   "e2",
+   "h1",
+   "j1",
+   "f2",
+   "f1",
+   "f3",
+   "f4",
+   "m1",
+   "g1",
+   "u1",
+   "m2",
+   "h2",
+   "a1",
+   "a2",
+   "e1"
+  ],
+  "definitions": {
+   "e2": "Största sammanlagda byggnadsarea för tekniska anläggningar är 100 kvadratmeter. Gäller inom hela användningsområdet",
+   "h1": "Högsta nockhöjd är 20 meter",
+   "j1": "Stängsel får uppföras i fastighetsgräns. Gäller inom hela användningsområdet",
+   "f2": "Uppstickande installationer på tak ska kläs in och utformas så att de harmonierar med bebyggelsens uttryck",
+   "f1": "Byggnader med längd som överstiger 50 meter ska delas upp i mindre byggnadsvolymer eller förses med fasader som visuellt delar upp byggnaden",
+   "f3": "Skyltar eller dylikt ska inte vara blinkande eller föränderliga och ska monteras på fasad och ingå i byggnaders utformning, områdesskylt undantaget. Skyltpyloner får inte anordnas",
+   "f4": "Minst 60 % av total takytan ska vara vegetationsklädd",
+   "m1": "Avledande dike",
+   "g1": "Markreservat för gemensamhetsanläggning.",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar.",
+   "m2": "Belysning ska utformas och placeras så att betydande ljusstörningar mot omgivningen undviks. Gäller inom hela användningsområdet",
+   "h2": "Högsta totalhöjd är 217 meter över angivet nollplan",
+   "a1": "Startbesked får inte ges för byggnation förrän avledande dike inom kvartersmark är på plats.",
+   "a2": "Startbesked får inte ges för byggnation förrän dike och damm inom Naturmark är på plats.",
+   "e1": "Största sammanlagda byggnadsarea är 83000 kvadratmeter inom användningsområdet, dock högst 60% av fastighetsarea"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "h1",
+   "h2"
+  ],
+  "image": "plan-5c5cfe6f-5-1.png"
+ },
+ {
+  "id": "plan-d2cb53fa-1-77",
+  "kommun": [
+   "1421"
+  ],
+  "kommun_name": "Orust",
+  "plan_id": "d2cb53fac165e0d7",
+  "plan_name": "Detaljplan för Kila 1:73 m.fl",
+  "doc_id": "pdf:1421:4ded0233f3125f69",
+  "property": "property 1:77",
+  "label": "1:77",
+  "codes_near": [
+   "d5",
+   "b1",
+   "b3",
+   "k1",
+   "e3",
+   "d4",
+   "f3",
+   "f4",
+   "u1",
+   "g1",
+   "e1",
+   "d1",
+   "f2",
+   "b2",
+   "e4"
+  ],
+  "definitions": {
+   "d5": "Minsta fastighetsstorlek är 2000 m2 (4 kap 18 § punkt 1 PBL)",
+   "e3": "Största byggnadsarea inom egenskapsområdet är 600 m2",
+   "d4": "Minsta fastighetsstorlek är 1200 m2 (4 kap 18 § punkt 1 PBL)",
+   "f3": "Byggnadernas fasader ska utformas med träpanel målad med slamfärg i grå kulör alternativt behandlad med järnvitriol. Tak ska vara av sedum med plåtdetaljer (4 kap 11 § punkt 1 PBL)",
+   "f4": "Byggnader utformas med stående träpanel. Tak ska vara av icke bländade material. Solpaneler medges (4 kap 11 § punkt 1 PBL)",
+   "u1": "Markreservat för allmännyttiga underjordska ledningar (4 kap 6 § PBL)",
+   "g1": "Markreservat för gemensamhetsanläggning (4 kap 18 § PBL)",
+   "d1": "Minsta fastighetsstorlek är 1500 m2 (4 kap 18 § punkt 1 PBL)",
+   "e4": "Största byggnadsarea för komplementbyggnad inom egenskapsområdet är 50m2"
+  },
+  "decisive_codes": [
+   "e2",
+   "e3",
+   "e4"
+  ],
+  "image": "plan-d2cb53fa-1-77.png"
+ },
+ {
+  "id": "plan-0e511af6-4-31",
+  "kommun": [
+   "0461"
+  ],
+  "kommun_name": "Gnesta",
+  "plan_id": "0e511af67ebd7f57",
+  "plan_name": "Detaljplan för Gnesta 36:11 m.fl. fastigheter, Centrumkvarteret",
+  "doc_id": "pdf:0461:dc12177374c26988",
+  "property": "property 4:31",
+  "label": "4:31",
+  "codes_near": [
+   "ö1",
+   "h1",
+   "k1",
+   "f2",
+   "f3",
+   "f4",
+   "n1",
+   "o2",
+   "b1",
+   "f5",
+   "o3",
+   "h2",
+   "h3",
+   "h5",
+   "h6",
+   "h8",
+   "f7",
+   "f6"
+  ],
+  "definitions": {
+   "ö1": "Marken får endast förses med lastkaj med maximal byggnadsarea om 40 kvm ö2 Marken får endast förses med upphöjt gårdsbjälklag till en maximal höjd av 1,5 meter över marknivå. Ovan gårdsbjälklaget får komplementbyggnad och annan anläggning än byggnad uppföras",
+   "h1": "Högsta nockhöjd är 23 meter över angivet nollplan.",
+   "k1": "Varsamhet vid förändring av byggnad. Värdebärande karaktärsdrag som ska beaktas är byggnadens form, takvinkel och fönstersättning. Fasaden ska vara slätputsad. Fönster i byggnadens övre våning ska vara trä utan spröjs motsvarande befintlig utformning och konstruktion.",
+   "f2": "Takutsprång ska vara minst 2 meter",
+   "f3": "Fasad ska vara av puts eller trä.",
+   "f4": "Färgsättning av fasad, sockel och sockelvåning ska vara i röda och gula nyanser som går ton i ton. Färgpalett finns i gestaltningsbilaga.",
+   "n1": "Växtbädd ska finnas",
+   "o2": "Minsta takvinkel är 25 grader.",
+   "b1": "Friskluftsintag placeras så att de vänds bort från Västra Stambanan (söderut). Samtliga lokaler förses med utrymningsmöjlighet bort från",
+   "f5": "Fasad ska vara av puts.",
+   "o3": "Minsta takvinkel är 25 grader.",
+   "h2": "Högsta nockhöjd är 29.5 meter över angivet nollplan.",
+   "h3": "Högsta nockhöjd är 31 meter över angivet nollplan.",
+   "h5": "Högsta nockhöjd är 23.5 meter över angivet nollplan.",
+   "h6": "Högsta nockhöjd är 27.5 meter över angivet nollplan.",
+   "h8": "Högsta nockhöjd är 31 meter över angivet nollplan.",
+   "f7": "Frontespis får uppföras till en maximal längd om 8,1 meter och en sammanlagd längd av 1/2 av takets längd mot gata.",
+   "f6": "Frontespis får uppföras till en maximal längd om 4,9 meter och en sammanlagd längd av 1/2 av takets längd mot gata."
+  },
+  "decisive_codes": [
+   "h1",
+   "h2",
+   "h3",
+   "h4",
+   "h5",
+   "h6",
+   "h7",
+   "h8",
+   "h9",
+   "ö1",
+   "ö3"
+  ],
+  "image": "plan-0e511af6-4-31.png"
+ },
+ {
+  "id": "plan-1d2db42f-1-319",
+  "kommun": [
+   "1961"
+  ],
+  "kommun_name": "Hallstahammar",
+  "plan_id": "1d2db42f3b17175b",
+  "plan_name": "dp236",
+  "doc_id": "pdf:1961:742cbf6fa363f14d",
+  "property": "property 1:319",
+  "label": "1:319",
+  "codes_near": [
+   "r1",
+   "f5",
+   "f1",
+   "p6",
+   "n2",
+   "x1",
+   "f2",
+   "p8",
+   "p2",
+   "n3",
+   "a1",
+   "e7",
+   "f4",
+   "p7",
+   "e8",
+   "p5",
+   "f3",
+   "p10",
+   "u1",
+   "k1",
+   "k2",
+   "k3",
+   "f6",
+   "h9",
+   "q4",
+   "q1",
+   "o3",
+   "f7",
+   "f8",
+   "p1",
+   "f10",
+   "p4",
+   "f9",
+   "p3",
+   "j1",
+   "n4"
+  ],
+  "definitions": {
+   "r1": "Byggnad får inte rivas.",
+   "f5": "Fasad ska utföras i trä eller puts",
+   "f1": "Endast radhus",
+   "p6": "Huvudbyggnad ska placeras längs den södra användningsgränsen.",
+   "n2": "Parkering tillåts ej. Parkeringsplatser för rörelsehindrade tillåten.",
+   "x1": "Markreservat för allmännyttig gång- och cykeltrafik.",
+   "f2": "Endast flerbostadshus",
+   "p8": "Ny huvudbyggnad ska placeras längs den västra egenskapsgränsen.",
+   "p2": "Huvudbyggnad ska placeras längs den västra egenskapsgränsen.",
+   "n3": "Marken får inte användas för parkering.",
+   "a1": "Bygglov krävs även för komplement- och tillbyggnader som annars är lovbefriade enligt 9 kap. 4a - b § PBL.",
+   "e7": "Största byggnadsarea för ny bebyggelse är 450 kvm.",
+   "f4": "Ny bebyggelse tillåts endast i form av radhus",
+   "p7": "Ny huvudbyggnad ska placeras längs den östra egenskapsgränsen.",
+   "e8": "Största byggnadsarea för ny bebyggelse är 180 kvm.",
+   "p5": "Ny huvudbyggnad ska placeras längs den södra egenskapsgränsen.",
+   "f3": "Endast radhus eller flerbostadshus",
+   "p10": "Ny huvudbyggnad ska placeras minst 10 meter från den västra användningsgränsen.",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar.",
+   "k1": "Soldattorpets volym ska bibehållas.",
+   "k2": "Fasader ska vara av stående locklistpanel.",
+   "k3": "Tak ska vara belagt med takpannor av lertegel.",
+   "f6": "Fasader mot Parkgatan och intilliggande gavlar ska bekläs med rött tegel upp till minst 4 meter från färdig mark.",
+   "h9": "Nockhöjden ska vara mellan 8 och 9.5 meter.",
+   "q4": "Byggnadens fönstersättning får inte ändras.",
+   "q1": "Byggnadens stomme av timmer ska bibehållas. Lagningar ska utföras med likvärdigt timmer.",
+   "o3": "Takvinkel för ny bebyggelse ska vara mellan 20 och 40 grader.",
+   "f7": "Fasad ska utföras i trä, puts eller tegel.",
+   "p1": "Huvudbyggnad ska placeras längs den södra egenskapsgränsen.",
+   "f10": "Maximalt två radhus i följd får utföras med samma fasadkulör.",
+   "p4": "Huvudbyggnad ska placeras längs den östra egenskapsgränsen.",
+   "p3": "Huvudbyggnad ska placeras längs den norra egenskapsgränsen.",
+   "j1": "Tydlig avgränsning i form av staket, plank eller häck ska anläggas mot naturomark.",
+   "n4": "Markens höjd får inte ändras mer än 0.5 meter."
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "e6",
+   "e7",
+   "e8",
+   "h2",
+   "h3",
+   "h4",
+   "h5",
+   "h6",
+   "h7",
+   "h8",
+   "h9",
+   "n4",
+   "o1"
+  ],
+  "image": "plan-1d2db42f-1-319.png"
+ },
+ {
+  "id": "plan-6c82d031-9-8",
+  "kommun": [
+   "1284"
+  ],
+  "kommun_name": "Höganäs",
+  "plan_id": "6c82d0314470bb38",
+  "plan_name": "DETALJPLAN FÖR BRUNNBY-BRÄCKE 9:3 MED FLERA",
+  "doc_id": "pdf:1284:3dbf6b59d82e770c",
+  "property": "Brunnby-Bräcke 9:8",
+  "label": "9:8",
+  "codes_near": [
+   "e1",
+   "p1",
+   "p2",
+   "e2",
+   "a1"
+  ],
+  "definitions": {
+   "e1": "50,0% S törsta byggnadsarea är angivet värde i % av fastigh etsarean inom användningsom rådet, PBL",
+   "e2": "20,0% S törsta byggnadsarea är angivet värde i % av fastigh etsarean inom användningsom rådet, PBL 4 kap. 11 § 1 st 1 p. ) — 0,0 Högsta nockh öjd är angivet värde i m eter på garage, carport och förråd, PBL"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2"
+  ],
+  "image": "plan-6c82d031-9-8.png"
+ },
+ {
+  "id": "plan-18d74bb2-4-180",
+  "kommun": [
+   "0331"
+  ],
+  "kommun_name": "Heby",
+  "plan_id": "18d74bb25103fafc",
+  "plan_name": "A3-L",
+  "doc_id": "pdf:0331:015a224db3243280",
+  "property": "property 4:180",
+  "label": "4:180",
+  "codes_near": [
+   "e1",
+   "f2",
+   "f1",
+   "p1",
+   "f3",
+   "b1",
+   "a2"
+  ],
+  "definitions": {
+   "e1": "Största byggnadsarea är 25 % av fastighetsarean inom användningsområdet",
+   "f2": "Tak ska utföras som sadeltak eller valmat tak. Lägre utstickande byggnadsdelar får utföras med annan utformning med avseende på taktyp",
+   "f1": "Högsta nockhöjd för komplementbyggnad är 4 meter",
+   "p1": "Byggnad ska placeras minst 4,5 meter från fastighetsgräns. Sammanbyggda hus får dock förläggas över fastighetsgräns",
+   "f3": "Byggnader får inte förses med källare",
+   "b1": "Endast 50 % av fastighetsarean får hårdgöras",
+   "a2": "Marklov krävs även för hårdgörning av mark"
+  },
+  "decisive_codes": [
+   "e1",
+   "f1"
+  ],
+  "image": "plan-18d74bb2-4-180.png"
+ },
+ {
+  "id": "plan-cc122262-1-20",
+  "kommun": [
+   "1482"
+  ],
+  "kommun_name": "Kungälv",
+  "plan_id": "cc122262b547d76c",
+  "plan_name": "bostader gardet 120 och karolinen 1 kvarter 7",
+  "doc_id": "pdf:1482:0c0a7d22045aa620",
+  "property": "Karolinen 1:20",
+  "label": "1:20",
+  "codes_near": [
+   "h1",
+   "h3",
+   "h2",
+   "h4",
+   "x1",
+   "f1",
+   "s1",
+   "f5",
+   "f6",
+   "x2",
+   "x3",
+   "v1",
+   "f4",
+   "f2",
+   "f3",
+   "u1"
+  ],
+  "definitions": {
+   "h1": "Högsta nockhöjd är 57.5 meter över angivet nollplan",
+   "h3": "Högsta nockhöjd är 12.5 meter över angivet nollplan",
+   "h2": "Högsta nockhöjd är 30.5 meter över angivet nollplan",
+   "h4": "Högsta nockhöjd är 39.5 meter över angivet nollplan",
+   "x1": "Markreservat för allmännyttig gångtrafik till en fri höjd av 2.5 meter",
+   "f1": "Byggnad får kraga ut med lägsta fri höjd 11 meter, exklusive balkonger som får kraga ut med lägsta fri höjd 5 meter",
+   "s1": "Från bottenplan och vertikalt avgränsat uppåt till 5 meter får endast centrumändamål och bostadskomplement inredas",
+   "f5": "Byggnad får kraga ut med lägsta fri höjd 11 meter, exklusive balkonger som får kraga ut med lägsta fri höjd 5 meter",
+   "f6": "Utkragande byggnadsdelar får maximalt",
+   "x2": "Markreservat för allmännyttig gång- och cykeltrafik.",
+   "x3": "Markreservat för allmännyttig gång- och cykeltrafik till en fri höjd av 2.5 meter.",
+   "v1": "Enkelsidiga lägenheter mot Hansagatan får högst vara 35 m2",
+   "f4": "I lägenheter större än 35 kvadratmeter ska minst hälften av bostadsrummen i varje lägenhet ska orienteras mot en ljuddämpad sida",
+   "f2": "Utkragande byggnadsdelar får maximalt",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar. (begränsas av sekundär egenskapsgräns)"
+  },
+  "decisive_codes": [
+   "f1",
+   "f5",
+   "h1",
+   "h2",
+   "h3",
+   "h4",
+   "x1",
+   "x3"
+  ],
+  "image": "plan-cc122262-1-20.png"
+ },
+ {
+  "id": "plan-c8c0ef9e-3-1",
+  "kommun": [
+   "0686"
+  ],
+  "kommun_name": "Eksjö",
+  "plan_id": "c8c0ef9e45238fc1",
+  "plan_name": "Detaljplan för del av",
+  "doc_id": "pdf:0686:0920feac20346198",
+  "property": "property 3:1",
+  "label": "3:1",
+  "codes_near": [
+   "h1",
+   "h2",
+   "e1",
+   "e2",
+   "a3",
+   "ö1"
+  ],
+  "definitions": {
+   "h1": "Högsta nockhöjd på huvudbyggnad är 8 meter",
+   "h2": "Högsta nockhöjd på komplementbyggnad är 4 meter",
+   "e1": "Största byggnadsarea för huvudbyggnad är 150 m2 per fastighet",
+   "e2": "Största byggnadsarea för komplementbyggnad är 50 m2 per fastighet",
+   "a3": "Strandskyddet är upphävt.",
+   "ö1": "Marken får inte förses med byggnad."
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "h1",
+   "h2"
+  ],
+  "image": "plan-c8c0ef9e-3-1.png"
+ },
+ {
+  "id": "plan-daed3eb5-44-7",
+  "kommun": [
+   "2081"
+  ],
+  "kommun_name": "Borlänge",
+  "plan_id": "daed3eb582d520dc",
+  "plan_name": "pluto 1 och lejonet 1 och",
+  "doc_id": "pdf:2081:af881f91db00fb7f",
+  "property": "Pluto 44:7",
+  "label": "44:7",
+  "codes_near": [
+   "ö1",
+   "h9",
+   "e2",
+   "m1"
+  ],
+  "definitions": {
+   "ö1": "Marken får endast förses med friliggande förråd och",
+   "h9": "Högsta nockhöjd på väderskydd och förrådsbyggnad är",
+   "e2": "Största sammanlagda byggnadsarea för förrådsbyggnader och väderskydd är 40 kvm. Därutöver medges tak över cykelparkering.",
+   "m1": "Bulleravskärmande byggnad, byggnadsverk eller annan bulleravskärmande åtgärd till en minsta höjd av 4 meter och minst 55 meters längd parallellt järnväg ska utföras till skydd för skolgården."
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "h1",
+   "h2",
+   "h3",
+   "h4",
+   "h5",
+   "h6",
+   "h7",
+   "h8",
+   "h9",
+   "m1"
+  ],
+  "image": "plan-daed3eb5-44-7.png"
+ },
+ {
+  "id": "plan-882ed219-1-68",
+  "kommun": [
+   "0885"
+  ],
+  "kommun_name": "Borgholm",
+  "plan_id": "882ed219311c10dc",
+  "plan_name": "Detaljplan för Legenäs 1:39 samt del av Persnäs-Sandvik 1:1",
+  "doc_id": "pdf:0885:3adb5baf3d66e3a3",
+  "property": "Legenäs 1:68",
+  "label": "1:68",
+  "codes_near": [
+   "t1",
+   "e2",
+   "o1"
+  ],
+  "definitions": {
+   "e2": "200,0 b1 b2",
+   "o1": "27,0 o2 45,0 p1"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "h2"
+  ],
+  "image": "plan-882ed219-1-68.png"
+ },
+ {
+  "id": "plan-67d7880e-1-47",
+  "kommun": [
+   "0562"
+  ],
+  "kommun_name": "Finspång",
+  "plan_id": "67d7880eb53a5412",
+  "plan_name": "smr sunda ost",
+  "doc_id": "pdf:0562:aa0fbdecb015ecee",
+  "property": "property 1:47",
+  "label": "1:47",
+  "codes_near": [
+   "e1",
+   "p1",
+   "h5",
+   "h3",
+   "g1"
+  ],
+  "definitions": {
+   "e1": "Största byggnadsarea är 20% av fastighetsarean. Maximalt 250 kvadratmeter per fastighet",
+   "p1": "Huvudbyggnad ska placeras minst 4 meter från",
+   "h5": "Högsta nockhöjd på huvudbyggnad är 6.5 meter",
+   "h3": "Högsta nockhöjd på huvudbyggnad är 6.5 meter . Höjdberäkning utgår från höjd mot gata och högsta nockhöjd får inte överskridas mot gata",
+   "g1": "Markreservat för gemensamhetsanläggning."
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e4",
+   "e5",
+   "e6",
+   "e7",
+   "e8",
+   "e9",
+   "h1",
+   "h2",
+   "h3",
+   "h4",
+   "h5",
+   "h6",
+   "h7",
+   "n1"
+  ],
+  "image": "plan-67d7880e-1-47.png"
+ },
+ {
+  "id": "plan-dbf73dbb-1-28",
+  "kommun": [
+   "2161"
+  ],
+  "kommun_name": "Ljusdal",
+  "plan_id": "dbf73dbbd55e556c",
+  "plan_name": "bondarv 1.26 .i järvsö",
+  "doc_id": "pdf:2161:d9c9b991ff1e97ef",
+  "property": "property 1:28",
+  "label": "1:28",
+  "codes_near": [
+   "p1",
+   "f2",
+   "f1",
+   "g1",
+   "e2",
+   "f4",
+   "f5"
+  ],
+  "definitions": {
+   "p1": "Byggnad ska placeras minst 4.5 meter från fastighetsgräns . (Begränsas av användningsgräns)",
+   "f2": "Tak ska vara av sadeltaksmodell",
+   "f1": "Endast friliggande bostadshus. (Begränsas av användningsgräns)",
+   "g1": "Markreservat för gemensamhetsanläggning.",
+   "e2": "Största byggnadsarea är 200 m² per fastighet",
+   "f4": "Vind får ej inredas. (Begränsas av användningsgräns)",
+   "f5": "Loft får ej anordnas. (Begränsas av användningsgräns)"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "h1",
+   "h2"
+  ],
+  "image": "plan-dbf73dbb-1-28.png"
+ },
+ {
+  "id": "plan-7e3b14b4-9-44",
+  "kommun": [
+   "2404"
+  ],
+  "kommun_name": "Vindeln",
+  "plan_id": "7e3b14b48fd4bf71",
+  "plan_name": "m 845 s",
+  "doc_id": "pdf:2404:d5254d1781f46a9c",
+  "property": "property 9:44",
+  "label": "9:44",
+  "codes_near": [
+   "h1",
+   "h2",
+   "h3",
+   "h4",
+   "h5",
+   "h6",
+   "h7",
+   "h8",
+   "v1",
+   "x1"
+  ],
+  "definitions": {
+   "h1": "Högsta byggna dshöjd för huvudbyggna den är 7,2 m eter",
+   "h2": "Högsta byggna dshöjd för huvudbyggna den är 6,5 m eter",
+   "h3": "Högsta byggna dshöjd för huvudbyggna den är 4,5 m eter",
+   "h4": "Högsta byggna dshöjd för ga ra ge eller gårdsbyggna d är 2,6 m eter",
+   "h5": "Högsta byggna dshöjd är 7,2 m eter",
+   "h6": "Högsta byggna dshöjd är 3,5 m eter",
+   "h7": "0,0 Högsta nockhöjd på huvudbyggna d är a ngivet värde i m eter",
+   "h8": "0,0 Högsta nockhöjd på kom plem entbyggna d är a ngivet värde i m eter",
+   "v1": "Högst två lägenheter per huvudbyggna d.",
+   "x1": "M a rkreserva t för a llm ännyttig gång- och cykeltra fik."
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "e6",
+   "h1",
+   "h2",
+   "h3",
+   "h4",
+   "h5",
+   "h6",
+   "h7",
+   "h8"
+  ],
+  "image": "plan-7e3b14b4-9-44.png"
+ },
+ {
+  "id": "plan-dfe028a4-27-2",
+  "kommun": [
+   "2161"
+  ],
+  "kommun_name": "Ljusdal",
+  "plan_id": "dfe028a4da114c24",
+  "plan_name": "nr2 kramsta s 4 m fl",
+  "doc_id": "pdf:2161:c9733d9c0e3525ab",
+  "property": "property 27:2",
+  "label": "27:2",
+  "codes_near": [
+   "b2",
+   "f1",
+   "f3",
+   "f4",
+   "f5",
+   "f6",
+   "f7",
+   "b1",
+   "d1",
+   "e1",
+   "f2",
+   "p1",
+   "b3",
+   "a1",
+   "v1"
+  ],
+  "definitions": {
+   "b2": "Endast 25 % av fastighetsarean får hårdgöras",
+   "f1": "Där den naturliga marklutningen överstiger 10 % skall byggnad uppföras med suterrängvåning, alternativt förhöjd sockel där inte suterrängvåning är möjligt för att anpassa byggnaden till terrängen.",
+   "f3": "Fasad ska utformas i trämaterial",
+   "f4": "Vind får ej inredas",
+   "f5": "Loft får ej anordnas",
+   "f6": "Taktäkning skall vara av tegel-, plåt- eller vegetativt material",
+   "f7": "Färg på taktäckning skall vara röd eller svart",
+   "b1": "Tak skall utföras som sadeltak",
+   "d1": "Minsta fastighetsstorlek är 800 kvadratmeter",
+   "e1": "Största byggnadsarea är 20 % per fastighet inom användningsområdet",
+   "f2": "Fasad ska utformas med dova kulörer i rött, svart eller brunt",
+   "p1": "Byggnad ska placeras minst 4 meter från fastighetsgräns",
+   "b3": "Dagvatten ska avledas till allmän platsmark. Utkastare från stuprör är ej tillåten.",
+   "a1": "Startbesked får inte ges för bostäder förrän lösa stenar eller block inom släntzon inklusive släntkrön och släntfot avlägsnats eller säkrats genom bultning eller annan säkerställd metod",
+   "v1": "Maximalt 1 lägenhet/bostad per fastighet inom användningsområdet"
+  },
+  "decisive_codes": [
+   "e1",
+   "f1"
+  ],
+  "image": "plan-dfe028a4-27-2.png"
+ },
+ {
+  "id": "plan-f8cfd3e9-1-67",
+  "kommun": [
+   "0765"
+  ],
+  "kommun_name": "Älmhult",
+  "plan_id": "f8cfd3e954fb0025",
+  "plan_name": "sånnaböke1 171 1",
+  "doc_id": "pdf:0765:ad77f4091d1b66d8",
+  "property": "Aböke 1:67",
+  "label": "1:67",
+  "codes_near": [
+   "d3",
+   "b1",
+   "e4",
+   "b4"
+  ],
+  "definitions": {
+   "b1": "Källare får inte finnas",
+   "e4": "Största byggnadsarea är 50 % inom egenskapsområdet",
+   "b4": "Grundläggning ska utföras med pålgrundläggning"
+  },
+  "decisive_codes": [
+   "e1",
+   "e10",
+   "e11",
+   "e12",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "e6",
+   "e7",
+   "e8",
+   "e9",
+   "f10",
+   "f5",
+   "f6",
+   "f7",
+   "f8",
+   "f9"
+  ],
+  "image": "plan-f8cfd3e9-1-67.png"
+ },
+ {
+  "id": "plan-82bcdb50-4-42",
+  "kommun": [
+   "0584"
+  ],
+  "kommun_name": "Vadstena",
+  "plan_id": "82bcdb50d454ff6f",
+  "plan_name": "Vadstena 4:44 öster om Tycklingevägen - Vadstena kommun",
+  "doc_id": "pdf:0584:3fb283048ba1ed66",
+  "property": "Vadstena 4:42",
+  "label": "4:42",
+  "codes_near": [
+   "e5",
+   "a3",
+   "d1"
+  ],
+  "definitions": {
+   "e5": "Största byggnadsarea är 170 m² per tomt, därav högst 120 för huvudbyggnad",
+   "a3": "Startbesked får inte ges för uppförande av byggnad förrän sanering av den förorenade delen av marken ska ske genom att de översta 0,5 m av jorden schaktas bort. Schaktmassor får inte återanvändas utan föregående anmälan till tillsynsmyndigheten",
+   "d1": "Minsta fastighetsstorlek är 500 kvadratmeter"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5"
+  ],
+  "image": "plan-82bcdb50-4-42.png"
+ },
+ {
+  "id": "plan-4c88cfab-99-1",
+  "kommun": [
+   "1291"
+  ],
+  "kommun_name": "Simrishamn",
+  "plan_id": "4c88cfabc4109182",
+  "plan_name": "Layout1",
+  "doc_id": "pdf:1291:b85f7aa54ee3521d",
+  "property": "property 99:1",
+  "label": "99:1",
+  "codes_near": [
+   "e1",
+   "n1"
+  ],
+  "definitions": {
+   "e1": "Byggnadsarea max 125 m2",
+   "n1": "Parkering +0,0 Föreskriven höjd över nollplanet i meter"
+  },
+  "decisive_codes": [
+   "e1",
+   "n1"
+  ],
+  "image": "plan-4c88cfab-99-1.png"
+ },
+ {
+  "id": "plan-ade75c23-3-22",
+  "kommun": [
+   "1264"
+  ],
+  "kommun_name": "Skurup",
+  "plan_id": "ade75c23ed803509",
+  "plan_name": "DETALJPLAN FÖR ÖRMÖLLA 1:40 OCH DEL AV ÖRMÖLLA 3:29, I ABBEKÅS, SKURUPS KOMMUN",
+  "doc_id": "pdf:1264:e8ac55fd9f01c22d",
+  "property": "property 3:22",
+  "label": "3:22",
+  "codes_near": [
+   "f1",
+   "e1"
+  ],
+  "definitions": {
+   "f1": "Huvudbyggnad ska utföras med fasad i stenmaterial, tegel eller puts. Inslag av annat material kan tillåtas till maximalt 35 % av",
+   "e1": "För friliggande villor är största byggnadsarea 220 m2 per"
+  },
+  "decisive_codes": [
+   "e1",
+   "h1",
+   "h2"
+  ],
+  "image": "plan-ade75c23-3-22.png"
+ },
+ {
+  "id": "plan-035b2c10-1-45",
+  "kommun": [
+   "1278"
+  ],
+  "kommun_name": "Båstad",
+  "plan_id": "035b2c10a9d63ff1",
+  "plan_name": "illustrationskarta",
+  "doc_id": "pdf:1278:2a5c7b9310c93524",
+  "property": "property 1:45",
+  "label": "1:45",
+  "codes_near": [
+   "q3",
+   "k2"
+  ],
+  "definitions": {
+   "q3": "Byggnadernas kulturhistoriska värden i form av befintliga byggnaders skala, disposition och takutformning tillsammans med",
+   "k2": "Byggnadsverkets värden vad gäller befintliga höjder, takvinkel,"
+  },
+  "decisive_codes": [
+   "b1",
+   "e1",
+   "e2",
+   "e3",
+   "k2",
+   "q2"
+  ],
+  "image": "plan-035b2c10-1-45.png"
+ },
+ {
+  "id": "plan-5e372477-1-3",
+  "kommun": [
+   "0583"
+  ],
+  "kommun_name": "Motala",
+  "plan_id": "5e372477ad490ed8",
+  "plan_name": "Klakorp 1:165 (Salemkyrkan), Borensberg - Motala kommun",
+  "doc_id": "pdf:0583:7d5b7e65ba81bfff",
+  "property": "property 1:3",
+  "label": "1:3",
+  "codes_near": [
+   "h1",
+   "h2",
+   "h3"
+  ],
+  "definitions": {
+   "h2": "Högsta nockhöjd är 7,5 meter.",
+   "h3": "Högsta nockhöjd är 4,0 meter."
+  },
+  "decisive_codes": [
+   "h2",
+   "h3"
+  ],
+  "image": "plan-5e372477-1-3.png"
+ },
+ {
+  "id": "plan-d2bb5923-2-262",
+  "kommun": [
+   "0162"
+  ],
+  "kommun_name": "Danderyd",
+  "plan_id": "d2bb59232601248d",
+  "plan_name": "STOCKSUND - Klövergärdet 1 - nya bostäder – Danderyds kommun",
+  "doc_id": "pdf:0162:0f07aa32f6bb730f",
+  "property": "property 2:262",
+  "label": "2:262",
+  "codes_near": [
+   "n2"
+  ],
+  "definitions": {
+   "n2": "Markens höjd, utformning och vegetation ska bevaras."
+  },
+  "decisive_codes": [
+   "a1",
+   "e1",
+   "e2",
+   "f1",
+   "h1",
+   "h2",
+   "n2",
+   "n3"
+  ],
+  "image": "plan-d2bb5923-2-262.png"
+ },
+ {
+  "id": "plan-f142da9c-4-37",
+  "kommun": [
+   "1381"
+  ],
+  "kommun_name": "Laholm",
+  "plan_id": "f142da9c0383d6e3",
+  "plan_name": "DETALJPLAN FÖR BRYGGAREN 10 MED FLERA, LAHOLM – LAHOLMS KOMMUN",
+  "doc_id": "pdf:1381:26ad461c27b3fcca",
+  "property": "property 4:37",
+  "label": "4:37",
+  "codes_near": [
+   "e1",
+   "e3",
+   "u1"
+  ],
+  "definitions": {
+   "e1": "1870 Största b yggn a dsa rea är a n givet värde i m ²,",
+   "e3": "10 Största b yggn a dsa rea för kom plem en tb yggn a d är a n givet värde i m ², PBL 4 ka p. 11 § 1 st 1 p.",
+   "u1": "Ma rkreserva t för a llm än n yttiga un derjordiska ledn in ga r. Kva rtersm a rk, PBL 4 ka p. 6 §"
+  },
+  "decisive_codes": [
+   "e1",
+   "e3",
+   "e4"
+  ],
+  "image": "plan-f142da9c-4-37.png"
+ },
+ {
+  "id": "plan-c5341148-13-31",
+  "kommun": [
+   "2021"
+  ],
+  "kommun_name": "Vansbro",
+  "plan_id": "c5341148d299b3c3",
+  "plan_name": "Detaljplan för Söderåsen",
+  "doc_id": "pdf:2021:9df8f1f381ca233f",
+  "property": "property 13:31",
+  "label": "13:31",
+  "codes_near": [
+   "h1",
+   "h2",
+   "a1",
+   "b1",
+   "e1",
+   "m2",
+   "m1"
+  ],
+  "definitions": {
+   "h1": "Högsta nockhöjd på huvudbyggnad är 12.0 meter",
+   "h2": "Högsta nockhöjd på komplementbyggnad är 4.0 meter",
+   "a1": "Strandskyddet är upphävt. . (begränsas av sekundär egenskapsgräns)",
+   "b1": "Minst 50 % av fastighetsarean inom användningsområdet ska vara genomsläpplig",
+   "e1": "Största byggnadsarea är 3000 m² inom användningsområdet",
+   "m1": "Till varje bostad ska det finnas en skyddad uteplats, egen eller gemensam, där ljudnivån är högst 50 dBA ekvivalent nivå och 70 dBA maxnivå m2 Vid uppförande av förskola ska ett bullerplank uppföras till en höjd om 2,2 meter"
+  },
+  "decisive_codes": [
+   "e1",
+   "h1",
+   "h2",
+   "m1"
+  ],
+  "image": "plan-c5341148-13-31.png"
+ },
+ {
+  "id": "plan-236dbe3b-1-22",
+  "kommun": [
+   "0662"
+  ],
+  "kommun_name": "Gislaved",
+  "plan_id": "236dbe3b968395cf",
+  "plan_name": "sm97",
+  "doc_id": "pdf:0662:428f2c9a15963af0",
+  "property": "property 1:22",
+  "label": "1:22",
+  "codes_near": [
+   "e1",
+   "p1",
+   "n2",
+   "n3"
+  ],
+  "definitions": {
+   "e1": "00,0% Största byggnadsarea är angivet värde i % av fastighetsarean inom användningsområdet ) 0,0 Högsta byggnadshöjd är angivet värde i meter",
+   "p1": "Byggnad ska placeras minst 4 meter från fastighesgräns. Garage, uthus och andra gårdsbyggnader får placeras intill 2 meter från fastighetsgräns.",
+   "n2": "Inom området ska växtlighet, träd och buskar bibehållas.",
+   "n3": "Marken får inte användas för upplag eller parkering"
+  },
+  "decisive_codes": [
+   "E1",
+   "e1"
+  ],
+  "image": "plan-236dbe3b-1-22.png"
+ },
+ {
+  "id": "plan-141cf6ab-6-7",
+  "kommun": [
+   "0586"
+  ],
+  "kommun_name": "Mjölby",
+  "plan_id": "141cf6ab7f62fef5",
+  "plan_name": "i väderstad väderstads nybble 3 2 . väderstad ab",
+  "doc_id": "pdf:0586:2757f23c0b885566",
+  "property": "Nybble 6:7",
+  "label": "6:7",
+  "codes_near": [
+   "n1",
+   "u1",
+   "a1",
+   "b1",
+   "a2",
+   "h2",
+   "b5",
+   "b3"
+  ],
+  "definitions": {
+   "n1": "Träd får endast fällas om det är sjukt, utgör en säkerhetsrisk eller hindrar drift och underhåll av markförlagd ledning. Åtgärder som kan få negativ effekt på trädet och dess rotsystem får inte vidtas. Marken får ej användas för upplag. Avverkning av träd kan kräva dispens/anmälan om samråd hos länsstyrelsen.",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar.",
+   "a1": "Marklov krävs även för för trädfällning. Fällt träd ska ersättas genom återplantering inom 50 meter från gräns till väg 942.",
+   "b1": "Markytans genomsläpplighet får inte försämras",
+   "a2": "Marklov krävs även för åtgärder som kan försämra markytans genomsläpplighet.",
+   "h2": "Högsta nockhöjd är 12 meter.",
+   "b5": "Lägsta färdig golvhöjd för bottenplan samt ingång till källare är +109,5 meter över angivet nollplan.",
+   "b3": "Kulverterat dike. Får överbyggas. (Begränsas av sekundär egenskapsgräns)"
+  },
+  "decisive_codes": [
+   "b5",
+   "b6",
+   "e1",
+   "h1",
+   "h2"
+  ],
+  "image": "plan-141cf6ab-6-7.png"
+ },
+ {
+  "id": "plan-63076052-1-11",
+  "kommun": [
+   "2081"
+  ],
+  "kommun_name": "Borlänge",
+  "plan_id": "63076052efd38fef",
+  "plan_name": "klövervallenpdf",
+  "doc_id": "pdf:2081:6f0cb8ae669f433e",
+  "property": "Klövervallen 1:11",
+  "label": "1:11",
+  "codes_near": [
+   "f1",
+   "f2",
+   "f3",
+   "n1",
+   "k1",
+   "e1",
+   "f7",
+   "n2",
+   "f4",
+   "f5",
+   "f6",
+   "u1",
+   "f12",
+   "f13",
+   "e3",
+   "f10",
+   "f11"
+  ],
+  "definitions": {
+   "f1": "Parkeringsdäck ska utformas med kanter för att hindra bländljus från",
+   "f2": "Parkeringsdäck får inrymma högst två parkeringsplan med en högsta plushöjd i meter på +152 över angivet nollplan, färdig golvhöjd parkeringsdäck",
+   "f3": "Parkeringsdäck får ej överbyggas med tak",
+   "n1": "Endast markparkering eller parkeringsdäck får anordnas",
+   "k1": "Byggnadens karaktärsdrag vad gäller fasadmaterial, färgsättning,",
+   "e1": "Största byggnadsarea är 100 m²",
+   "f7": "Maximal markyta som får hårdgöras är 800 kvadratmeter",
+   "n2": "Marken får inte användas för parkering, undantaget cykelparkering",
+   "f4": "Fasaderna ska utföras i samma färgschema som befintliga byggnader inom planområdet",
+   "f5": "Endast sadeltak",
+   "f6": "Takkupor får anordnas till högst en tredjedel av takets längd, maximalt 2 meter per takkupa och ska vara lägre än byggnadens nockhöjd",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar",
+   "f12": "Om balkong/uteplats ska uppföras ska minst en balkong/uteplats till varje bostad eller en gemensam uteplats i anslutning till bostäderna utföras eller placeras så att bullerriktvärden för denna inte överskrids",
+   "f13": "Takkupor får inte uppföras",
+   "e3": "Största byggnadsarea är 60 m²",
+   "f10": "Maximal markyta som får hårdgöras är 100 kvadratmeter",
+   "f11": "Maximal markyta som får hårdgöras är 750 kvadratmeter"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "f2",
+   "f6"
+  ],
+  "image": "plan-63076052-1-11.png"
+ },
+ {
+  "id": "plan-961f5a4b-5-17",
+  "kommun": [
+   "1282"
+  ],
+  "kommun_name": "Landskrona",
+  "plan_id": "961f5a4bd2499fa8",
+  "plan_name": "vapensmeden 1 2",
+  "doc_id": "pdf:1282:b8b66c7ccc05a881",
+  "property": "property 5:17",
+  "label": "5:17",
+  "codes_near": [
+   "u1",
+   "m4",
+   "a1"
+  ],
+  "definitions": {
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar.",
+   "m4": "Avvattnande dike ska anläggas för att avleda vatten till fastighetens västra hörn m5 Friskluftsintag ska placeras vända bort från väg E6",
+   "a1": "Marklov krävs även för fällning av befintlig lind vid N=6202561 E=106957. Lov för fällning ska endast ges om trädet är sjukt,"
+  },
+  "decisive_codes": [
+   "RH",
+   "h1",
+   "h2",
+   "m4"
+  ],
+  "image": "plan-961f5a4b-5-17.png"
+ },
+ {
+  "id": "plan-b8c0f58a-23-193",
+  "kommun": [
+   "2582"
+  ],
+  "kommun_name": "Boden",
+  "plan_id": "b8c0f58a382b6e40",
+  "plan_name": "A1-L",
+  "doc_id": "pdf:2582:18aabd90f87445d2",
+  "property": "property 23:193",
+  "label": "23:193",
+  "codes_near": [
+   "h2",
+   "e4",
+   "d4",
+   "p3",
+   "p2",
+   "f3",
+   "o2",
+   "e3"
+  ],
+  "definitions": {
+   "h2": "Högsta nockhöjd är 8.5 meter.",
+   "e4": "Största byggnadsarea är 180 m² per fastighet.",
+   "d4": "Minsta fastighetsstorlek är 750 m²",
+   "p3": "Huvudbyggnad ska placeras minst 4 meter från",
+   "p2": "Komplementbyggnad ska placeras minst 2 meter från",
+   "f3": "Endast friliggande hus",
+   "o2": "Minsta takvinkel är 20 grader.",
+   "e3": "Största byggnadsarea är 130 m² per fastighet."
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "e6",
+   "h1",
+   "h2",
+   "h3",
+   "h4"
+  ],
+  "image": "plan-b8c0f58a-23-193.png"
+ },
+ {
+  "id": "plan-11a27da2-16-1",
+  "kommun": [
+   "1273"
+  ],
+  "kommun_name": "Osby",
+  "plan_id": "11a27da20e7ebb5a",
+  "plan_name": "Detaljplan för del av Osby 181:5 och del av Norrskenet 4 (Skogshem)",
+  "doc_id": "pdf:1273:4e22159eb714be5f",
+  "property": "property 16:1",
+  "label": "16:1",
+  "codes_near": [
+   "e1",
+   "h1"
+  ],
+  "definitions": {
+   "e1": "Största byggnadsarea är 40 % av fastighetsarean inom användningsområdet.",
+   "h1": "Högsta nockhöjd är 16 meter."
+  },
+  "decisive_codes": [
+   "e1",
+   "h1"
+  ],
+  "image": "plan-11a27da2-16-1.png"
+ },
+ {
+  "id": "plan-6f31a42e-1-105",
+  "kommun": [
+   "0160"
+  ],
+  "kommun_name": "Täby",
+  "plan_id": "6f31a42e07cd0d06",
+  "plan_name": "Detaljplan för Bromsen 11 m.fl. i Skarpäng",
+  "doc_id": "pdf:0160:c646da49bbdedd01",
+  "property": "Bromsen 1:105",
+  "label": "1:105",
+  "codes_near": [
+   "f1",
+   "h4",
+   "h3",
+   "o2",
+   "o1",
+   "h1",
+   "n5",
+   "f5",
+   "e2",
+   "e5",
+   "f4",
+   "s1",
+   "ö1",
+   "h2",
+   "h5",
+   "n1",
+   "n2",
+   "n3",
+   "n4"
+  ],
+  "definitions": {
+   "f1": "Endast radhus",
+   "o2": "Minsta takvinkel är 55 grader",
+   "o1": "Minsta takvinkel är 45 grader",
+   "h1": "Högsta nockhöjd är 18.5 meter över angivet nollplan h2 Högsta nockhöjd är 23.0 meter över angivet nollplan h3 Högsta nockhöjd är 25.0 meter över angivet nollplan h4 Högsta nockhöjd är 26.0 meter över angivet nollplan h5 Högsta nockhöjd är 27.0 meter över angivet nollplan",
+   "f5": "För varje bostad får en takkupa uppföras med en största bredd om 2 meter på vardera sidan av taknocken",
+   "e2": "Största byggnadsarea är 325 m²",
+   "e5": "Största byggnadsarea är 715 m²",
+   "f4": "Byggnad ska utformas med förskjutet fasadliv",
+   "s1": "Minst hälften av bostadsrummen i varje bostad ska orienteras mot en ljuddämpad sida",
+   "ö1": "Marken får endast förses med komplementbyggnad",
+   "n1": "Parkering för boende får endast anordnas i underjordiskt garage. Parkering för rörelsehindrade får anordnas ovan mark n2 Parkering för besökare får endast anordnas ovan mark n3 Trädet får endast fällas om det är sjukt eller utgör en säkerhetsrisk n4 Marken inom fastigheten ska anordnas med ytor"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "h1"
+  ],
+  "image": "plan-6f31a42e-1-105.png"
+ },
+ {
+  "id": "plan-e5b621f7-2-127",
+  "kommun": [
+   "1482"
+  ],
+  "kommun_name": "Kungälv",
+  "plan_id": "e5b621f7c0b689f1",
+  "plan_name": "Kareby — Bostäder i Kareby - kungalv.se",
+  "doc_id": "pdf:1482:9cf9a761f95eb367",
+  "property": "property 2:127",
+  "label": "2:127",
+  "codes_near": [
+   "h3",
+   "h2"
+  ],
+  "definitions": {
+   "h3": "Högsta nockhöjd på komplementbyggnader är 29.0 meter över angivet nollplan.",
+   "h2": "Högsta nockhöjd på huvudbyggnader är 34.4 meter över angivet nollplan. Om byggnaden konstrueras med bjälklag i trä får höjden per våningsplan öka med 0.3 meter per bostadsvåning så att högsta nockhöjd på huvudbyggnader blir 35.0 meter över angivet nollplan."
+  },
+  "decisive_codes": [
+   "h2",
+   "h3",
+   "h4"
+  ],
+  "image": "plan-e5b621f7-2-127.png"
+ },
+ {
+  "id": "plan-820eea43-1-142",
+  "kommun": [
+   "0642"
+  ],
+  "kommun_name": "Mullsjö",
+  "plan_id": "820eea436b3ab19f",
+  "plan_name": "Detaljplan för del av Bosebygd 1:3",
+  "doc_id": "pdf:0642:469d67af024a3339",
+  "property": "property 1:142",
+  "label": "1:142",
+  "codes_near": [
+   "h1",
+   "h2",
+   "n1"
+  ],
+  "definitions": {
+   "h1": "Högsta nockhöjd är 8 meter",
+   "h2": "Högsta nockhöjd är 5 meter",
+   "n1": "Schaktning och anläggning får ej påverka trädet inklusive dess rotsystem"
+  },
+  "decisive_codes": [
+   "e1",
+   "h1",
+   "h2"
+  ],
+  "image": "plan-820eea43-1-142.png"
+ },
+ {
+  "id": "plan-4e7caeac-12-15",
+  "kommun": [
+   "1233"
+  ],
+  "kommun_name": "Vellinge",
+  "plan_id": "4e7caeace4692408",
+  "plan_name": "Detaljplan för Ljunghusen 12:6 m.fl., norr om väg 100 Vellinge kommun, Skåne län",
+  "doc_id": "pdf:1233:61cc74673086328b",
+  "property": "property 12:15",
+  "label": "12:15",
+  "codes_near": [
+   "e1",
+   "e2",
+   "p1",
+   "p2",
+   "n1",
+   "e3",
+   "g2",
+   "g1"
+  ],
+  "definitions": {
+   "e1": "4/ 750 e2 e1 3/ 1000 e3",
+   "e2": "Största sammanlagda byggnadsarea är 180 m 2 per fastighet, varav högst 40 m 2 för fristående komplementbyggnader. Bestämmelsen gäller inom hela användningsområdet.",
+   "p1": "Endast friliggande hus. Huvudbyggnad ska placeras minst 4,0 m från grannfastighet. Garage/carport ska placeras minst 1,0 m från grannfastighet. Garage och uthus etc utformade som självständiga volymer och som sammanbyggs med huvudbyggnad räknas som komplementbyggnad avseende placering och får placeras minst 1,0 m från grannfastighet.",
+   "e3": "Största byggnadsarea är 20 procent av fastighetsarean, varav högst 40 m2 för fristående komplementbyggnader. Största sammanlagda byggnadsarea per fastighet är dock 230 m2. Bestämmelsen gäller inom hela användningsområdet.",
+   "g2": "Marken skall vara tillgänglig för gemensamhetsanläggning för dagvattenledning",
+   "g1": "Marken skall vara tillgänglig för gemensamhetsanläggning för grönytor samt dränering"
+  },
+  "decisive_codes": [
+   "a2",
+   "e1",
+   "e2",
+   "e3",
+   "e5"
+  ],
+  "image": "plan-4e7caeac-12-15.png"
+ },
+ {
+  "id": "plan-2921dc72-8-41",
+  "kommun": [
+   "2282"
+  ],
+  "kommun_name": "Kramfor",
+  "plan_id": "2921dc729ab9d8cc",
+  "plan_name": "Detaljplan för Limsta 18:5, Banken 6, Banken 7 m.fl. Babelsberg Kramfors kommun",
+  "doc_id": "pdf:2282:058a957da8893c84",
+  "property": "Banken 8:41",
+  "label": "8:41",
+  "codes_near": [
+   "q5",
+   "m1",
+   "f2",
+   "u1",
+   "f1",
+   "f6",
+   "m4",
+   "h2",
+   "h3",
+   "q7",
+   "a1",
+   "u2"
+  ],
+  "definitions": {
+   "m1": "Minst hälften av bostadsrummen i lägenheter större än 35 kvm ska placeras mot ljuddämpad sida",
+   "f2": "Fasader ska utformas med träpanel eller puts med kulörer i dov pastell. Dock ej svart, grå eller vit. Tak ska utformas med sadeltak i",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar.",
+   "f1": "Byggnaden ska anpassas till sin omgivning i fråga om proportioner, materialval och kulörer. Fasader ska utformas med hög kvalité samt",
+   "f6": "Endast suterränghus Ändrad lovplikt",
+   "m4": "Byggnaden ska utföras med minst brandklass EI30. Fönster ska utföras brandklassade mot Ådalsbanan. Friskluftintag får inte placeras mot Ådalsbanan. Byggnaden ska utformas så att utrymning är möjlig att utföra på motsatt sida från Ådalsbanan",
+   "h2": "Högsta totalhöjd är 42 meter över angivet nollplan",
+   "h3": "Högsta totalhöjd är 43 meter över angivet nollplan",
+   "q7": "Underhållet ska anpassas till byggnadsverkets värde från historisk, kulturhistorisk, miljömässig och konstnärlig synpunkt. Byggnadsverket ska underhållas så att de särskilda värdena bevaras",
+   "a1": "Marklov krävs även för att fälla träd med en stamdiameter på över",
+   "u2": "Markreservat för allmännyttig underjordisk anläggning."
+  },
+  "decisive_codes": [
+   "f3",
+   "h1",
+   "h2",
+   "h3",
+   "h4",
+   "h5"
+  ],
+  "image": "plan-2921dc72-8-41.png"
+ },
+ {
+  "id": "plan-0d57ae77-7-37",
+  "kommun": [
+   "0880"
+  ],
+  "kommun_name": "Kalmar",
+  "plan_id": "0d57ae774860c1e2",
+  "plan_name": "dp smedby tågstopp",
+  "doc_id": "pdf:0880:1b5a63e371a65761",
+  "property": "property 7:37",
+  "label": "7:37",
+  "codes_near": [
+   "n1",
+   "b1",
+   "b2",
+   "u1",
+   "h2",
+   "h3",
+   "o1",
+   "e3",
+   "e2",
+   "e5",
+   "e6"
+  ],
+  "definitions": {
+   "n1": "Parkering",
+   "b1": "Om en bostad har en eller flera uteplatser ska minst en av dessa placeras där högst 50 dB(A) ekvivalent ljudnivå samt 70 dB(A) maximal ljudnivå ej överskrids",
+   "b2": "Byggnader ska grundläggas och utföras så att komfortvägd vibrationsnivå i bostadsrum ej överskrider 0,4 mm/s rms vid tågpassage samt att maximal stomljudsnivå i bostadsrum ej överskrider LmaxF 32 dB(A) vid tågpassage",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar.",
+   "h2": "Högsta nockhöjd är 13.0 meter",
+   "h3": "Högsta totalhöjd är 4.0 meter för komplementbyggnad",
+   "o1": "Största takvinkel är 35 grader",
+   "e3": "Största byggnadsarea för komplementbyggnad är 110 kvm",
+   "e2": "Största byggnadsarea per byggnad är 350 kvm",
+   "e5": "Största sammanlagda byggnadsarea är 35 procent av fastighetsarean inom användningsområdet",
+   "e6": "Största sammanlagda byggnadsarea är 30 procent av fastighetsarean inom användningsområdet"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "e6",
+   "f1",
+   "h1",
+   "h2",
+   "h3",
+   "v1"
+  ],
+  "image": "plan-0d57ae77-7-37.png"
+ },
+ {
+  "id": "plan-fb408433-85-3",
+  "kommun": [
+   "2034"
+  ],
+  "kommun_name": "Orsa",
+  "plan_id": "fb408433b588426f",
+  "plan_name": "detaljplan för SYDÖSTRA GRÖNKLITT",
+  "doc_id": "pdf:2034:649e00cbd0fd6556",
+  "property": "property 85:3",
+  "label": "85:3",
+  "codes_near": [
+   "n2",
+   "n4",
+   "b2",
+   "d1",
+   "b3",
+   "n3",
+   "j1",
+   "o1",
+   "p1",
+   "h1",
+   "f1",
+   "f2",
+   "e1",
+   "b6",
+   "d4"
+  ],
+  "definitions": {
+   "n2": "Marken ska i huvudsak behålla sin naturkaraktär. Gäller hela användningsområdet.",
+   "n4": "Vid utfyllnad av mark inom fastighet ska det vid färdigställande av markarbeten återvegeteras i slänter för att återfå naturkaraktär. Gäller hela användningsområdet.",
+   "b2": "Byggnaders utformning och placering ska anpassas efter markens naturliga beskaffenhet.",
+   "d1": "Minsta fastighetsstorlek är 750 m²",
+   "b3": "Minst 50 % av fastighetsarean ska vara genomsläpplig",
+   "n3": "Stödmurar, gabioner och liknande anläggningar med terrasserande syfte får vara högst 1,5 meter höga.",
+   "j1": "Staket på och mellan tomter ska utgöras av trä.",
+   "o1": "Minsta resp största takvinkel ska vara 18 resp 35 grader",
+   "p1": "Byggnad ska placeras minst 4 meter från gräns mot angränsande bostadsfastighet. Komplementbyggnad får placeras minst 1 meter från angränsande bostadsfastighet.",
+   "h1": "Högsta nockhöjd på huvudbyggnad är 9,0 meter och på komplemenbyggnad 5,5 meter. Nockhöjden beräknas utifrån färdigt golvnivån på souterrängvåningen/bottenvåningen.",
+   "f1": "Takmaterial ska ges en mörk, matt färg och ej vara reflekterande. Alterativt kan taket vara vegetationsklätt (t.ex. sedum)",
+   "f2": "Fasadmaterial ska huvudsakligen vara av trä och ges en mörk, matt färg.",
+   "e1": "Endast friliggande byggnader med största byggnadsarea 150 kvm. Inom areabegränsningen får komplementbyggnader utgöra max 30 kvm. Högst 1 huvudbyggnad och 2 lägenheter per fastighet.",
+   "d4": "Minsta fastighetsstorlek är 900 m²"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "e6",
+   "h1",
+   "h2",
+   "n1"
+  ],
+  "image": "plan-fb408433-85-3.png"
+ },
+ {
+  "id": "plan-f945a590-35-3",
+  "kommun": [
+   "1381"
+  ],
+  "kommun_name": "Laholm",
+  "plan_id": "f945a59017cf37bb",
+  "plan_name": "DETALJPLAN FÖR DEL AV MELLBY 15:1 MELLBYSTRAND – LAHOLMS KOMMUN",
+  "doc_id": "pdf:1381:3b91ae5b6fb4ced2",
+  "property": "property 35:3",
+  "label": "35:3",
+  "codes_near": [
+   "b3",
+   "h1",
+   "h2",
+   "o1",
+   "e1",
+   "d1",
+   "p1",
+   "b1",
+   "b2",
+   "f1"
+  ],
+  "definitions": {
+   "b3": "Marken ska vara genomsläpplig.",
+   "o1": "0,0 Största takvinkel är angivet värde i grader.",
+   "e1": "1500 d1 5000",
+   "d1": "0,0 Minsta fastighetsstorlek är angivet värde i m²",
+   "p1": "Huvudbyggnad ska placeras minst 4 meter från fastighetsgräns där dessa inte är sammanbyggda",
+   "b1": "Källare får inte finnas.",
+   "b2": "Nivå på färdigt golv ska vara minst +4,5 meter över angivet nollplan"
+  },
+  "decisive_codes": [
+   "b2",
+   "e1",
+   "o1"
+  ],
+  "image": "plan-f945a590-35-3.png"
+ },
+ {
+  "id": "plan-2b0d33cb-85-3",
+  "kommun": [
+   "2034"
+  ],
+  "kommun_name": "Orsa",
+  "plan_id": "2b0d33cb1b88c975",
+  "plan_name": "detaljplan för SYDÖSTRA GRÖNKLITT",
+  "doc_id": "pdf:2034:7005fa1890d68362",
+  "property": "property 85:3",
+  "label": "85:3",
+  "codes_near": [
+   "d1",
+   "n1",
+   "o1",
+   "h3",
+   "f1",
+   "f2",
+   "b3",
+   "g1",
+   "f3",
+   "n2",
+   "b1",
+   "p1",
+   "h4",
+   "a3",
+   "b2",
+   "e1"
+  ],
+  "definitions": {
+   "d1": "Minsta fastighetsstorlek är 750 m²",
+   "n1": "Stödmurar, gabioner och liknande anläggningar med terrasserande syfte får vara högst 2 meter höga. Murar ska ha fasad av natursten eller betongsten.",
+   "o1": "Minsta resp största takvinkel ska vara 18 resp 35 grader",
+   "h3": "Högsta nockhöjd på komplementbyggnad är 5,5 meter.",
+   "f1": "Takmaterial ska ges en mörk, matt färg och ej vara reflekterande. Alternativt kan taket vara vegetationsklätt (t.ex. sedum)",
+   "f2": "Fasadmaterial ska utgöras av trä. Fasad ska ha matt yta och vara ofärgad, behandlad med järnvitriol eller tjärvitriol eller ges en faluröd, svart, grå eller brun kulör",
+   "g1": "Markreservat för gemensamhetsanläggning.",
+   "f3": "Staket ska utgöras av trä",
+   "n2": "Minst 75 procent av fastigheten ska ha genomsläpplig yta, det vill säga utgöras av planterad eller bevuxen trädgård eller naturmark, för att möjliggöra infiltration och fördröjning av dagvatten. Naturmark kan även erhållas genom att avbaningsmassor återförs efter att byggskedet avslutats. Asfaltering medges inte",
+   "b1": "Grundläggning ska utföras radonskyddat",
+   "p1": "Huvudbyggnad ska placeras minst 4 meter från fastighetsgräns. Komplementbyggnad ska placeras minst 1 meter från fastighetsgräns.",
+   "h4": "Högsta nockhöjd för huvudbyggnad är 5,7 meter över vägmitt för den väg från vilken infart ordnas ifrån. Vid beräkning av nockhöjd ska den gatunivå användas som bedöms vara mest relevant utifrån placeringen av aktuell byggnad",
+   "a3": "Marklov krävs även för åtgärder som minskar markens genomsläpplighet.",
+   "b2": "Huvudbyggnad ska utföras med souterränggrundläggning",
+   "e1": "Endast friliggande byggnader. Största sammanlagda byggnadsarea är 150 kvm per fastighet. Komplementbyggnader får sammantaget ha en byggnadsarea om max 30 kvm per fastighet. Högst 1 huvudbyggnad och 2 lägenheter per fastighet. Gäller hela användningsområdet"
+  },
+  "decisive_codes": [
+   "a2",
+   "e1",
+   "e2",
+   "h1",
+   "h2",
+   "h3",
+   "h4"
+  ],
+  "image": "plan-2b0d33cb-85-3.png"
+ },
+ {
+  "id": "plan-e21f0c2b-7-2",
+  "kommun": [
+   "2480"
+  ],
+  "kommun_name": "Umeå",
+  "plan_id": "e21f0c2b15834275",
+  "plan_name": "Detaljplan för del av fastigheten Sofiehem 2:1",
+  "doc_id": "pdf:2480:70d063e81cbbe222",
+  "property": "Sofiehem 7:2",
+  "label": "7:2",
+  "codes_near": [
+   "h2",
+   "f1",
+   "n1",
+   "n2",
+   "p1"
+  ],
+  "definitions": {
+   "h2": "Högsta nockhöjd är 4 meter.",
+   "f1": "Fasad ska vara av trä eller tegel",
+   "n1": "Träd med en bröstdiameter över 20 centimeter får endast fällas om det är sjukt eller utgör en säkerhetsrisk",
+   "n2": "Fällda träd ska ersättas med nya",
+   "p1": "Byggnad ska placeras minst 1 meter från GATA"
+  },
+  "decisive_codes": [
+   "h1",
+   "h2"
+  ],
+  "image": "plan-e21f0c2b-7-2.png"
+ },
+ {
+  "id": "plan-d703493f-23-2",
+  "kommun": [
+   "1862"
+  ],
+  "kommun_name": "Degerfor",
+  "plan_id": "d703493f4215f79a",
+  "plan_name": "Detaljplan för del av Agen 21:13 m.ﬂ. (Pekås)",
+  "doc_id": "pdf:1862:f84101f2dfd8bb5a",
+  "property": "property 23:2",
+  "label": "23:2",
+  "codes_near": [
+   "ö1",
+   "ö2",
+   "h1",
+   "u1",
+   "p1",
+   "f1",
+   "f2"
+  ],
+  "definitions": {
+   "ö1": "Marken får inte förses med byggnad.",
+   "ö2": "Marken får endast förses med carport, cykelgarage och andra anläggningar än byggnader.",
+   "h1": "0,0 Högsta nockhöjd är angivet värde i meter.",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar.",
+   "p1": "Byggnad ska placeras minst 4,5 meter från fastighetsgräns",
+   "f1": "Tomt ska utformas med vegetation",
+   "f2": "Tomt ska utformas med vegetation. Gång- och cykelbana får anordnas"
+  },
+  "decisive_codes": [
+   "E1",
+   "e1",
+   "h1"
+  ],
+  "image": "plan-d703493f-23-2.png"
+ },
+ {
+  "id": "plan-4df92dd1-56-67",
+  "kommun": [
+   "2582"
+  ],
+  "kommun_name": "Boden",
+  "plan_id": "4df92dd1826f9e27",
+  "plan_name": "Plankarta",
+  "doc_id": "pdf:2582:ac992090c48df94a",
+  "property": "property 56:67",
+  "label": "56:67",
+  "codes_near": [
+   "h1",
+   "h2",
+   "e1",
+   "e2",
+   "e3",
+   "d1"
+  ],
+  "definitions": {
+   "e1": "250,0 Största byggnadsarea är angivet värde i m² per friliggande villor",
+   "e3": "500,0 Största byggnadsarea är angivet värde i m² per friliggande villor",
+   "d1": "1000,0 Minsta fastighetsstorlek är angivet värde i m²"
+  },
+  "decisive_codes": [
+   "e1",
+   "e3"
+  ],
+  "image": "plan-4df92dd1-56-67.png"
+ },
+ {
+  "id": "plan-3c18c391-7-1",
+  "kommun": [
+   "0763"
+  ],
+  "kommun_name": "Tingsryd",
+  "plan_id": "3c18c3912ffd9040",
+  "plan_name": "detaljplan för Västra industriområdet (Mårsslätt 1:2 m.fl.)",
+  "doc_id": "pdf:0763:d8e63ff95472e6e4",
+  "property": "property 7:1",
+  "label": "7:1",
+  "codes_near": [
+   "n1",
+   "l1",
+   "ö1",
+   "h1"
+  ],
+  "definitions": {
+   "h1": "15,0 Högsta totalhöjd är angivet värde i meter."
+  },
+  "decisive_codes": [
+   "E1",
+   "h1"
+  ],
+  "image": "plan-3c18c391-7-1.png"
+ },
+ {
+  "id": "plan-8008b706-11-5",
+  "kommun": [
+   "2521"
+  ],
+  "kommun_name": "Pajala",
+  "plan_id": "8008b706964c4fb9",
+  "plan_name": "Aktuellt detaljplanearbete - Pajala Kommun",
+  "doc_id": "pdf:2521:eac51e39fe4e132a",
+  "property": "Pajala 11:5",
+  "label": "11:5",
+  "codes_near": [
+   "a1",
+   "o1",
+   "e1",
+   "a2",
+   "h1",
+   "h2",
+   "g1",
+   "g2"
+  ],
+  "definitions": {
+   "a1": "Huvudmannaskapet är enskilt för den allmänna platsen. (Begränsas av användningsgräns)",
+   "o1": "Minsta takvinkel är 27 grader. (Begränsas av användningsgräns)",
+   "e1": "Största byggnadsarea är 30 % av fastighetsarean inom användningsområdet. (Begränsas av användningsgräns)",
+   "a2": "Strandskyddet är upphävt.",
+   "h1": "Högsta nockhöjd är 5,5 m räknat från markens medelnivå invid byggnaden. (Begränsas av användningsgräns)",
+   "h2": "Högsta nockhöjd är 7,5 m räknat från markens medelnivå invid byggnaden. (Begränsas av användningsgräns)",
+   "g1": "Markreservat för gemensamhetsanläggning. (Begränsas av användningsgräns)",
+   "g2": "Markreservat för gemensamhetsanläggning. (Begränsas av användningsgräns)"
+  },
+  "decisive_codes": [
+   "e1",
+   "h1",
+   "h2",
+   "h3"
+  ],
+  "image": "plan-8008b706-11-5.png"
+ },
+ {
+  "id": "plan-2e526b30-1-55",
+  "kommun": [
+   "1282"
+  ],
+  "kommun_name": "Landskrona",
+  "plan_id": "2e526b30fa74a110",
+  "plan_name": "sabyholm",
+  "doc_id": "pdf:1282:b39f7a8d66569ace",
+  "property": "property 1:55",
+  "label": "1:55",
+  "codes_near": [
+   "o1",
+   "o2",
+   "h2",
+   "f1",
+   "p1",
+   "f2",
+   "n1",
+   "a1",
+   "m1",
+   "m2"
+  ],
+  "definitions": {
+   "o1": "Minsta takvinkel är 27 grader",
+   "o2": "Största takvinkel är 45 grader",
+   "h2": "Högsta nockhöjd är 12 meter",
+   "f1": "Fasad ska utformas huvudsakligen i tegel i röda eller gula nyanser.",
+   "p1": "Huvudbyggnads långsida ska placerasparallellt med förgårdsmark mot gata",
+   "f2": "Huvudbyggnad ska utformas med sadeltak",
+   "n1": "Trädet får endast fällas om det är sjukt eller utgör en säkerhetsrisk. Marklov krävs för fällning.",
+   "a1": "Startbesked får inte ges för nybyggnad, inredning av ytterligare bostad eller ändrad användning förrän sanering av markföroreningar har kommit till stånd. (Begränsas av användningsgräns)",
+   "m1": "Belysning utomhus ska utföras med låg ljuspunktshöjd och skärmas av så att den endast lyser upp det direkta närområdet nedan den. Belysning ska ha varmt ljus. (Begränsas av användningsgräns)",
+   "m2": "Bostad ska ha tillgång till enskild eller gemensam uteplats som är"
+  },
+  "decisive_codes": [
+   "RH",
+   "h2",
+   "m1"
+  ],
+  "image": "plan-2e526b30-1-55.png"
+ },
+ {
+  "id": "plan-354a2f0c-67-107",
+  "kommun": [
+   "1270"
+  ],
+  "kommun_name": "Tomelilla",
+  "plan_id": "354a2f0c870308fb",
+  "plan_name": "tryde 67:27",
+  "doc_id": "pdf:1270:2867efa002d5c743",
+  "property": "Tryde 67:107",
+  "label": "67:107",
+  "codes_near": [
+   "n1",
+   "m1",
+   "b6",
+   "n2",
+   "b1",
+   "b4",
+   "b2",
+   "b3",
+   "e2",
+   "d1",
+   "h3",
+   "o1",
+   "h1",
+   "o2",
+   "h2",
+   "f1"
+  ],
+  "definitions": {
+   "n1": "Stengärde ska bevaras",
+   "m1": "Infiltrationsdiken samt infiltrationsytor med en total",
+   "b6": "Marken ska vara genomsläpplig",
+   "n2": "Vegetationsridå ska finnas",
+   "b1": "Källare får inte finnas",
+   "b4": "Minst 50 % av marken ska vara genomsläpplig.",
+   "b2": "Dagvatten ska infiltreras på tomten och ledas till infiltrationsdiken och infiltrationsytor inom användningsområdet.",
+   "b3": "Färdigt golv ska anläggas på sådan höjd att byggnader inte översvämmas vid 100-årsregn.",
+   "e2": "Största byggnadsarea är 50 % av fastighetsarean inom egenskapsområdet",
+   "d1": "Minsta fastighetsstorlek är 300 m²",
+   "h3": "För komplementbyggnader är högsta nockhöjd 3,5 meter över omgivande mark.",
+   "o1": "Minsta takvinkel är 10 grader och största takvinkel är 27 grader.",
+   "h1": "Högsta nockhöjd är 8 meter över omgivande mark.",
+   "o2": "Minsta takvinkel är 27 grader och största takvinkel är 45 grader.",
+   "h2": "Högsta nockhöjd är 6 meter över omgivande mark.",
+   "f1": "Fasad på huvudbyggnad ska huvudsakligen utgöras av puts eller tegel. Komplementbyggnader får utföras med träfasad."
+  },
+  "decisive_codes": [
+   "b3",
+   "e1",
+   "e2",
+   "e3",
+   "h1",
+   "h2",
+   "h3",
+   "h4"
+  ],
+  "image": "plan-354a2f0c-67-107.png"
+ },
+ {
+  "id": "plan-d6781c73-1-12",
+  "kommun": [
+   "1782"
+  ],
+  "kommun_name": "Filipstad",
+  "plan_id": "d6781c73f1066324",
+  "plan_name": "Detaljplan för Västra Filipstad 1:110",
+  "doc_id": "pdf:1782:d136fdffc5bc2a77",
+  "property": "Västra 1:12",
+  "label": "1:12",
+  "codes_near": [
+   "q1",
+   "h1"
+  ],
+  "definitions": {
+   "q1": "Byggnadens exteriör ska bevaras",
+   "h1": "Högsta nockhöjd är 10 meter"
+  },
+  "decisive_codes": [
+   "e1",
+   "h1",
+   "h2"
+  ],
+  "image": "plan-d6781c73-1-12.png"
+ },
+ {
+  "id": "plan-da0d73a2-1-28",
+  "kommun": [
+   "0428"
+  ],
+  "kommun_name": "Vingåker",
+  "plan_id": "da0d73a250d4317c",
+  "plan_name": "Detaljplan för del av Vingåker-Sjögölet 1:52 m.fl. Vingåkers kommun, Södermanlands län",
+  "doc_id": "pdf:0428:c4fbe169fa28f27c",
+  "property": "property 1:28",
+  "label": "1:28",
+  "codes_near": [
+   "o2",
+   "e6",
+   "h4",
+   "a1",
+   "e5",
+   "h1",
+   "h2",
+   "h3",
+   "u1"
+  ],
+  "definitions": {
+   "o2": "Största takvinkel är 45 grader.",
+   "e6": "Största byggnadsarea är 30 m² per Miljöhus EGENSKAPSBESTÄMMELSER FÖR",
+   "h4": "Högsta nockhöjd på huvudbyggnad för friliggande hus är 11,5 meter. Högsta nockhöjd på huvudbyggnad för sammanbyggda hus och",
+   "a1": "Strandskyddet är upphävt. EGENSKAPSBESTÄMMELSER FÖR ALL",
+   "e5": "Största byggnadsarea är 1600 m².",
+   "h2": "Högsta nockhöjd på huvudbyggnad är 6.5 meter. Utöver högsta nockhöjd får suterrängvåning finnas.",
+   "h3": "Högsta nockhöjd på huvudbyggnad är 11.5 meter. Utöver högsta nockhöjd får suterrängvåning finnas."
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "e6",
+   "h2",
+   "h3",
+   "h4"
+  ],
+  "image": "plan-da0d73a2-1-28.png"
+ },
+ {
+  "id": "plan-1be1d38a-2-17",
+  "kommun": [
+   "2262"
+  ],
+  "kommun_name": "Timrå",
+  "plan_id": "1be1d38a60323d73",
+  "plan_name": "Ändring av Detaljplan för Torsboda 1:2 m.fl. Industriområde för energiintensiv verksamhet Timrå kommun Upprättad av",
+  "doc_id": "pdf:2262:de5be500725ff609",
+  "property": "property 2:17",
+  "label": "2:17",
+  "codes_near": [
+   "a4",
+   "a3"
+  ],
+  "definitions": {
+   "a4": "Marklov krävs även för förändrade marknivåer.",
+   "a3": "Startbesked får inte ges för byggnader förrän en planskild trafikanordning vid väg E4 har kommit till stånd."
+  },
+  "decisive_codes": [
+   "a3",
+   "e1",
+   "h1"
+  ],
+  "image": "plan-1be1d38a-2-17.png"
+ },
+ {
+  "id": "plan-1ec3ff83-53-4",
+  "kommun": [
+   "1285"
+  ],
+  "kommun_name": "Eslöv",
+  "plan_id": "1ec3ff83c201cc3a",
+  "plan_name": "andring stenbocken 14 och 15",
+  "doc_id": "pdf:1285:bd5205b3ed2c76e3",
+  "property": "property 53:4",
+  "label": "53:4",
+  "codes_near": [
+   "h5",
+   "h6",
+   "f4",
+   "f3",
+   "b2",
+   "f2",
+   "e1",
+   "b3",
+   "n4",
+   "n1",
+   "b1",
+   "m1"
+  ],
+  "definitions": {
+   "h5": "Högsta nockhöjd på byggnad är 26,5 meter",
+   "h6": "Högsta nockhöjd på byggnad är 17,5 meter",
+   "f4": "Bostadsentréer ska orienteras mot GATA, GÅNG, TORG eller C2, 4",
+   "f3": "Tak ska utformas med minst 25 % planterad yta",
+   "b2": "20 f4 f3 f2",
+   "f2": "Gemensam takterrass för boende ska uppföras",
+   "e1": "Takvinkeln på byggnader får vara mellan 0 och 30 grader, undantaget växthus",
+   "b3": "Marken får inte underbyggas",
+   "n4": "Trädrad ska finnas mot gata",
+   "n1": "Minst 8 träd ska planteras",
+   "b1": "Dagvattenanläggning som rymmer minst 200 kubikmeter ska uppföras",
+   "m1": "Skyfallsmagasin och teknisk lösning för fördröjning av skyfall ska uppföras"
+  },
+  "decisive_codes": [
+   "e1",
+   "f3",
+   "h1",
+   "h2",
+   "h3",
+   "h4",
+   "h5",
+   "h6",
+   "h7"
+  ],
+  "image": "plan-1ec3ff83-53-4.png"
+ },
+ {
+  "id": "plan-5d4700c9-2-41",
+  "kommun": [
+   "1486"
+  ],
+  "kommun_name": "Strömstad",
+  "plan_id": "5d4700c97cfff52d",
+  "plan_name": "Del av Rossö 2:16 m fl - Strömstad",
+  "doc_id": "pdf:1486:d5b0a091a1843204",
+  "property": "property 2:41",
+  "label": "2:41",
+  "codes_near": [
+   "d2",
+   "e1",
+   "e2",
+   "e3",
+   "m1",
+   "p1",
+   "a2",
+   "u1",
+   "g1"
+  ],
+  "definitions": {
+   "d2": "0 Minsta fastighetsstorlek är angivet värde i kvadratmeter för parhus/radhus, PBL 4 kap. 18 § 1 st Placering p1 Byggnad ska placeras minst 4,5 meter från gräns mot kvartersmark, alternativt sammanbyggas i fastighetsgräns. Garage/carport ska placeras med portgaveln minst 6 meter från gata och med övriga gavlar minst 2 meter från gatan., PBL 4 kap. 16 § 1 st 1 p. Utfart",
+   "e1": "0,0 Största byggnadsarea är angivet värde i m² per fastighet för fristående hus, PBL",
+   "e2": "0,0 Största byggnadsarea är angivet värde i m² per fastighet för parhus/radhus, PBL 4 kap. 11 § 1 st 1 p. e3 Högsta nockhöjd för komplementbyggnader är 4,0 meter, PBL 4 kap. 11 § 1 st 1 p. Fastighet",
+   "a2": "Startbesked får inte ges för byggnad förrän erforderliga dagvattenanläggningar inom g1-området och allmän plats har kommit till stånd. Kvartersmark, PBL 4 kap. 14 § 1 st 1 p. Markreservat för gemensamhetsanläggningar",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar. Kvartersmark, PBL 4 kap. 6 § Villkor för startbesked",
+   "g1": "Markreservat för gemensamhetsanläggning för dagvattenanläggning. Kvartersmark, PBL"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2"
+  ],
+  "image": "plan-5d4700c9-2-41.png"
+ },
+ {
+  "id": "plan-774f6e9a-3-16",
+  "kommun": [
+   "0188"
+  ],
+  "kommun_name": "Norrtälje",
+  "plan_id": "774f6e9a11980419",
+  "plan_name": "Terminalen, Ankaret, Hamnpiren, Färjan m.fl. | Norrtälje kommun",
+  "doc_id": "pdf:0188:ff144bdb37e3a032",
+  "property": "property 3:16",
+  "label": "3:16",
+  "codes_near": [
+   "f7",
+   "f5"
+  ],
+  "definitions": {
+   "f7": "Tak ska utformas som sadeltak eller valmat tak med undantag från frontespis, takkupor, trapphus, hisschakt",
+   "f5": "Fasader ska i huvudsak utföras i tegel eller puts med en bottenvåning mot allmän plats i tegel, puts, sten eller klinker som ska utmärka sig med högre våningshöjd och detaljering i fasadgestaltning. Eventuella horisontella som vertikala elementskarvar ska döljas eller integreras i fasadgestaltningen."
+  },
+  "decisive_codes": [
+   "e1",
+   "f12",
+   "f15",
+   "f18",
+   "f5",
+   "h1",
+   "h2",
+   "h3"
+  ],
+  "image": "plan-774f6e9a-3-16.png"
+ },
+ {
+  "id": "plan-aa7ec9c2-1-603",
+  "kommun": [
+   "0128"
+  ],
+  "kommun_name": "Salem",
+  "plan_id": "aa7ec9c2f2ba7158",
+  "plan_name": "1 södra ekdalen",
+  "doc_id": "pdf:0128:12a5447b050ebb8d",
+  "property": "property 1:603",
+  "label": "1:603",
+  "codes_near": [
+   "d2",
+   "e1",
+   "f2",
+   "h3",
+   "n2",
+   "a2",
+   "a3",
+   "e9",
+   "e10",
+   "n1",
+   "d5",
+   "h1",
+   "e8",
+   "e11",
+   "e2"
+  ],
+  "definitions": {
+   "d2": "Minsta fastighetsstorlek är 1200 m²",
+   "e1": "Största byggnadsarea för huvudbyggnad är 150 m²",
+   "f2": "Endast friliggande enbostadshus",
+   "h3": "Högsta nockhöjd är 9.0 meter",
+   "n2": "Ytor för öppen dagvattenhantering",
+   "a2": "Strandskyddet är upphävt",
+   "a3": "Strandskyddet är upphävt",
+   "e9": "Högst ett friliggande enbostadshus per fastighet",
+   "e10": "Största byggnadsarea för komplementbyggnader är sammanlagt 50 m²",
+   "n1": "Träd får endast fällas om det är sjukt eller utgör en säkerhetsrisk. Granar undantas",
+   "d5": "Minsta fastighetsstorlek är 4000 m²",
+   "h1": "Högsta nockhöjd är 6.0 meter",
+   "e8": "Största byggnadsarea för huvudbyggnad är 250 m2",
+   "e11": "Största byggnadsarea för komplementbyggnader är sammanlagt 75 m²",
+   "e2": "Största bruttoarea för huvudbyggnad är 300 m2"
+  },
+  "decisive_codes": [
+   "b2",
+   "e1",
+   "e10",
+   "e11",
+   "e12",
+   "e14",
+   "e15",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "e6",
+   "e7",
+   "e8",
+   "e9",
+   "h1",
+   "h2",
+   "h3"
+  ],
+  "image": "plan-aa7ec9c2-1-603.png"
+ },
+ {
+  "id": "plan-704b4c75-15-9",
+  "kommun": [
+   "2521"
+  ],
+  "kommun_name": "Pajala",
+  "plan_id": "704b4c75ec2f8895",
+  "plan_name": "dp sahavaara gruva",
+  "doc_id": "pdf:2521:b7c125d283471b67",
+  "property": "property 15:9",
+  "label": "15:9",
+  "codes_near": [
+   "a5",
+   "n1",
+   "e1",
+   "a4"
+  ],
+  "definitions": {
+   "a5": "Rivningslov krävs inte för byggnader med upp till 200 kvadratmeter byggnadsarea.",
+   "n1": "Tidigare odlingslandskap vars karaktär och vegetation bör behållas. Minst 90% av ytan ska utgöras av vegetation eller spår av tidigare jordbruksbebyggelse",
+   "e1": "Största byggnadsarea är 1000 m²",
+   "a4": "Bygglov krävs inte för uppförande av teknikbyggnader med upp till 80 kvadratmeter byggnadsarea och en totalhöjd med upp till 10 meter. Bestämmelsen gäller under den tid detaljplanen gäller."
+  },
+  "decisive_codes": [
+   "a4",
+   "a5",
+   "e1",
+   "h1",
+   "h2",
+   "h3"
+  ],
+  "image": "plan-704b4c75-15-9.png"
+ },
+ {
+  "id": "plan-b540af68-28-10",
+  "kommun": [
+   "2581"
+  ],
+  "kommun_name": "Piteå",
+  "plan_id": "b540af68a8a497e6",
+  "plan_name": "Detaljplan för Del av Helgenäs 2:1 m.fl - Arkiv plan",
+  "doc_id": "pdf:2581:69676c260ae0ddc0",
+  "property": "property 28:10",
+  "label": "28:10",
+  "codes_near": [
+   "a1",
+   "h1",
+   "h2",
+   "h3",
+   "h4",
+   "h5",
+   "u1",
+   "o1",
+   "o2",
+   "o3",
+   "o4",
+   "e1",
+   "e2",
+   "e3",
+   "f1"
+  ],
+  "definitions": {
+   "a1": "Huvudmannaskapet är enskilt för den allmänna platsen.",
+   "h1": "10 Högsta nockhöjd är angivet värde i meter h2 11 Högsta nockhöjd är angivet värde i meter h3 4 Högsta nockhöjd är angivet värde i meter",
+   "h4": "6 Högsta nockhöjd är angivet värde i meter",
+   "h5": "7 Högsta nockhöjd är angivet värde i meter",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar.",
+   "o1": "Takvinkeln ska vara 25 grader",
+   "o2": "Takvinkeln ska vara 30 grader",
+   "o3": "Takvinkeln ska vara 15 grader",
+   "o4": "Takvinkeln ska vara 0-20 grader",
+   "e1": "50 Största byggnadsarea är angivet värde i m²",
+   "e2": "150 Största byggnadsarea är angivet värde i m² e3 30 Största byggnadsarea är angivet värde i m²",
+   "f1": "Byggnad ska utformas med sadeltak"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "h1",
+   "h4",
+   "h5"
+  ],
+  "image": "plan-b540af68-28-10.png"
+ },
+ {
+  "id": "plan-f223f3c7-1-436",
+  "kommun": [
+   "1715"
+  ],
+  "kommun_name": "Kil",
+  "plan_id": "f223f3c771ccb8f9",
+  "plan_name": "Detaljplan för Apotekaren 6 och 7",
+  "doc_id": "pdf:1715:a1abcb448efacec2",
+  "property": "property 1:436",
+  "label": "1:436",
+  "codes_near": [
+   "e1",
+   "e2",
+   "f1",
+   "f2",
+   "o1",
+   "o2",
+   "h1",
+   "n1",
+   "b1",
+   "p1",
+   "n2",
+   "n3"
+  ],
+  "definitions": {
+   "e1": "Största byggnadsarea är 800 m².",
+   "e2": "Största bruttoarea är 950 m².",
+   "f1": "Fasad på huvudbyggnaden huvudvolym ska beklädas med träpanel och färgsättas med kulör i jordartskala",
+   "f2": "Tak på huvudbyggnadens huvudvolym ska utformas som sadeltak och täckas med faltak, lertegel eller bandfalsad plåt",
+   "o1": "Minsta takvinkel är 35 grader.",
+   "o2": "Största takvinkel är 45 grader.",
+   "h1": "Högsta nockhöjd är 10 meter.",
+   "n1": "Marken får inte användas för parkering.",
+   "b1": "Källare får inte finnas.",
+   "p1": "Huvudbyggnadens huvudvolym ska placeras 2 meter från fastighetsgräns mot allmän plats Gång- och cykelväg mot Storgatan",
+   "n2": "Inom egenskapsområdet ska minst två prydnadsträd planteras och bibehållas (begränsas av sekundär egenskapsgräns)",
+   "n3": "Inom egenskapsområde ska minst ett prydnadsträd planteras och bibehållas (begränsas av sekundär egenskapsgräns)"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "h1"
+  ],
+  "image": "plan-f223f3c7-1-436.png"
+ },
+ {
+  "id": "plan-776075ba-2-2",
+  "kommun": [
+   "2181"
+  ],
+  "kommun_name": "Sandviken",
+  "plan_id": "776075ba535a6006",
+  "plan_name": "Detaljplan för Lasarettet 111 med flera - Sandvikens kommun",
+  "doc_id": "pdf:2181:d0a5c3e1cb3e11d4",
+  "property": "property 2:2",
+  "label": "2:2",
+  "codes_near": [
+   "h1",
+   "e1",
+   "b1",
+   "e2",
+   "h2",
+   "f1"
+  ],
+  "definitions": {
+   "h1": "Högsta nockhöjd är 28 meter h2 Högsta nockhöjd är 3.5 meter",
+   "e1": "Största byggnadsarea är 450 m²",
+   "b1": "Lägsta nivå för färdigt golv +75,8 meter, RH2000.",
+   "e2": "Största byggnadsarea är 30 % av fastighetsarean inom egenskapsområdet",
+   "f1": "Endast punkthus"
+  },
+  "decisive_codes": [
+   "b1",
+   "e1",
+   "e2",
+   "h1"
+  ],
+  "image": "plan-776075ba-2-2.png"
+ },
+ {
+  "id": "plan-5cdf11cb-1-264",
+  "kommun": [
+   "0120"
+  ],
+  "kommun_name": "Värmdö",
+  "plan_id": "5cdf11cb5c396f19",
+  "plan_name": "DETALJPLAN FÖR STADSPARKEN (Gustavsberg 2:1 m.fl.) VÄRMDÖ KOMMUN",
+  "doc_id": "pdf:0120:978c38908bb8389c",
+  "property": "property 1:264",
+  "label": "1:264",
+  "codes_near": [
+   "a1",
+   "n1",
+   "a2",
+   "u1",
+   "e1",
+   "k1"
+  ],
+  "definitions": {
+   "a1": "Marklov krävs även för fällning av träd",
+   "n1": "Träd ska bevaras. Träd får endast fällas om det utgör en säkerhetsrisk. Om trädet fälls ska återplantering göras med samma trädslag och stammen ska tas om hand för att gynna fauna",
+   "a2": "Strandskyddet är upphävt",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar",
+   "e1": "Största byggnadsarea är 100 m²",
+   "k1": "Byggnaden karaktärsdrag vad gäller byggnadens volym och takform ska bibehållas. Bemålad naturstenssockel samt skorstenar och enkupigt glaserat chamottetaktegel ska bibehållas"
+  },
+  "decisive_codes": [
+   "e1",
+   "e2"
+  ],
+  "image": "plan-5cdf11cb-1-264.png"
+ },
+ {
+  "id": "plan-1b759775-2-31",
+  "kommun": [
+   "1562"
+  ],
+  "kommun_name": "Lilla Edet",
+  "plan_id": "1b7597755d345a6d",
+  "plan_name": "Detaljplan för Stendahls bil, Edet 1:17 m.fl",
+  "doc_id": "pdf:1562:ae7803665ea39ebf",
+  "property": "Edet 2:31",
+  "label": "2:31",
+  "codes_near": [
+   "b1",
+   "b2",
+   "b3",
+   "e1",
+   "h1",
+   "u1",
+   "n1"
+  ],
+  "definitions": {
+   "b1": "Ventilationsutsläpp får inte anläggas närmare än 50 meter från bostadshus b2 Friskluftsintag ska placeras på fasad som vetter bort från väg E45",
+   "b3": "Utrymning ska vara möjlig från fasad som vetter bort från E45",
+   "e1": "Största byggnadsarea är 4800 m².",
+   "h1": "Högsta nockhöjd är 8.5 meter.",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar.",
+   "n1": "Parkering av och upplag med tunga fordon är inte tillåten."
+  },
+  "decisive_codes": [
+   "e1",
+   "h1"
+  ],
+  "image": "plan-1b759775-2-31.png"
+ },
+ {
+  "id": "plan-ce512f67-2-3",
+  "kommun": [
+   "1715"
+  ],
+  "kommun_name": "Kil",
+  "plan_id": "ce512f67d06dfb32",
+  "plan_name": "Detaljplan för Halvardsön",
+  "doc_id": "pdf:1715:f6504923c0f423c5",
+  "property": "property 2:3",
+  "label": "2:3",
+  "codes_near": [
+   "e2",
+   "h2",
+   "f1",
+   "f2",
+   "a2",
+   "a4",
+   "a1"
+  ],
+  "definitions": {
+   "e2": "Största byggnadsarea är 120 m².",
+   "h2": "Högsta nockhöjd är 5 meter.",
+   "f1": "Fasadkulör får endast utgöras av naturliga nyanser av",
+   "a2": "Strandskyddet är upphävt.",
+   "a4": "Huvudmannaskapet är enskilt för den allmänna platsen.",
+   "a1": "Strandskyddet är upphävt."
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "f3",
+   "h1",
+   "h2"
+  ],
+  "image": "plan-ce512f67-2-3.png"
+ },
+ {
+  "id": "plan-b89dafc4-2-87",
+  "kommun": [
+   "1527"
+  ],
+  "kommun_name": "Vårgårda",
+  "plan_id": "b89dafc42fdd9c2e",
+  "plan_name": "plankarta",
+  "doc_id": "pdf:1527:18cc83afba3387ce",
+  "property": "property 2:87",
+  "label": "2:87",
+  "codes_near": [
+   "e3",
+   "b1",
+   "f4"
+  ],
+  "definitions": {
+   "e3": "Största byggnadsarea inklusive komplementbyggnader inom byggrätt samt angränsande kryssmark",
+   "b1": "Nivå för FG mot gata ska vara 0,0 - 0,3 meter över gatans nivå mitt för byggnaden."
+  },
+  "decisive_codes": [
+   "e3",
+   "e4"
+  ],
+  "image": "plan-b89dafc4-2-87.png"
+ },
+ {
+  "id": "plan-7d46571d-1-80",
+  "kommun": [
+   "1421"
+  ],
+  "kommun_name": "Orust",
+  "plan_id": "7d46571db310fb78",
+  "plan_name": "Detaljplan för Varekil 1:187 m.fl. Planbeskrivning",
+  "doc_id": "pdf:1421:8716691b713ed802",
+  "property": "Varekil 1:80",
+  "label": "1:80",
+  "codes_near": [
+   "h1",
+   "m2",
+   "a2",
+   "a3",
+   "n2",
+   "m3",
+   "u1"
+  ],
+  "definitions": {
+   "h1": "Högsta nockhöjd är 12 meter",
+   "m2": "Fasadbelysning och annan fast ljusanordning på byggnadens sida mot Varekilsån ska vara nedåtriktad och avskärmad. Belysning får inte riktas mot vattenytan eller mot vegetation längs ån. Ljusarmatur",
+   "a2": "Startbesked får inte ges för bebyggelse förrän m1 har utförts.",
+   "a3": "Startbesked får inte ges för bebyggelse förrän dagvattenanläggning har kommit till stånd.",
+   "n2": "Markens höjd får inte vara lägre än 2.7 meter över nollplanet.",
+   "m3": "Golvnivå får inte vara lägre än 3,0 meter över nollplanet. Byggnader ska uppföras med översvämningssäker konstruktion upp till +3,0 m.",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar."
+  },
+  "decisive_codes": [
+   "e1",
+   "h1",
+   "h2",
+   "m3",
+   "n2"
+  ],
+  "image": "plan-7d46571d-1-80.png"
+ },
+ {
+  "id": "plan-938c55ae-1-77",
+  "kommun": [
+   "0513"
+  ],
+  "kommun_name": "Kinda",
+  "plan_id": "938c55ae6fb6bd98",
+  "plan_name": "Krågedal 1:3 - A different Kinda life - en del av Sjöriket Kinda!",
+  "doc_id": "pdf:0513:2dac82a19bc508a6",
+  "property": "property 1:77",
+  "label": "1:77",
+  "codes_near": [
+   "e2"
+  ],
+  "definitions": {
+   "e2": "För enbostadshus är största byggnadsarea för huvudbyggnad"
+  },
+  "decisive_codes": [
+   "b1",
+   "e1",
+   "e2",
+   "e3",
+   "h1"
+  ],
+  "image": "plan-938c55ae-1-77.png"
+ },
+ {
+  "id": "plan-756553e7-4-32",
+  "kommun": [
+   "0586"
+  ],
+  "kommun_name": "Mjölby",
+  "plan_id": "756553e7db70d215",
+  "plan_name": "i skänninge vattenverkstan trojenborg",
+  "doc_id": "pdf:0586:ce4e03a53c0ea5b6",
+  "property": "Skänninge 4:32",
+  "label": "4:32",
+  "codes_near": [
+   "f1",
+   "f2",
+   "n4",
+   "k1",
+   "a2",
+   "h1",
+   "h2",
+   "a3",
+   "f3"
+  ],
+  "definitions": {
+   "f1": "Grupphusbebyggelse. Med grupphus avses radhus, kedjehus, parhus eller friliggande hus med likartad utformning. Skaft till tomter med friliggande hus får finnas.",
+   "f2": "Friliggande bostäder",
+   "a2": "Marklov krävs även för trädfällning. Fällt träd ska ersättas genom återplantering inom fastigheten.",
+   "h1": "Högsta nockhöjd på huvudbyggnad är 9.5 meter . Tak ska utformas som sadeltak med minsta takvinkel om 30 grader",
+   "h2": "Högsta nockhöjd är 4.0 meter",
+   "a3": "Strandskyddet är upphävt.",
+   "f3": "I befintlig byggnad, \"Vattenverkstan\", får flera bostäder anordnas. Bestämmelser om utformning, utförande och högsta nockhöjd på huvudbyggnad gäller inte här"
+  },
+  "decisive_codes": [
+   "e3",
+   "f3",
+   "h1",
+   "h2",
+   "h3"
+  ],
+  "image": "plan-756553e7-4-32.png"
+ },
+ {
+  "id": "plan-1c85e9d1-15-31",
+  "kommun": [
+   "0331"
+  ],
+  "kommun_name": "Heby",
+  "plan_id": "1c85e9d1fd1d24b4",
+  "plan_name": "DETALJPLAN FÖR Del av Morgongåva 15:14 DP 391 Morgongåva tätort Heby kommun, Uppsala län Utökat planförfa",
+  "doc_id": "pdf:0331:7eab1281714bb8e7",
+  "property": "Morgongåva 15:31",
+  "label": "15:31",
+  "codes_near": [
+   "u1",
+   "n1",
+   "e2",
+   "p2"
+  ],
+  "definitions": {
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar",
+   "n1": "Markens höjd får inte sänkas",
+   "p2": "Byggnad ska placeras minst 4.5 meter från fastighetsgräns"
+  },
+  "decisive_codes": [
+   "b3",
+   "b4",
+   "b5",
+   "e1",
+   "n1"
+  ],
+  "image": "plan-1c85e9d1-15-31.png"
+ },
+ {
+  "id": "plan-b1f024f8-1-35",
+  "kommun": [
+   "1961"
+  ],
+  "kommun_name": "Hallstahammar",
+  "plan_id": "b1f024f85a2c0e52",
+  "plan_name": "dp.233 sörstafors bruk",
+  "doc_id": "pdf:1961:1bdb1965fc8160ff",
+  "property": "Sörsta 1:35",
+  "label": "1:35",
+  "codes_near": [
+   "q5",
+   "q4",
+   "a11",
+   "u1",
+   "m3",
+   "m4",
+   "a6",
+   "k1",
+   "q2",
+   "f10",
+   "r1",
+   "q3",
+   "q1",
+   "k3",
+   "a4",
+   "n1",
+   "g1",
+   "n2",
+   "a1",
+   "a8",
+   "a2",
+   "p1",
+   "f1",
+   "f3",
+   "f5",
+   "b2",
+   "f2",
+   "p3",
+   "b1",
+   "a7",
+   "a5",
+   "b4",
+   "k4"
+  ],
+  "definitions": {
+   "a11": "Strandskyddet är upphävt.",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar",
+   "m3": "Markförorening ska hanteras så att den inte utgör risk för människors hälsa eller miljön",
+   "m4": "Markförorening ska hanteras så att den inte utgör risk för människors hälsa eller miljön",
+   "a6": "Startbesked får inte ges för ombyggnation eller ändrad markanvändning förrän markföroreningar och övriga föroreningar hanterats så att de inte utgör risk för människors hälsa eller miljön",
+   "k1": "Byggnadsverkets värden vad gäller dess ursprungliga volym, proportioner, fönster, material, färgsättning och detaljeringsnivå ska bibehållas",
+   "f10": "Balkong får inte finnas",
+   "r1": "Byggnad får inte rivas",
+   "q1": "Byggnadsverkets gavlar ska underhållas och bevaras q2 Fabriksskorstenen ska underhållas och bevaras q3 Byggnadens proportioner och material ska underhållas och bevaras q4 Broräckenas material och utformning ska underhållas och bevaras q5 Stenmurar ska underhållas och bevaras",
+   "k3": "Tillbyggnad ska utformas med hänsyn till befintliga byggnaders volymer, proportioner och material",
+   "a4": "Bygglov krävs även för ändring och renovering av bro eller stenmur",
+   "n1": "Trädet får endast fällas om det är sjukt eller utgör en säkerhetsrisk n2 Markens höjd får inte ändras",
+   "g1": "Markreservat för gemensamhetsanläggning för",
+   "a1": "Bygglov krävs även för komplement- och",
+   "a2": "Marklov krävs även för hårdgörande av marken",
+   "f1": "Fasad ska utformas med träpanel",
+   "f3": "Fasad ska utformas med träpanel eller puts",
+   "f5": "Endast parhus eller radhus",
+   "f2": "Fasad ska utformas med rött tegel",
+   "b1": "Minst 50 % av markytan inom",
+   "a7": "Startbesked får inte ges för uppförande eller ändring av byggnad förrän markföroreningar och övriga föroreningar har sanerats till en nivå som inte utgör risk för människors hälsa eller miljön och åtgärder enligt bestämmelsen m3 kommit till stånd a8 Startbesked får inte ges för uppförande av byggnad förrän markföroreningar och övriga",
+   "a5": "Startbesked får inte ges för uppförande eller ändring av byggnad förrän markföroreningar och övriga föroreningar har sanerats till en nivå som inte utgör risk för människors hälsa eller miljön",
+   "b4": "Färdigt golv ska vara 0,3 meter högre än höjd på",
+   "k4": "Transformatorstation ska utformas med hänsyn till bruksområdets karaktär och material"
+  },
+  "decisive_codes": [
+   "b4",
+   "m1",
+   "m2",
+   "n1"
+  ],
+  "image": "plan-b1f024f8-1-35.png"
+ },
+ {
+  "id": "plan-33eca9fa-1-43",
+  "kommun": [
+   "1583"
+  ],
+  "kommun_name": "Borås",
+  "plan_id": "33eca9fa00172179",
+  "plan_name": "A1-L",
+  "doc_id": "pdf:1583:2e310d20feee3a00",
+  "property": "property 1:43",
+  "label": "1:43",
+  "codes_near": [
+   "a1",
+   "m1",
+   "h5",
+   "f5",
+   "e4",
+   "h6",
+   "n2",
+   "n3",
+   "o1",
+   "f3",
+   "f4",
+   "e3",
+   "h1",
+   "n1",
+   "e2",
+   "h4",
+   "n5",
+   "m2",
+   "n4",
+   "f7",
+   "e5"
+  ],
+  "definitions": {
+   "a1": "Huvudmannaskapet är enskilt för den allmänna platsen. (Begränsas av användningsgräns)",
+   "m1": "Området är bullerutsatt. Varje bostad ska ha tillgång till skyddad uteplats i enlighet med trafikbullerförordningens riktvärden.",
+   "h5": "Högsta totalhöjd är 10 meter.",
+   "f5": "Endast radhus eller vårdboende får uppföras.",
+   "e4": "Största byggnadsarea är 1000 m2 för vårdboende och 40% av fastighetsarean för radhus.",
+   "h6": "Högsta totalhöjd på komplementbyggnader är 5 meter",
+   "n2": "Antalet markparkeringar får maximalt vara 32 bilparkeringsplatser. Antalet sammanhängande bilparkeringsplatser får maximalt vara 15.",
+   "n3": "Parkering ska omgärdas av häckar och trädplantering.",
+   "o1": "Takvinkeln ska på bostadshus vara mellan 30-45 grader.",
+   "f3": "Fasadmaterial ska huvudsakligen vara i trä.",
+   "f4": "Taktäckning på komplementbyggnader ska förses med sedumtak eller motsvarande växtlighet.",
+   "e3": "Största byggnadsarea är 550 m² inom användningsområdet.",
+   "h1": "Högsta nockhöjd är 272.5 meter över angivet nollplan.",
+   "n1": "Antalet markparkeringar får maximalt vara 46 bilparkeringsplatser. Antalet sammahängande bilparkeringsplatser får maximalt vara 13.",
+   "e2": "Största byggnadsarea är 1500 m² inom användningsområdet.",
+   "h4": "Högsta nockhöjd är 268.5 meter över angivet nollplan.",
+   "n5": "Träd ska minst planteras mellan var fjärde bilparkeringsruta.",
+   "m2": "Anläggning för fördröjning av dagvatten ska finnas inom kvartersmarken.",
+   "n4": "Schaktning och anläggning får ej påverka träd inklusive dess rotsystem på angränsande fastighet.",
+   "f7": "Byggnad får uppföras i max två våningar.",
+   "e5": "Största byggnadsarea är 500 m² per enskild huvudbyggnad."
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "h1",
+   "h2",
+   "h3",
+   "h4",
+   "h5",
+   "h6",
+   "h7",
+   "h8"
+  ],
+  "image": "plan-33eca9fa-1-43.png"
+ },
+ {
+  "id": "plan-e4b11358-1-7",
+  "kommun": [
+   "1582"
+  ],
+  "kommun_name": "Alingsås",
+  "plan_id": "e4b1135823439c3e",
+  "plan_name": "Detaljplan för del av Sörhaga 1:7 m.fl, Poppelgatan (Västra Sörhaga) - Alingsås kommun",
+  "doc_id": "pdf:1582:a383e1e2ff93df80",
+  "property": "Sörhaga 1:7",
+  "label": "1:7",
+  "codes_near": [
+   "n1",
+   "n2",
+   "n3",
+   "n4",
+   "n5",
+   "v1",
+   "b1",
+   "b2",
+   "b3",
+   "b4",
+   "b5",
+   "a1",
+   "a2"
+  ],
+  "definitions": {
+   "n1": "Träd med stamomkrets om minst 100 cm i brösthöjd får endast fällas om det är sjukt eller utgör en säkerhetsrisk.",
+   "n2": "Minst 60% av marken ska vara genomsläpplig",
+   "n3": "Antalet sammanhängande bilparkeringsplatser får maximalt vara 10. Över denna längd ska hårdgjorda ytor brytas upp med träd/annan vegetation. Gäller ej vid uppförande av parkeringsgarage och radgarage.",
+   "n4": "Markparkering får ej anordnas, gäller ej handikapp-parkering (bestämmelsen gäller inom hela användningsområdet).",
+   "n5": "Uppförande av belysningsmaster tillåts ej.",
+   "v1": "Lägenheter ska ha hälften av bostadsrummen orienterade mot en ljuddämpad sida, alternativt vara mindre än 35 m².",
+   "b1": "Minsta rumshöjd i entréplan mot allmän plats TORG ska vara 3,3 meter. Ett demonterbart bjälklag som inte är en förutsättning för byggnadens bärande konstruktion får uppföras.",
+   "b2": "Byggnad ska uppföras som en sammanbyggd byggnadskropp med hänsyn till buller.",
+   "b3": "Källare får inte finnas.",
+   "b4": "Marken får byggas under med planteringsbart bjälklag.",
+   "b5": "Parkeringsgarage får endast uppföras i källarplan. Gäller inom hela användningsområdet.",
+   "a1": "Startbesked får inte ges för bostäder förrän bullerplank mot järnvägen har uppförts.",
+   "a2": "Upphävande av strandskydd (gäller inom hela användningsområdet)"
+  },
+  "decisive_codes": [
+   "b1",
+   "f3",
+   "h1",
+   "h2",
+   "n1"
+  ],
+  "image": "plan-e4b11358-1-7.png"
+ },
+ {
+  "id": "plan-b1144c60-1-8",
+  "kommun": [
+   "0581"
+  ],
+  "kommun_name": "Norrköping",
+  "plan_id": "b1144c6004f5da56",
+  "plan_name": "strombrytaren 12 och strombrytaren 11",
+  "doc_id": "pdf:0581:58341addf23a9278",
+  "property": "property 1:8",
+  "label": "1:8",
+  "codes_near": [
+   "g2",
+   "g1",
+   "b4",
+   "h11",
+   "f2",
+   "f1",
+   "h13",
+   "d3"
+  ],
+  "definitions": {
+   "g2": "Markreservat för gemensamhetsanläggning för gata.",
+   "b4": "Riskreducerande byggnadstekniska åtgärder ska utföras såsom anpassat ventilationssystem mellan källarvåning/garage samt bostad för att minska risken för ånginträngning in i bostäder.",
+   "h11": "Högsta byggnadshöjd är +53,7 meter över angivet nollplan. Utöver högsta angivna byggnadshöjd får takkupor och frontespis uppföras till en tredjedel av fasadens längd.",
+   "f1": "Balkong får inte glasas in om den kragar ut över allmän plats GATA/TORG. f2 Balkong får kraga ut över allmän plats med fri höjd på 4,7 meter och med ett maxdjup på 1,0 meter.",
+   "h13": "Högsta byggnadshöjd är +59,2 meter över angivet nollplan. Utöver högsta angivna byggnadshöjd får takkupor och frontespis uppföras till en tredjedel av fasadens längd.",
+   "d3": "Minsta fastighetsstorlek är 1000 m²"
+  },
+  "decisive_codes": [
+   "b2",
+   "b3",
+   "e1",
+   "e2",
+   "e3",
+   "f1",
+   "f3",
+   "f4",
+   "f8",
+   "h1",
+   "h10",
+   "h11",
+   "h12",
+   "h13",
+   "h2",
+   "h3",
+   "h4",
+   "h5",
+   "h6",
+   "h7",
+   "h8",
+   "h9",
+   "n5",
+   "n6",
+   "n8",
+   "n9"
+  ],
+  "image": "plan-b1144c60-1-8.png"
+ },
+ {
+  "id": "plan-0eb0c7ff-2-22",
+  "kommun": [
+   "0184"
+  ],
+  "kommun_name": "Solna",
+  "plan_id": "0eb0c7ff4792888f",
+  "plan_name": "Kvarteret Albydal m.fl. - Solna stad",
+  "doc_id": "pdf:0184:0bcfe5f505b630f6",
+  "property": "property 2:22",
+  "label": "2:22",
+  "codes_near": [
+   "f1",
+   "f3",
+   "x1",
+   "ö1",
+   "f6"
+  ],
+  "definitions": {
+   "x1": "Marken ska vara tillgänglig (fri från pelare och andra hinder) för gångtrafik med minst 7 meters fri höjd.",
+   "ö1": "Marken får endast förses med komplementbyggnad ovan gårdsbjälklaget (ovan +17,0 meter).",
+   "f6": "Byggnad ska utformas med högst 6 våningar ovan gårdsbjälklaget (ovan +17,0 meter)."
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "e5",
+   "e6",
+   "f4",
+   "f5",
+   "f6",
+   "x1",
+   "ö1"
+  ],
+  "image": "plan-0eb0c7ff-2-22.png"
+ },
+ {
+  "id": "plan-9f4d79a7-19-2",
+  "kommun": [
+   "1761"
+  ],
+  "kommun_name": "Hammarö",
+  "plan_id": "9f4d79a77fe875e0",
+  "plan_name": "lunnaparken och skoghallsådrans båthamn",
+  "doc_id": "pdf:1761:c6c4d487bab9e344",
+  "property": "property 19:2",
+  "label": "19:2",
+  "codes_near": [
+   "h2",
+   "a1",
+   "e1",
+   "a3",
+   "a4",
+   "u1"
+  ],
+  "definitions": {
+   "h2": "Högsta nockhöjd är 5 meter över angivet nollplan",
+   "a1": "Bygglov får inte ges för byggnad förrän skydd mot översvämning för 200-års nivån (+47 m.ö.h.) tydliggjorts för byggnationen. (Begränsas av användningsgräns)",
+   "e1": "Största byggnadsarean är 30% av kvartersmarken inom användningsområdet. (Begränsas av användningsgräns)",
+   "a3": "Strandskyddet är upphävt. Detta gäller för kvartersmarken inom användningsområdet. (Begränsas av användningsgräns)",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar."
+  },
+  "decisive_codes": [
+   "a1",
+   "e1",
+   "h1",
+   "h2"
+  ],
+  "image": "plan-9f4d79a7-19-2.png"
+ },
+ {
+  "id": "plan-709d4aac-1-227",
+  "kommun": [
+   "0862"
+  ],
+  "kommun_name": "Emmaboda",
+  "plan_id": "709d4aac97218b43",
+  "plan_name": "Detaljplan för del av fastigheten Emmaboda 4:1 m.fl. Mjusjön, Lindås samhälle, Emmaboda kommun, Kalmar lä",
+  "doc_id": "pdf:0862:f1ab08d8a7c8c33b",
+  "property": "property 1:227",
+  "label": "1:227",
+  "codes_near": [
+   "d1",
+   "h1",
+   "p1",
+   "p2",
+   "p3",
+   "a1",
+   "h2"
+  ],
+  "definitions": {
+   "d1": "Minsta fastighetsstorlek är 1000 m²",
+   "h1": "Högsta nockhöjd på huvudbyggnad är 8.0 meter",
+   "p1": "Huvudbyggnad ska placeras minst 4,0 meter från fastighetsgräns.",
+   "p2": "Komplementbyggnad ska placeras minst 1,0 meter från fastighetsgräns",
+   "p3": "Garage och carport ska placeras minst 6,0 meter från fastighetsgräns där angöring sker",
+   "a1": "Strandskyddet är upphävt.",
+   "h2": "Högsta nockhöjd på huvudbyggnad är 5.0 meter"
+  },
+  "decisive_codes": [
+   "h1",
+   "h2"
+  ],
+  "image": "plan-709d4aac-1-227.png"
+ },
+ {
+  "id": "plan-8b92893e-91-4",
+  "kommun": [
+   "1291"
+  ],
+  "kommun_name": "Simrishamn",
+  "plan_id": "8b92893e6a089b13",
+  "plan_name": "Plankarta 2025-12-01",
+  "doc_id": "pdf:1291:a54adedec58fcc09",
+  "property": "property 91:4",
+  "label": "91:4",
+  "codes_near": [
+   "n1",
+   "f2",
+   "f1",
+   "h3",
+   "f7",
+   "f3",
+   "f4",
+   "f5",
+   "f6",
+   "f9",
+   "f8"
+  ],
+  "definitions": {
+   "n1": "Parkering +0,0 Föreskriven höjd över nollplanet i meter"
+  },
+  "decisive_codes": [
+   "e1",
+   "h1",
+   "n1"
+  ],
+  "image": "plan-8b92893e-91-4.png"
+ },
+ {
+  "id": "plan-a0280c60-4-8",
+  "kommun": [
+   "1784"
+  ],
+  "kommun_name": "Arvika",
+  "plan_id": "a0280c606faab3e4",
+  "plan_name": "glava glasbruk l 4 d",
+  "doc_id": "pdf:1784:04b6266628c65122",
+  "property": "property 4:8",
+  "label": "4:8",
+  "codes_near": [
+   "k1",
+   "e1",
+   "h1",
+   "h2",
+   "o1",
+   "a4",
+   "u1",
+   "a7"
+  ],
+  "definitions": {
+   "k1": "Kulturhistoriskt värdefull byggnad. Byggnads karaktär med avseende på volym, proportioner, indelning, material och materialbehandling, färgsättning samt detaljeringsnivå ska bibehållas",
+   "e1": "Största byggnadsarea är 20 procent av fastighetsarean",
+   "h1": "Högsta totalhöjd på huvudbyggnader är 10.0 meter",
+   "h2": "Högsta totalhöjd på komplementbyggnader är 5.0 meter h3 Högsta totalhöjd är 3.0 meter",
+   "o1": "Minsta takvinkel för huvudbyggnad är 10 grader",
+   "a4": "Startbesked får inte ges för byggnader förrän marken har åtgärdats till en nivå av känslig markanvändning eller angivna platsspecifika riktvärden.",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar.",
+   "a7": "Marklov krävs även för all schaktning, sprängning och fyllning.."
+  },
+  "decisive_codes": [
+   "e1",
+   "e2",
+   "e3",
+   "e4",
+   "h1",
+   "h2",
+   "h4"
+  ],
+  "image": "plan-a0280c60-4-8.png"
+ },
+ {
+  "id": "plan-6f141409-3-101",
+  "kommun": [
+   "0125"
+  ],
+  "kommun_name": "Ekerö",
+  "plan_id": "6f141409a6686dbf",
+  "plan_name": "stenhamra skolområde med 23 04 06",
+  "doc_id": "pdf:0125:3087ef5e963a0c14",
+  "property": "property 3:101",
+  "label": "3:101",
+  "codes_near": [
+   "h1",
+   "h2",
+   "h3",
+   "n1",
+   "n2",
+   "u1",
+   "x1"
+  ],
+  "definitions": {
+   "h1": "Högsta nockhöjd är 9 meter",
+   "h2": "Högsta nockhöjd är 14 meter",
+   "h3": "Högsta nockhöjd är 7.5 meter",
+   "n1": "Parkering får anordnas.",
+   "n2": "Träd med en stamdiameter över 30 cm får endast fällas om det är sjukt eller utgör en säkerhetsrisk.",
+   "u1": "Markreservat för allmännyttiga underjordiska ledningar.",
+   "x1": "Markreservat för allmännyttig gång- och cykeltrafik."
+  },
+  "decisive_codes": [
+   "e2",
+   "h1",
+   "h2",
+   "h3"
+  ],
+  "image": "plan-6f141409-3-101.png"
+ }
+]

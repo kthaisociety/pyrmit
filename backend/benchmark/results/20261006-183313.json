@@ -1,0 +1,1477 @@
+{
+  "questions": [
+    "D:\\AISociety\\pyrmit\\backend\\benchmark\\questions.jsonl"
+  ],
+  "n_questions": 73,
+  "corpus_size": 4619,
+  "summary": {
+    "te3-large": {
+      "en": {
+        "all": {
+          "n": 73,
+          "hit@1": 0.589041095890411,
+          "hit@3": 0.7808219178082192,
+          "hit@5": 0.821917808219178,
+          "hit@10": 0.9041095890410958,
+          "recall@5": 0.821917808219178,
+          "mrr@10": 0.6945749075886063
+        },
+        "law": {
+          "n": 47,
+          "hit@1": 0.723404255319149,
+          "hit@3": 0.9361702127659575,
+          "hit@5": 0.9787234042553191,
+          "hit@10": 0.9787234042553191,
+          "recall@5": 0.9787234042553191,
+          "mrr@10": 0.8262411347517733
+        },
+        "document": {
+          "n": 26,
+          "hit@1": 0.34615384615384615,
+          "hit@3": 0.5,
+          "hit@5": 0.5384615384615384,
+          "hit@10": 0.7692307692307693,
+          "recall@5": 0.5384615384615384,
+          "mrr@10": 0.45656288156288155
+        }
+      }
+    }
+  },
+  "per_question": {
+    "te3-large": [
+      {
+        "id": "pbl-attefall-size",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "permit-exemption"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1899,
+          1907,
+          1906,
+          1900,
+          1905
+        ]
+      },
+      {
+        "id": "pbl-decision-deadline",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "procedure"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          2012,
+          2013,
+          1764,
+          2014,
+          1771
+        ]
+      },
+      {
+        "id": "pbl-start-notice",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "procedure"
+        ],
+        "first_rank": 4,
+        "group_ranks": [
+          4
+        ],
+        "top": [
+          2057,
+          2056,
+          2061,
+          2034,
+          2060
+        ]
+      },
+      {
+        "id": "pbl-final-notice",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "procedure"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          2035,
+          134,
+          1884,
+          2071,
+          2057
+        ]
+      },
+      {
+        "id": "pbl-implementation-period",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "detaljplan"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1735,
+          1737,
+          1743,
+          1741,
+          1738
+        ]
+      },
+      {
+        "id": "pbl-implementation-extension",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "detaljplan"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1738,
+          1735,
+          1737,
+          1739,
+          1744
+        ]
+      },
+      {
+        "id": "pbl-plan-request-deadline",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "detaljplan",
+          "procedure"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1764,
+          1771,
+          2012,
+          1697,
+          1735
+        ]
+      },
+      {
+        "id": "pbl-plan-request-content",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "detaljplan",
+          "procedure"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1763,
+          1995,
+          2005,
+          1762,
+          1765
+        ]
+      },
+      {
+        "id": "pbl-plan-required",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "detaljplan"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1715,
+          1729,
+          1727,
+          1724,
+          1932
+        ]
+      },
+      {
+        "id": "pbl-temporary-permit",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "permit"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1977,
+          1741,
+          1743,
+          1744,
+          1936
+        ]
+      },
+      {
+        "id": "pbl-demolition",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "permit"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1940,
+          1981,
+          1941,
+          1939,
+          1945
+        ]
+      },
+      {
+        "id": "pbl-penalty-intent",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "enforcement"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          2136,
+          2132,
+          2137,
+          2138,
+          2139
+        ]
+      },
+      {
+        "id": "pbl-penalty-correction",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "enforcement"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          2137,
+          2106,
+          1993,
+          2136,
+          2095
+        ]
+      },
+      {
+        "id": "pbl-inspector-tasks",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "procedure"
+        ],
+        "first_rank": 4,
+        "group_ranks": [
+          4
+        ],
+        "top": [
+          2040,
+          2039,
+          1970,
+          2042,
+          2037
+        ]
+      },
+      {
+        "id": "pbl-new-building-permit",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "permit"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1898,
+          1932,
+          1897,
+          1920,
+          1904
+        ]
+      },
+      {
+        "id": "pbl-land-suitability",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1676,
+          1674,
+          1677,
+          1983,
+          1678
+        ]
+      },
+      {
+        "id": "pbl-appeal-exclusions",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "appeal"
+        ],
+        "first_rank": 2,
+        "group_ranks": [
+          2
+        ],
+        "top": [
+          2164,
+          2162,
+          2161,
+          2171,
+          2179
+        ]
+      },
+      {
+        "id": "pbl-fees",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "pbl",
+          "procedure"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          2157,
+          2021,
+          2158,
+          2159,
+          2014
+        ]
+      },
+      {
+        "id": "mb-shore-distance",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "miljobalken",
+          "strandskydd"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1171,
+          1170,
+          1174,
+          1169,
+          588
+        ]
+      },
+      {
+        "id": "mb-shore-prohibitions",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "miljobalken",
+          "strandskydd"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1172,
+          1173,
+          1174,
+          1083,
+          1170
+        ]
+      },
+      {
+        "id": "mb-shore-lifting",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "miljobalken",
+          "strandskydd"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1175,
+          1234,
+          1171,
+          1170,
+          1179
+        ]
+      },
+      {
+        "id": "mb-precaution",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "miljobalken"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1058,
+          1057,
+          1059,
+          1519,
+          1306
+        ]
+      },
+      {
+        "id": "mb-strategic-assessment",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "miljobalken",
+          "mkb"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1112,
+          1117,
+          1115,
+          1114,
+          1128
+        ]
+      },
+      {
+        "id": "mb-quality-standards",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "miljobalken"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1094,
+          1103,
+          1501,
+          1092,
+          1096
+        ]
+      },
+      {
+        "id": "mb-national-interest",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "miljobalken",
+          "riksintresse"
+        ],
+        "first_rank": 3,
+        "group_ranks": [
+          3
+        ],
+        "top": [
+          1081,
+          1184,
+          1072,
+          1158,
+          1159
+        ]
+      },
+      {
+        "id": "mb-waste-definition",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "miljobalken"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1321,
+          1323,
+          1325,
+          1331,
+          1329
+        ]
+      },
+      {
+        "id": "mb-contamination-liability",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "miljobalken",
+          "contamination"
+        ],
+        "first_rank": 3,
+        "group_ranks": [
+          3
+        ],
+        "top": [
+          1219,
+          1227,
+          1218,
+          1221,
+          1220
+        ]
+      },
+      {
+        "id": "mb-biotope",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "miljobalken"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          1168,
+          1167,
+          1169,
+          1160,
+          1396
+        ]
+      },
+      {
+        "id": "jb-real-property",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "jordabalk"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          583,
+          575,
+          503,
+          397,
+          615
+        ]
+      },
+      {
+        "id": "jb-fixtures",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "jordabalk"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          589,
+          333,
+          617,
+          898,
+          594
+        ]
+      },
+      {
+        "id": "jb-purchase-form",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "jordabalk",
+          "purchase"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          608,
+          614,
+          613,
+          356,
+          616
+        ]
+      },
+      {
+        "id": "jb-defects",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "jordabalk",
+          "purchase"
+        ],
+        "first_rank": 2,
+        "group_ranks": [
+          2
+        ],
+        "top": [
+          619,
+          626,
+          622,
+          634,
+          623
+        ]
+      },
+      {
+        "id": "jb-neighbours",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "jordabalk"
+        ],
+        "first_rank": 2,
+        "group_ranks": [
+          2
+        ],
+        "top": [
+          606,
+          596,
+          914,
+          597,
+          598
+        ]
+      },
+      {
+        "id": "jb-title-registration",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "jordabalk",
+          "purchase"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          622,
+          621,
+          634,
+          623,
+          620
+        ]
+      },
+      {
+        "id": "fbl-suitability",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "fastighetsbildning"
+        ],
+        "first_rank": 2,
+        "group_ranks": [
+          2
+        ],
+        "top": [
+          575,
+          337,
+          342,
+          505,
+          346
+        ]
+      },
+      {
+        "id": "fbl-forms",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "fastighetsbildning"
+        ],
+        "first_rank": 2,
+        "group_ranks": [
+          2
+        ],
+        "top": [
+          397,
+          330,
+          519,
+          525,
+          502
+        ]
+      },
+      {
+        "id": "fbl-reallocation",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "fastighetsbildning"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          397,
+          460,
+          458,
+          403,
+          595
+        ]
+      },
+      {
+        "id": "brl-definition",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "bostadsratt"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          64,
+          81,
+          87,
+          82,
+          164
+        ]
+      },
+      {
+        "id": "brl-min-apartments",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "bostadsratt"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          68,
+          65,
+          89,
+          207,
+          92
+        ]
+      },
+      {
+        "id": "brl-subletting",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "bostadsratt"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          143,
+          834,
+          828,
+          66,
+          833
+        ]
+      },
+      {
+        "id": "brl-sale-form",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "bostadsratt"
+        ],
+        "first_rank": 3,
+        "group_ranks": [
+          3
+        ],
+        "top": [
+          98,
+          110,
+          126,
+          125,
+          127
+        ]
+      },
+      {
+        "id": "brl-economic-plan",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "bostadsratt"
+        ],
+        "first_rank": 29,
+        "group_ranks": [
+          29
+        ],
+        "top": [
+          83,
+          74,
+          99,
+          65,
+          81
+        ]
+      },
+      {
+        "id": "exp-urban-development",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "expropriation"
+        ],
+        "first_rank": 2,
+        "group_ranks": [
+          2
+        ],
+        "top": [
+          1820,
+          234,
+          2196,
+          243,
+          1822
+        ]
+      },
+      {
+        "id": "exp-compensation",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "expropriation"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          257,
+          286,
+          287,
+          231,
+          289
+        ]
+      },
+      {
+        "id": "exp-infrastructure",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "expropriation"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          235,
+          242,
+          243,
+          237,
+          234
+        ]
+      },
+      {
+        "id": "al-condition",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "anlaggning"
+        ],
+        "first_rank": 3,
+        "group_ranks": [
+          3
+        ],
+        "top": [
+          6,
+          4,
+          5,
+          15,
+          438
+        ]
+      },
+      {
+        "id": "al-cost-shares",
+        "lang": "en",
+        "table": "law",
+        "tags": [
+          "anlaggning"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          16,
+          15,
+          501,
+          535,
+          478
+        ]
+      },
+      {
+        "id": "kb2-homes",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "kristineberg",
+          "units"
+        ],
+        "first_rank": 26,
+        "group_ranks": [
+          26
+        ],
+        "top": [
+          2801,
+          2346,
+          3022,
+          2776,
+          2864
+        ]
+      },
+      {
+        "id": "kb1-contents",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "kristineberg",
+          "units"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          2776,
+          2346,
+          3019,
+          2864,
+          2831
+        ]
+      },
+      {
+        "id": "kb1-heights",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "kristineberg",
+          "building-rights"
+        ],
+        "first_rank": 2,
+        "group_ranks": [
+          2
+        ],
+        "top": [
+          2801,
+          2844,
+          2346,
+          3702,
+          3687
+        ]
+      },
+      {
+        "id": "kb1-townhouses",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "kristineberg",
+          "building-rights"
+        ],
+        "first_rank": 7,
+        "group_ranks": [
+          7
+        ],
+        "top": [
+          2851,
+          3094,
+          2853,
+          2767,
+          3098
+        ]
+      },
+      {
+        "id": "kb1-implementation",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "kristineberg"
+        ],
+        "first_rank": 6,
+        "group_ranks": [
+          6
+        ],
+        "top": [
+          2767,
+          3013,
+          2346,
+          3014,
+          3016
+        ]
+      },
+      {
+        "id": "kb1-stormwater",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "kristineberg",
+          "water"
+        ],
+        "first_rank": 12,
+        "group_ranks": [
+          12
+        ],
+        "top": [
+          2911,
+          2994,
+          2912,
+          3798,
+          3750
+        ]
+      },
+      {
+        "id": "kb1-public-space",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "kristineberg"
+        ],
+        "first_rank": 10,
+        "group_ranks": [
+          10
+        ],
+        "top": [
+          2988,
+          2991,
+          3002,
+          3890,
+          2346
+        ]
+      },
+      {
+        "id": "kb1-hazardous-route",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "kristineberg",
+          "risk"
+        ],
+        "first_rank": 17,
+        "group_ranks": [
+          17
+        ],
+        "top": [
+          2933,
+          4366,
+          3368,
+          2702,
+          3379
+        ]
+      },
+      {
+        "id": "kb1-preschool",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "kristineberg",
+          "building-rights"
+        ],
+        "first_rank": 2,
+        "group_ranks": [
+          2
+        ],
+        "top": [
+          2856,
+          2858,
+          2862,
+          2801,
+          2776
+        ]
+      },
+      {
+        "id": "morby-floor-area",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "morby",
+          "building-rights"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          3708,
+          3620,
+          3703,
+          3687,
+          3705
+        ]
+      },
+      {
+        "id": "morby-setback",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "morby",
+          "risk"
+        ],
+        "first_rank": 2,
+        "group_ranks": [
+          2
+        ],
+        "top": [
+          3858,
+          3586,
+          3700,
+          3706,
+          3626
+        ]
+      },
+      {
+        "id": "morby-storeys",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "morby",
+          "building-rights"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          3687,
+          2844,
+          3702,
+          3704,
+          3692
+        ]
+      },
+      {
+        "id": "morby-noise",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "morby",
+          "noise"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          3800,
+          3992,
+          3804,
+          3801,
+          3331
+        ]
+      },
+      {
+        "id": "morby-location",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "morby"
+        ],
+        "first_rank": 4,
+        "group_ranks": [
+          4
+        ],
+        "top": [
+          3575,
+          3641,
+          3626,
+          3590,
+          3619
+        ]
+      },
+      {
+        "id": "morby-plan-decision",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "morby",
+          "procedure"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          3598,
+          2802,
+          3615,
+          3079,
+          3827
+        ]
+      },
+      {
+        "id": "morby-flooding",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "morby",
+          "water"
+        ],
+        "first_rank": 10,
+        "group_ranks": [
+          10
+        ],
+        "top": [
+          3793,
+          3684,
+          3376,
+          3378,
+          3653
+        ]
+      },
+      {
+        "id": "kumla-plots",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "kumla",
+          "units"
+        ],
+        "first_rank": null,
+        "group_ranks": [
+          null
+        ],
+        "top": [
+          3623,
+          3058,
+          3032,
+          3094,
+          3022
+        ]
+      },
+      {
+        "id": "kumla-waste",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "kumla"
+        ],
+        "first_rank": 3,
+        "group_ranks": [
+          3
+        ],
+        "top": [
+          2927,
+          2926,
+          3111,
+          3783,
+          3784
+        ]
+      },
+      {
+        "id": "op-holiday-homes",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "oversiktsplan",
+          "building-rights"
+        ],
+        "first_rank": 6,
+        "group_ranks": [
+          6
+        ],
+        "top": [
+          2853,
+          3094,
+          2851,
+          3098,
+          2399
+        ]
+      },
+      {
+        "id": "op-population",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "oversiktsplan"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          2330,
+          4562,
+          3306,
+          2406,
+          2411
+        ]
+      },
+      {
+        "id": "op-e18-housing",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "oversiktsplan"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          2364,
+          2370,
+          3976,
+          2451,
+          3904
+        ]
+      },
+      {
+        "id": "op-negative-impacts",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "oversiktsplan",
+          "mkb"
+        ],
+        "first_rank": 9,
+        "group_ranks": [
+          9
+        ],
+        "top": [
+          3281,
+          4420,
+          4214,
+          2754,
+          3292
+        ]
+      },
+      {
+        "id": "mkb-rural-growth",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "mkb",
+          "units"
+        ],
+        "first_rank": 15,
+        "group_ranks": [
+          15
+        ],
+        "top": [
+          2409,
+          4562,
+          2406,
+          4378,
+          2399
+        ]
+      },
+      {
+        "id": "mkb-nitrate",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "mkb",
+          "water"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          3434,
+          4165,
+          4533,
+          4591,
+          4402
+        ]
+      },
+      {
+        "id": "samrad-roslagsbanan",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "samrad"
+        ],
+        "first_rank": 12,
+        "group_ranks": [
+          12
+        ],
+        "top": [
+          4556,
+          4570,
+          4572,
+          2320,
+          4484
+        ]
+      },
+      {
+        "id": "samrad-culture-committee",
+        "lang": "en",
+        "table": "document",
+        "tags": [
+          "samrad"
+        ],
+        "first_rank": 1,
+        "group_ranks": [
+          1
+        ],
+        "top": [
+          4310,
+          4415,
+          4312,
+          4151,
+          4311
+        ]
+      }
+    ]
+  }
+}

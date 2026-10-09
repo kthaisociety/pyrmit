@@ -12,3 +12,4 @@ python-multipart>=0.0.9
 pgvector>=0.4.0
 mistralai>=1.0.0
 langfuse>=2.0.0
+numpy>=1.26.0

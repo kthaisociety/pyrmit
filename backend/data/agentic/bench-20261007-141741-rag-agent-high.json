@@ -1,0 +1,734 @@
+[
+ {
+  "case": "attefall-vallentuna",
+  "system": "rag",
+  "effort": "high",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.375,
+  "unsupported": 4,
+  "evidence": 0.0,
+  "tool_calls": 0,
+  "llm_calls": 2,
+  "seconds": 64.9,
+  "cost": 0.00237,
+  "judge_cost": 0.00068305,
+  "tokens_in": 5174,
+  "tokens_out": 3447,
+  "comment": "The answer identifies relevant conditions and notification requirements but omits the full size, height and total-area limits, the cultural-value exception, and an explicit requirement for startbesked; it also adds unsupported fee figures, a 4.5 m rule and a plan-specific prohibition claim.",
+  "answer": "**Verdict:** **Feasible with conditions** — Vallentuna’s material lists a route for a 25 m² permit-exempt supplementary building, but whether it applies depends on what kind of cottage it is and the rules for your exact property.\n\n**Key rules and constraints:**\n- If the cottage is a **komplementbyggnad**—a detached building that complements your house but is not fitted out as an independent dwelling—it matches the PBL definition. If it has an independent dwelling, it is instead a **komplementbostadshus**. That distinction matters for which rules and fees apply. [c:3b2da371d150a347] PBL 1 kap. 4 § — “*inte är inredd med en självständig bostad*” means it is **not fitted out as an independent dwelling**.\n- Vallentuna’s fee schedule lists a **25 m² komplementbyggnad** under PBL 9 kap. 4 a §, without technical consultation, with a listed fee of **SEK 7,380**. A different schedule lists a komplementbostadshus of up to 30 m² with technical consultation and a fee of **SEK 20,088**. These are fee-schedule entries, so confirm which category and current fee apply. [c:4ad98a50e3678a90] Vallentuna, “Revidering av taxa för bygglovsverksamhet”; [c:33fa15fe44b3781e] Vallentuna, “Revidering av taxa för bygglovsverksamhet 2025”\n- Being inside a detailed-plan area does **not** by itself establish that the cottage is allowed. A Vallentuna detailed plan for Åbyholm, for example, prohibits Attefall measures on certain land. Check the plan and its provisions for your property. [c:d20eb7aadaf87a26] Vallentuna, “Detaljplan för Åbyholm-Antagande”\n- Vallentuna’s guidance describes permit-exempt measures as “*utan bygglov, men inte utan tillstånd*” (“without a building permit, but not without permission”). It also includes a 4.5 m boundary-distance condition in the supplied excerpt; confirm how that condition applies to your proposed building and whether neighbour consent is relevant. [c:50c7a4c64e49a7d5] Vallentuna, “Avgift för bygglovbefriade anmälningspliktiga åtgärder”\n\n**Process and next steps:**\n1. Ask Vallentuna’s building-permit function to check your property’s **exact detaljplan** and whether it prohibits or limits Attefall measures.\n2. Clarify whether the cottage will be a komplementbyggnad or a komplementbostadshus. Vallentuna’s material classifies permit-exempt measures as **notification-required**; ask what notification and any start clearance are required before construction. [c:4ba51be1ab011176] Vallentuna, “Avgift för bygglovbefriade anmälningspliktiga åtgärder”\n3. Budget provisionally for the listed **SEK 7,380** if the 25 m² komplementbyggnad entry applies; confirm the current fee with the municipality. The sources give **no processing time** or current contact details.\n\n**Uncertainties:** The sources do not identify your property’s plan, establish whether your cottage would be an independent dwelling, or confirm the current applicable rules and fees. The 25 m² and 30 m² figures appear in separate municipal fee documents, so verify the applicable category and current requirements with Vallentuna before proceeding.",
+  "steps": [
+   {
+    "tool": "retrieve",
+    "kommuner": [
+     "0115",
+     "0512"
+    ],
+    "chunks": [
+     "2b2da371d150a347",
+     "967db54dbba37745",
+     "a9f43024c03bbcaa",
+     "014fca079f58ae0e",
+     "e55f283c65e65b39",
+     "9d9809feb7c23167",
+     "4510cae9276cf5ab",
+     "6eb5cb75edb6e758",
+     "c8bf6f530cd8d09b",
+     "f6c80c5f5640a11e",
+     "4ba51be1ab011176",
+     "366bfe68f680954b",
+     "33fa15fe44b3781e",
+     "d20eb7aadaf87a26",
+     "8bcf62612488932c",
+     "cdf7e1c4db1dcd0f",
+     "4ad98a50e3678a90",
+     "50c7a4c64e49a7d5",
+     "c36c00c8291f2296",
+     "6bc308381274fe66"
+    ]
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "attefall-vallentuna",
+  "system": "agent",
+  "effort": "high",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.5,
+  "unsupported": 0,
+  "evidence": 1.0,
+  "tool_calls": 17,
+  "llm_calls": 7,
+  "seconds": 61.0,
+  "cost": 0.00505,
+  "judge_cost": 0.000918675,
+  "tokens_in": 60643,
+  "tokens_out": 5956,
+  "comment": "It states the main size, height and total-area limits, but only partly addresses the required notification and start decision, weakens the cultural-value permit rule, and omits neighbour consent near a boundary.",
+  "answer": "**Verdict: Feasible with conditions.** A 25 m² guest cottage can generally be built without a building permit on a plot within a detaljplan in Vallentuna, if it meets the limits below and the property is not subject to a special protection that requires a permit.\n\n**Key rules and constraints:**\n\n- **Size and placement:** PBL exempts a new accessory building or accessory dwelling from a building permit within a detaljplan if its *byggnadsarea* (building footprint) is no more than 30 m², it is smaller than the building it supplements, its roof-ridge height is no more than 4.0 m, and it is placed within the plot. The statute says “*högst 30,0 kvadratmeter*” (“at most 30.0 m²”). A 25 m² footprint is within that limit. [c:c153b69d1648f70b, PBL 9 kap. 4 §]\n- **Total accessory-building area:** The new cottage plus other accessory buildings on the plot must total no more than 45 m². Older permit-exempt buildings count too. Vallentuna also lists the 45 m² total and 4 m ridge-height limits. [c:c153b69d1648f70b, PBL 9 kap. 4 §; c:a1cbd51fb395f18a, *Nybyggnad av komplementbyggnad*]\n- **It must be smaller than the main building:** If the house the cottage supplements has a building footprint of 25 m² or less, this condition would not be met. [c:c153b69d1648f70b, PBL 9 kap. 4 §]\n- **Use and protected areas:** Vallentuna lists a guest cottage (*gäststuga*) as an accessory building and says it must complement the house, not function as a stand-alone residence. Specially protected or particularly valuable buildings or areas can require a permit despite the exemption. [c:a1cbd51fb395f18a, *Nybyggnad av komplementbyggnad*; c:c05a57ca9446f7b5, PBL 9 kap. 37 §]\n\n**Process and next steps:**\n\n- Check the cottage’s **building footprint**, ridge height, and the combined area of all existing accessory buildings.\n- Ask Vallentuna’s building-permit office to check the property’s exact detaljplan and whether it lies in a specially valuable or protected area. The property address or designation will help them verify this.\n- A building permit exemption does not rule out an **anmälan** (notification). For example, installing ventilation or a water-supply or drainage system requires notification; work that requires notification must not start before the municipality issues a *startbesked* (start notice). [c:e2bb583cd77075bd, PBF 6 kap. 1 §; c:f8721e335f9c3e3b, PBL 10 kap. 3 §; c:f496dbe166d04eb5, Vallentuna *Nybyggnad av komplementbyggnad*]\n\n**Uncertainties:** I can’t check the exact plan provisions, existing accessory-building area, or any heritage protection without the property details. The statutory limit is based on *byggnadsarea*—the footprint—so confirm that your “25 m²” refers to that measure.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Vallentuna"
+    },
+    "chunks": [],
+    "output_chars": 210,
+    "image": false,
+    "ms": 13
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 4 a §"
+    },
+    "chunks": [],
+    "output_chars": 671,
+    "image": false,
+    "ms": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 4 b §"
+    },
+    "chunks": [],
+    "output_chars": 671,
+    "image": false,
+    "ms": 5
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "attefallshus komplementbyggnad inom detaljplan bygglov anmälan startbesked Vallentuna",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "a1cbd51fb395f18a",
+     "f496dbe166d04eb5",
+     "33fa15fe44b3781e",
+     "a1caffc553f6d1fc",
+     "07b484740b4a9b61"
+    ],
+    "output_chars": 1909,
+    "image": false,
+    "ms": 126
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "attefallsåtgärd komplementbyggnad detaljplan bygglov 25 kvadratmeter",
+     "scope": "law",
+     "kommun": "",
+     "k": 5
+    },
+    "chunks": [
+     "42ceaa2d71a734f0",
+     "330abfd22d93caa6",
+     "c153b69d1648f70b",
+     "9821607343973fde",
+     "1d15f447dd106635"
+    ],
+    "output_chars": 2250,
+    "image": false,
+    "ms": 132
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "a1cbd51fb395f18a",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [
+     "a1cbd51fb395f18a",
+     "f496dbe166d04eb5"
+    ],
+    "output_chars": 3366,
+    "image": false,
+    "ms": 0
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "Plan- och bygglag (2010:900)",
+     "section": "9 kap. 4 §"
+    },
+    "chunks": [
+     "c153b69d1648f70b"
+    ],
+    "output_chars": 957,
+    "image": false,
+    "ms": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "anmälan startbesked attefallsåtgärd komplementbyggnad bygglovsfri 2025",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 8
+    },
+    "chunks": [
+     "9821607343973fde",
+     "5fa41941e5898eae",
+     "469c8cef127fdb5c",
+     "1f59e8579601b6b5",
+     "330abfd22d93caa6",
+     "c153b69d1648f70b",
+     "42ceaa2d71a734f0",
+     "f8721e335f9c3e3b"
+    ],
+    "output_chars": 3568,
+    "image": false,
+    "ms": 101
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "9 kap. 4 § komplementbyggnad byggnadsarea befintlig byggnad skyddsbestämmelser detaljplan",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "c153b69d1648f70b",
+     "42ceaa2d71a734f0",
+     "9821607343973fde",
+     "330abfd22d93caa6",
+     "1d15f447dd106635"
+    ],
+    "output_chars": 2250,
+    "image": false,
+    "ms": 99
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "anmälan byggnad komplementbyggnad vatten avlopp ventilation startbesked nybyggnad undantag bygglov",
+     "scope": "kommun",
+     "kommun": "0115",
+     "k": 5
+    },
+    "chunks": [
+     "f496dbe166d04eb5",
+     "20075414c1065d91",
+     "98b5178ac361cca1",
+     "2e7b0a3b56de89f2",
+     "6474a3f259563a35"
+    ],
+    "output_chars": 2542,
+    "image": false,
+    "ms": 94
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "kulturhistoriskt särskilt värdefullt område",
+     "kommun": "0115",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "5ebb73256d252c5e",
+     "b0205b5a2f0ceb97",
+     "a1cbd51fb395f18a"
+    ],
+    "output_chars": 1437,
+    "image": false,
+    "ms": 108
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 37 §"
+    },
+    "chunks": [
+     "c05a57ca9446f7b5"
+    ],
+    "output_chars": 1084,
+    "image": false,
+    "ms": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBF",
+     "section": "6 kap. 5 §"
+    },
+    "chunks": [
+     "8ffc9f9528573f3a",
+     "16dcef42ecc18f39"
+    ],
+    "output_chars": 1694,
+    "image": false,
+    "ms": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "10 kap. 3 §"
+    },
+    "chunks": [
+     "f8721e335f9c3e3b"
+    ],
+    "output_chars": 529,
+    "image": false,
+    "ms": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "installation vatten avlopp ventilation anmälan komplementbyggnad PBF 6 kap",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "e2bb583cd77075bd",
+     "4258298784303d79",
+     "fa1e11cd937e3baa",
+     "5fa41941e5898eae",
+     "41148ed2b56f70f6"
+    ],
+    "output_chars": 1847,
+    "image": false,
+    "ms": 100
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBF",
+     "section": "6 kap. 1 §"
+    },
+    "chunks": [
+     "e2bb583cd77075bd",
+     "1be4c271eeceb3f6"
+    ],
+    "output_chars": 1259,
+    "image": false,
+    "ms": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "bygglov krävs särskilt värdefullt område nybyggnad komplementbyggnad PBL 9 kap 37 §",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 3
+    },
+    "chunks": [
+     "c05a57ca9446f7b5",
+     "3b8f4cbf239fddb1",
+     "c153b69d1648f70b"
+    ],
+    "output_chars": 1363,
+    "image": false,
+    "ms": 99
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "ydre-barn-demolition",
+  "system": "rag",
+  "effort": "high",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.8333333333333334,
+  "unsupported": 1,
+  "evidence": 1.0,
+  "tool_calls": 0,
+  "llm_calls": 2,
+  "seconds": 21.9,
+  "cost": 0.0017,
+  "judge_cost": 0.0007102,
+  "tokens_in": 6322,
+  "tokens_out": 1835,
+  "comment": "It correctly says demolition is normally possible without a permit and advises checking with Ydre and handling waste, but wrongly presents special heritage value as an independent permit trigger outside a detailed plan.",
+  "answer": "**Verdict:** **Feasible with conditions** — being outside a detailed development plan generally means no demolition permit is required, but exceptions apply if the barn is specially valuable or covered by area regulations.\n\n**Key rules and constraints:**\n- Outside a detailed development plan, demolition permission is required if the building is covered by a demolition-permit requirement or demolition ban in area regulations, or if it is a particularly valuable building or lies within a particularly valuable built environment. The law says “*I ett område som inte omfattas av en detaljplan krävs det rivningslov …*” (“In an area not covered by a detailed development plan, demolition permission is required …”) in those cases. [c:0d65737ef59dfa72] (PBL 9 kap. 44 §)\n- Ydre says that demolition of a building or part of one requires a **notification** when no permit is required. If the work is permit-required, submit a permit application instead; Ydre says a separate notification is then not needed. [c:9c9cbbd0184e6356] (Ydre, *Lov och anmälan*)\n- The sources do not identify a special demolition exemption just because the building is a farm barn. The barn’s heritage status and any applicable area regulations therefore need checking. [c:0d65737ef59dfa72] (PBL 9 kap. 44 §)\n\n**Process and next steps:**\n1. Ask Ydre’s building office to check whether the property is covered by area regulations and whether the barn or its surroundings are considered particularly valuable. Ydre directs property-specific questions to its building office. [c:5ec9fd9d0003168d] (Ydre, *Lov och anmälan*)\n2. If permission is required, Ydre lists a site plan, technical description and potentially a demolition control plan among the documents for a demolition application. The control plan should address how demolition waste is handled; if hazardous waste may arise, this should be stated in the notification. [c:2a60677da1acc8d0] (Ydre, *Rivningslov och rivningsanmälan*); [c:36e16691d99aaee5] (Ydre, *Lov och anmälan*)\n3. Contact Samhällsbyggnadsförvaltningen through the municipality’s contact e-service or call **0381-66 12 00**. [c:2896a91119a0162d] (Ydre, *Bygga nytt, riva eller förändra*)\n4. The sources give no demolition-specific fee or processing time.\n\n**Uncertainties:** The supplied information does not establish whether this particular barn is specially valuable or whether area regulations apply to the farm. Confirm both with Ydre before deciding whether to apply for demolition permission or submit a notification.",
+  "steps": [
+   {
+    "tool": "retrieve",
+    "kommuner": [
+     "0512",
+     "0115"
+    ],
+    "chunks": [
+     "0d65737ef59dfa72",
+     "52e3de52219744a4",
+     "f6ec94e1bd7f711c",
+     "e9d269e045bc18ee",
+     "5308b1e8873a9fa5",
+     "fd1e165cf610722c",
+     "8e4ac0cc6fb4946b",
+     "f05f9123317825d1",
+     "2e55d1fde9825f9e",
+     "39f0d7c355074fda",
+     "9c9cbbd0184e6356",
+     "2a60677da1acc8d0",
+     "5ec9fd9d0003168d",
+     "3dccc27f06c43b5c",
+     "36e16691d99aaee5",
+     "90530fb39d8d5fd7",
+     "2896a91119a0162d",
+     "59cb28eb69032461",
+     "8012cf233bad03b1",
+     "3d104c517ce058b1"
+    ]
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "ydre-barn-demolition",
+  "system": "agent",
+  "effort": "high",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.8333333333333334,
+  "unsupported": 2,
+  "evidence": 1.0,
+  "tool_calls": 20,
+  "llm_calls": 7,
+  "seconds": 56.2,
+  "cost": 0.00508,
+  "judge_cost": 0.0008319,
+  "tokens_in": 54359,
+  "tokens_out": 5553,
+  "comment": "The answer correctly says a permit is usually not needed and advises checking with Ydre and handling cultural value and waste, but it adds a likely incorrect heritage-based permit trigger outside a detailed plan and an unsupported, highly specific 2026 fee schedule.",
+  "answer": "**Verdict: Feasible with conditions** — being outside a detailed plan usually means no demolition permit for an ordinary barn, but a protected barn may need one, and a barn larger than 50 m² generally needs a demolition notification and a start notice before work begins.\n\n**Key rules and constraints**\n\n- Outside a detailed plan, a demolition permit is still required if area regulations cover the building with a permit requirement or demolition prohibition, or if the barn is particularly valuable or lies in a particularly valuable built-up area. The statute says *“särskilt värdefull”* (“particularly valuable”). Its age alone does not establish that status. [c:0d65737ef59dfa72; PBL 9 kap. 44 §] [PBL 8 kap. 13 §]\n- If no demolition permit is required, demolition of a building with a building area **greater than 50 m²** requires a notification. The rule contains no general exemption for a farm barn. [c:e2bb583cd77075bd; PBF 6 kap. 1 §]\n- Ydre says the notification should address any expected hazardous demolition waste, and that the control plan should explain how waste will be handled and potentially reused. [c:2a60677da1acc8d0]\n- Ydre’s page summarizes the usual rule as requiring a demolition permit within a detailed-plan area. Because the statute also covers certain buildings outside such areas, check the barn’s status rather than relying on that summary alone. [c:2a60677da1acc8d0; PBL 9 kap. 44 §]\n\n**Process and next steps**\n\n1. Ask Ydre’s building-permit unit (Plan- och byggenheten) to check whether the property is covered by area regulations or a heritage-value assessment, and confirm the barn’s measured building area.\n2. If a permit is required, apply for it. Otherwise, if the barn is over 50 m², submit a demolition notification. **Do not start demolition until the municipality has issued a startbesked (start notice).** [c:f8721e335f9c3e3b; PBL 10 kap. 3 §]\n3. The notification-handling deadline is normally four weeks and may be extended once by up to four weeks. [c:8ffc9f9528573f3a; PBF 6 kap. 5 §]\n4. Ydre’s 2026 fee schedule lists demolition-notification fees in several tariff columns: 4,776–5,015 SEK without technical consultation, and 7,910–10,971 SEK with it. Ask the municipality which amount applies to your case. [c:bbc18681c9473885; *Avgifter och taxor 2026 Plan- och byggenheten*]\n\n**Uncertainties**\n\nThe exact farm/property, barn size, any area regulations, and whether the barn or its surroundings are officially considered particularly valuable are unknown. Those details determine whether you need a permit, a notification, or neither.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Ydre"
+    },
+    "chunks": [],
+    "output_chars": 200,
+    "image": false,
+    "ms": 7
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "rivningslov utanför detaljplan rivning byggnad ekonomibyggnad jordbruk",
+     "scope": "kommun",
+     "kommun": "Ydre",
+     "k": 8
+    },
+    "chunks": [
+     "2a60677da1acc8d0",
+     "36e16691d99aaee5",
+     "c7a7dddcd8de7c5e",
+     "937425952d3bb97a",
+     "eeb9fc563e49664e",
+     "3d104c517ce058b1",
+     "b3754f99f55d482c",
+     "642427d4ec37325c"
+    ],
+    "output_chars": 3378,
+    "image": false,
+    "ms": 123
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 10 §"
+    },
+    "chunks": [
+     "1d15f447dd106635"
+    ],
+    "output_chars": 828,
+    "image": false,
+    "ms": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 11 §"
+    },
+    "chunks": [
+     "42ceaa2d71a734f0"
+    ],
+    "output_chars": 989,
+    "image": false,
+    "ms": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBF",
+     "section": "6 kap. 5 §"
+    },
+    "chunks": [
+     "8ffc9f9528573f3a",
+     "16dcef42ecc18f39"
+    ],
+    "output_chars": 1694,
+    "image": false,
+    "ms": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "rivningslov utanför detaljplan rivningsanmälan",
+     "scope": "law",
+     "kommun": "",
+     "k": 5
+    },
+    "chunks": [
+     "52e3de52219744a4",
+     "0d65737ef59dfa72",
+     "f6ec94e1bd7f711c",
+     "e2bb583cd77075bd",
+     "1495643edb0b8acb"
+    ],
+    "output_chars": 1946,
+    "image": false,
+    "ms": 174
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 44 §"
+    },
+    "chunks": [
+     "0d65737ef59dfa72"
+    ],
+    "output_chars": 512,
+    "image": false,
+    "ms": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBF",
+     "section": "6 kap. 1 §"
+    },
+    "chunks": [
+     "e2bb583cd77075bd",
+     "1be4c271eeceb3f6"
+    ],
+    "output_chars": 1259,
+    "image": false,
+    "ms": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "2a60677da1acc8d0",
+     "doc_id": "",
+     "start": 0,
+     "count": 4
+    },
+    "chunks": [
+     "2a60677da1acc8d0"
+    ],
+    "output_chars": 1805,
+    "image": false,
+    "ms": 0
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "rivningsanmälan byggnadsarea 50 kvadratmeter rivning utanför detaljplan ekonomibyggnad",
+     "scope": "kommun",
+     "kommun": "Ydre",
+     "k": 5
+    },
+    "chunks": [
+     "2a60677da1acc8d0",
+     "c7a7dddcd8de7c5e",
+     "bbc18681c9473885",
+     "36e16691d99aaee5",
+     "9c9cbbd0184e6356"
+    ],
+    "output_chars": 2153,
+    "image": false,
+    "ms": 117
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "8 kap. 13 §"
+    },
+    "chunks": [
+     "720626801923cf9d"
+    ],
+    "output_chars": 596,
+    "image": false,
+    "ms": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "ekonomibyggnad jordbruk rivning anmälan rivningslov utanför detaljplan",
+     "scope": "law",
+     "kommun": "",
+     "k": 8
+    },
+    "chunks": [
+     "52e3de52219744a4",
+     "0d65737ef59dfa72",
+     "f6ec94e1bd7f711c",
+     "e2bb583cd77075bd",
+     "0ecfdba1696309e8",
+     "1495643edb0b8acb",
+     "6ee185be3811726f",
+     "28ce5bfa91d6b35c"
+    ],
+    "output_chars": 2839,
+    "image": false,
+    "ms": 152
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "rivning ekonomibyggnad på jordbruksfastighet anmälan byggnadsarea 50 kvadratmeter",
+     "scope": "kommun",
+     "kommun": "Ydre",
+     "k": 5
+    },
+    "chunks": [
+     "c7a7dddcd8de7c5e",
+     "2a60677da1acc8d0",
+     "bbc18681c9473885",
+     "83eb09feb2e7dbb5",
+     "9c9cbbd0184e6356"
+    ],
+    "output_chars": 2190,
+    "image": false,
+    "ms": 111
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "bbc18681c9473885",
+     "doc_id": "",
+     "start": 0,
+     "count": 3
+    },
+    "chunks": [
+     "fdc05e9194b3de60",
+     "bbc18681c9473885",
+     "319051273fd366ed"
+    ],
+    "output_chars": 1233,
+    "image": false,
+    "ms": 0
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Ydre",
+     "doc_type": "bygglov",
+     "title_contains": "Avgifter och taxor 2026"
+    },
+    "chunks": [],
+    "output_chars": 111,
+    "image": false,
+    "ms": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "10 kap. 3 §"
+    },
+    "chunks": [
+     "f8721e335f9c3e3b"
+    ],
+    "output_chars": 529,
+    "image": false,
+    "ms": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "9c9cbbd0184e6356",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [
+     "db1ec0a776126eda",
+     "9c9cbbd0184e6356",
+     "09a599aef7cc8336",
+     "90530fb39d8d5fd7",
+     "bec79861fba60029"
+    ],
+    "output_chars": 7110,
+    "image": false,
+    "ms": 0
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "bbc18681c9473885",
+     "doc_id": "",
+     "start": 30,
+     "count": 5
+    },
+    "chunks": [
+     "fdc05e9194b3de60",
+     "bbc18681c9473885",
+     "319051273fd366ed",
+     "2f87c7ad60ac4c5d",
+     "8783c0974fb3a784"
+    ],
+    "output_chars": 1811,
+    "image": false,
+    "ms": 0
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "rivningsanmälan startbesked innan rivning handläggningstid fyra veckor",
+     "scope": "law",
+     "kommun": "",
+     "k": 4
+    },
+    "chunks": [
+     "f8721e335f9c3e3b",
+     "6432f50060aa4abb",
+     "469c8cef127fdb5c",
+     "32dd584294082493"
+    ],
+    "output_chars": 1520,
+    "image": false,
+    "ms": 183
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "handläggningstid anmälan fyra veckor förlängas fyra veckor",
+     "scope": "law",
+     "kommun": "Ydre",
+     "k": 3
+    },
+    "chunks": [
+     "8ffc9f9528573f3a",
+     "23061ff0af788e31",
+     "4ed25a6454d9df81"
+    ],
+    "output_chars": 1428,
+    "image": false,
+    "ms": 102
+   }
+  ],
+  "error": null
+ }
+]
