@@ -15,6 +15,11 @@
 
 Architecture, data flow and every module are described in [`CLAUDE.md`](CLAUDE.md).
 
+**Reports** ([`reports/`](reports/)):
+- [Benchmark report](reports/pyrmit_benchmark_report.pdf): agent vs RAG, effort settings, cost and latency on the case benchmarks.
+- [Technical report](reports/pyrmit_technical_report.pdf): Swedish planning context, data sources, pipeline and evaluation method.
+- Hosting report ([PDF](reports/pyrmit_hosting_report.pdf) / [Markdown](reports/pyrmit_hosting_report.md)): embedding model choice, CPU (ONNX) benchmark, database and storage options, hosting costs.
+
 ---
 
 ## Quick start (with the shared data)
@@ -194,7 +199,7 @@ From `backend/`. Each step reads the previous step's output. Times and sizes com
 | Grounding of the answers | `python -m agentic.grounding <results.json>` | API credits |
 | PDF reports | `python -m agentic.report`, `python -m agentic.report_technical` | free (reads the result files) |
 
-Cases are in `backend/agentic/cases*.jsonl`. Past results are in `backend/data/agentic/` (versioned, about 50 MB) and can be browsed in the app's **Benchmark** tab.
+Cases are in `backend/agentic/cases*.jsonl`. Past results are in `backend/data/agentic/` (versioned, about 50 MB) and can be browsed in the app's **Benchmark** tab. The PDF reports regenerate into `../pyrmit_doc/`; copy the ones worth sharing into `reports/`.
 
 ---
 
@@ -220,5 +225,6 @@ pyrmit/
 │   ├── agents/, chunking/ # earlier pgvector RAG + feasibility agents (RETRIEVAL_BACKEND=pgvector)
 │   └── data/              # corpus, index, benchmark results (mostly gitignored)
 ├── frontend/              # Next.js: chat, sources viewer, pipeline inspector, database & benchmark views
+├── reports/               # benchmark, technical and hosting reports (PDF / Markdown)
 └── CLAUDE.md              # detailed architecture and gotchas
 ```

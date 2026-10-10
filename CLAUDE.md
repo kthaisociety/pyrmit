@@ -231,6 +231,8 @@ headless Chrome/Edge, charts as inline SVG; `tr(fr, en)` / `fmt` / `money` follo
 `python -m agentic.report_technical [--lang ...]` builds the detailed technical report (`pyrmit_rapport_technique.pdf` /
 `pyrmit_technical_report.pdf`): Swedish planning context, data sources and freshness plan, pipeline with code refs,
 retrieval eval (from `data/eval/*.json`), agent eval methodology with the judge prompts; figures read from the data.
+The key reports (benchmark, technical, hosting PDF + Markdown) are copied into `reports/` (versioned; the generators
+write to `../pyrmit_doc/`, so copy them again after regenerating).
 Gotcha (Windows): stopping a background shell does not kill its Python children; a "killed" benchmark can keep running
 and spending credits. Check with `Get-CimInstance Win32_Process` and `Stop-Process`.
 
