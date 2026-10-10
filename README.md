@@ -48,7 +48,7 @@ cd ../frontend && bun install
 
 ### Add the data and the config
 
-1. Unpack the data archive into `backend/data/` (paths must match, e.g. `backend/data/index/store/st-arctic-l-v2/corpus.sqlite`).
+1. Download and unpack the data into `backend/data/`: see [Get the data](#get-the-data) below.
 2. Put `.env` in `backend/`. The local agent setup needs at least:
 
    ```properties
@@ -104,23 +104,60 @@ Everything lives in `backend/data/` (not in git, except the benchmark results in
 |---|---|---|---|
 | **Minimum** | `index/store/st-arctic-l-v2/`, `corpus/municipalities.json`, `corpus/plans.jsonl` | **1.5 GB** | The app: search (SQLite + FTS5 BM25 + vectors), kommun detection, plan registry |
 | **PDFs** | `corpus/raw/web/*/pdf/`, `corpus/raw/web/*/ocr/` | **18.4 GB** | Opening a cited PDF at the passage; the agent reading plankartor (`view_map_area`, `view_pdf_page`) |
-| Rebuild only | `corpus/chunks.jsonl`, `corpus/documents.jsonl`, `index/dense/st-arctic-l-v2/`, `corpus/raw/web/*/pages` + `manifest.jsonl` | 1.8 GB | Re-chunking, incremental re-indexing, resuming the crawl |
+| Rebuild only | `corpus/chunks.jsonl`, `corpus/documents.jsonl`, `index/dense/st-arctic-l-v2/`, `corpus/raw/laws/`, `corpus/raw/web/*/pages` + `manifest.jsonl` | 1.8 GB | Re-chunking, incremental re-indexing, resuming the crawl |
 
 Without the PDFs the app works fully, except that PDF sources show the cited chunks only, and the map tools return an error.
 
-**Sending the data**: pack it with `tar` (built into Windows 10+, macOS and Linux), from `backend/`:
+### Get the data
+
+**Download**: <https://www.swisstransfer.com/dl/01a12498-77b3-7256-8eba-ccead24ab77a>
+
+The link was created on October 10, 2026. It is active until October 25, 2026 and can be extended once, up to November 9, 2026, with at most 250 downloads. Once it expires, ask a maintainer for a new link (see [Sharing a new snapshot](#sharing-a-new-snapshot)), or rebuild the corpus (next section).
+
+| File | Size | Contents | Get it if |
+|---|---|---|---|
+| `pyrmit-data-min.tar.gz` | 0.9 GB (1.5 GB unpacked) | Minimum pack | Always |
+| `pyrmit-data-pdfs.tar` | 18.8 GB | PDFs pack (7,798 PDFs + OCR text) | You want PDF sources and the map tools |
+| `pyrmit-data-rebuild.tar.gz` | 0.9 GB (1.8 GB unpacked) | Rebuild pack | You will re-chunk, re-index or recrawl |
+
+Download the files one by one. "Download all" makes a single 19 GB zip that you would have to unzip first. Then unpack them **from `backend/`**: the archives contain `data/...` paths. `tar` is built into Windows 10+, macOS and Linux.
 
 ```bash
-tar -cf pyrmit-data-min.tar data/index/store/st-arctic-l-v2 data/corpus/municipalities.json data/corpus/plans.jsonl
-tar -cf pyrmit-data-pdfs.tar data/corpus/raw/web/*/pdf data/corpus/raw/web/*/ocr
-# unpack from backend/: tar -xf pyrmit-data-min.tar
+cd pyrmit/backend
+tar -xzf ~/Downloads/pyrmit-data-min.tar.gz        # required
+tar -xf  ~/Downloads/pyrmit-data-pdfs.tar          # optional, 18.8 GB
+tar -xzf ~/Downloads/pyrmit-data-rebuild.tar.gz    # optional
+ls data/index/store/st-arctic-l-v2                 # -> corpus.sqlite  meta.json  vectors.npy
 ```
+
+In PowerShell, use `$HOME\Downloads\pyrmit-data-min.tar.gz`. Plan for twice the size on disk while unpacking; the archives can be deleted afterwards.
+
+Optional integrity check: `sha256sum <file>` (Linux/macOS) or `Get-FileHash <file>` (PowerShell) should match:
+
+| File | SHA-256 |
+|---|---|
+| `pyrmit-data-min.tar.gz` | `b64c12af2df865220bbb588b44a356e3410ee724cde8c9ad7a281156e5b51537` |
+| `pyrmit-data-pdfs.tar` | `6f5e773914c85bdc689e065b04e8dc8f43f5ce60d69d88a9a9c06e446b9a1484` |
+| `pyrmit-data-rebuild.tar.gz` | `6a1bb28e60f8625879c9b81a4858adc662bcf85d4ad4607be4cb68b087d57ef6` |
+
+### Sharing a new snapshot
+
+After a rebuild, run from `backend/` (about 10 min):
+
+```bash
+tar -czf pyrmit-data-min.tar.gz data/index/store/st-arctic-l-v2 data/corpus/municipalities.json data/corpus/plans.jsonl
+tar -cf  pyrmit-data-pdfs.tar data/corpus/raw/web/*/pdf data/corpus/raw/web/*/ocr
+tar -czf pyrmit-data-rebuild.tar.gz data/corpus/chunks.jsonl data/corpus/documents.jsonl data/index/dense/st-arctic-l-v2 data/corpus/raw/laws data/corpus/raw/web/*/pages data/corpus/raw/web/*/manifest.jsonl
+sha256sum pyrmit-data-*.tar*
+```
+
+Then upload the three files in one [SwissTransfer](https://www.swisstransfer.com) transfer: "Link" mode, 30 days, 250 downloads. Uploading 19 GB takes about 40 min to 1 h at 8 MB/s; keep the tab open. Finally, update the link, the dates and the checksums above.
 
 | Service (free plan) | Limit | Fits |
 |---|---|---|
-| WeTransfer | 3 GB per 30 days, 10 transfers | Minimum pack only |
-| **SwissTransfer** | 50 GB per transfer, kept 15 days, no account | Everything |
+| **SwissTransfer** | 50 GB per transfer, 15 days (+15 on request), 250 downloads, no account | Everything |
 | Smash | No size limit (transfers over 2 GB are queued) | Everything |
+| WeTransfer | 3 GB per 30 days, 10 transfers | Minimum pack only |
 | Google Drive | 15 GB | Minimum pack only |
 
 ---
