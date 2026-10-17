@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import ChunkCard from '@/components/ChunkCard';
+import { authFetch } from '@/lib/auth';
 
 export interface RetrievedChunk {
   source: string;
@@ -34,6 +35,62 @@ interface CallRecord {
   output_chars?: number;
   duration_ms?: number;
   error?: string;
+  tool?: string;
+  image?: boolean;
+}
+
+/** Agent tools that look at an image (plankarta crop, PDF page); the image is re-rendered from the call's arguments. */
+const IMAGE_TOOLS = new Set(['view_map_area', 'view_pdf_page']);
+
+function hasImage(call: CallRecord): boolean {
+  // Traces saved before `tool` / `image` were recorded: take the tool from the name and try
+  const tool = call.tool ?? call.name.split('(')[0];
+  return call.kind === 'tool' && IMAGE_TOOLS.has(tool) && call.image !== false && typeof call.input === 'string';
+}
+
+function ToolImage({ call }: { call: CallRecord }) {
+  const tool = call.tool ?? call.name.split('(')[0];
+  const input = typeof call.input === 'string' ? call.input : '{}';
+  const [url, setUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    authFetch(`/api/docs/tool-image?tool=${encodeURIComponent(tool)}&input=${encodeURIComponent(input)}`)
+      .then((response) => (response.ok ? response.blob() : null))
+      .then((blob) => {
+        if (cancelled) return;
+        if (!blob) { setFailed(true); return; }
+        objectUrl = URL.createObjectURL(blob);
+        setUrl(objectUrl);
+      })
+      .catch(() => { if (!cancelled) setFailed(true); });
+    return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [tool, input]);
+
+  let caption = tool;
+  try {
+    const args = JSON.parse(input) as Record<string, unknown>;
+    caption = [args.around ? `around ${String(args.around)}` : '', `page ${String(args.page ?? 1)}`, String(args.doc_id ?? '')]
+      .filter(Boolean).join(' · ');
+  } catch { /* keep the tool name */ }
+
+  if (failed) return null;
+  return (
+    <figure className="space-y-1">
+      {url ? (
+        <a href={url} target="_blank" rel="noreferrer" title="Open full size">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt={caption} className="max-h-96 rounded-lg border border-zinc-200 dark:border-zinc-700" />
+        </a>
+      ) : (
+        <div className="flex h-24 w-40 items-center justify-center rounded-lg border border-dashed border-zinc-300 text-[11px] text-zinc-400 dark:border-zinc-700">
+          Rendering image…
+        </div>
+      )}
+      <figcaption className="font-mono text-[10px] text-zinc-500">{tool} · {caption}</figcaption>
+    </figure>
+  );
 }
 
 type StepKey = 'understand' | 'explore' | 'retrieval' | 'agents' | 'answer' | 'other';
@@ -169,6 +226,7 @@ function CallLine({ call }: { call: CallRecord }) {
             <TextBlock key={i} label={`Message ${i + 1} · ${message.role}`} text={message.content} />
           ))}
           {call.output && <TextBlock label="Output" text={call.output} />}
+          {hasImage(call) && <ToolImage call={call} />}
         </div>
       )}
     </div>
@@ -254,6 +312,7 @@ export default function PipelineTrace({ events }: { events: PipelineEvent[] }) {
   const feasibility = intent?.route === 'feasibility';
   const agentRoute = intent?.route === 'agent';
   const exploreCalls = callsBy('explore');
+  const imageCalls = exploreCalls.filter(hasImage);
   const kommuner = Array.isArray(localQuery?.kommuner) ? (localQuery.kommuner as string[]) : [];
   const totalCost = costOf(calls);
   const retrievalSummary = retrievals
@@ -308,8 +367,11 @@ export default function PipelineTrace({ events }: { events: PipelineEvent[] }) {
         <Step
           index={++index}
           title="Explore (agent)"
-          summary={`${exploreCalls.filter((c) => c.kind === 'tool').length} tool calls · ${
-            exploreCalls.filter((c) => c.kind === 'llm').length} model turns`}
+          summary={[
+            `${exploreCalls.filter((c) => c.kind === 'tool').length} tool calls`,
+            `${exploreCalls.filter((c) => c.kind === 'llm').length} model turns`,
+            imageCalls.length ? `${imageCalls.length} image${imageCalls.length > 1 ? 's' : ''}` : '',
+          ].filter(Boolean).join(' · ')}
           calls={exploreCalls}
         />
       )}

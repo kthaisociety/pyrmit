@@ -4,6 +4,8 @@ Open a cited chunk in its original document, for the clickable citations of the 
 - GET /api/docs/locate?chunk_id=...  -> where to open it: a crawled PDF at the page holding the chunk, or the
   original web page / statute with a text fragment (#:~:text=...) that Chrome scrolls to and highlights
 - GET /api/docs/pdf/{chunk_id}       -> that PDF with the chunk's text highlighted (PyMuPDF annotations)
+- GET /api/docs/tool-image?tool=...&input=...  -> the image an agent tool call looked at (view_map_area /
+  view_pdf_page), re-rendered from the call's arguments for the pipeline inspector (traces don't store images)
 
 The page is found by searching the chunk's wording in the PDF (chunks don't store page numbers); for scanned PDFs,
 in the OCR text of each page (page only, no highlight).
@@ -157,6 +159,31 @@ def locate(chunk_id: str = Query(...), _user: models.User = Depends(get_current_
             text = re.sub(r"^\s*\d+\s*[a-z]?\s*§\s*", "", text)
         return {**base, "type": "url", "url": _text_fragment(chunk["url"], text)}
     return {**base, "type": "none"}
+
+
+IMAGE_TOOLS = {"view_map_area", "view_pdf_page"}
+
+
+@lru_cache(maxsize=32)
+def _tool_image(tool: str, arguments: str) -> bytes | None:
+    from agentic.service import get_tools
+    from agentic.tools import run_tool
+
+    try:
+        parsed = json.loads(arguments)
+    except json.JSONDecodeError:
+        return None
+    return run_tool(get_tools(), tool, parsed if isinstance(parsed, dict) else {}).image_png
+
+
+@router.get("/docs/tool-image")
+def tool_image(tool: str = Query(...), input: str = Query("{}"), _user: models.User = Depends(get_current_user)):
+    if tool not in IMAGE_TOOLS:
+        raise HTTPException(status_code=400, detail=f"{tool} returns no image")
+    png = _tool_image(tool, input)
+    if png is None:
+        raise HTTPException(status_code=404, detail="This call returned no image")
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": "private, max-age=3600"})
 
 
 @router.get("/docs/pdf/{chunk_id}")

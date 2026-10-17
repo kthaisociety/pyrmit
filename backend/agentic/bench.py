@@ -74,13 +74,23 @@ def run_rag(question: str, tools, model: str, effort: str, k: int = 10) -> Agent
     hits = result["law"] + result["local"]
     run.seen_chunks = [hit.chunk["chunk_id"] for hit in hits]
     context = "\n\n".join(f"Source {i + 1} [c:{hit.chunk['chunk_id']}]:\n{chunk_text(hit.chunk)}" for i, hit in enumerate(hits))
-    answer = client.responses.create(
+    # Streamed as in the chat, so the time to the first answer token compares with the agent's
+    stream = client.responses.create(
         model=model, reasoning={"effort": effort}, instructions=RAG_INSTRUCTIONS,
-        input=f"Sources:\n\n{context}\n\nQuestion: {question}",
+        input=f"Sources:\n\n{context}\n\nQuestion: {question}", stream=True,
     )
-    _add_usage(run.usage, answer.usage)
+    parts, final = [], None
+    for event in stream:
+        if event.type == "response.output_text.delta" and event.delta:
+            if not parts:
+                run.first_token_s = round(time.perf_counter() - started, 1)
+            parts.append(event.delta)
+        elif event.type == "response.completed":
+            final = event.response
+    if final is not None:
+        _add_usage(run.usage, final.usage)
     run.llm_calls = 2
-    run.answer = get_response_output_text(answer)
+    run.answer = "".join(parts)
     run.seconds = round(time.perf_counter() - started, 1)
     run.steps = [{"tool": "retrieve", "kommuner": result["kommuner"], "chunks": run.seen_chunks}]
     return run

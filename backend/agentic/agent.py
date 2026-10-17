@@ -162,7 +162,8 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
                               "output_chars": len(result.text), "image": bool(result.image_png), "ms": ms, "turn": step})
             emit({"type": "tool_result", "name": call.name, "result": result.text[:300]})
             emit({"type": "tool_done", "name": call.name, "input": json.dumps(arguments, ensure_ascii=False),
-                  "output": result.text[:4000], "chunks": len(result.chunk_ids), "ms": ms})
+                  "output": result.text[:4000], "chunks": len(result.chunk_ids), "ms": ms,
+                  "image": bool(result.image_png)})
         if ready:
             break
     pool.shutdown(wait=False)

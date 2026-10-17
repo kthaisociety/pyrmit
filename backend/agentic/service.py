@@ -202,8 +202,10 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
                    output=event.get("summary"))
             yield from flush()
         elif event["type"] == "tool_done":
+            # The image itself is not stored in the trace: the inspector re-renders it (/api/docs/tool-image)
             record(kind="tool", name=f"{event['name']}({event.get('input', '')[:80]})", input=event.get("input"),
-                   output=event.get("output"), duration_ms=event.get("ms"), matches=event.get("chunks"))
+                   output=event.get("output"), duration_ms=event.get("ms"), matches=event.get("chunks"),
+                   tool=event["name"], image=event.get("image", False))
             yield from flush()
     if "error" in outcome:
         raise outcome["error"]

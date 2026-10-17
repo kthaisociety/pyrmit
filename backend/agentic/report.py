@@ -13,6 +13,7 @@ import html
 import json
 import re
 import shutil
+import sqlite3
 import subprocess
 from collections import defaultdict
 from datetime import date
@@ -20,29 +21,40 @@ from pathlib import Path
 
 from agentic.bench import CASES_PATH, RESULTS_DIR, sample_cases
 from corpus.common import DATA_DIR, read_jsonl
+from localrag.eval import matches
+from localrag.index import INDEX_DIR
 
 DOC_DIR = Path(__file__).resolve().parents[2].parent / "pyrmit_doc"
 OUTPUT_NAMES = {"fr": "pyrmit_rapport_benchmark", "en": "pyrmit_benchmark_report"}
 LANG = "en"  # set by main(); tr() and fmt() follow it
-FIRST_MATRIX_RUN = "20261007-211220"  # earlier result files used the in-memory corpus subset and older prompts
+FIRST_MATRIX_RUN = "20261007-211220"
+# Short reading of the results for the technical report's summary (the benchmark report has the full one)
+NARRATIVE_RESULTS = {"en": """<p>The agent beats the classic RAG on key points and evidence on every set, and the gap
+grows with difficulty (MÖD and plan maps): a single search on the user's facts rarely reaches the deciding statute section
+or plan map, whereas the agent first works out which rule applies, then looks it up. The RAG is about twice as fast and
+four times cheaper, with as high a grounding (it says less). Within the agent, the exploration effort is the setting that
+matters; map reading lifts the verdict on plan-map questions; refused projects remain the agent's weak spot (it leans
+towards “feasible with conditions”).</p>"""}  # earlier result files used the in-memory corpus subset and older prompts
 BROWSERS = [r"C:\Program Files\Google\Chrome\Application\chrome.exe",
             r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"]
 
 # Earlier runs (14 cases, in-memory corpus of the 5 kommuner of the cases), from pyrmit_agentic_rag_report.md
-HISTORY = [  # (French name, English name), key points, evidence, grounding, latency s, first token s, cost $
-    (("RAG classique (1 recherche, réponse high)", "Classic RAG (1 search, high-effort answer)"),
-     0.56, 0.58, 0.84, 30, None, 0.0021),
-    (("Agent v1 (effort high partout)", "Agent v1 (high effort throughout)"), 0.75, 0.86, 0.68, 64, None, 0.0057),
+HISTORY = [  # (French name, English name), verdict, key points, evidence, grounding, latency s, first token s, cost $
+    (("RAG classique (1 recherche, réponse high, non streamée)", "Classic RAG (1 search, high-effort answer, not streamed)"),
+     1.0, 0.56, 0.58, 0.84, 30, None, 0.0021),
+    (("Agent v1 (effort high partout)", "Agent v1 (high effort throughout)"), 1.0, 0.75, 0.86, 0.68, 64, None, 0.0057),
     (("Agent v2 (sources citables, effort medium)", "Agent v2 (citeable sources, medium effort)"),
-     0.77, 0.96, 0.86, 39, 39, 0.0042),
+     1.0, 0.77, 0.96, 0.86, 39, 39, 0.0042),
     (("Agent v3 (exploration low, réponse medium)", "Agent v3 (low exploration, medium answer)"),
-     0.68, 0.73, 0.82, 19, 13, 0.0025),
+     1.0, 0.68, 0.73, 0.82, 19, 13, 0.0025),
     (("Agent v4 (v3 + lecture du document communal)", "Agent v4 (v3 + read the key municipal document)"),
-     0.65, 0.84, 0.84, 23, 17, 0.0036),
+     1.0, 0.65, 0.84, 0.84, 23, 17, 0.0036),
 ]
 
 FILE = re.compile(r"bench-(\d{8}-\d{6})-(?P<systems>[a-z-]+?)-(?P<answer>low|medium|high)"
-                  r"-explore-(?P<explore>low|medium|high|same)(?P<tag>-cases_caselaw)?\.json$")
+                  r"-explore-(?P<explore>low|medium|high|same)(?P<tag>-cases_caselaw|-cases_plans)?"
+                  r"(?:-no-(?P<ablation>[a-z_-]+))?\.json$")
+CASE_SETS = {None: "cases14", "-cases_caselaw": "mod", "-cases_plans": "plans"}
 
 
 def esc(value) -> str:
@@ -71,6 +83,51 @@ def mean(values: list) -> float | None:
 
 # --- data --------------------------------------------------------------------------------------------------------
 
+STORE_DB = INDEX_DIR / "store" / "st-arctic-l-v2" / "corpus.sqlite"
+CHUNK_ID = re.compile(r"c:([0-9a-f]{8,16})(?![0-9a-f])")
+
+
+class StoreChunks:
+    """Chunks read on demand from the disk store's SQLite; a truncated id (the model sometimes drops characters)
+    resolves by unique prefix, as in CorpusTools.get_chunk."""
+
+    def __init__(self):
+        self.db = sqlite3.connect(STORE_DB) if STORE_DB.exists() else None
+        if self.db is not None:
+            self.db.row_factory = sqlite3.Row
+        self.cache: dict[str, dict | None] = {}
+
+    def get(self, chunk_id: str) -> dict | None:
+        if chunk_id not in self.cache:
+            row = None
+            if self.db is not None:
+                row = self.db.execute("SELECT * FROM chunks WHERE chunk_id = ?", (chunk_id,)).fetchone()
+                if row is None and len(chunk_id) < 16:
+                    rows = self.db.execute("SELECT * FROM chunks WHERE chunk_id >= ? AND chunk_id < ? LIMIT 2",
+                                           (chunk_id, chunk_id + "g")).fetchall()
+                    row = rows[0] if len(rows) == 1 else None
+            self.cache[chunk_id] = dict(row) if row else None
+        return self.cache[chunk_id]
+
+
+def all_cases() -> dict[str, dict]:
+    return {case["id"]: case for name in ("cases.jsonl", "cases_caselaw.jsonl", "cases_plans.jsonl")
+            if (CASES_PATH.parent / name).exists() for case in read_jsonl(CASES_PATH.parent / name)}
+
+
+def reading_metrics(row: dict, case: dict | None, chunks: StoreChunks) -> None:
+    """Two reading measures computed from a result row, no LLM: `seen_n` = distinct passages the system had in
+    front of it (retrieved for the RAG, tool outputs for the agent); `evidence_cited` = share of the expected
+    evidence that the answer cites ([c:id]), not just saw."""
+    seen = {chunk_id for step in row.get("steps") or [] for chunk_id in step.get("chunks") or []}
+    row["seen_n"] = len(seen) if row.get("steps") else None
+    if not case or not case.get("evidence"):
+        row["evidence_cited"] = None
+        return
+    cited = [c for c in (chunks.get(i) for i in dict.fromkeys(CHUNK_ID.findall(row.get("answer") or ""))) if c]
+    row["evidence_cited"] = sum(any(matches(c, m) for c in cited) for m in case["evidence"]) / len(case["evidence"])
+
+
 def load_runs() -> list[dict]:
     """One entry per (case set, system, explore effort, answer effort), merging every matrix file of that
     configuration (each file's passes count as separate repeats)."""
@@ -79,15 +136,18 @@ def load_runs() -> list[dict]:
         match = FILE.search(path.name)
         if not match or match.group(1) < FIRST_MATRIX_RUN:
             continue
-        key = ("mod" if match.group("tag") else "cases14", match.group("systems"), match.group("explore"),
-               match.group("answer"))
+        key = (CASE_SETS[match.group("tag")], match.group("systems"), match.group("explore"), match.group("answer"),
+               match.group("ablation") or "")
         files[key].append(path)
     runs = []
-    for (cases, systems, explore, answer), paths in sorted(files.items()):
+    cases_by_id, chunks = all_cases(), StoreChunks()
+    for (cases, systems, explore, answer, ablation), paths in sorted(files.items()):
         rows = []
         for index, path in enumerate(paths):
             for row in json.loads(path.read_text(encoding="utf-8")):
-                rows.append({**row, "repeat": f"{index}.{row.get('repeat', 0)}"})
+                row = {**row, "repeat": f"{index}.{row.get('repeat', 0)}"}
+                reading_metrics(row, cases_by_id.get(row["case"]), chunks)
+                rows.append(row)
         for system in sorted({row["system"] for row in rows}):
             mine = [row for row in rows if row["system"] == system and not row.get("error")]
             if not mine:
@@ -95,6 +155,8 @@ def load_runs() -> list[dict]:
             repeats = sorted({row["repeat"] for row in mine})
             runs.append({
                 "cases": cases, "system": system, "explore": explore if system == "agent" else "–", "answer": answer,
+                "ablation": ablation, "map_views": mean([r.get("map_views") for r in mine]),
+                "seen": mean([r.get("seen_n") for r in mine]), "cited": mean([r.get("evidence_cited") for r in mine]),
                 "file": ", ".join(p.name for p in paths), "n": len(mine), "repeats": len(repeats),
                 "verdict": mean([float(r["verdict_ok"]) for r in mine]), "points": mean([r["points"] for r in mine]),
                 "evidence": mean([r["evidence"] for r in mine]), "grounded": mean([r.get("grounded") for r in mine]),
@@ -105,7 +167,8 @@ def load_runs() -> list[dict]:
                 "rows": mine,
             })
     order = {"low": 0, "medium": 1, "high": 2, "–": 3, "same": 3}
-    return sorted(runs, key=lambda r: (r["cases"], r["system"] != "agent", order[r["explore"]], order[r["answer"]]))
+    return sorted(runs, key=lambda r: (r["cases"], r["system"] != "agent", r["ablation"], order[r["explore"]],
+                                       order[r["answer"]]))
 
 
 def stratum(case: dict) -> str:
@@ -145,11 +208,18 @@ def short(run: dict) -> str:
     return "RAG" if run["system"] == "rag" else f"{run['explore']} / {run['answer']}"
 
 
+ABLATIONS = {"view_map_area": ("sans view_map_area", "no view_map_area"),
+             "view_map_area-view_pdf_page": ("sans lecture de carte", "no map reading at all")}
+
+
 def label(run: dict) -> str:
     if run["system"] == "rag":
         return tr(f"RAG classique (réponse {run['answer']})", f"Classic RAG ({run['answer']} answer)")
-    return tr(f"Agent, exploration {run['explore']} / réponse {run['answer']}",
+    name = tr(f"Agent, exploration {run['explore']} / réponse {run['answer']}",
               f"Agent, exploration {run['explore']} / answer {run['answer']}")
+    if run.get("ablation"):
+        name += f" – {tr(*ABLATIONS.get(run['ablation'], (run['ablation'], run['ablation'])))}"
+    return name
 
 
 # --- charts (inline SVG) -------------------------------------------------------------------------------------------
@@ -193,9 +263,9 @@ def scatter(points: list[tuple[str, float, float, str]], x_label: str, y_label: 
     left, bottom, top_pad, right = 46, 40, 14, 170
     plot_w, plot_h = width - left - right, height - bottom - top_pad
     x_max = x_max or max(p[1] for p in points) * 1.15
-    y_min = 0.3
+    y_min = 0.1
     parts = [f'<svg viewBox="0 0 {width} {height}" class="chart" xmlns="http://www.w3.org/2000/svg">']
-    for tick in (0.3, 0.5, 0.7, 0.9):
+    for tick in (0.1, 0.3, 0.5, 0.7, 0.9):
         y = top_pad + plot_h * (1 - (tick - y_min) / (1 - y_min))
         parts.append(f'<line x1="{left}" x2="{left + plot_w}" y1="{y:.1f}" y2="{y:.1f}" class="grid"/>'
                      f'<text x="{left - 6}" y="{y + 3:.1f}" class="tick" text-anchor="end">{fmt(tick, 1)}</text>')
@@ -244,22 +314,28 @@ def md_to_html(text: str, limit: int = 1800) -> str:
     return "\n".join(out)
 
 
-def runs_table(runs: list[dict]) -> str:
-    head = tr("<tr><th>Configuration</th><th>n</th><th>Verdict</th><th>Points clés</th><th>Preuves</th>"
-              "<th>Ancrage</th><th>Appels outils</th><th>Latence</th><th>1er token</th><th>Coût / question</th></tr>",
-              "<tr><th>Configuration</th><th>n</th><th>Verdict</th><th>Key points</th><th>Evidence</th>"
-              "<th>Grounding</th><th>Tool calls</th><th>Latency</th><th>1st token</th><th>Cost / question</th></tr>")
+def runs_table(runs: list[dict], map_views: bool = False) -> str:
+    """One row per configuration; `map_views` adds the mean number of map images looked at (plankarta cases)."""
+    extra = f"<th>{tr('Vues de carte', 'Map views')}</th>" if map_views else ""
+    head = tr("<tr><th>Configuration</th><th>n</th><th>Verdict</th><th>Points clés</th><th>Preuves vues</th>"
+              "<th>Preuves citées</th><th>Ancrage</th><th>Passages vus</th>"
+              f"<th>Appels outils</th>{extra}<th>Latence</th><th>1er token</th><th>Coût / question</th></tr>",
+              "<tr><th>Configuration</th><th>n</th><th>Verdict</th><th>Key points</th><th>Evidence seen</th>"
+              "<th>Evidence cited</th><th>Grounding</th><th>Passages seen</th>"
+              f"<th>Tool calls</th>{extra}<th>Latency</th><th>1st token</th><th>Cost / question</th></tr>")
     body = []
     best = {key: max((r[key] for r in runs if r[key] is not None), default=None)
-            for key in ("verdict", "points", "evidence", "grounded")}
+            for key in ("verdict", "points", "evidence", "cited", "grounded")}
     for run in runs:
         def cell(key):
             value = run[key]
             text = fmt(value)
             return f"<td class='{'best' if value is not None and value == best[key] else ''}'>{text}</td>"
         body.append(f"<tr><td>{esc(label(run))}</td><td>{run['n']}</td>{cell('verdict')}{cell('points')}"
-                    f"{cell('evidence')}{cell('grounded')}<td>{fmt(run['tools'], 1)}</td>"
-                    f"<td>{fmt(run['seconds'], 0)} s</td><td>{fmt(run['first'], 0)} s</td>"
+                    f"{cell('evidence')}{cell('cited')}{cell('grounded')}<td>{fmt(run['seen'], 0)}</td>"
+                    f"<td>{fmt(run['tools'], 1)}</td>"
+                    + (f"<td>{fmt(run['map_views'], 1)}</td>" if map_views else "")
+                    + f"<td>{fmt(run['seconds'], 0)} s</td><td>{fmt(run['first'], 0)} s</td>"
                     f"<td>{money(run['cost'])}</td></tr>")
     return f"<table>{head}{''.join(body)}</table>"
 
@@ -317,42 +393,78 @@ code { font-family: Consolas, monospace; font-size: 8.5pt; background: #f3f4f6; 
 </style>"""
 
 
+def examples_html(runs: list[dict], cases_key: str, cases: list[dict]) -> str:
+    """Example cases of one set with what every configuration answered (verdict, scores, judge comment)."""
+    def rows_for(case):
+        return [(label(run), next((r for r in run["rows"] if r["case"] == case["id"]), None))
+                for run in runs if run["cases"] == cases_key]
+    return "".join(example_case(case, rows_for(case)) for case in cases)
+
+
+def overview_table(pairs: list[tuple[str, list[dict]]]) -> str:
+    """Per benchmark set, the systems side by side (main metrics only)."""
+    head = tr("<tr><th>Jeu de cas</th><th>Système</th><th>n</th><th>Verdict</th><th>Points clés</th><th>Preuves vues</th>"
+              "<th>Preuves citées</th><th>Ancrage</th><th>Passages vus</th><th>Latence</th><th>1er token</th>"
+              "<th>Coût / question</th></tr>",
+              "<tr><th>Case set</th><th>System</th><th>n</th><th>Verdict</th><th>Key points</th><th>Evidence seen</th>"
+              "<th>Evidence cited</th><th>Grounding</th><th>Passages seen</th><th>Latency</th><th>1st token</th>"
+              "<th>Cost / question</th></tr>")
+    body = []
+    for name, runs in pairs:
+        runs = [r for r in runs if r]
+        for i, run in enumerate(runs):
+            first = f"<td rowspan='{len(runs)}'><b>{esc(name)}</b></td>" if i == 0 else ""
+            system = "RAG" if run["system"] == "rag" else f"Agent ({run['explore']} / {run['answer']})"
+            body.append(f"<tr>{first}<td>{esc(system)}</td><td>{run['n']}</td>"
+                        + "".join(f"<td>{fmt(run[k])}</td>" for k in ("verdict", "points", "evidence", "cited", "grounded"))
+                        + f"<td>{fmt(run['seen'], 0)}</td><td>{fmt(run['seconds'], 0)} s</td><td>{fmt(run['first'], 0)} s</td>"
+                          f"<td>{money(run['cost'])}</td></tr>")
+    return f"<table>{head}{''.join(body)}</table>"
+
+
 def build_html() -> str:
     runs = load_runs()
-    by_key = {(r["cases"], r["system"], r["explore"], r["answer"]): r for r in runs}
+    by_key = {(r["cases"], r["system"], r["explore"], r["answer"], r["ablation"]): r for r in runs}
+
+    def pick(cases: str, system: str, explore: str = "–", answer: str = "medium", ablation: str = "") -> dict | None:
+        return by_key.get((cases, system, explore, answer, ablation))
+
     runs14 = [r for r in runs if r["cases"] == "cases14"]
     runs_mod = [r for r in runs if r["cases"] == "mod"]
+    runs_plans = [r for r in runs if r["cases"] == "plans"]
     cases14 = list(read_jsonl(CASES_PATH))
     caselaw = list(read_jsonl(CASES_PATH.parent / "cases_caselaw.jsonl"))
+    plan_cases = list(read_jsonl(CASES_PATH.parent / "cases_plans.jsonl"))
     sample = sample_cases(list(caselaw), 50)
     rulings = list(read_jsonl(DATA_DIR / "raw" / "caselaw" / "mod.jsonl"))
     relevant = sum(1 for r in rulings if r.get("relevant"))
     plans = sum(1 for _ in (DATA_DIR / "plans.jsonl").open(encoding="utf-8")) if (DATA_DIR / "plans.jsonl").exists() else 0
-    plans_n = f"{plans:,}" if LANG == "en" else f"{plans:,}".replace(",", " ")
-    cases_label = {"cases14": tr("14 cas", "14 cases"), "mod": "MÖD"}
+    plans_n = f"{plans:,}" if LANG == "en" else f"{plans:,}".replace(",", " ")
+    cases_label = {"cases14": tr("14 cas", "14 cases"), "mod": "MÖD", "plans": "plankarta"}
 
-    colors = ["#2563eb", "#f59e0b", "#10b981", "#8b5cf6", "#ef4444", "#0891b2"]
+    colors = ["#2563eb", "#f59e0b", "#10b981", "#8b5cf6", "#ef4444", "#0891b2", "#64748b", "#db2777"]
     quality_chart = ""
-    if runs:
-        configs = [r for r in runs_mod if r["system"] == "agent"] or runs14
+    configs = runs_mod or runs14
+    if configs:
         quality_chart = bar_chart(
             [(m, [(short(r), r[k]) for r in configs]) for m, k in
              [("Verdict", "verdict"), (tr("Points clés", "Key points"), "points"),
               (tr("Preuves", "Evidence"), "evidence"), (tr("Ancrage", "Grounding"), "grounded")]],
-            ["exploration " + short(r) for r in configs], colors)
-    agents = [r for r in runs if r["system"] == "agent"]
+            [("exploration " + short(r)) if r["system"] == "agent" else "RAG" for r in configs], colors)
+    compared = runs14 + runs_mod  # agent configurations and the classic RAG
     tradeoff = cost_chart = ""
-    if agents:
-        names = [f"{cases_label[r['cases']]} – {short(r)}" for r in agents]
-        tradeoff = scatter([(names[i], r["seconds"], r["points"], colors[i % len(colors)]) for i, r in enumerate(agents)],
-                           tr("latence moyenne par question (s)", "mean latency per question (s)"),
-                           tr("points clés", "key points"), x_max=60)
-        cost_chart = scatter([(names[i], r["cost"], r["points"], colors[i % len(colors)]) for i, r in enumerate(agents)],
-                             tr("coût moyen par question ($)", "mean cost per question ($)"),
-                             tr("points clés", "key points"), x_max=0.012)
+    if compared:
+        names = [f"{cases_label[r['cases']]} – {short(r)}" for r in compared]
+
+        def points(key: str) -> list:
+            return [(names[i], r[key], r["points"], colors[i % len(colors)]) for i, r in enumerate(compared)]
+        tradeoff = scatter(points("seconds"), tr("latence moyenne par question (s)", "mean latency per question (s)"),
+                           tr("points clés", "key points"), x_max=max(r["seconds"] for r in compared) * 1.15)
+        cost_chart = scatter(points("cost"), tr("coût moyen par question ($)", "mean cost per question ($)"),
+                             tr("points clés", "key points"), x_max=max(r["cost"] for r in compared) * 1.2)
 
     # Per-case wins of medium exploration over low, on the MÖD cases
-    low, med = by_key.get(("mod", "agent", "low", "medium")), by_key.get(("mod", "agent", "medium", "medium"))
+    low, med = pick("mod", "agent", "low"), pick("mod", "agent", "medium")
     duel = ""
     if low and med:
         def per_case(run):
@@ -378,18 +490,7 @@ def build_html() -> str:
 
     examples14 = [c for c in cases14 if c["id"] in ("kumla-200m2", "ydre-lake-house")]
     examples_mod = [c for c in sample if c["id"] in ("mod-2026-13", "mod-2026-17")] or sample[:2]
-
-    def rows_for(case, cases_key):
-        out = []
-        for run in runs:
-            if run["cases"] != cases_key:
-                continue
-            row = next((r for r in run["rows"] if r["case"] == case["id"]), None)
-            out.append((label(run), row))
-        return out
-
-    examples = (''.join(example_case(c, rows_for(c, 'cases14')) for c in examples14)
-                + ''.join(example_case(c, rows_for(c, 'mod')) for c in examples_mod))
+    examples = examples_html(runs, "cases14", examples14) + examples_html(runs, "mod", examples_mod)
     answer_excerpt = ""
     if med or low:
         source_run = med or low
@@ -405,197 +506,265 @@ def build_html() -> str:
     verdict_split = ", ".join(f"{esc(k)}{tr(' : ', ': ')}{v}"
                               for k, v in sorted(verdict_counts.items(), key=lambda kv: -kv[1])[:5])
     history = "".join(
-        f"<tr><td>{esc(tr(*n))}</td><td>{fmt(p)}</td><td>{fmt(e)}</td><td>{fmt(g)}</td><td>{s} s</td>"
-        f"<td>{'–' if f is None else str(f) + ' s'}</td><td>{money(c)}</td></tr>" for n, p, e, g, s, f, c in HISTORY)
+        f"<tr><td>{esc(tr(*n))}</td><td>{fmt(v)}</td><td>{fmt(p)}</td><td>{fmt(e)}</td><td>{fmt(g)}</td><td>{s} s</td>"
+        f"<td>{'–' if f is None else str(f) + ' s'}</td><td>{money(c)}</td></tr>" for n, v, p, e, g, s, f, c in HISTORY)
     table14 = runs_table(runs14) if runs14 else "<p>–</p>"
     table_mod = runs_table(runs_mod) if runs_mod else "<p>–</p>"
-    verdicts_mod = verdict_table([r for r in runs_mod if r["system"] == "agent"], {c["id"]: c for c in caselaw})
+    table_plans = runs_table(runs_plans, map_views=True) if runs_plans else "<p>–</p>"
+    verdicts_mod = verdict_table(runs_mod, {c["id"]: c for c in caselaw})
     files = ", ".join(sorted({esc(r["file"]) for r in runs})) or "–"
+    stamps = sorted(m.group(1) for r in runs for name in r["file"].split(", ") if (m := FILE.search(name)))
+    period = (f"{stamps[0][:4]}-{stamps[0][4:6]}-{stamps[0][6:8]} to {stamps[-1][:4]}-{stamps[-1][4:6]}-{stamps[-1][6:8]}"
+              if stamps else "–")
+    overview = overview_table([(cases_label[key], [pick(key, "rag"), pick(key, "agent", "medium")])
+                               for key in ("cases14", "mod", "plans")])
     today = date.today()
+
+    def val(run: dict | None, key: str, digits: int = 2) -> str:
+        return fmt(run[key], digits) if run and run.get(key) is not None else "–"
+
+    rag14, agent14 = pick("cases14", "rag"), pick("cases14", "agent", "medium")
+    rag_mod, agent_mod = pick("mod", "rag"), med
+    rag_plans, agent_plans = pick("plans", "rag"), pick("plans", "agent", "medium")
+    no_map = pick("plans", "agent", "medium", ablation="view_map_area-view_pdf_page")
+
+    # Conclusions, written from the numbers above (re-read them after new runs: the wording states directions)
+    high_mod = pick("mod", "agent", "medium", "high")
+    no_view = pick("plans", "agent", "medium", ablation="view_map_area")
+    caselaw_by_id = {c["id"]: c for c in caselaw}
+
+    def by_outcome(run: dict | None) -> dict:
+        outcomes = defaultdict(list)
+        for row in run["rows"] if run else []:
+            if row["case"] in caselaw_by_id:
+                outcomes[stratum(caselaw_by_id[row["case"]])].append(float(row["verdict_ok"]))
+        return {key: mean(values) for key, values in outcomes.items()}
+
+    def outcome(run: dict | None, key: str) -> str:
+        value = by_outcome(run).get(key)
+        return f"{value * 100:.0f} %" if value is not None else "–"
+
+    agents_all = [r for r in runs if r["system"] == "agent" and not r["ablation"]]
+    seen_range = f"{min(r['seen'] for r in agents_all):.0f}–{max(r['seen'] for r in agents_all):.0f}" if agents_all else "–"
+    tools_range = f"{min(r['tools'] for r in agents_all):.0f}–{max(r['tools'] for r in agents_all):.0f}" if agents_all else "–"
+    summary = f"""<li>Compared: a <b>tool-using agent</b> and a <b>classic RAG</b> (one search, one answer), same model and same
+corpus, on three sets: 14 hand-written case studies, {len(sample)} cases from real rulings of the Land and Environment
+Court of Appeal (MÖD) and {len(plan_cases)} questions on a property of a real plan map.</li>
+<li><b>The agent wins on everything that requires finding the deciding rule</b>, and the gap grows with difficulty.
+Key points: {val(agent14, 'points')} vs {val(rag14, 'points')} (14 cases), {val(agent_mod, 'points')} vs
+{val(rag_mod, 'points')} (MÖD), {val(agent_plans, 'points')} vs {val(rag_plans, 'points')} (plankarta). Expected evidence
+seen: {val(agent14, 'evidence')} / {val(agent_mod, 'evidence')} / {val(agent_plans, 'evidence')} vs {val(rag14, 'evidence')} /
+{val(rag_mod, 'evidence')} / {val(rag_plans, 'evidence')}.</li>
+<li><b>The RAG is about twice as fast and four times cheaper</b>: {val(rag14, 'seconds', 0)}–{val(rag_plans, 'seconds', 0)} s
+per question (first word after {val(rag14, 'first', 0)}–{val(rag_plans, 'first', 0)} s), {money(rag_mod['cost'] if rag_mod else None)}
+per question, against {val(agent14, 'seconds', 0)}–{val(agent_plans, 'seconds', 0)} s and {money(agent14['cost'] if agent14 else None)}–{money(agent_plans['cost'] if agent_plans else None)}
+for the agent. Its grounding is as high or higher ({val(rag_plans, 'grounded')}–{val(rag14, 'grounded')}): it says less, but what it says
+is in its sources.</li>
+<li><b>Verdict</b>: all systems score ≥ {fmt(min(r['verdict'] for r in runs14)) if runs14 else '–'} on the 14 cases; on MÖD the agent gets {val(agent_mod, 'verdict')}–{val(low, 'verdict')}
+against {val(rag_mod, 'verdict')} for the RAG, on the plan maps {val(agent_plans, 'verdict')} against {val(rag_plans, 'verdict')}.
+The agent's weak spot is still the projects the court refused ({outcome(agent_mod, 'negative')}–{outcome(low, 'negative')}
+correct): it leans towards “feasible with conditions”.</li>
+<li><b>Map reading matters</b> on the plan-map cases: without the map tools the agent's verdict drops from
+{val(agent_plans, 'verdict')} to {val(no_map, 'verdict')} and its key points from {val(agent_plans, 'points')} to
+{val(no_map, 'points')}, but the map adds about {(agent_plans['seconds'] - no_map['seconds']) if agent_plans and no_map else 0:.0f} s
+per question.</li>
+<li><b>Exploration effort is the agent setting that matters</b>: <i>low</i> → <i>medium</i> on MÖD raises evidence
+{val(low, 'evidence')} → {val(agent_mod, 'evidence')}, grounding {val(low, 'grounded')} → {val(agent_mod, 'grounded')} and
+key points {val(low, 'points')} → {val(agent_mod, 'points')}, for +{(agent_mod['seconds'] - low['seconds']) if low and agent_mod else 0:.0f} s
+and {(agent_mod['cost'] / low['cost']) if low and agent_mod else 0:.1f}× the cost; a <i>high</i> final answer brings nothing
+measurable.</li>"""
+
+    overview_text = f"""<p>The agent reads {seen_range} passages per question through {tools_range} tool calls, each with its
+own query; the RAG reads the 20 passages of a single search. The number is not the point (a case has 1 to 2 expected
+passages): the RAG's single query, written from the user's facts, rarely lands on the statute section or the plan map
+that decides the case, whereas the agent first works out which rule applies, then looks it up. Of what it sees, the
+agent cites about three quarters of the expected evidence (evidence cited vs seen); the RAG cites most of what it
+finds, but outside the 14 case studies it finds little.</p>"""
+
+    plans_text = f"""<p>With both map tools the agent gets the verdict right in {val(agent_plans, 'verdict')} of the answers and
+covers {val(agent_plans, 'points')} of the key points; without <code>view_map_area</code> (whole-page images only)
+{val(no_view, 'verdict')} / {val(no_view, 'points')}; with no map at all {val(no_map, 'verdict')} / {val(no_map, 'points')}:
+it has to guess the zone from the text. The map views make this set slow ({val(agent_plans, 'seconds', 0)} s per question).
+Grounding is lower with the map ({val(agent_plans, 'grounded')} vs {val(no_map, 'grounded')}), probably because what is
+read on the image (which zone the property is in) cannot be checked by the grounding judge, which only gets text. The
+classic RAG, with one search and no map, has the plan map of the case among its passages in {val(rag_plans, 'evidence')}
+of the answers and gets the verdict right in {val(rag_plans, 'verdict')}.</p>"""
+
+    reading = f"""<li><b>The search strategy separates the systems, not the volume read.</b> The RAG has 20 slots for 1–2
+expected passages, but one query. On the MÖD cases every expected passage is a statute section, among several thousand,
+and the question describes facts (a house by a lake, a barn on farmland) rather than the rule: the rewrite rarely
+reaches the deciding section (evidence {val(rag_mod, 'evidence')}). The agent reasons first (“this is shoreline protection:
+exemption and its special reasons”) and then fetches the section.</li>
+<li><b>Where the RAG is enough.</b> On the 14 case studies (short questions, well-covered municipalities, answers in
+one municipal page or a well-known section) it reaches the verdict every time, with the best grounding and half the
+latency; it still covers {(agent14['points'] - rag14['points']) if agent14 and rag14 else 0:.2f} fewer key points than the
+agent.</li>
+<li><b>Verdict calibration.</b> The RAG is right more often than the agent on refused projects
+({outcome(rag_mod, 'negative')} vs {outcome(agent_mod, 'negative')}) but much less on granted ones
+({outcome(rag_mod, 'positive')} vs {outcome(agent_mod, 'positive')}): missing the conditions and exceptions that make a project
+possible, it is more negative rather than better calibrated. The agent's “with conditions” on refusals seems to come
+from treating the conditions it finds as requirements to meet rather than as blockers.</li>
+<li><b>Exploration effort</b>: at <i>low</i> the agent makes ~12 tool calls per question, at <i>medium</i> ~20–26, better
+targeted; it then sees and cites much more of the expected evidence. More exploration also finds more conditions, hence
+a slightly lower verdict score on MÖD ({val(low, 'verdict')} → {val(agent_mod, 'verdict')}) despite better evidence.</li>
+<li><b>Grounding is not quality on its own.</b> The RAG has the highest grounding and the lowest key-point coverage: the
+measure says that stated claims are supported, not that the important ones are there. Read it together with key
+points and evidence.</li>
+<li><b>Difficulty.</b> The MÖD and plan-map cases separate the systems; the 14 case studies saturate on the verdict and
+only show differences in key points and evidence.</li>"""
+
+    recommendations = f"""<li><b>Default app setting</b>: the agent, <i>medium</i> exploration and <i>medium</i> answer; <i>low</i>
+exploration as a fast mode (≈ {val(low, 'seconds', 0)} s). A <i>high</i> answer is not worth its cost.</li>
+<li><b>The classic RAG is not a substitute</b> for feasibility questions beyond the simplest ones; it could serve where
+speed matters more than completeness (a first quick answer while the agent explores), to be evaluated as such.</li>
+<li><b>Verdict prompt</b>: state that an unmet substantive condition (productive farmland without an essential public
+interest, shoreline protection without a special reason, a project that requires a detailed plan) makes the project
+“not feasible as described”, and measure it on the refused MÖD cases.</li>
+<li><b>Map reading</b>: keep <code>view_map_area</code>; make it cheaper (one crop instead of crop + page, smaller
+images) since it doubles the time on plan questions.</li>
+<li><b>Benchmark</b>: run the MÖD sample (50 cases, 2 passes) and the plan-map set for every prompt or model change; add
+sets for the use cases of the product vision (shaping a project from a vague idea, multi-turn guidance), which these
+sets do not measure.</li>
+<li><b>Judge</b>: have a domain expert review a sample of scores and of plan-map references.</li>"""
 
     if LANG == "en":
         body = f"""
-<h1>Pyrmit – feasibility agent: benchmark report</h1>
-<div class="sub">Feasibility assistant for building projects in Sweden (planning law, PBL, Environmental Code,
-detailed development plans). Model: GPT-6 Luna via OpenRouter. Report generated on {today:%Y-%m-%d}.</div>
+<h1>Pyrmit – benchmark report</h1>
+<div class="sub">Feasibility questions on Swedish planning law: tool-using agent vs. classic RAG. Model: GPT-6 Luna via
+OpenRouter. Runs: {period}; report generated on {today:%Y-%m-%d}. How the system works and how each benchmark set is
+built are explained in the <b>technical report</b>; this report gives the test conditions and the results.</div>
 
 <div class="box"><b>Summary</b>
 <ul>
-<li>The system under test is a <b>tool-using agent</b> that explores a local corpus by itself: 15 Swedish statutes, the
-websites of all 290 municipalities (kommuner), {plans_n} indexed detailed plans (detaljplaner). It answers with cited,
-clickable sources.</li>
-<li>Two benchmarks: <b>14 hand-written case studies</b> (real projects in the corpus municipalities) and <b>{len(sample)}
-cases drawn from real rulings of the Land and Environment Court of Appeal (MÖD)</b>, out of {len(caselaw)} generated from
-{len(rulings)} rulings.</li>
-<li>Each answer is scored on the verdict, the expected key points, the evidence actually consulted, how well its claims
-are grounded in the cited sources, latency and cost.</li>
-<li><b>Main result</b>: the reasoning effort of the exploration turns is the setting that matters. Raising exploration
-from <i>low</i> to <i>medium</i> makes the agent see much more of the expected evidence (0.53 → 0.70 on the MÖD cases),
-improves grounding (0.69 → 0.79) and key-point coverage (0.43 → 0.48), at the cost of ~17 s and 2.4× the price
-(≈ $0.009 per question). A <i>high</i>-effort final answer brings nothing measurable.</li>
-<li><b>Weak spot</b>: on projects the court refused, the agent concludes “not feasible” in only 40–60 % of cases; it leans
-towards “feasible with conditions”. This is the first prompt fix to make.</li>
-<li>The MÖD cases are much harder than the 14 case studies, which saturate (verdict ≈ 1): they are the benchmark to use
-for the next decisions.</li>
-<li>Cost of the agent answers in this report: about ${fmt(total_cost, 2)} (excluding the judge and case generation).</li>
+{summary}
 </ul></div>
 
-<h2>1. The system under test</h2>
-<h3>1.1 Offline corpus</h3>
+<h2>1. Test conditions</h2>
+<h3>1.1 Systems compared</h3>
 <table>
-<tr><th>Source</th><th>Content</th><th>Processing</th></tr>
-<tr><td>Statutes (Riksdagen open data)</td><td>15 consolidated texts: Planning and Building Act (PBL) and Ordinance (PBF),
-Environmental Code (MB), Land Code (JB), Real Property Formation Act, Joint Facilities Act, water and sewage (LAV, FMH),
-Cultural Environment Act…</td><td>One chunk per section (§), chapters and lettered sections handled</td></tr>
-<tr><td>Websites of the 290 municipalities (Wikidata)</td><td>Pages on building permits, sewage, fees, plan requests,
-comprehensive plans, detailed plans + linked PDFs (plan descriptions, plan maps, fee schedules)</td><td>Crawl honouring
-robots.txt (1 request/s), PyMuPDF text, local OCR (EasyOCR) for scanned PDFs</td></tr>
-<tr><td>Detailed plan registry</td><td>{plans_n} plans: status, date of legal force, plan map / plan description,
-extracted plan provisions (building area, ridge height, plot size…)</td><td>Rule-based, no LLM</td></tr>
+<tr><th>System</th><th>What it does</th><th>Settings tested</th></tr>
+<tr><td><b>Classic RAG</b></td><td>One rewrite call (English question + Swedish search query, effort low) → one dense
+search on the Swedish query (arctic-embed-l-v2, municipality filter detected from the question) → the top 10 statute
+sections and top 10 municipal passages → one answer call, streamed. It cannot open a document, list plans or look at a
+map.</td><td>Answer effort <i>medium</i>, streamed (the history table also shows an earlier <i>high</i>,
+non-streamed run)</td></tr>
+<tr><td><b>Agent</b></td><td>Tool loop: exploration turns (search, grep, read a document, statute section, plan registry
+and plan rules, map crop around a property, PDF page image), tools of a turn run in parallel, then <code>answer_ready</code>
+and one streamed final answer.</td><td>Exploration effort <i>low</i> / <i>medium</i> × answer effort <i>medium</i> /
+<i>high</i>; on the plankarta cases, ablations without the map tools</td></tr>
 </table>
-<p>In total 344,199 passages (chunks) in 31,497 documents, 275 municipalities represented. Retrieval: local embeddings
-<code>snowflake-arctic-embed-l-v2</code> (chosen on a retrieval benchmark: 0.92 recall@5) + BM25 on Swedish stems
-(SQLite FTS5), RRF fusion, municipality filter; all on disk (SQLite + vectors on the GPU, ~0.1 s per search).</p>
+<p>Both answer in the same format (verdict, key rules with [c:id] citations, process, uncertainties) and search the same
+corpus: the full disk store (15 statutes, the crawled websites of the municipalities, {plans_n} indexed detailed plans).</p>
 
-<h3>1.2 Agent loop</h3>
-<div class="flow"><span>Question (English)</span><b>→</b><span>Exploration turns (<i>explore</i> effort): tools in
-parallel</span><b>→</b><span>answer_ready</span><b>→</b><span>Final answer (<i>answer</i> effort),
-streamed</span><b>→</b><span>Clickable [n] citations</span></div>
+<h3>1.2 Benchmark sets</h3>
 <table>
-<tr><th>Tool</th><th>Role</th></tr>
-<tr><td><code>find_kommun</code></td><td>Place → municipality, and what the corpus holds for it</td></tr>
-<tr><td><code>search</code></td><td>Hybrid search (semantic + Swedish BM25) over the statutes and/or a municipality</td></tr>
-<tr><td><code>grep</code></td><td>Exact search: plan numbers, property designations, “nockhöjd”, amounts</td></tr>
-<tr><td><code>list_documents</code> / <code>read</code></td><td>List a municipality's documents, read a passage or a document</td></tr>
-<tr><td><code>law_section</code></td><td>Exact text of a section (“PBL 9 kap. 4 §”)</td></tr>
-<tr><td><code>plans</code> / <code>plan_rules</code></td><td>Detailed plan registry and each plan's provisions as a table</td></tr>
-<tr><td><code>view_pdf_page</code></td><td>Image of a PDF page for the model (plan map)</td></tr>
+<tr><th>Set</th><th>Origin</th><th>Cases run</th><th>What it tests</th><th>Reference</th></tr>
+<tr><td><b>14 case studies</b></td><td>Hand-written from real documents of 5 municipalities (detailed plans of 3 real
+projects, municipal guidance pages, statutes) and questions from user feedback</td><td>14 (all)</td><td>Combining
+national and local rules on common projects</td><td>Accepted verdicts, 3–5 key points, expected evidence (statute
+section or exact municipal excerpt)</td></tr>
+<tr><td><b>MÖD rulings</b></td><td>Real appeals decided by the Land and Environment Court of Appeal ({len(rulings)} rulings
+since 2011, {relevant} on our topics); the facts become the applicant's question, asked before the decision</td>
+<td>{len(sample)} of {len(caselaw)} (stratified by outcome, fixed seed)</td><td>Legal judgement on real disputes;
+verdict against the real outcome</td><td>Outcome → accepted verdicts; court's reasons → key points; statutes applied →
+evidence (current wording)</td></tr>
+<tr><td><b>Plankarta</b></td><td>Real plan maps (in force or adopted) of {len({c['kommun'][0] for c in plan_cases})}
+municipalities, a property number printed on the map; the project is designed so that its feasibility depends on the
+zone rules</td><td>{len(plan_cases)} (high-confidence references)</td><td>Reading the map: which zone the property is
+in, which codes apply</td><td>Codes and values read on the map crop + legend by a vision model; evidence = the plan
+map document</td></tr>
 </table>
-<p>Every tool output carries passage identifiers (<code>[c:id]</code>); the answer must cite them for every rule, number
-or deadline. Two reasoning-effort settings: <b>explore</b> for the turns where the agent searches, <b>answer</b> for the
-final answer. They are the main subject of this benchmark.</p>
 
-<h2>2. How the benchmark was built</h2>
-<h3>2.1 The 14 case studies</h3>
-<p>Written by hand from corpus documents and user feedback (questions such as “building permit procedure in
-Vallentuna”, “maximum height in Veda”, sewage, infrastructure). Three families: real projects on detailed plans
-(Kumla-Stensta, Mörby backe, Kristineberg), national + local rules (Attefall houses, shoreline protection, eco-village on
-farmland, private sewage, plot subdivision, demolition…), procedures (advance rulings, förhandsbesked). Each case has
-accepted verdicts, 3–5 key points, and <b>expected evidence</b> (a statute section or an exact excerpt of a municipal
-document) that the agent must have consulted.</p>
-
-<h3>2.2 Cases drawn from real rulings (MÖD)</h3>
-<ol>
-<li><b>Collection</b>: {len(rulings)} rulings of Mark- och miljööverdomstolen since 2011 (lagen.nu, whose robots.txt allows
-the ruling pages); {relevant} on our topics (building permits, detailed plans, shoreline protection, advance rulings,
-sewage…).</li>
-<li><b>Transformation</b> by the LLM: the facts become the question, asked as the applicant would <i>before</i> the
-decision (without the outcome or the reasoning); the actual outcome gives the accepted verdicts; the court's reasons give
-the key points; the statutes applied give the expected evidence.</li>
-<li><b>Checks</b>: purely procedural rulings dropped (standing, sanctions); questions that mention the court dropped;
-evidence = an exact phrase of at least 5 words of the <b>current</b> statute text (PBL chapter 9 was renumbered by SFS
-2025:974 and some wording changed); rulings with no current provision kept without expected evidence (scored on verdict
-and key points).</li>
-<li><b>Sample</b>: {len(sample)} cases drawn at random (fixed seed), balanced between negative, positive and open
-outcomes, all with expected evidence.</li>
-</ol>
-<p>Split of the {len(caselaw)} generated cases by accepted verdicts: {verdict_split}. Generation cost: ~$0.55.</p>
-
-<h3>2.3 Example cases</h3>
-{examples}
-
-<h2>3. How answers are scored</h2>
+<h3>1.3 Protocol and scoring</h3>
+<ul>
+<li>Same model for the systems and the judges (GPT-6 Luna via OpenRouter); judge effort medium.</li>
+<li>Each configuration runs 2 passes or more (n = answers = cases × passes); cases run 3 in parallel, so latencies
+include some contention. Answers are streamed: “1st token” is the time until the first word of the answer.</li>
+<li>Results are written per answer (<code>data/agentic/bench-*.json</code>) with the full answer, the tool calls and the
+judge's comment.</li>
+</ul>
 <table>
 <tr><th>Measure</th><th>Definition</th><th>How</th></tr>
 <tr><td>Verdict</td><td>The answer's verdict (feasible / with conditions / not feasible / unclear) is among the accepted
 verdicts</td><td>LLM judge</td></tr>
-<tr><td>Key points</td><td>Each expected point scored 0 (missing or contradicted), 1 (partial), 2 (clear); scaled to 0–1</td>
+<tr><td>Key points</td><td>Each expected point 0 (missing or contradicted), 1 (partial), 2 (clear); scaled to 0–1</td>
 <td>LLM judge</td></tr>
-<tr><td>Evidence</td><td>Share of the expected evidence (statute section, document excerpt) that the agent <i>actually saw</i>
-in its tool outputs</td><td>Automatic, no LLM</td></tr>
+<tr><td>Evidence seen</td><td>Share of the expected evidence the system <i>actually had in front of it</i> (retrieved
+passages for the RAG, tool outputs for the agent)</td><td>Automatic, no LLM</td></tr>
+<tr><td>Evidence cited</td><td>Share of the expected evidence the answer <i>cites</i>: did the system recognise the
+decisive passage among what it read? The gap with “evidence seen” is the passages read but not used</td><td>Automatic,
+no LLM</td></tr>
+<tr><td>Passages seen</td><td>Distinct passages the system had in front of it per question: the reading volume. A
+precision (“relevant / read”) is not measurable: the labels list the decisive passages, not every useful one</td>
+<td>Automatic</td></tr>
 <tr><td>Grounding</td><td>Share of the answer's factual claims supported by the text of the sources it cites</td>
-<td>Second LLM judge, with the full source text</td></tr>
-<tr><td>Unsupported claims</td><td>Rules or numbers found neither in the reference nor in the cited sources</td><td>LLM judge</td></tr>
-<tr><td>Latency, 1st token, cost</td><td>Total time, time to the first word of the streamed answer, OpenRouter cost</td>
-<td>Measured</td></tr>
+<td>Second LLM judge, full source text</td></tr>
+<tr><td>Latency, 1st token, cost</td><td>Total time, time to the first answer word, OpenRouter cost of the system's calls
+(judges excluded)</td><td>Measured</td></tr>
 </table>
-<div class="warn"><b>Limits of the evaluation.</b> The judge is the same model as the agent (GPT-6 Luna, medium effort):
-cheap but possibly lenient; its scores are for <i>comparing</i> settings, not absolute values. The key points of the MÖD
-cases are written by the LLM from the ruling: a point can be finer than what a good advisor would say. The judge gets the
-text of the cited sources so that a correct fact missing from the reference is not penalised. Each configuration was run
-2 to 4 times: the pass-to-pass variance is given below. Cases run 3 in parallel: latencies include some contention.</div>
+<div class="warn"><b>Limits.</b> The judge is the system's own model: cheap but possibly lenient, so its scores
+<i>compare</i> settings rather than give absolute quality. MÖD key points and plankarta references are written by an
+LLM (from the ruling, from the map); no human review yet. A difference below ~0.05 between configurations is within the
+pass-to-pass noise (section 2.6). <b>Scope</b>: every case is a feasibility check of a defined project at a known place;
+the results say nothing about helping shape a project from a vague idea, multi-turn guidance or finding where a project
+is possible (technical report, section 7.8).</div>
 
-<h2>4. Results</h2>
-<h3>4.1 History on the 14 cases (5-municipality sub-corpus, successive versions)</h3>
-<table><tr><th>Version</th><th>Key points</th><th>Evidence</th><th>Grounding</th><th>Latency</th><th>1st token</th>
+<h2>2. Results</h2>
+<h3>2.1 Overview: classic RAG vs. agent (default setting, medium / medium)</h3>
+{overview}
+{overview_text}
+
+<h3>2.2 14 case studies</h3>
+<p><b>History</b> (5-municipality sub-corpus, successive versions):</p>
+<table><tr><th>Version</th><th>Verdict</th><th>Key points</th><th>Evidence</th><th>Grounding</th><th>Latency</th><th>1st token</th>
 <th>Cost</th></tr>
 {history}
 </table>
 <p>v1 → v2: citeable identifiers in every tool output and a “no claim without a source read” rule (grounding 0.68 →
 0.86). v2 → v3/v4: parallel tools, <code>answer_ready</code>, streamed answer and <i>low</i> exploration effort: latency
-halved, but lower quality. Hence the matrix below.</p>
-
-<h3>4.2 Effort matrix (full corpus on disk)</h3>
-<h3>14 case studies</h3>
+halved, lower quality. The RAG of this table ran with a <i>high</i>, non-streamed answer; it is re-measured below at
+<i>medium</i>, streamed.</p>
+<p><b>Effort matrix</b> (full corpus on disk):</p>
 {table14}
-<h3>{len(sample)} MÖD cases</h3>
+
+<h3>2.3 MÖD cases ({len(sample)} sampled rulings)</h3>
 {table_mod}
 <p>Best value of each column in green. n = number of answers (cases × passes).</p>
-{quality_chart and '<h3>4.3 Quality on the MÖD cases</h3>' + quality_chart}
-<h3>4.4 Quality / speed / cost trade-off</h3>
+{quality_chart}
+{duel}
+<p><b>Verdict by actual outcome</b> (in brackets: number of answers; “open outcome” = remitted or fact-dependent
+decision, accepted verdicts “with conditions” / “unclear”):</p>
+{verdicts_mod}
+
+<h3>2.4 Plankarta cases (map reading)</h3>
+{table_plans}
+<p>Map views = images of the plan map the agent looked at per question (<code>view_map_area</code>,
+<code>view_pdf_page</code>). Evidence = the plan map of the case was among the passages seen.</p>
+{plans_text}
+
+<h3>2.5 Quality / speed / cost trade-off (14 cases and MÖD)</h3>
 {tradeoff}
 {cost_chart}
-{duel}
-<h3>4.5 Verdict by actual outcome (MÖD cases)</h3>
-{verdicts_mod}
-<p>In brackets: number of answers. “Open outcome” = remitted or fact-dependent decision (accepted verdicts: with
-conditions / unclear).</p>
-{'<h3>4.6 Variance between passes</h3><ul>' + spread + '</ul><p>Typical gap between two identical passes: a few hundredths; a difference below ~0.05 between configurations is not significant.</p>' if spread else ''}
 
-{answer_excerpt}
+{'<h3>2.6 Variance between passes</h3><ul>' + spread + '</ul><p>Typical gap between two identical passes: a few hundredths; a difference below ~0.05 between configurations is not significant.</p>' if spread else ''}
 
-<h2>5. Reading the results</h2>
+<h2>3. Reading the results</h2>
 <ul>
-<li><b>Exploration effort matters, answer effort does not.</b> At <i>low</i>, the agent makes ~12 tool calls per question;
-at <i>medium</i>, ~20 (14 cases) to ~26 (MÖD), better targeted: it more often reads the decisive statute section and the
-relevant municipal document. Evidence seen: 0.84 → 0.88 on the 14 cases, 0.53 → 0.70 on the MÖD cases; grounding 0.69 →
-0.79 on the MÖD cases; key points +0.05 to +0.07, beyond the pass-to-pass spread (~0.04). A <i>high</i> final answer
-changes neither key points nor evidence, and adds 7 s.</li>
-<li><b>The price</b>: on the MÖD cases, latency 26 s → 43 s (first word of the answer: 19 s → 35 s), cost $0.0036 →
-$0.0086 per question. On the 14 cases, only +3 s. At 1,000 questions a month: ~$9 instead of ~$4.</li>
-<li><b>Verdict calibration</b>: on the MÖD cases, the verdict is right for 90 % of open outcomes and ~75 % of granted
-projects, but only 40–60 % of refused projects: the agent answers “feasible with conditions” where the court said no
-(often: productive farmland, shoreline protection without a special reason, need for a detailed plan). More exploration
-reinforces this caution (more conditions found → “with conditions”), hence a slightly lower overall verdict score at
-<i>medium</i> (0.75 → 0.70) despite better evidence.</li>
-<li><b>The MÖD cases are harder</b> than the 14 case studies: fine legal facts (“productive” land, “substantial” change of
-use, LIS conditions…) and key points written from the Court's full reasoning. The 14 cases saturate (verdict ≥ 0.96
-everywhere) and no longer separate the settings.</li>
-<li><b>Grounding</b>: 79–89 % of claims are supported by the cited sources; the rest is mostly general legal knowledge
-of the model, not re-read in the corpus.</li>
+{reading}
 </ul>
 
-<h2>6. Recommendations and next steps</h2>
+<h2>4. Recommendations</h2>
 <ul>
-<li><b>Default app setting</b>: <i>medium</i> exploration, <i>medium</i> answer; keep <i>low</i> exploration as a “fast”
-mode (≈ 25 s). A <i>high</i> answer is not worth its cost.</li>
-<li><b>Verdict prompt</b>: state explicitly that an unmet substantive condition (productive farmland without an essential
-public interest, shoreline protection without a special reason, a project that requires a detailed plan) makes the
-project “not feasible as described”, and do not turn every procedural requirement into “with conditions”. Measure the
-effect on the refused MÖD cases.</li>
-<li><b>Benchmark</b>: use the {len(caselaw)} MÖD cases (samples of 50, 2 passes) for every prompt or model change; add
-“plan map only” cases now that the scanned PDFs are OCR'd, once map reading is in place.</li>
-<li><b>Corpus</b>: the OCR of the 769 scanned PDFs is done (their text enters the index at the next rebuild); next, link
-each plan code to its area on the map (vision model) and each property to its applicable plan (municipal WMS /
-Lantmäteriet).</li>
-<li><b>Judge</b>: have a domain expert review a sample of scores to calibrate the LLM judge.</li>
+{recommendations}
 </ul>
 
 <h2>Appendix: reproduce</h2>
-<p><code>python -m corpus.caselaw</code> (MÖD rulings) · <code>python -m agentic.cases_from_caselaw</code> (cases) ·
-<code>python -m agentic.bench --systems agent --store disk --explore-effort medium --effort medium --cases-file
-cases_caselaw.jsonl --sample 50 --repeats 2 --workers 3</code> · <code>python -m agentic.grounding &lt;results&gt;</code> ·
-<code>python -m agentic.report --lang en</code>. Result files used: {files}.</p>"""
+<p><code>python -m agentic.bench --systems agent --store disk --explore-effort medium --effort medium --cases-file
+cases_caselaw.jsonl --sample 50 --repeats 2 --workers 3</code> (MÖD; <code>--systems rag</code> for the classic RAG;
+<code>--cases-file cases_plans.jsonl</code> for the plankarta cases, <code>--disable-tools view_map_area</code> for the
+ablations) · <code>python -m agentic.grounding &lt;results&gt;</code> · <code>python -m agentic.report</code>. Total cost
+of the answers in this report: ~${fmt(total_cost, 2)} (judges and case generation excluded). Result files used:
+{files}.</p>"""
     else:
         body = f"""
 <h1>Pyrmit – agent de faisabilité : rapport de benchmark</h1>
@@ -710,11 +879,13 @@ tournent 3 en parallèle : les latences incluent un peu de contention.</div>
 
 <h2>4. Résultats</h2>
 <h3>4.1 Historique sur les 14 cas (sous-corpus des 5 communes, versions successives)</h3>
-<table><tr><th>Version</th><th>Points clés</th><th>Preuves</th><th>Ancrage</th><th>Latence</th><th>1er token</th>
+<table><tr><th>Version</th><th>Verdict</th><th>Points clés</th><th>Preuves</th><th>Ancrage</th><th>Latence</th><th>1er token</th>
 <th>Coût</th></tr>
 {history}
 </table>
-<p>v1 → v2 : identifiants citables dans toutes les sorties d'outils et règle « pas d'affirmation sans source lue »
+<p>Le verdict est juste pour toutes les versions (14/14) : ces cas saturent sur ce critère. Le RAG tournait avec une
+réponse en effort high, non streamée (sa latence est la réponse complète, ~1 700 tokens de raisonnement) : il n'a pas été
+relancé en effort medium et streamé comme les agents, ce qui devrait le rendre plus rapide qu'eux (non mesuré). v1 → v2 : identifiants citables dans toutes les sorties d'outils et règle « pas d'affirmation sans source lue »
 (ancrage 0,68 → 0,86). v2 → v3/v4 : outils en parallèle, <code>answer_ready</code>, réponse streamée et exploration en
 effort <i>low</i> : latence divisée par 2, mais qualité en baisse. D'où la matrice ci-dessous.</p>
 
@@ -786,6 +957,43 @@ cases_caselaw.jsonl --sample 50 --repeats 2 --workers 3</code> · <code>python -
             f"<body>{body}\n</body></html>")
 
 
+def flatten_outline(pdf_path: Path) -> int:
+    """Chrome writes the outline (--generate-pdf-document-outline: one bookmark per heading, at its exact position)
+    under a single entry for the h1 title: drop it so the sections are the top level of the viewer's side panel."""
+    import pymupdf
+
+    doc = pymupdf.open(pdf_path)
+    toc = doc.get_toc(simple=False)
+    if toc and toc[0][0] == 1 and all(entry[0] > 1 for entry in toc[1:]):
+        toc = [[entry[0] - 1, *entry[1:]] for entry in toc[1:]]
+        doc.set_toc(toc)
+        tmp = pdf_path.with_name(pdf_path.stem + ".tmp.pdf")
+        doc.save(tmp, garbage=3, deflate=True)
+        doc.close()
+        tmp.replace(pdf_path)
+    else:
+        doc.close()
+    return len(toc)
+
+
+def find_browser() -> str | None:
+    return next((b for b in BROWSERS if Path(b).exists()), None) or shutil.which("chrome") or shutil.which("msedge")
+
+
+def write_pdf(page_html: str, name: str, browser: str | None) -> None:
+    """HTML -> ../pyrmit_doc/<name>.html and .pdf (headless Chrome / Edge), with a clickable outline (bookmarks)."""
+    out_html, out_pdf = DOC_DIR / f"{name}.html", DOC_DIR / f"{name}.pdf"
+    out_html.write_text(page_html, encoding="utf-8")
+    if browser is None:
+        print(f"No Chrome/Edge found: open {out_html} and print it to PDF")
+        return
+    subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-pdf-header-footer",
+                    "--generate-pdf-document-outline", f"--print-to-pdf={out_pdf}", out_html.as_uri()],
+                   check=True, capture_output=True, timeout=180)
+    bookmarks = flatten_outline(out_pdf)
+    print(f"{out_pdf} ({out_pdf.stat().st_size // 1024} KB, {bookmarks} bookmarks)")
+
+
 def main() -> None:
     import argparse
 
@@ -794,17 +1002,9 @@ def main() -> None:
     parser.add_argument("--lang", choices=["en", "fr", "both"], default="en")
     args = parser.parse_args()
     DOC_DIR.mkdir(parents=True, exist_ok=True)
-    browser = next((b for b in BROWSERS if Path(b).exists()), None) or shutil.which("chrome") or shutil.which("msedge")
+    browser = find_browser()
     for LANG in (["fr", "en"] if args.lang == "both" else [args.lang]):
-        out_html = DOC_DIR / f"{OUTPUT_NAMES[LANG]}.html"
-        out_pdf = DOC_DIR / f"{OUTPUT_NAMES[LANG]}.pdf"
-        out_html.write_text(build_html(), encoding="utf-8")
-        if browser is None:
-            print(f"No Chrome/Edge found: open {out_html} and print it to PDF")
-            continue
-        subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-pdf-header-footer",
-                        f"--print-to-pdf={out_pdf}", out_html.as_uri()], check=True, capture_output=True, timeout=180)
-        print(f"{out_pdf} ({out_pdf.stat().st_size // 1024} KB)")
+        write_pdf(build_html(), OUTPUT_NAMES[LANG], browser)
 
 
 if __name__ == "__main__":

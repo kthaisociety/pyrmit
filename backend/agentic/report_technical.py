@@ -9,6 +9,7 @@ agent are evaluated. Companion to agentic.report (the benchmark summary); figure
 """
 
 import argparse
+import base64
 import html
 import json
 import re
@@ -85,7 +86,12 @@ def corpus_stats() -> dict:
     stats["plan_status"] = Counter(p["status"] for p in plans).most_common()
     rulings = list(read_jsonl(DATA_DIR / "raw" / "caselaw" / "mod.jsonl"))
     stats["rulings"], stats["rulings_relevant"] = len(rulings), sum(1 for r in rulings if r.get("relevant"))
-    stats["caselaw_cases"] = sum(1 for _ in (CASES_PATH.parent / "cases_caselaw.jsonl").open(encoding="utf-8"))
+    caselaw = list(read_jsonl(CASES_PATH.parent / "cases_caselaw.jsonl"))
+    stats["caselaw_cases"] = len(caselaw)
+    stats["caselaw_evidence"] = sum(1 for case in caselaw if case["evidence"])
+    stats["caselaw_kommuner"] = len({code for case in caselaw for code in case["kommun"]})
+    candidates = report.DATA_DIR.parent / "agentic" / "plan_cases" / "candidates.json"
+    stats["plan_candidates"] = len(json.loads(candidates.read_text(encoding="utf-8"))) if candidates.exists() else 0
     stats["municipalities"] = len(json.loads((DATA_DIR / "municipalities.json").read_text(encoding="utf-8")))
     return stats
 
@@ -127,6 +133,8 @@ pre.prompt { white-space: pre-wrap; font-family: Consolas, monospace; font-size:
   border: 1px solid #e5e7eb; border-radius: 4pt; padding: 6pt 8pt; margin: 4pt 0 8pt; break-inside: avoid; }
 td code, li code, p code { white-space: nowrap; }
 .toc { columns: 2; font-size: 9pt; margin: 6pt 0 10pt; } .toc div { margin: 1pt 0; }
+.case { break-inside: auto; }
+img.crop { max-width: 60%; max-height: 300px; border: 1px solid #e5e7eb; border-radius: 4pt; margin: 6pt 0 2pt; }
 </style>"""
 
 
@@ -147,6 +155,40 @@ def build_html() -> str:
     judge_prompt, grounding_prompt = prompt_block(JUDGE_INSTRUCTIONS), prompt_block(GROUNDING_INSTRUCTIONS)
     case_prompt = prompt_block(CASE_INSTRUCTIONS)
     retrieval = retrieval_table()
+    by_key = {(r["cases"], r["system"], r["explore"], r["answer"], r["ablation"]): r for r in runs}
+    overview = report.overview_table([
+        (name, [by_key.get((key, "rag", "–", "medium", "")), by_key.get((key, "agent", "medium", "medium", ""))])
+        for key, name in (("cases14", tr("14 cas", "14 cases")), ("mod", "MÖD"), ("plans", "plankarta"))])
+    results_text = report.NARRATIVE_RESULTS.get(LANG, "")
+
+    # Section 7: how each benchmark set is built, with the cases themselves
+    cases14 = list(read_jsonl(CASES_PATH))
+    plan_cases = list(read_jsonl(CASES_PATH.parent / "cases_plans.jsonl"))
+    colon = tr(" : ", ": ")
+    verdict_split = ", ".join(f"{esc(k)}{colon}{v}"
+                              for k, v in Counter(" / ".join(c["verdicts"]) for c in caselaw).most_common(5))
+    caselaw_topics = ", ".join(f"{esc(t)} {n}" for t, n in Counter(
+        t for c in caselaw for t in c.get("tags", []) if t != "caselaw").most_common(8))
+    refused = sum(1 for c in plan_cases if "not_feasible" in c["verdicts"])
+    plan_verdicts = tr(f"« non faisable » accepté pour {refused}, pas pour les {len(plan_cases) - refused} autres",
+                       f"“not feasible” accepted for {refused}, not for the other {len(plan_cases) - refused}")
+    cases14_table = (tr("<table><tr><th>Cas</th><th>Question</th><th>Documents sources</th><th>Verdicts acceptés</th></tr>",
+                        "<table><tr><th>Case</th><th>Question</th><th>Source documents</th><th>Accepted verdicts</th></tr>")
+                     + "".join(f"<tr><td><code>{esc(c['id'])}</code>{' ★' if 'real-project' in c.get('tags', []) else ''}"
+                               f"</td><td>{esc(c['question'])}</td><td>{esc(c.get('source', ''))}</td>"
+                               f"<td>{esc(', '.join(c['verdicts']))}</td></tr>" for c in cases14)
+                     + "</table>" + tr("<p class='n'>★ projet réel sur un plan détaillé réel</p>",
+                                       "<p class='n'>★ real project on a real detailed plan</p>"))
+    examples14 = [c for c in cases14 if c["id"] in ("kumla-200m2", "ydre-lake-house")]
+    examples_mod = [c for c in sample if c["id"] in ("mod-2026-13", "mod-2026-17")] or sample[:2]
+    examples = report.examples_html(runs, "cases14", examples14) + report.examples_html(runs, "mod", examples_mod)
+    plan_example = ""
+    if plan_cases:
+        case = plan_cases[0]
+        image = report.DATA_DIR.parent / "agentic" / "plan_cases" / case.get("image", "")
+        figure = (f"<img class='crop' src='data:image/png;base64,{base64.b64encode(image.read_bytes()).decode()}' "
+                  f"alt='plan map crop'><p class='n'>{esc(case.get('source', ''))}</p>") if image.is_file() else ""
+        plan_example = figure + report.examples_html(runs, "plans", [case])
 
     if LANG == "en":
         body = f"""
@@ -157,7 +199,7 @@ Generated on {today:%Y-%m-%d}; figures are read from the data and result files a
 <div>1. Purpose of the system</div><div>2. The Swedish planning system and where Pyrmit fits</div>
 <div>3. Data sources: what, why, how</div><div>4. Keeping the data current</div>
 <div>5. Pipeline, with code references</div><div>6. Retrieval evaluation</div>
-<div>7. Agent evaluation: methodology in detail</div><div>8. Results summary</div>
+<div>7. Evaluation: how the benchmarks are built and scored</div><div>8. Results summary</div>
 <div>9. Limitations and roadmap</div><div>Appendix: commands and files</div>
 </div>
 
@@ -348,23 +390,94 @@ API models (arctic-embed-l-v2: 0.92 recall@5); BM25 on English queries is useles
 fusion nor the reranker beat dense retrieval on the Swedish query. The agent still uses hybrid search because exact
 wording (plan names, “20 meter”) matters inside its tool calls.</p>
 
-<h2>7. Agent evaluation: methodology in detail</h2>
-<h3>7.1 Benchmark sets</h3>
-<ul>
-<li><b>14 case studies</b> ({code('agentic/cases.jsonl')}), hand-written. Fields: <code>question</code>, <code>kommun</code>
-(codes), <code>verdicts</code> (accepted), <code>key_points</code>, <code>evidence</code> (matchers), <code>source</code>.</li>
-<li><b>{s['caselaw_cases']} MÖD cases</b> ({code('agentic/cases_caselaw.jsonl')}) generated by
-{code('agentic/cases_from_caselaw.py')} from {s['rulings_relevant']} topical rulings: one LLM call per ruling with the
-prompt below; drafts cached in <code>data/corpus/raw/caselaw/case_drafts.jsonl</code>; rejected when not usable
-(procedure, sanctions, standing) or when the question mentions the court (<code>LEAK</code> regex); kommun name →
-code (<code>kommun_codes</code>, genitive forms); statutes → evidence matchers (<code>evidence_for</code>).</li>
-<li><b>Sampling</b>: <code>sample_cases</code> in {code('agentic/bench.py')} draws N cases with a fixed seed, round-robin
-over three strata (negative = refused, positive = granted, open = remitted / fact-dependent), labelled cases first.
-The report uses N = {len(sample)}.</li>
-</ul>
-<p>Case-generation prompt ({code('agentic/cases_from_caselaw.py')} <code>INSTRUCTIONS</code>):</p>
+<h2>7. Evaluation: how the benchmarks are built and scored</h2>
+<p>Three benchmark sets, each built to answer a different question. All cases share one format (one JSON line per case):
+the <code>question</code> as a user would ask it, in English; the <code>kommun</code> codes it concerns; the accepted
+<code>verdicts</code> (feasible / conditional / not_feasible / unclear); 3–5 <code>key_points</code> an expert answer must
+make; the <code>evidence</code> the system should have read (matchers, section 7.5); and the <code>source</code>. They
+differ in where the scenario comes from and who wrote the reference.</p>
+<table>
+<tr><th>Set</th><th>Scenario</th><th>Documents it is built from</th><th>Reference written by</th><th>Size</th></tr>
+<tr><td><b>14 case studies</b><br>{code('agentic/cases.jsonl')}</td><td>Realistic questions (user feedback, typical
+projects); 3 are real development projects</td><td>Detailed plans, municipal guidance pages and statutes of 5
+municipalities</td><td>Hand, from those documents</td><td>14</td></tr>
+<tr><td><b>MÖD rulings</b><br>{code('agentic/cases_caselaw.jsonl')}</td><td><b>Real</b> applications that were refused or
+granted and appealed to the highest planning court</td><td>The rulings of Mark- och miljööverdomstolen (lagen.nu), current
+statute text for the evidence</td><td>LLM, from the ruling (facts, outcome, reasons)</td><td>{s['caselaw_cases']}
+generated, 50 sampled</td></tr>
+<tr><td><b>Plankarta</b><br>{code('agentic/cases_plans.jsonl')}</td><td><b>Real</b> plan maps and property numbers;
+the project is designed</td><td>Plan maps (plankartor) in force or adopted, and the plan legend from the plan
+registry</td><td>Vision LLM, from a crop of the map + the legend; only confident labels kept</td><td>{len(plan_cases)}</td></tr>
+</table>
+
+<h3>7.1 The 14 case studies (hand-written)</h3>
+<p><b>Where they come from.</b> The questions started from the feedback on the first version of Pyrmit (questions on
+Vallentuna such as “what is the building permit procedure”, “what is the maximum height in Veda”) and were extended to
+the project types the tool is meant for: building on a detailed plan, Attefall houses, shoreline protection, an
+eco-village on farmland, private sewage, plot subdivision, rezoning requests, demolition, advance rulings. Five
+municipalities were chosen because the corpus covers them well: Vallentuna, Uppsala, Norrtälje, Ydre and Gotland.</p>
+<p><b>Real or constructed.</b> Three cases are real development projects on real detailed plans (Kumla-Stensta,
+Mörby backe and Kristineberg in Vallentuna): the question asks about a project slightly beyond, or within, what the
+adopted plan allows, and the plan's own provisions decide. The others are realistic scenarios built on the
+municipality's real pages and the statutes. None is an application with a known decision: the reference is what the
+documents say, written by hand, and every key point is backed by an <b>exact excerpt</b> of the document or a statute
+section (the expected evidence).</p>
+{cases14_table}
+
+<h3>7.2 The MÖD cases (real rulings)</h3>
+<p><b>Why real rulings.</b> A ruling of Mark- och miljööverdomstolen is a real application (a building permit, an advance
+ruling, a shoreline exemption, a detailed plan…) that the municipality decided, that was appealed, and on which the
+highest court in planning matters gave the final answer with its reasons. It gives what hand-written cases cannot: a
+real outcome to check the verdict against, decided on the law, and a variety of situations ({s['caselaw_kommuner']}
+municipalities).</p>
+<ol>
+<li><b>Collection</b> ({code('corpus/caselaw.py')}): {s['rulings']} rulings since 2011 from lagen.nu (robots.txt allows
+the ruling pages; 1 request/s), with headnote, keywords, statutes cited and full text; {s['rulings_relevant']} are on our
+topics (building permits, detailed plans, shoreline protection, advance rulings, sewage…).</li>
+<li><b>Transformation</b> ({code('agentic/cases_from_caselaw.py')}, one LLM call per ruling, prompt below): the facts of
+the ruling become the question, written as the applicant would ask it <i>before</i> the decision, with neither the
+outcome nor the reasoning; the actual outcome gives the accepted verdicts (a remittal or a fact-dependent decision gives
+“conditional” / “unclear”); the court's reasons give the key points; the statutes it applied give the expected
+evidence.</li>
+<li><b>Checks</b>: purely procedural rulings dropped (standing, sanctions); questions that mention the
+court dropped (<code>LEAK</code> regex); municipality names mapped to codes. Evidence = the longest run of
+≥ 5 words of the statute wording quoted in the ruling that is found in the <b>current</b> statute text, so it survives
+the 2025 renumbering of PBL chapter 9 and small amendments; {s['caselaw_evidence']} of the {s['caselaw_cases']} cases
+have such a label, the others (rulings under the old PBL) are scored on verdict and key points only.</li>
+<li><b>Sample</b>: the benchmark runs on 50 cases drawn with a fixed seed, round-robin over the three outcomes (refused,
+granted, open), labelled cases first (<code>sample_cases</code> in {code('agentic/bench.py')}).</li>
+</ol>
+<p>Split of the {s['caselaw_cases']} cases by accepted verdicts: {verdict_split}. Topics (ruling keywords): {caselaw_topics}.
+Case-generation prompt ({code('agentic/cases_from_caselaw.py')} <code>INSTRUCTIONS</code>):</p>
 {case_prompt}
-<h3>7.2 Evidence labels and matching</h3>
+
+<h3>7.3 The plankarta cases (real plan maps, designed projects)</h3>
+<p><b>Why.</b> In the two other sets the map is never needed (2 map views in 576 agent answers): their answers are in the
+text of plans and statutes. But a detailed plan's rules often differ by zone (a height or a building area per block), and
+only the map shows which zone a property is in. This set asks about a specific property where that matters.</p>
+<ol>
+<li><b>Candidates</b> ({code('agentic/cases_from_plans.py')} <code>candidates</code>, rule-based, free): plans in force or
+adopted from the plan registry, whose plan map has a text layer and at least two coded height or building-area rules (so
+the rules differ by zone); on the map, a property number (e.g. “5:125”) printed at most twice, whose surroundings carry
+one of those codes; scale labels, legend and title-block areas and unconfirmed tract names are filtered; at most two per
+municipality. The crop around the property is saved. {s['plan_candidates']} candidates.</li>
+<li><b>Reference</b> (<code>label</code>, one vision call per candidate, high effort): the model gets the crop and the
+meaning of the codes from the plan legend, decides which zone the property is in and which codes apply, and designs a
+realistic project (house, extension, garage) <b>within</b> the limits for half of the cases and <b>slightly above</b>
+one limit for the other half, so that “not feasible” is not a free win. It writes the question in the owner's words,
+without plan codes, and the key points with each code and value. Only high-confidence labels are kept:
+{len(plan_cases)} cases in {len({c['kommun'][0] for c in plan_cases})} municipalities ({plan_verdicts}).</li>
+<li><b>Evidence</b> = the plan map document (<code>doc_id</code>): the system must have had it in front of it.</li>
+</ol>
+<p><b>Real or constructed.</b> The plan, the map, the property and its codes are real; the project and the question are
+constructed, and the reference is a model's reading of the map. The crops are kept in
+<code>data/agentic/plan_cases/</code> for a manual check; a sample should be reviewed by a person.</p>
+
+<h3>7.4 Example cases</h3>
+{examples}
+{plan_example}
+
+<h3>7.5 Evidence labels and matching</h3>
 <p>A matcher is a dict checked against every chunk the agent was shown ({code('localrag/eval.py')} <code>matches</code>):
 <code>law</code> (substring of the statute title) + <code>section</code> or <code>contains</code> (verbatim phrase,
 whitespace- and case-normalised), <code>kommun_code</code> + <code>contains</code> / <code>title</code>, or
@@ -373,13 +486,19 @@ then keeps the <b>longest run of ≥ 5 consecutive words found in the current st
 (<code>longest_phrase</code>): this survives renumbering and small amendments (“tas i anspråk” → “tas i anspråk eller
 inreds”). Without a match, a section number is used only outside the renumbered PBL 9 kap.; otherwise the case has no
 evidence label. <code>check_labels</code> refuses to run a benchmark whose labels match no chunk.</p>
-<h3>7.3 Metrics</h3>
+<h3>7.6 Metrics</h3>
 <table>
 <tr><th>Metric</th><th>Formula</th><th>Code</th></tr>
 <tr><td>verdict_ok</td><td>judge's verdict ∈ accepted verdicts</td><td><code>judge</code>, <code>run_case</code></td></tr>
 <tr><td>points</td><td>Σ judge scores (0/1/2 per key point) / (2 × number of key points)</td><td><code>run_case</code></td></tr>
-<tr><td>evidence</td><td>share of matchers satisfied by at least one chunk the agent saw (tool outputs), no LLM</td>
-<td><code>evidence_recall</code></td></tr>
+<tr><td>evidence (seen)</td><td>share of matchers satisfied by at least one chunk the system saw (agent: tool outputs;
+RAG: retrieved chunks), no LLM</td><td><code>evidence_recall</code></td></tr>
+<tr><td>evidence cited</td><td>share of matchers satisfied by at least one chunk the answer cites ([c:id], truncated ids
+resolved by unique prefix), no LLM</td><td>{code('agentic/report.py')} <code>reading_metrics</code></td></tr>
+<tr><td>passages seen</td><td>distinct chunk ids in the tool outputs (agent) or retrieved (RAG). A precision “relevant /
+read” is not computed: the evidence labels list the decisive passages (1–3 per case), not every useful one, so most
+useful passages would count as irrelevant, and more so for the agent, which reads 3–4 times more</td>
+<td><code>reading_metrics</code></td></tr>
 <tr><td>grounded</td><td>supported claims / claims, second judge with the full text of the cited chunks</td>
 <td>{code('agentic/grounding.py')}</td></tr>
 <tr><td>unsupported</td><td>claims in neither the reference nor the cited sources (first judge)</td><td><code>judge</code></td></tr>
@@ -391,8 +510,12 @@ evidence label. <code>check_labels</code> refuses to run a benchmark whose label
 {judge_prompt}
 <p>Grounding prompt ({code('agentic/grounding.py')} <code>INSTRUCTIONS</code>):</p>
 {grounding_prompt}
-<h3>7.4 Protocol</h3>
+<h3>7.7 Protocol</h3>
 <ul>
+<li>Systems: the agent (<code>run_agent</code>, efforts set per run) and a classic RAG baseline (<code>run_rag</code> in
+{code('agentic/bench.py')}: the chat's local pipeline, i.e. a rewrite call that also writes a Swedish search query, one
+dense search on it with the municipality filter, the top 10 statute sections + top 10 municipal passages, one streamed
+answer in the same format). Evidence for the RAG = the passages it retrieved.</li>
 <li>Corpus: the full disk store (<code>--store disk</code>), so cases from any municipality are answerable.</li>
 <li>Same model for agent and judges (GPT-6 Luna via OpenRouter); judge effort medium.</li>
 <li>Repeats (<code>--repeats</code>) and merged files give 2–4 passes per configuration; per-pass means measure noise.</li>
@@ -401,18 +524,48 @@ evidence label. <code>check_labels</code> refuses to run a benchmark whose label
 answer, tool steps and judge comment); <code>--resume</code> completes an interrupted run.</li>
 <li>Reports: {code('agentic/report.py')} (summary) and this file, {code('agentic/report_technical.py')}.</li>
 </ul>
+<h3>7.8 Scope: which questions these benchmarks represent</h3>
+<p>The three sets ask one kind of question: <b>a defined project at a known place: is it feasible, under which rules,
+and how to get it approved?</b> This is pre-application screening. Within it, the sets are skewed in known ways:</p>
+<ul>
+<li>The place is always given (municipality, often the plan or the property) and the project is specified (use, size,
+height); the question is single-turn, in English.</li>
+<li>The 14 case studies come from 5 municipalities that the corpus covers well: coverage is better than for an
+average municipality.</li>
+<li>Appealed rulings are contested cases by selection: more borderline situations and more refusals than ordinary
+applications, so the MÖD set is harder than typical traffic and refusal-heavy.</li>
+<li>The plankarta cases are designed so that about half the projects slightly exceed a limit.</li>
+</ul>
+<p><b>Not measured</b>, although plausible uses of the tool:</p>
+<ul>
+<li><b>Shaping a project from a vague idea</b> (“I have land near Stockholm and want to build a small eco-village: what
+could I build, where, and in which order?”): proposing options, the constraints that decide between them, the questions
+to ask the municipality, over several turns. No set rewards a good design conversation; the verdict / key-point scoring
+does not fit it.</li>
+<li>Process guidance beyond the key points (documents to submit, sequencing of permits, timelines), and follow-up
+turns.</li>
+<li>Finding where a project is possible (which municipality, plan or site allows it) and comparing rules across
+municipalities.</li>
+<li>Questions where the user does not know the property or the plan, and arguments addressed to the municipality or
+the neighbours.</li>
+</ul>
+<p>The scores therefore say how well Pyrmit <i>checks</i> a defined project, not how well it helps <i>build</i> one.
+The target use cases, and so the next benchmark, should come from the product vision defined with the project team
+and the client, for example real project briefs, written as the users would bring them.</p>
 
 <h2>8. Results summary</h2>
-<p>MÖD sample ({len(sample)} cases); details and charts in the benchmark report.</p>
-{table_mod}
-{verdicts_mod}
-<p>Exploration effort is the setting that matters (evidence 0.53 → 0.70, grounding 0.69 → 0.79); a high-effort
-answer adds nothing; the agent under-calls “not feasible” on refused projects (40–60 %).</p>
+<p>Classic RAG and the agent at its default setting (exploration medium, answer medium) on the three sets; all
+configurations, charts and the reading of the results are in the benchmark report.</p>
+{overview}
+{results_text}
 
 <h2>9. Limitations and roadmap</h2>
 <ul>
 <li><b>Evaluation</b>: LLM judge = agent model (possible leniency); key points written by an LLM; no human review yet.
 Next: expert review of a sample, a second judge model, inter-judge agreement.</li>
+<li><b>Scope of the benchmarks</b>: only feasibility checks of a defined project at a known place (section 7.8); helping
+shape a project from a vague idea, multi-turn guidance and site search are not measured. The use cases to evaluate
+next come from the product vision (project team and client).</li>
 <li><b>Data</b>: coverage depends on each municipality's website; no property → plan link; no spatial layers; no
 provenance dates (section 4). Next: provenance metadata, scheduled incremental refresh, Lantmäteriet and county GIS data.</li>
 <li><b>Plans</b>: provisions are extracted as text; which map area carries which code needs a vision model on the plan
@@ -740,17 +893,9 @@ def main() -> None:
     parser.add_argument("--lang", choices=["en", "fr", "both"], default="en")
     args = parser.parse_args()
     report.DOC_DIR.mkdir(parents=True, exist_ok=True)
-    browser = next((b for b in report.BROWSERS if Path(b).exists()), None) or shutil.which("chrome") or shutil.which("msedge")
+    browser = report.find_browser()
     for LANG in (["fr", "en"] if args.lang == "both" else [args.lang]):
-        out_html = report.DOC_DIR / f"{OUTPUT_NAMES[LANG]}.html"
-        out_pdf = report.DOC_DIR / f"{OUTPUT_NAMES[LANG]}.pdf"
-        out_html.write_text(build_html(), encoding="utf-8")
-        if browser is None:
-            print(f"No Chrome/Edge found: open {out_html} and print it to PDF")
-            continue
-        subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-pdf-header-footer",
-                        f"--print-to-pdf={out_pdf}", out_html.as_uri()], check=True, capture_output=True, timeout=180)
-        print(f"{out_pdf} ({out_pdf.stat().st_size // 1024} KB)")
+        report.write_pdf(build_html(), OUTPUT_NAMES[LANG], browser)
 
 
 if __name__ == "__main__":

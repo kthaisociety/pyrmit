@@ -230,7 +230,16 @@ accepts `doc_id`). Check a sample of crops / labels by hand.
 headless Chrome/Edge, charts as inline SVG; `tr(fr, en)` / `fmt` / `money` follow the module-level `LANG`.
 `python -m agentic.report_technical [--lang ...]` builds the detailed technical report (`pyrmit_rapport_technique.pdf` /
 `pyrmit_technical_report.pdf`): Swedish planning context, data sources and freshness plan, pipeline with code refs,
-retrieval eval (from `data/eval/*.json`), agent eval methodology with the judge prompts; figures read from the data.
+retrieval eval (from `data/eval/*.json`), how each benchmark set is built (origin, source documents, who wrote the
+reference, the 14 cases listed, example cases) and scored, with the judge prompts; figures read from the data.
+Split: the technical report explains, the benchmark report gives conditions + results (overview RAG vs agent, one
+table per set: 14 cases, MÖD, plankarta incl. ablations). `load_runs` keys result files by (set, systems, explore,
+answer, ablation) from the file name (`FILE`: `-cases_caselaw` / `-cases_plans`, `-no-<tools>`); the conclusions text
+is in `build_html` (`summary`, `reading`...), written from the numbers, so update it after new runs. Only the English
+text was restructured (2026-10-17); the French bodies are the older layout. Both PDFs get a clickable outline
+(`write_pdf`: Chrome `--generate-pdf-document-outline`, exact heading positions; `flatten_outline` drops the h1 entry
+so sections are top level). The bench's RAG answer is streamed
+(`run_rag` records `first_token_s`).
 The key reports (benchmark, technical, hosting PDF + Markdown) are copied into `reports/` (versioned; the generators
 write to `../pyrmit_doc/`, so copy them again after regenerating).
 Gotcha (Windows): stopping a background shell does not kill its Python children; a "killed" benchmark can keep running
@@ -325,6 +334,7 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | POST   | `/api/db/search`                  | Yes  | Retrieval top-k on both pools, no LLM (`store`: neon = pgvector, local = localrag) |
 | GET    | `/api/docs/locate`                | Yes  | Where to open a cited chunk: PDF page + zoom on the passage, or original URL with `#:~:text=` |
 | GET    | `/api/docs/pdf/{chunk_id}`        | Yes  | The chunk's crawled PDF with the passage highlighted (PyMuPDF annotations) |
+| GET    | `/api/docs/tool-image`            | Yes  | Image an agent tool call looked at (`tool`=view_map_area/view_pdf_page, `input`=the call's JSON arguments), re-rendered for the inspector |
 | GET    | `/api/benchmark/sets`, `/cases`, `/case`, `/image/{id}` | Yes | Benchmark case sets, cases, one case + its past results (from `data/agentic/bench-*.json`), plankarta crop |
 | POST   | `/api/benchmark/run`              | Yes  | Run the agent on a case now (chat settings) and grade it; background job (spends credits) |
 | GET    | `/api/benchmark/run/{job_id}`     | Yes  | Progress (tool calls) and result of that job (polled: a run outlasts the frontend proxy timeout) |
@@ -506,7 +516,7 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `frontend/components/Chat.tsx` -- Message list, SSE stream consumption, session history fetch; a new chat is announced
   to the sidebar on the `session_id` event; opening another chat aborts the local stream only, and history
   messages with status "streaming" are re-fetched every 2 s until done; live Reasoning/Process steps while streaming; once finished, "Inspect pipeline" and a clickable "Sources" list (retrieved chunks per source, from `pipeline` events) below the answer
-- `frontend/components/PipelineTrace.tsx` -- "Inspect pipeline" panel rendering `pipeline` events (live or from saved `trace`): a totals line (time, tokens, cost) then one collapsible step per stage (Understand, Retrieve, Agents, Verdict, Answer) with a one-line summary, and the stage's API calls nested inside (assigned by call kind/name in `stepOf`)
+- `frontend/components/PipelineTrace.tsx` -- "Inspect pipeline" panel rendering `pipeline` events (live or from saved `trace`): a totals line (time, tokens, cost) then one collapsible step per stage (Understand, Retrieve, Agents, Verdict, Answer) with a one-line summary, and the stage's API calls nested inside (assigned by call kind/name in `stepOf`). An expanded `view_map_area` / `view_pdf_page` tool call shows the image the agent looked at: traces store no images (tool records carry `tool` + `image`), `ToolImage` re-renders them from the call's arguments via `/api/docs/tool-image` (older traces: tool taken from the call name)
 - `frontend/components/DatabaseBrowser.tsx` -- Database view with a Neon / Local corpus toggle: stats, chunk browsing, search playground
 - `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)
 - `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage
