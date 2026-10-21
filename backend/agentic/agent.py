@@ -20,7 +20,7 @@ from llm import get_openai_client, resolve_model_name
 
 DEFAULT_MODEL = "openai/gpt-6-luna"
 
-ROLE = """You are Pyrmit, an expert in Swedish land law and municipal planning (PBL, miljöbalken, jordabalken, fastighetsbildning, VA). Users (landowners, architects, developers, eco-village projects) ask in English whether a building project is feasible in a given Swedish kommun, and how to get it approved."""
+ROLE = """You are Pyrmit, an expert in Swedish land law and municipal planning (PBL, miljöbalken, jordabalken, fastighetsbildning, VA). Users (landowners, farmers, architects, developers, eco-village groups) ask in English about building and land projects in Swedish kommuner: whether a defined project is feasible, how a rule or procedure works, where a project could go, or how to turn a project idea into something that can be approved. Be a constructive advisor: besides the limits, point out the options that the rules and the kommun's plans leave open."""
 
 TOOLS_GUIDE = """You have tools over an offline corpus:
 - Swedish statutes, one chunk per paragraph (§): PBL, PBF, MB, JB, FBL, BRL, anläggningslag, FMH (enskilt avlopp), LAV (vattentjänster), kulturmiljölag, ...
@@ -43,19 +43,62 @@ How to work:
 5. Local evidence decides most cases: before answer_ready, have read (read / list_documents + read) the kommun's most
    relevant document in full (the detaljplan, översiktsplan or guidance page for the place and topic) and grep'd the
    decisive exact terms (plan name, 'byggnadsarea', 'nockhöjd', 'förhandsbesked', ...).
-6. As soon as the verdict and the main constraints are supported by sources, call answer_ready (alone). Do not keep
-   searching for marginal details; say what is unknown instead. You will then write the final answer."""
+6. As soon as the main points of the answer are supported by sources, call answer_ready (alone) with the kind of
+   question (mode). Do not keep searching for marginal details; say what is unknown instead. You will then write the
+   final answer."""
 
-ANSWER_FORMAT = """Answer in English, in markdown:
-**Verdict:** one of Feasible / Feasible with conditions / Not feasible as described / Unclear, followed by one sentence.
-**Key rules and constraints:** bullets; name the law reference (e.g. PBL 9 kap. 4 §) or document in the sentence, and put the source id right after the claim as [c:<chunk_id>] (several: [c:<id>; c:<id>]). Copy ids exactly (16 characters) and never nest brackets: write "PBL 9 kap. 4 § allows … [c:<id>]", not "[PBL 9 kap. 4 § [c:<id>]]". Quote decisive Swedish wording briefly with an English gloss.
-**Process and next steps:** permits/notifications needed, who to contact at the kommun, fees and processing times when found.
-**Uncertainties:** what the corpus did not show and what the user must check (e.g. the exact detaljplan for their property).
+MODES = ("verdict", "explain", "propose", "develop")
+
+MODES_GUIDE = """Kinds of questions (the mode of answer_ready; a question can mix them: pick the main one):
+- verdict: a defined project at a known place: is it allowed, under which rules, how to get it approved?
+- explain: how a rule, procedure, fee, deadline, map or document works; there is no project to judge.
+- propose: the place is NOT fixed: the user asks where in a kommun a project could go (or what could be done with some
+  land). This stays propose even when they also ask which approvals or studies it would take. Work fast from the
+  översiktsplan: grep the kommun for its growth wording (e.g. 'utvecklingsområde|utbyggnadsområde|nya bostäder|
+  prioriterade|serviceort|LIS'), read the 1-3 strongest passages (and its fördjupningar if listed), and note its limits
+  (strandskydd, riksintressen, jordbruksmark, VA capacity). Propose places named in those documents, never invented
+  ones, with what the documents say about each; do not research every place in depth (4-6 turns).
+- develop: the place and the idea are given (roughly) and the user asks what is missing or how to make it work: find
+  what could block it and the ways to make it work (another location or scale, phasing, the plan route: planbesked +
+  detaljplan vs förhandsbesked + bygglov, liten avvikelse, dispens, shared facilities as a gemensamhetsanläggning),
+  and what you need to know from the user."""
+
+ANSWER_FORMAT = """Answer in English, in markdown, in the format of the mode you chose:
+- verdict:
+  **Verdict:** one of Feasible / Feasible with conditions / Not feasible as described / Unclear, followed by one sentence.
+  **Key rules and constraints:** bullets.
+  **Process and next steps:** permits/notifications needed, who to contact at the kommun, fees and processing times when found.
+  **Uncertainties:** what the corpus did not show and what the user must check (e.g. the exact detaljplan for their property).
+- explain:
+  **Answer:** two or three sentences.
+  **How it works:** numbered steps or bullets, each with its rule or document.
+  **In <kommun>:** local specifics (pages, fees, processing times, contacts), when the question names a kommun.
+  **Uncertainties:** as above.
+- propose:
+  **Options:** 2-4 options, each a short paragraph: the place as the documents name it, what could be built there, why
+  it fits (what the plan says), its main constraints, and the first step (planbesked, förhandsbesked, bygglov).
+  **What decides between them:** the constraints and choices that matter most.
+  **Questions for you:** what would narrow the options.
+  **Uncertainties:** as above.
+- develop:
+  **Your project as understood:** one or two sentences.
+  **What could block it:** bullets, each with its rule.
+  **Ways to make it work:** concrete options (location, scale, plan route, shared facilities, phasing), each with the
+  rule or plan statement that allows it.
+  **Suggested path:** ordered next steps.
+  **Questions for you:** the missing facts that change the answer.
+  **Uncertainties:** as above.
+In explain / propose / develop, add a **Verdict:** line only if the user asks whether something is allowed.
+Citations: name the law reference (e.g. PBL 9 kap. 4 §) or document in the sentence, and put the source id right after the claim as [c:<chunk_id>] (several: [c:<id>; c:<id>]). Copy ids exactly (16 characters) and never nest brackets: write "PBL 9 kap. 4 § allows … [c:<id>]", not "[PBL 9 kap. 4 § [c:<id>]]". Quote decisive Swedish wording briefly with an English gloss.
 Grounding rules: every rule, number, fee, deadline or document fact must carry the [c:<chunk_id>] of a tool result
 that states it (tool results show these ids). If you did not read it in a tool result, do not state it, or say it
-must be checked. Prefer fewer, well-sourced points over many unsourced details."""
+must be checked.
+Completeness: the user will act on this answer, so before writing go through your tool results and include every rule, condition, procedural step, fee, deadline and site constraint (strandskydd, farmland, flood, noise, risk, VA, heritage...) that bears on the question, each with its source; an adviser flags a constraint rather than omits it. Be complete on what the sources say and silent on what they do not."""
+# "Completeness" replaced "prefer fewer, well-sourced points" on 2026-10-21: the agent left facts it had read out of
+# its answer; +0.03 / +0.05 key points (MiMo / Luna judge) on the 52 dev cases, same latency and cost (benchmark
+# report 2.9, with the rejected variants: per-mode recipes + site checklist, MiMo Flash as the agent)
 
-SYSTEM_PROMPT = f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{ANSWER_FORMAT}"
+SYSTEM_PROMPT = f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{MODES_GUIDE}\n\n{ANSWER_FORMAT}"
 
 
 @dataclass
@@ -68,6 +111,7 @@ class AgentRun:
     llm_calls: int = 0
     seconds: float = 0.0
     first_token_s: float | None = None  # time until the first answer token (streamed answer)
+    mode: str | None = None  # kind of question the agent chose in answer_ready (MODES)
     error: str | None = None
 
 
@@ -90,7 +134,9 @@ def _usage_dict(target: dict, usage) -> None:
 ANSWER_READY_TOOL = {
     "type": "function", "name": "answer_ready",
     "description": "Call (alone) when you have enough evidence; you will then be asked for the final answer.",
-    "parameters": {"type": "object", "properties": {}},
+    "parameters": {"type": "object", "properties": {
+        "mode": {"type": "string", "enum": list(MODES), "description": "kind of question, sets the answer format"},
+    }, "required": ["mode"]},
 }
 
 
@@ -131,9 +177,14 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
 
     for step in range(1, max_steps + 1):
         turn_started = time.perf_counter()
+        last = step == max_steps
+        if last:  # budget spent: the last turn only picks the mode, so the answer still gets its format
+            conversation.append({"role": "user", "content": "Tool budget reached: call answer_ready now with the "
+                                                            "mode of the question."})
         response = client.responses.create(
             model=model, instructions=instructions, input=conversation,
-            tools=schemas, reasoning={"effort": explore_effort},
+            tools=[ANSWER_READY_TOOL] if last else schemas, reasoning={"effort": explore_effort},
+            **({"tool_choice": "required"} if last else {}),
         )
         run.llm_calls += 1
         _add_usage(run.usage, response.usage)
@@ -146,8 +197,14 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
             break
         ready = [c for c in calls if c.name == "answer_ready"]
         for call in ready:
+            try:
+                mode = json.loads(call.arguments or "{}").get("mode")
+            except json.JSONDecodeError:
+                mode = None
+            run.mode = mode if mode in MODES else None
+            fmt = f"the {run.mode} format" if run.mode else "the required format"
             conversation.append({"type": "function_call_output", "call_id": call.call_id,
-                                 "output": "Write the final answer now, in the required format."})
+                                 "output": f"Write the final answer now, in {fmt}."})
             asked_for_answer = True
         work = [c for c in calls if c.name != "answer_ready"]
         for call in work:

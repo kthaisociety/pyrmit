@@ -87,4 +87,6 @@ def get_response_output_text(response: Any) -> str:
 
 def get_openai_client() -> OpenAI:
     api_key, base_url = chat_client_settings()
-    return OpenAI(api_key=api_key, base_url=base_url)
+    # The SDK default (600 s per read, 2 retries) let a stalled OpenRouter stream block a benchmark worker for
+    # 30 min; LLM_TIMEOUT_S bounds the wait for each response / stream chunk, not the whole answer
+    return OpenAI(api_key=api_key, base_url=base_url, timeout=float(os.getenv("LLM_TIMEOUT_S", "180")), max_retries=1)

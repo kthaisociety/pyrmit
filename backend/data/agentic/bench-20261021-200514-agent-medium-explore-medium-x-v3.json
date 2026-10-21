@@ -1,0 +1,5524 @@
+[
+ {
+  "case": "kristineberg-terraced",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.25,
+  "point_scores": [
+   1,
+   0,
+   0,
+   1
+  ],
+  "unsupported": 2,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "verdict",
+  "mode_ok": true,
+  "evidence": 1.0,
+  "tool_calls": 10,
+  "llm_calls": 9,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 61.6,
+  "first_token_s": 56.5,
+  "cost": 0.00513,
+  "judge_cost": 0.000745172,
+  "tokens_in": 90620,
+  "tokens_out": 1842,
+  "comment": "The answer correctly confirms radhus are allowed in Kristineberg etapp 1 and cites supported sources, but it omits the two-storey/120-140 m² rule and the bygglov requirement, and states plot and footprint limits (130-160 m² minimum plot, 45-50% footprint) that contradict the reference's 250-600 m² plots and 120-140 m² building area.",
+  "answer": "**Verdict: Feasible with conditions.** Radhus are expressly allowed in **Kristineberg etapp 1**, but the applicable plot-size and building limits depend on which area of the detailed-plan map the site is in. [c:b28b51b90ce65173]\n\n**Key rules and constraints:**\n- The plan identifies areas for housing and specifically allows *radhus* (terraced houses), as well as areas for *radhus/parhus/kedjehus* (terraced, semi-detached or linked houses). [c:b28b51b90ce65173]\n- For radhus, the plan description gives a maximum building footprint (*byggnadsarea*) of **45–50% of the plot area** and minimum plot sizes ranging from **130–160 m²**. The applicable percentage and minimum depend on the map designation. [c:5c64d45f9699293e]\n- The stated maximum ridge height (*nockhöjd*) for these small-house areas varies between **7.5 and 9 metres**. [c:1b608d747f89a0f6]\n- *Byggnadsarea* means the building’s footprint, not its total floor area. For example, on a 150 m² plot, a 45–50% limit would mean a footprint of 67.5–75 m²; the plan’s exact designation determines which limit applies. [c:5c64d45f9699293e]\n- This answer concerns **etapp 1**. The municipality describes etapp 3 as a plan still investigating housing development, so do not assume etapp 1’s detailed limits apply to other stages. [c:8942a08d6014023a]\n\n**Process and next steps:** Check the **plankarta** for the specific plot to confirm its designation and exact building limits, then confirm the proposed design with Vallentuna’s building-permit office. The plan description says the map codes determine which rules apply where. [c:5c64d45f9699293e]\n\n**Uncertainties:** Without a precise location or property designation, I can’t tell which radhus zone—or which exact footprint percentage and height limit—applies.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Kristineberg, Vallentuna"
+    },
+    "chunks": [],
+    "output_chars": 680,
+    "image": false,
+    "ms": 19378,
+    "turn": 1
+   },
+   {
+    "tool": "plans",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "query": "Kristineberg",
+     "status": ""
+    },
+    "chunks": [],
+    "output_chars": 1048,
+    "image": false,
+    "ms": 10,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Kristineberg radhus detaljplan byggnadsarea bostäder",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 10
+    },
+    "chunks": [
+     "b28b51b90ce65173",
+     "5c64d45f9699293e",
+     "76387a7ad96570c9",
+     "0bdd7354409b6fa3",
+     "ae2fd741aff2c18e",
+     "d38e4ce48d6b570c",
+     "7371cb3ed433aa55",
+     "8942a08d6014023a",
+     "8fb291f5d39b4e36",
+     "b5c4dc4be0dcebcc"
+    ],
+    "output_chars": 4884,
+    "image": false,
+    "ms": 633,
+    "turn": 2
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "Kristineberg|radhus|byggnadsarea",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "8010f1ebabb78981",
+     "9c3afa489efe6b78",
+     "a260db0051003268",
+     "bd488691dbc3f776",
+     "a8faf32585caa789",
+     "0bdd7354409b6fa3",
+     "10f35a41ca70b7c5",
+     "97ea65684a5b79f2",
+     "a567b8fb955814d2",
+     "123b9f4d5c38a57f",
+     "55e3867cfde2addd",
+     "bd5fd2eadb9f3046",
+     "10155ffb1457879c",
+     "55433d2fb32a0003",
+     "6537c7d98ce38e51"
+    ],
+    "output_chars": 7565,
+    "image": false,
+    "ms": 4601,
+    "turn": 2
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "doc_type": "detaljplan",
+     "title_contains": "Kristineberg"
+    },
+    "chunks": [],
+    "output_chars": 911,
+    "image": false,
+    "ms": 3677,
+    "turn": 2
+   },
+   {
+    "tool": "plan_rules",
+    "arguments": {
+     "plan_id": "e469cf355c356715",
+     "topic": "building_area"
+    },
+    "chunks": [
+     "5c64d45f9699293e",
+     "221e3365f21786ca"
+    ],
+    "output_chars": 762,
+    "image": false,
+    "ms": 0,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "b28b51b90ce65173",
+     "doc_id": "",
+     "start": 0,
+     "count": 3
+    },
+    "chunks": [
+     "e687df7817440ef5",
+     "b28b51b90ce65173",
+     "5a887e8bbc342a85"
+    ],
+    "output_chars": 2338,
+    "image": false,
+    "ms": 3,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "pdf:0115:f3489cab302dba2c",
+     "start": 30,
+     "count": 10
+    },
+    "chunks": [
+     "b5c4dc4be0dcebcc",
+     "d82e618860e30be7",
+     "5c64d45f9699293e",
+     "221e3365f21786ca",
+     "1086440717ba1eb2",
+     "b32a6a67fb81aa6b",
+     "afd34d12d0fbea18",
+     "ec56ada4e2e9a80a",
+     "b3748eb783199893"
+    ],
+    "output_chars": 8740,
+    "image": false,
+    "ms": 3,
+    "turn": 5
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "f3|f4|radhus|45 %|50 %|minsta fastighetsstorlek",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "8010f1ebabb78981",
+     "a260db0051003268",
+     "0bdd7354409b6fa3",
+     "7f426774d27457a7",
+     "f035c9147a4db543",
+     "76387a7ad96570c9",
+     "aae75c5c5b436a28",
+     "be86f830917715ce",
+     "6f3c0257e4ff6c19",
+     "97ba03b4bd9b25a9",
+     "a57ee8d5672c04c3",
+     "deae063cc5877d5c",
+     "ecf800830016e587",
+     "4321be77ba9c08c8",
+     "860e16bc50eabaf8"
+    ],
+    "output_chars": 7182,
+    "image": false,
+    "ms": 3198,
+    "turn": 6
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "pdf:0115:f3489cab302dba2c",
+     "start": 39,
+     "count": 4
+    },
+    "chunks": [
+     "1b608d747f89a0f6",
+     "481f9c9c403b8f6a",
+     "d18b3e5bfb98991f",
+     "aedf1b61f9b98832"
+    ],
+    "output_chars": 5573,
+    "image": false,
+    "ms": 1,
+    "turn": 7
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "kumla-200m2",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "unclear",
+  "verdict_ok": true,
+  "points": 0.625,
+  "point_scores": [
+   2,
+   2,
+   1,
+   0
+  ],
+  "unsupported": 0,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "verdict",
+  "mode_ok": true,
+  "evidence": 0.5,
+  "tool_calls": 18,
+  "llm_calls": 8,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 65.7,
+  "first_token_s": 58.5,
+  "cost": 0.00748,
+  "judge_cost": 0.00056355,
+  "tokens_in": 116336,
+  "tokens_out": 2547,
+  "comment": "The answer correctly states the 160/180 m² footprint limits and that 200 m² exceeds them, confirms the 40 m² garage under the 60 m² komplementbyggnad allowance, but only touches on bygglov without citing PBL 9:3, and entirely omits the missing municipal water/sewage (shared well/wastewater) key point, leaving the overall classification as unclear.",
+  "answer": "**Verdict:** **Unclear as a formal decision; likely not feasible as described under the Kumla-Stensta plan provisions available to me.** Those provisions set a maximum house footprint of either 160 m² or 180 m², depending on which part of the area your plot is in, so a 200 m² house would exceed either limit. [c:4cb664425072e3a7]\n\n**Key rules and constraints:**\n- The plan description says the area was intended for about ten detached homes. It describes a maximum building area of **180 m² per plot in the northern part** and **160 m² per plot in the southern part**, with a separate allowance for a complementary building of up to **60 m²**. [c:987e9fb52b9e8dfc] [c:4cb664425072e3a7]\n- On that basis, a **40 m² garage may fit the stated complementary-building allowance**, but it does not let you use the house’s allowance for a larger main building. The proposal also says the house must be at least **4 m from the property boundary** and a garage/carport/store at least **1.5 m from another property boundary**, unless the neighbour agrees to a closer position. [c:4cb664425072e3a7]\n- A single storey does not remove the stated footprint cap. The description also refers to a main-roof pitch of **15°–35°** and minimum plot sizes of **1,200–1,400 m²**. [c:9dfdfcacaebd4432]\n\n**Process and next steps:**\n1. Ask Vallentuna’s building-permit team to confirm the **adopted, legally binding detailed plan and the applicable zone for your plot**. The corpus contains a Kumla-Stensta plan description, but not its plankarta, so I cannot establish whether these stated limits are the final binding provisions or which part of the plan your plot falls in. The plan description itself explains that the plankarta—not the explanatory description—is legally binding in later permit decisions. [c:f7d0be9debce5249]\n2. If those limits apply, explore a design with a house footprint no larger than **160 or 180 m²**, plus a garage that fits the complementary-building allowance and placement rules. A larger house would require the municipality to confirm whether any lawful exception is available; do not assume one will be granted.\n3. The description says parking is to be arranged on the plot. It also flags that a geotechnical investigation may be required before a permit if conditions warrant it, and that the area is hilly and building design should respect the existing terrain. [c:8a53e6ce6e0621b4] [c:4a08f570886b8a8a] [c:3edd3ef911a68e81]\n\n**Uncertainties:** I could not verify the final adopted plankarta or identify your plot’s zone from the available records. The plot designation—or a plan-map extract—would let the municipality confirm the exact limit that applies.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Kumla-Stensta, Vallentuna"
+    },
+    "chunks": [],
+    "output_chars": 388,
+    "image": false,
+    "ms": 11851,
+    "turn": 1
+   },
+   {
+    "tool": "plans",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "query": "Kumla-Stensta",
+     "status": ""
+    },
+    "chunks": [],
+    "output_chars": 238,
+    "image": false,
+    "ms": 21,
+    "turn": 2
+   },
+   {
+    "tool": "plans",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "query": "Stensta",
+     "status": ""
+    },
+    "chunks": [],
+    "output_chars": 1982,
+    "image": false,
+    "ms": 42,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Kumla-Stensta detaljplan nya tomter byggnadsarea enbostadshus garage",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 10
+    },
+    "chunks": [
+     "4cb664425072e3a7",
+     "987e9fb52b9e8dfc",
+     "968da7d1ea93b0c3",
+     "840f0cb0b994eec4",
+     "3d785a177e6ee298",
+     "f361a52a5013e922",
+     "19cab706eafbab28",
+     "22061b9c77b19f19",
+     "bcc1c1addc36b78e",
+     "8a53e6ce6e0621b4"
+    ],
+    "output_chars": 4572,
+    "image": false,
+    "ms": 1743,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "4cb664425072e3a7",
+     "doc_id": "",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [
+     "319d0490257be6b8",
+     "4cb664425072e3a7",
+     "ad58f37367e7a3cf",
+     "9dfdfcacaebd4432",
+     "8a53e6ce6e0621b4",
+     "d34d16d745a2b45e",
+     "0d88bca12b660776",
+     "0924af94920d0e22",
+     "376ec66c613daea4",
+     "279a43ab45da7d7c"
+    ],
+    "output_chars": 6189,
+    "image": false,
+    "ms": 41,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "987e9fb52b9e8dfc",
+     "doc_id": "",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [
+     "f7d0be9debce5249",
+     "987e9fb52b9e8dfc",
+     "1241ccc42c2968d3",
+     "42605f292626dc51",
+     "52a69b301a16035c",
+     "f361a52a5013e922",
+     "0bea7252c081f803",
+     "22061b9c77b19f19",
+     "1dfb1a966539118f",
+     "ffcabd126389178e"
+    ],
+    "output_chars": 5625,
+    "image": false,
+    "ms": 46,
+    "turn": 3
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "Kumla-Stensta|byggnadsarea|garage|200 m2|200 m²|friliggande",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "0bdd7354409b6fa3",
+     "7f426774d27457a7",
+     "f035c9147a4db543",
+     "76387a7ad96570c9",
+     "3615634ae68e63ba",
+     "64c5dfd58d80bf2a",
+     "f9afc9644586fc39",
+     "be86f830917715ce",
+     "2b3414d53ba80efb",
+     "1299061b29a6b768",
+     "c7321e2bee718f42",
+     "f7d0be9debce5249",
+     "987e9fb52b9e8dfc",
+     "1241ccc42c2968d3",
+     "42605f292626dc51"
+    ],
+    "output_chars": 6754,
+    "image": false,
+    "ms": 4300,
+    "turn": 3
+   },
+   {
+    "tool": "plan_rules",
+    "arguments": {
+     "plan_id": "89f64a7a8ad3fb3e",
+     "topic": "building_area"
+    },
+    "chunks": [
+     "08bcd1d8a2069568",
+     "2393d22e6cde5aa7",
+     "67c34a689c3df375"
+    ],
+    "output_chars": 1646,
+    "image": false,
+    "ms": 0,
+    "turn": 3
+   },
+   {
+    "tool": "plan_rules",
+    "arguments": {
+     "plan_id": "89f64a7a8ad3fb3e",
+     "topic": "ancillary"
+    },
+    "chunks": [
+     "02beffc8e3232c99",
+     "08bcd1d8a2069568",
+     "2393d22e6cde5aa7",
+     "f689268cc9e21ffc",
+     "49e5f6bfd499d041",
+     "2d86c7307ceeff9c"
+    ],
+    "output_chars": 2641,
+    "image": false,
+    "ms": 0,
+    "turn": 3
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "doc_type": "detaljplan",
+     "title_contains": "Kumla-Stensta"
+    },
+    "chunks": [],
+    "output_chars": 206,
+    "image": false,
+    "ms": 2132,
+    "turn": 4
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "160 m²|180 m²|60 kvm|genomförandetid|antagen|laga kraft|plankarta",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "a8faf32585caa789",
+     "10155ffb1457879c",
+     "55433d2fb32a0003",
+     "e6dc6a9f20190ab0",
+     "64c5dfd58d80bf2a",
+     "807669871e724339",
+     "95863722ea3dba7e",
+     "5f626dfdf75edd11",
+     "3819c1027df853f6",
+     "10c9fbf88b9f3296",
+     "de137239ec8056f1",
+     "c7321e2bee718f42",
+     "f7d0be9debce5249",
+     "3edd3ef911a68e81",
+     "4cb664425072e3a7"
+    ],
+    "output_chars": 6973,
+    "image": false,
+    "ms": 3636,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c7321e2bee718f42",
+     "doc_id": "",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "1299061b29a6b768",
+     "c7321e2bee718f42",
+     "f7d0be9debce5249",
+     "987e9fb52b9e8dfc",
+     "1241ccc42c2968d3",
+     "42605f292626dc51",
+     "52a69b301a16035c",
+     "f361a52a5013e922"
+    ],
+    "output_chars": 4304,
+    "image": false,
+    "ms": 22,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "d34d16d745a2b45e",
+     "doc_id": "",
+     "start": 0,
+     "count": 0
+    },
+    "chunks": [
+     "8a53e6ce6e0621b4",
+     "d34d16d745a2b45e",
+     "0d88bca12b660776"
+    ],
+    "output_chars": 1629,
+    "image": false,
+    "ms": 21,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Kumla 1:9 detaljplan antagen laga kraft byggnadsarea planbeskrivning",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 10
+    },
+    "chunks": [
+     "f361a52a5013e922",
+     "1299061b29a6b768",
+     "1dfb1a966539118f",
+     "af56afc5a2ae03b1",
+     "7611e85a395f050e",
+     "7ff82dff25691a94",
+     "8fcca2ac2026015e",
+     "fe48f44623fd78e9",
+     "840f0cb0b994eec4",
+     "0dddc73997b3f653"
+    ],
+    "output_chars": 3873,
+    "image": false,
+    "ms": 636,
+    "turn": 5
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "Kumla 1:9|Kumla-Stensta",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "1299061b29a6b768",
+     "c7321e2bee718f42",
+     "f7d0be9debce5249",
+     "987e9fb52b9e8dfc",
+     "1241ccc42c2968d3",
+     "42605f292626dc51",
+     "52a69b301a16035c",
+     "f361a52a5013e922",
+     "0bea7252c081f803",
+     "22061b9c77b19f19",
+     "1dfb1a966539118f",
+     "ffcabd126389178e",
+     "7c2a52a1fda844a1",
+     "4a08f570886b8a8a",
+     "3edd3ef911a68e81"
+    ],
+    "output_chars": 6767,
+    "image": false,
+    "ms": 2567,
+    "turn": 5
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "3edd3ef911a68e81",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [
+     "4a08f570886b8a8a",
+     "3edd3ef911a68e81",
+     "319d0490257be6b8",
+     "4cb664425072e3a7",
+     "ad58f37367e7a3cf"
+    ],
+    "output_chars": 4217,
+    "image": false,
+    "ms": 36,
+    "turn": 5
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "279a43ab45da7d7c",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [
+     "376ec66c613daea4",
+     "279a43ab45da7d7c",
+     "aa72324bdfec1030",
+     "ffa9d48f81132853",
+     "06461081a3a32638"
+    ],
+    "output_chars": 3144,
+    "image": false,
+    "ms": 34,
+    "turn": 5
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "7611b1a966a2b45e",
+     "doc_id": "",
+     "start": 0,
+     "count": 4
+    },
+    "chunks": [],
+    "output_chars": 34,
+    "image": false,
+    "ms": 0,
+    "turn": 6
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "attefall-vallentuna",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.625,
+  "point_scores": [
+   2,
+   2,
+   1,
+   0
+  ],
+  "unsupported": 1,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "verdict",
+  "mode_ok": true,
+  "evidence": 1.0,
+  "tool_calls": 17,
+  "llm_calls": 6,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 58.5,
+  "first_token_s": 52.7,
+  "cost": 0.00514,
+  "judge_cost": 0.00066612,
+  "tokens_in": 62877,
+  "tokens_out": 2558,
+  "comment": "The answer correctly covers the 30 m²/4 m/45 m²/plot conditions and the anmälan–startbesked requirement, but it only partially states the cultural-heritage rule (softened to 'may' and mis-cited as 9 kap. 37 § instead of 38 §) and never mentions that close placement to the boundary may require the neighbours' consent.",
+  "answer": "**Verdict: Feasible with conditions** — a 25 m² guest cottage can generally be built without a building permit in a Vallentuna detaljplan area, provided it meets the conditions below.\n\n**Key rules and constraints:**\n- A guest cottage is a type of *komplementbyggnad* under Vallentuna’s guidance. For a building within a detailed-plan area, PBL 9 kap. 4 § exempts it from building-permit requirements if its building area is no more than 30 m², it is smaller than the house it complements, its roof ridge is no higher than 4.0 m, and it is placed within the property’s *tomt*. The cottage and other qualifying accessory buildings on the property must together total no more than 45 m². [c:c153b69d1648f70b; c:a1cbd51fb395f18a]\n- The permit exemption does not apply if the cottage would be closer than 4.5 m to a property boundary; a permit is then required. [c:7386ffc09148425f]\n- A permit may also be required where special cultural-heritage protections apply. Vallentuna’s guidance flags culturally significant areas, and PBL 9 kap. 37 § provides for permit requirements for buildings or areas covered by specified protection provisions. [c:a1cbd51fb395f18a; c:3b8f4cbf239fddb1]\n- The cottage may still require a notification and *startbesked* before construction—for example, if you install water and wastewater facilities or ventilation equipment. PBL 10 kap. 3 § prohibits starting work that requires a notification until the municipality has issued *startbesked*. [c:f496dbe166d04eb5; c:f8721e335f9c3e3b]\n\n**Process and next steps:**\n1. Check the cottage’s distance from every property boundary, its ridge height, and the total area of existing accessory buildings.\n2. Ask Vallentuna’s building-permit department whether your property is in a protected cultural-heritage area and whether your intended installations require notification.\n3. If notification is required, wait for *startbesked* before starting work.\n\n**Uncertainties:** I don’t know your property, the cottage’s proposed location or height, the area of existing accessory buildings, or whether it will include water, wastewater or ventilation. Those details could change the result.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Vallentuna"
+    },
+    "chunks": [],
+    "output_chars": 211,
+    "image": false,
+    "ms": 9434,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "attefallshus komplementbyggnad bygglov detaljplan 25 m2 anmälan startbesked",
+     "scope": "law",
+     "kommun": "",
+     "k": 5
+    },
+    "chunks": [
+     "cc6f86001c3d2d48",
+     "e1e830b363984271",
+     "c153b69d1648f70b",
+     "42ceaa2d71a734f0",
+     "1d3d3e588b5a00f6"
+    ],
+    "output_chars": 2275,
+    "image": false,
+    "ms": 7777,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "attefallshus 25 kvadratmeter bygglov detaljplan anmälan startbesked",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "69169ebb2b5d0265",
+     "918feb6ddefec2ef",
+     "5ebb73256d252c5e",
+     "5f262f51ff60e564",
+     "bf94a49275fc32a8"
+    ],
+    "output_chars": 2838,
+    "image": false,
+    "ms": 7814,
+    "turn": 1
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 4 §"
+    },
+    "chunks": [
+     "c153b69d1648f70b"
+    ],
+    "output_chars": 978,
+    "image": false,
+    "ms": 196,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBF",
+     "section": "6 kap. 5 §"
+    },
+    "chunks": [
+     "8ffc9f9528573f3a",
+     "16dcef42ecc18f39"
+    ],
+    "output_chars": 1736,
+    "image": false,
+    "ms": 140,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "komplementbyggnad attefallshus 30 kvadratmeter bygglovsfritt detaljplan Vallentuna startbesked placering tomt",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 8
+    },
+    "chunks": [
+     "a1cbd51fb395f18a",
+     "48d4295f4b3b832b",
+     "7498d1ce621cb549",
+     "ab21d00f1892d356",
+     "f9819a615096397a",
+     "e00cdaa92186f3bc",
+     "a2ee3503fec2fb03",
+     "317a896764ba8609"
+    ],
+    "output_chars": 3254,
+    "image": false,
+    "ms": 929,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "PBL bygglovsbefriad komplementbyggnad 30 kvadratmeter startbesked anmälan 2025",
+     "scope": "law",
+     "kommun": "",
+     "k": 8
+    },
+    "chunks": [
+     "c153b69d1648f70b",
+     "cc6f86001c3d2d48",
+     "1d15f447dd106635",
+     "42ceaa2d71a734f0",
+     "ddcc5e75a5c5c5e1",
+     "9821607343973fde",
+     "e1e830b363984271",
+     "6f0410c96e60041e"
+    ],
+    "output_chars": 3639,
+    "image": false,
+    "ms": 1237,
+    "turn": 2
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "doc_type": "bygglov",
+     "title_contains": "komplementbyggnad"
+    },
+    "chunks": [],
+    "output_chars": 218,
+    "image": false,
+    "ms": 4412,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0115:be4271386d5769ad",
+     "start": 0,
+     "count": 4
+    },
+    "chunks": [
+     "a1cbd51fb395f18a",
+     "f496dbe166d04eb5"
+    ],
+    "output_chars": 3370,
+    "image": false,
+    "ms": 38,
+    "turn": 3
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "anmälan|startbesked|tomtgräns|4,5 meter|strandskydd|kulturhistor",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "3ae91dff6e1f8e09",
+     "4463112e3a73206d",
+     "5857ae2e2b2b1435",
+     "32684057c1b0942d",
+     "2a5012e2c9016354",
+     "fde5f1738b3edcb2",
+     "e105b166c9f2563e",
+     "c9df984ac93aab3b",
+     "69e1a0826c5d4b23",
+     "866b27b9640a9a94",
+     "b610caf34667dfef",
+     "65b3964bed76f73c",
+     "fdf289987c9b006e",
+     "c973dc9035bad696",
+     "fca7af895fff224f"
+    ],
+    "output_chars": 7242,
+    "image": false,
+    "ms": 3791,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "10 kap. 3 §"
+    },
+    "chunks": [
+     "f8721e335f9c3e3b"
+    ],
+    "output_chars": 550,
+    "image": false,
+    "ms": 125,
+    "turn": 3
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "9 kap. 4 § komplementbyggnad anmälan startbesked 2025 bygglovsfri",
+     "scope": "law",
+     "kommun": "",
+     "k": 6
+    },
+    "chunks": [
+     "11527a363cc7d400",
+     "f8721e335f9c3e3b",
+     "cc6f86001c3d2d48",
+     "5fa41941e5898eae",
+     "ddcc5e75a5c5c5e1",
+     "1495643edb0b8acb"
+    ],
+    "output_chars": 2505,
+    "image": false,
+    "ms": 979,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 8 §"
+    },
+    "chunks": [
+     "751393d66058335a"
+    ],
+    "output_chars": 223,
+    "image": false,
+    "ms": 118,
+    "turn": 3
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "bygglovsbefriad komplementbyggnad placeras närmare gräns 4,5 meter medgivande 9 kap 4 §",
+     "scope": "law",
+     "kommun": "",
+     "k": 5
+    },
+    "chunks": [
+     "c153b69d1648f70b",
+     "7386ffc09148425f",
+     "9821607343973fde",
+     "42ceaa2d71a734f0",
+     "330abfd22d93caa6"
+    ],
+    "output_chars": 2247,
+    "image": false,
+    "ms": 1095,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "kulturhistoriskt särskilt värdefullt område bygglov krävs komplementbyggnad 9 kap 8 §",
+     "scope": "law",
+     "kommun": "",
+     "k": 5
+    },
+    "chunks": [
+     "c05a57ca9446f7b5",
+     "3b8f4cbf239fddb1",
+     "720626801923cf9d",
+     "1e5bd8dc7c760893",
+     "9821607343973fde"
+    ],
+    "output_chars": 2176,
+    "image": false,
+    "ms": 1460,
+    "turn": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 34 §"
+    },
+    "chunks": [
+     "7386ffc09148425f"
+    ],
+    "output_chars": 726,
+    "image": false,
+    "ms": 222,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "komplementbyggnad anmälan installation vatten avlopp ventilation startbesked",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "c4adb47e06430681",
+     "f496dbe166d04eb5",
+     "5facccff1b9e03db",
+     "923723018d0e2b11",
+     "5ebb73256d252c5e"
+    ],
+    "output_chars": 2485,
+    "image": false,
+    "ms": 725,
+    "turn": 4
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "morby-five-storeys",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "not_feasible",
+  "verdict_ok": true,
+  "points": 0.875,
+  "point_scores": [
+   1,
+   2,
+   2,
+   2
+  ],
+  "unsupported": 1,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "verdict",
+  "mode_ok": true,
+  "evidence": 0.6666666666666666,
+  "tool_calls": 24,
+  "llm_calls": 8,
+  "map_views": 1,
+  "map_doc_viewed": null,
+  "seconds": 79.7,
+  "first_token_s": 71.9,
+  "cost": 0.01037,
+  "judge_cost": 0.00080141,
+  "tokens_in": 132202,
+  "tokens_out": 3295,
+  "comment": "The answer correctly concludes the project is not feasible and covers the storey limit, the 15 m dangerous-goods setback and the need for a plan change, but its stated floor-area total (6,400 m²) conflicts with the reference's ~7,000 m² BTA figure.",
+  "answer": "**Verdict: Not feasible as described.** The Mörby backe detailed plan allows apartment buildings and a fifth level in limited forms, but the mapped gross-floor-area limits total about **6,400 m²**, not 8,000 m².\n\n**Key rules and constraints:**\n- Vallentuna’s plan registry identifies the Mörby backe detailed plan as **in force**. The plan concerns the junction of Teknikvägen and Mörbyvägen and the properties Vallentuna-Mörby 1:98, 1:94, 1:305 and 1:357, among others. [c:e6244a41ff38a373]\n- The plan map sets maximum gross floor areas of **1,300 m², 2,800 m² and 2,300 m²** in separate areas—**6,400 m² combined**. An 8,000 m² proposal exceeds those mapped limits by about **1,600 m²**. [c:833b59dfb8c2335b; c:e567970b2009ae93]\n- The plan’s described massing is not five full storeys throughout: the northern building is described as four storeys plus a fifth level designed as an attic under a pitched roof; the southern building is lower, described as three storeys plus an attic. [c:87f96bc8d1c82c06]\n- Along Teknikvägen, the plan provides a 15-metre risk setback for homes because the road is a secondary route for dangerous goods. The map also requires fire-resistant façade/window design and evacuation away from the road in the relevant area. [c:87f96bc8d1c82c06; c:8567f5907eec429f]\n- Within a detailed-plan area, building permission depends on the proposal complying with the plan. A departure can be allowed only in specified circumstances, including a departure that is “small” and consistent with the plan’s purpose; an additional 1,600 m² over the mapped total is not a sound basis to assume that exception will apply. (PBL 9 kap. 56 and 60 §§.) [c:9a534c8969a1e156; c:b0dbf056f7966c02]\n\n**Process and next steps:**\n1. Have the architect test a scheme against the **adopted, legally binding plan map**, separating floor area by each mapped area and distinguishing a permitted attic level from a full storey.\n2. If 8,000 m² is essential, ask Vallentuna’s planning department whether it would consider a plan amendment. Increasing the permitted development would require a planning decision; it should not be treated as achievable through an ordinary building-permit application.\n3. Confirm the risk-design requirements and the applicable plan-map version with the municipality before fixing the massing or floor-area schedule.\n\n**Uncertainties:** The plan materials available here include a map sheet marked as a consultation-stage document, although the plan registry lists the plan as in force. Confirm the adopted, legally binding map and the exact allocation of the three area caps for your intended footprint with Vallentuna before relying on the 6,400 m² calculation.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Mörby backe, Teknikvägen / Mörbyvägen, central Vallentuna"
+    },
+    "chunks": [],
+    "output_chars": 211,
+    "image": false,
+    "ms": 8299,
+    "turn": 1
+   },
+   {
+    "tool": "plans",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "query": "Mörby backe Teknikvägen Mörbyvägen",
+     "status": ""
+    },
+    "chunks": [],
+    "output_chars": 108,
+    "image": false,
+    "ms": 971,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Mörby backe Teknikvägen Mörbyvägen bostäder detaljplan fem våningar exploatering",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 10
+    },
+    "chunks": [
+     "9147278d49464eb0",
+     "860c27ec54c65d80",
+     "4a26844efbd75ec9",
+     "656912f612a5758f",
+     "f39b50d8b4e1a324",
+     "87f96bc8d1c82c06",
+     "e6900f3f1d2994c0",
+     "3d47f8e931e34518",
+     "ca3f73d16db125f0",
+     "16e4742927c2b1e5"
+    ],
+    "output_chars": 5087,
+    "image": false,
+    "ms": 1015,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "bygglov flerbostadshus detaljplan våningar byggnadsarea bruttoarea",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "c153b69d1648f70b",
+     "42ceaa2d71a734f0",
+     "9821607343973fde",
+     "330abfd22d93caa6",
+     "1d15f447dd106635"
+    ],
+    "output_chars": 2260,
+    "image": false,
+    "ms": 1287,
+    "turn": 2
+   },
+   {
+    "tool": "plans",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "query": "Mörby",
+     "status": ""
+    },
+    "chunks": [],
+    "output_chars": 920,
+    "image": false,
+    "ms": 52,
+    "turn": 3
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "doc_type": "detaljplan",
+     "title_contains": "Mörby backe"
+    },
+    "chunks": [],
+    "output_chars": 821,
+    "image": false,
+    "ms": 3438,
+    "turn": 3
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "Mörby backe|Mörbyvägen|Teknikvägen|laga kraft|femte våning|bruttoarea",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "5b4c891543795226",
+     "cd5248da7d2e1815",
+     "f36d13925ce78b37",
+     "95863722ea3dba7e",
+     "3819c1027df853f6",
+     "10c9fbf88b9f3296",
+     "de137239ec8056f1",
+     "c25df6249df13e84",
+     "dc5cc981fc35800f",
+     "ac18d61711957081",
+     "1d58f9277ae886a0",
+     "2b5a4867f1d3648c",
+     "87f96bc8d1c82c06",
+     "5a7f8af493bc9ed9",
+     "8600ecf7245a75fd"
+    ],
+    "output_chars": 6580,
+    "image": false,
+    "ms": 3770,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 56 §"
+    },
+    "chunks": [
+     "9a534c8969a1e156",
+     "4e62704f77195c61"
+    ],
+    "output_chars": 2341,
+    "image": false,
+    "ms": 151,
+    "turn": 3
+   },
+   {
+    "tool": "plan_rules",
+    "arguments": {
+     "plan_id": "b5bf648f929ffe0a",
+     "topic": "height"
+    },
+    "chunks": [
+     "d4662c132d6b7955",
+     "9cf5b97d17e9112f"
+    ],
+    "output_chars": 1044,
+    "image": false,
+    "ms": 0,
+    "turn": 4
+   },
+   {
+    "tool": "plan_rules",
+    "arguments": {
+     "plan_id": "b5bf648f929ffe0a",
+     "topic": "building_area"
+    },
+    "chunks": [
+     "833b59dfb8c2335b",
+     "e567970b2009ae93",
+     "8aae07911629b219",
+     "1e05a18a81bc1c07"
+    ],
+    "output_chars": 1274,
+    "image": false,
+    "ms": 0,
+    "turn": 4
+   },
+   {
+    "tool": "plan_rules",
+    "arguments": {
+     "plan_id": "b5bf648f929ffe0a",
+     "topic": "design"
+    },
+    "chunks": [
+     "8567f5907eec429f"
+    ],
+    "output_chars": 1255,
+    "image": false,
+    "ms": 0,
+    "turn": 4
+   },
+   {
+    "tool": "plan_rules",
+    "arguments": {
+     "plan_id": "b5bf648f929ffe0a",
+     "topic": "use"
+    },
+    "chunks": [],
+    "output_chars": 735,
+    "image": false,
+    "ms": 0,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "pdf:0115:2295fbf76ea7120b",
+     "start": 0,
+     "count": 58
+    },
+    "chunks": [
+     "3d47f8e931e34518",
+     "9147278d49464eb0",
+     "135b6b9335eb57fb",
+     "15ef0485dae8d691",
+     "895a755b9ae67405",
+     "34ccd89ab1ae238e"
+    ],
+    "output_chars": 8438,
+    "image": false,
+    "ms": 18,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "pdf:0115:a18f8dddab2b9736",
+     "start": 0,
+     "count": 117
+    },
+    "chunks": [
+     "b1dbb27e7cb52d24",
+     "e6244a41ff38a373",
+     "a44720bae3de7717",
+     "cf718fe316ba20be",
+     "f779d479c61f6694",
+     "a7ca5f5d929ad926",
+     "0b3033f65abc46f0",
+     "54783a9c5cfa3823",
+     "5503041723fa21c2"
+    ],
+    "output_chars": 9194,
+    "image": false,
+    "ms": 17,
+    "turn": 4
+   },
+   {
+    "tool": "view_map_area",
+    "arguments": {
+     "doc_id": "pdf:0115:2ffc818922b652aa",
+     "around": "Teknikvägen",
+     "page": 1,
+     "size": "wide"
+    },
+    "chunks": [
+     "01e70e306f718a8e",
+     "e3f851462b282806",
+     "8567f5907eec429f",
+     "020b8781f3ba6998",
+     "1e05a18a81bc1c07",
+     "833b59dfb8c2335b",
+     "e567970b2009ae93",
+     "8aae07911629b219",
+     "9cf5b97d17e9112f",
+     "c8a28013e8626ba4"
+    ],
+    "output_chars": 2501,
+    "image": true,
+    "ms": 742,
+    "turn": 5
+   },
+   {
+    "tool": "plan_rules",
+    "arguments": {
+     "plan_id": "b5bf648f929ffe0a",
+     "topic": "storeys"
+    },
+    "chunks": [],
+    "output_chars": 735,
+    "image": false,
+    "ms": 0,
+    "turn": 5
+   },
+   {
+    "tool": "plan_rules",
+    "arguments": {
+     "plan_id": "b5bf648f929ffe0a",
+     "topic": "no_build"
+    },
+    "chunks": [],
+    "output_chars": 735,
+    "image": false,
+    "ms": 0,
+    "turn": 5
+   },
+   {
+    "tool": "plan_rules",
+    "arguments": {
+     "plan_id": "b5bf648f929ffe0a",
+     "topic": "ancillary"
+    },
+    "chunks": [
+     "01e70e306f718a8e",
+     "d4662c132d6b7955"
+    ],
+    "output_chars": 1063,
+    "image": false,
+    "ms": 0,
+    "turn": 5
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "laga kraft|1300 m²|2800 m²|2300 m²|4 våningar|femte våning|15 meter|8 000|8000",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "95863722ea3dba7e",
+     "3819c1027df853f6",
+     "10c9fbf88b9f3296",
+     "de137239ec8056f1",
+     "c25df6249df13e84",
+     "87f96bc8d1c82c06",
+     "5a66a38445341370",
+     "968e8bd3ffdda8ad",
+     "371c5ab53a764035",
+     "95fcd84898c7fa1d",
+     "2f80b11eb3b90373",
+     "aa876e0b575eca2f",
+     "1615a0fce1475d9e",
+     "46de37d8a7c84f6b",
+     "b22e67368b0364c5"
+    ],
+    "output_chars": 6992,
+    "image": false,
+    "ms": 3149,
+    "turn": 5
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "pdf:0115:c4d771e390dae2d8",
+     "start": 0,
+     "count": 51
+    },
+    "chunks": [
+     "4400b3a93fb8e937",
+     "861970b8cbd4d4ef",
+     "68c7896097e48d75",
+     "0ab74382a9b87ecf",
+     "1284da4457cf4af2",
+     "4fadeb9a9f3c561f"
+    ],
+    "output_chars": 8046,
+    "image": false,
+    "ms": 21,
+    "turn": 5
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "legacy:moerby_backe",
+     "start": 0,
+     "count": 35
+    },
+    "chunks": [
+     "dc5cc981fc35800f",
+     "ac18d61711957081",
+     "1d58f9277ae886a0",
+     "2b5a4867f1d3648c",
+     "87f96bc8d1c82c06",
+     "5a7f8af493bc9ed9",
+     "8600ecf7245a75fd",
+     "cff62b46975ef48c",
+     "84a9c66c7063457a",
+     "779e524834611724",
+     "5a66a38445341370",
+     "2a52ba7de9215fd7"
+    ],
+    "output_chars": 8601,
+    "image": false,
+    "ms": 26,
+    "turn": 6
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "Mörby backe|genomförandetid|Största bruttoarea är|BTA|laga kraft",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "95863722ea3dba7e",
+     "3819c1027df853f6",
+     "10c9fbf88b9f3296",
+     "de137239ec8056f1",
+     "7de8dc1b11c83d8f",
+     "c25df6249df13e84",
+     "dc5cc981fc35800f",
+     "ac18d61711957081",
+     "1d58f9277ae886a0",
+     "2b5a4867f1d3648c",
+     "87f96bc8d1c82c06",
+     "5a7f8af493bc9ed9",
+     "8600ecf7245a75fd",
+     "cff62b46975ef48c",
+     "84a9c66c7063457a"
+    ],
+    "output_chars": 6838,
+    "image": false,
+    "ms": 2183,
+    "turn": 6
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 61 §"
+    },
+    "chunks": [
+     "cfffbde7885e1641"
+    ],
+    "output_chars": 644,
+    "image": false,
+    "ms": 33,
+    "turn": 6
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 60 §"
+    },
+    "chunks": [
+     "b0dbf056f7966c02"
+    ],
+    "output_chars": 905,
+    "image": false,
+    "ms": 31,
+    "turn": 6
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "ydre-lake-house",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "unclear",
+  "verdict_ok": true,
+  "points": 1.0,
+  "point_scores": [
+   2,
+   2,
+   2,
+   2
+  ],
+  "unsupported": 0,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "verdict",
+  "mode_ok": true,
+  "evidence": 1.0,
+  "tool_calls": 20,
+  "llm_calls": 6,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 38.3,
+  "first_token_s": 27.3,
+  "cost": 0.00473,
+  "judge_cost": 0.000892632,
+  "tokens_in": 63960,
+  "tokens_out": 2048,
+  "comment": "The answer clearly covers all four key points (100 m strandskydd, building prohibition, dispens with särskilda skäl, and bygglov/förhandsbesked) with all factual claims backed by the cited sources, though its classification as 'unclear' is less apt than 'conditional' given that the reference clearly frames this as possible only with a dispens.",
+  "answer": "**Verdict: Unclear — potentially possible, but a holiday house 40 metres from the shore will normally need a separate shoreline-protection exemption, and approval depends heavily on the exact lake and site.**\n\n**Key rules and constraints:**\n\n- Ydre says shoreline protection normally extends **100 metres from the shore**, on both land and water, and may extend farther. At 40 metres, the site is therefore likely protected, unless the lake falls within a statutory exception or protection has otherwise been removed. Ydre also notes that protection no longer generally applies to lakes smaller than one hectare, or to lakes created after 1975, subject to possible protection decisions by the County Administrative Board. [c:171ff4c79e2da4fa; c:59cb28eb69032461]\n- Within a protected area, a new building is prohibited unless an exemption is granted. [Miljöbalken (MB) 7 kap. 15 §; c:38fb0ce0bc889423] Ydre’s guidance says an exemption requires a **special reason**; examples include land already lawfully used privately or land separated from the shore by a road or development. [c:242415e9f8510532]\n- For a new single holiday house, the exemption grounds are limited. They can include land already taken into use in a way that makes it unimportant to the protection purposes, separation from the shore, or certain compelling public or other interests. [MB 7 kap. 18 d–e §§; c:002270483256cd3c; c:00ec41fdf90976ee] If the site is in a designated LIS area—*rural development in shoreline locations*—the rules also allow consideration of whether the shoreline location contributes to rural development. But for an individual one- or two-home proposal, the specific LIS ground is whether the home is planned **in connection with an existing dwelling**. [MB 7 kap. 18 g §; c:e196f3b2f4276d6b] Being in Ydre, or near a lake, is not by itself enough.\n- Any exemption must preserve the public’s free passage and the conditions needed for plant and animal life between the shore and the building, where required. [MB 7 kap. 18 i §; c:a1c7f3f11ae547c3]\n- Outside a detailed development plan, building permission is still possible, but the site must be suitable and the proposal must meet planning requirements. Relevant issues include health and safety, ground and water conditions, access, water supply, wastewater, pollution, noise, flooding and erosion. [PBL 9 kap. 57 §; 2 kap. 5 §; c:01156e3238dfc9f8; c:945fef370731f443]\n- A building permit and shoreline-protection exemption are **separate approvals**: a building permit does not itself lift the shoreline prohibition. Ydre identifies the municipality’s shoreline-exemption application route on its guidance page. [c:242415e9f8510532; c:cf2506fac3ee6a90]\n\n**Process and next steps:**\n\n1. Ask Ydre’s building/environment departments to confirm the lake’s shoreline-protection status and whether the proposed plot is within a mapped LIS area. The exact lake, property and proposed building position matter.\n2. If protection applies, apply for a shoreline-protection exemption and explain the specific statutory reason for it; show the proposed building, access and how shoreline passage and nature values will be protected.\n3. Seek a **preliminary location decision** (*förhandsbesked*) from Ydre before commissioning full building-permit drawings. Outside a detailed plan, a preliminary decision can assess whether the house can be located at that site; it does not replace the shoreline exemption. [PBL 9 kap. 74 §; c:1f2cb83654a3676d]\n4. If the site is considered suitable and shoreline protection can be resolved, apply for building permission and provide the required access, water and wastewater information.\n\n**Uncertainties:** You have not identified the lake or property, so I cannot confirm whether shoreline protection applies, whether the site is in a designated LIS area, whether a qualifying special reason exists, or whether water, wastewater, access or site conditions would support permission. The municipality should verify these against the exact location before you rely on the 40-metre measurement.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Ydre"
+    },
+    "chunks": [],
+    "output_chars": 200,
+    "image": false,
+    "ms": 2994,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Ydre strandskydd ny bostad fritidshus strandnära landsbygd förhandsbesked bygglov",
+     "scope": "kommun",
+     "kommun": "Ydre",
+     "k": 8
+    },
+    "chunks": [
+     "b83476f0bc7f2531",
+     "c75a608c4ab297e1",
+     "1e6a68ff5885fcd3",
+     "a1e1857c4569fe2f",
+     "4979801cfdd4f52d",
+     "90530fb39d8d5fd7",
+     "59cb28eb69032461",
+     "e1781d1f1165e59b"
+    ],
+    "output_chars": 3738,
+    "image": false,
+    "ms": 783,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "strandskydd 100 meter särskilda skäl dispens ny byggnad bostad fri passage",
+     "scope": "law",
+     "kommun": "",
+     "k": 8
+    },
+    "chunks": [
+     "b26426ddf206527c",
+     "e196f3b2f4276d6b",
+     "a790eb95423b5634",
+     "f39fa6bdc26c081d",
+     "002270483256cd3c",
+     "a1c7f3f11ae547c3",
+     "1c7f86f64f72c90e",
+     "ce5ff1ab99b8ad78"
+    ],
+    "output_chars": 3340,
+    "image": false,
+    "ms": 1040,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "bygglov utanför detaljplan förhandsbesked bostad lämplig lokalisering jordbruksmark vatten avlopp",
+     "scope": "law",
+     "kommun": "",
+     "k": 8
+    },
+    "chunks": [
+     "cfffbde7885e1641",
+     "b0dbf056f7966c02",
+     "945fef370731f443",
+     "01156e3238dfc9f8",
+     "e9f08262c39a9ba6",
+     "bab24eaf474250a8",
+     "62d9608f5974bad1",
+     "ae6ec4c6dc5c2ad3"
+    ],
+    "output_chars": 3441,
+    "image": false,
+    "ms": 1410,
+    "turn": 1
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "MB",
+     "section": "7 kap. 15 §"
+    },
+    "chunks": [
+     "38fb0ce0bc889423"
+    ],
+    "output_chars": 623,
+    "image": false,
+    "ms": 42,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "MB",
+     "section": "7 kap. 18 e §"
+    },
+    "chunks": [
+     "00ec41fdf90976ee"
+    ],
+    "output_chars": 953,
+    "image": false,
+    "ms": 41,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "MB",
+     "section": "7 kap. 18 g §"
+    },
+    "chunks": [
+     "e196f3b2f4276d6b"
+    ],
+    "output_chars": 662,
+    "image": false,
+    "ms": 33,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "MB",
+     "section": "7 kap. 18 i §"
+    },
+    "chunks": [
+     "a1c7f3f11ae547c3"
+    ],
+    "output_chars": 765,
+    "image": false,
+    "ms": 41,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 74 §"
+    },
+    "chunks": [
+     "1f2cb83654a3676d"
+    ],
+    "output_chars": 961,
+    "image": false,
+    "ms": 41,
+    "turn": 2
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Ydre",
+     "doc_type": "strandskydd",
+     "title_contains": ""
+    },
+    "chunks": [],
+    "output_chars": 365,
+    "image": false,
+    "ms": 3838,
+    "turn": 2
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "100 meter|LIS|landsbygdsutveckling|fritidshus|strandskydd",
+     "kommun": "Ydre",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "f349f426a12b4956",
+     "661e3a0d8f27f43f",
+     "a5b6198bfb90b44a",
+     "8641159c9ef8d473",
+     "3718361728b71427",
+     "bf664753ffe69c66",
+     "62e7a8acade0701d",
+     "4979801cfdd4f52d",
+     "33bba3afefea436d",
+     "2896a91119a0162d",
+     "171ff4c79e2da4fa",
+     "59cb28eb69032461",
+     "242415e9f8510532",
+     "cf2506fac3ee6a90",
+     "d6f2e28e084a2280"
+    ],
+    "output_chars": 6613,
+    "image": false,
+    "ms": 4000,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:171ff4c79e2da4fa",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 1,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:59cb28eb69032461",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 1,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:c75a608c4ab297e1",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 1,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "2 kap. 5 §"
+    },
+    "chunks": [
+     "945fef370731f443"
+    ],
+    "output_chars": 837,
+    "image": false,
+    "ms": 57,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 57 §"
+    },
+    "chunks": [
+     "01156e3238dfc9f8",
+     "e9f08262c39a9ba6"
+    ],
+    "output_chars": 2469,
+    "image": false,
+    "ms": 66,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0512:9d45337768d57ad4",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [
+     "171ff4c79e2da4fa",
+     "59cb28eb69032461",
+     "242415e9f8510532",
+     "cf2506fac3ee6a90",
+     "d6f2e28e084a2280"
+    ],
+    "output_chars": 6153,
+    "image": false,
+    "ms": 2,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "pdf:0512:c58d904880c8653b",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "6883cc631f332242",
+     "73b9cf51242da412",
+     "9d1fc3bd35a2eda6",
+     "1fc6ff2895930d07",
+     "0c1be3868a2b8d4d",
+     "e0d680dcf8e63857",
+     "c39015d31ce0b59f",
+     "c6d3720f6bece92d"
+    ],
+    "output_chars": 4920,
+    "image": false,
+    "ms": 7,
+    "turn": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "MB",
+     "section": "7 kap. 18 c §"
+    },
+    "chunks": [
+     "f39fa6bdc26c081d"
+    ],
+    "output_chars": 291,
+    "image": false,
+    "ms": 14,
+    "turn": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "MB",
+     "section": "7 kap. 18 d §"
+    },
+    "chunks": [
+     "002270483256cd3c"
+    ],
+    "output_chars": 437,
+    "image": false,
+    "ms": 14,
+    "turn": 4
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "uppsala-septic",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 1.0,
+  "point_scores": [
+   2,
+   2,
+   2,
+   2
+  ],
+  "unsupported": 1,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "explain",
+  "mode_ok": true,
+  "evidence": 1.0,
+  "tool_calls": 13,
+  "llm_calls": 6,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 38.5,
+  "first_token_s": 27.5,
+  "cost": 0.00607,
+  "judge_cost": 0.00143952,
+  "tokens_in": 80995,
+  "tokens_out": 1970,
+  "comment": "The answer correctly covers the permit requirement under the national regulation, applying to Uppsala kommun and waiting for the written decision, the 11 744 kr / 1 468 kr hourly 2026 fees, and the site plan/soil investigation requirements; the only unsupported specific is the claim about wells 'within 100 metres', which the sources state only as 'nearby' wells, and it appropriately frames the project as requiring site-specific municipal approval.",
+  "answer": "## Answer\n\nFor a countryside house in Uppsala without municipal sewer, you will generally need an approved **individual wastewater system** (enskilt avlopp). If it includes a flush toilet, you must obtain a permit from Uppsala Municipality’s Environmental Administration **before construction**; the municipality assesses the site and decides which treatment solution is acceptable. [c:5ad3694cc417eb29; c:032cdebd2dad267f]\n\n## How it works\n\n1. **Choose a system that suits the site.** Common options are infiltration, a sand filter bed (markbädd), a small treatment plant (minireningsverk), or a sealed tank. Soil, groundwater, well locations, space and the site’s treatment requirements affect what can be approved. Infiltration needs sufficiently permeable soil; Uppsala says a mark-based system needs at least **1 metre** between the distribution layer and the highest groundwater level. A filter bed is an option where soil is too clayey for infiltration. [c:eb25b8947780a415; c:2dd37a0ca8ba1779; c:07ac95c99ecaa7c1]\n\n2. **Investigate and prepare the application.** For a mark-based solution, Uppsala asks for a **2–3 metre test pit** for the case officer to inspect; an infiltration application also needs a soil-permeability analysis. Include a system description and a site plan showing boundaries, buildings, system and discharge point, access for sludge collection, nearby wells and other systems, slope, test-pit location, ditches/watercourses and archaeological remains. The municipality asks for information about drinking-water and energy wells within 100 metres. [c:032cdebd2dad267f; c:7ae2a107109b2eef]\n\n3. **Apply before you build.** A system connected to a WC requires a permit under the national rules; other systems generally require notification, though Uppsala requires a permit for BDT-only wastewater in certain locally designated areas. Wait for the written decision before starting work. After construction, submit the completion certificate and photos, and build to match the approved decision. [c:5ad3694cc417eb29; c:7ae2a107109b2eef; c:6205c78e9eb918c8]\n\n4. **Plan for ongoing care.** Most systems include a sludge separator and further treatment. Uppsala says these systems must be emptied at least annually; Uppsala Vatten handles sludge collection. Treatment plants require ongoing care and often a service agreement. [c:2dd37a0ca8ba1779; c:918d2926c25091ab]\n\n## In Uppsala: costs and timing\n\n- For a typical household WC system discharging to soil or water, the municipality’s **2026 application fee is SEK 11,744**. The same listed fee applies to a WC sealed tank combined with BDT treatment that discharges to soil or water. A system taking all wastewater to a sealed tank is listed at **SEK 5,872**; Uppsala says that arrangement should generally be used only where water use is low, such as a lightly used holiday home. [c:6a3028ef903fb000; c:918d2926c25091ab]\n- The municipality’s current page reports a **10–20 week wait before it can begin processing** applications; an incomplete application can take longer. Its stated 2026 environmental hourly rate is **SEK 1,468**. [c:51705ba7ffee082b; c:6a3028ef903fb000]\n- These are municipal review fees, **not the cost of the equipment, excavation, installation, servicing or sludge collection**. The Uppsala material reviewed does not give a total installation-price estimate; get site-specific quotes from a wastewater contractor or consultant.\n\nContact Uppsala Municipality’s Environmental Administration via **018-727 00 00** or **miljoforvaltningen@uppsala.se** to check whether your particular property is in a locally designated area and what solution its site conditions may support. [c:d1c9f76c1911c43b]\n\n## Uncertainties\n\nWithout the property location and information about soil, groundwater, wells and nearby watercourses, it is not possible to say which system will be approved. Uppsala assesses each case individually. [c:eb25b8947780a415]",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Uppsala"
+    },
+    "chunks": [],
+    "output_chars": 201,
+    "image": false,
+    "ms": 3794,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "enskilt avlopp tillstånd ansökan avgift taxa hushållsspillvatten infiltration markbädd minireningsverk",
+     "scope": "kommun",
+     "kommun": "Uppsala",
+     "k": 10
+    },
+    "chunks": [
+     "213f5f3aee7dbaf5",
+     "0f14a8271f220c8b",
+     "07ac95c99ecaa7c1",
+     "032cdebd2dad267f",
+     "c843813925f89ceb",
+     "d1c9f76c1911c43b",
+     "d1d9b54ebe86f468",
+     "9ff982f6fbaa03c2",
+     "eb25b8947780a415",
+     "918d2926c25091ab"
+    ],
+    "output_chars": 4856,
+    "image": false,
+    "ms": 849,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "enskilt avlopp tillstånd anläggning avloppsvatten hushåll 13 § FMH",
+     "scope": "law",
+     "kommun": "",
+     "k": 8
+    },
+    "chunks": [
+     "5ad3694cc417eb29",
+     "d2d8e6e94c62b34f",
+     "f2d6e3fd94f7ef8c",
+     "41acdc53c41e1c46",
+     "33eb278f6bffb0a7",
+     "11de3e4bcf588df9",
+     "0970ca2b62d3793e",
+     "3bc82cda20e3891c"
+    ],
+    "output_chars": 3434,
+    "image": false,
+    "ms": 1070,
+    "turn": 1
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Uppsala",
+     "doc_type": "avlopp",
+     "title_contains": "söka tillstånd"
+    },
+    "chunks": [],
+    "output_chars": 229,
+    "image": false,
+    "ms": 2440,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c843813925f89ceb",
+     "doc_id": "",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "918d2926c25091ab",
+     "c843813925f89ceb",
+     "7ae2a107109b2eef",
+     "6a3028ef903fb000",
+     "d1c9f76c1911c43b"
+    ],
+    "output_chars": 8045,
+    "image": false,
+    "ms": 5,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "d1c9f76c1911c43b",
+     "doc_id": "",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "6a3028ef903fb000",
+     "d1c9f76c1911c43b"
+    ],
+    "output_chars": 3505,
+    "image": false,
+    "ms": 6,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "FMH",
+     "section": "13 §"
+    },
+    "chunks": [
+     "5ad3694cc417eb29"
+    ],
+    "output_chars": 954,
+    "image": false,
+    "ms": 26,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "MB",
+     "section": "9 kap. 7 §"
+    },
+    "chunks": [
+     "33eb278f6bffb0a7"
+    ],
+    "output_chars": 659,
+    "image": false,
+    "ms": 35,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "213f5f3aee7dbaf5",
+     "doc_id": "",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "213f5f3aee7dbaf5",
+     "f1ea4e02f08d0a03"
+    ],
+    "output_chars": 3759,
+    "image": false,
+    "ms": 1,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "07ac95c99ecaa7c1",
+     "doc_id": "",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "2dd37a0ca8ba1779",
+     "07ac95c99ecaa7c1",
+     "918d2926c25091ab",
+     "c843813925f89ceb",
+     "7ae2a107109b2eef",
+     "6a3028ef903fb000"
+    ],
+    "output_chars": 9122,
+    "image": false,
+    "ms": 9,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "032cdebd2dad267f",
+     "doc_id": "",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "eb25b8947780a415",
+     "032cdebd2dad267f",
+     "6205c78e9eb918c8",
+     "2dd37a0ca8ba1779",
+     "07ac95c99ecaa7c1",
+     "918d2926c25091ab"
+    ],
+    "output_chars": 9086,
+    "image": false,
+    "ms": 9,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "eb25b8947780a415",
+     "doc_id": "",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "51705ba7ffee082b",
+     "eb25b8947780a415",
+     "032cdebd2dad267f",
+     "6205c78e9eb918c8",
+     "2dd37a0ca8ba1779",
+     "07ac95c99ecaa7c1"
+    ],
+    "output_chars": 9156,
+    "image": false,
+    "ms": 6,
+    "turn": 3
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "enskilt avlopp anläggningskostnad installation kostnad slamtömning avgift taxa",
+     "scope": "kommun",
+     "kommun": "Uppsala",
+     "k": 8
+    },
+    "chunks": [
+     "41416a59a3d0de83",
+     "2dd37a0ca8ba1779",
+     "85ea611321e28b85",
+     "d1c9f76c1911c43b",
+     "c843813925f89ceb",
+     "0f14a8271f220c8b",
+     "51705ba7ffee082b",
+     "6a3028ef903fb000"
+    ],
+    "output_chars": 3864,
+    "image": false,
+    "ms": 529,
+    "turn": 4
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "vallentuna-subdivide",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.875,
+  "point_scores": [
+   2,
+   2,
+   1,
+   2
+  ],
+  "unsupported": 0,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "explain",
+  "mode_ok": true,
+  "evidence": 0.5,
+  "tool_calls": 23,
+  "llm_calls": 9,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 50.5,
+  "first_token_s": 42.1,
+  "cost": 0.00611,
+  "judge_cost": 0.00067475,
+  "tokens_in": 101903,
+  "tokens_out": 2314,
+  "comment": "The answer covers avstyckning at Lantmäteriet, the lasting-suitability condition, the förhandsbesked step and municipal guidance well, but only partially states that a bygglov is needed for the house itself.",
+  "answer": "**Answer:** The formal split is an **avstyckning**—a cadastral procedure handled by Lantmäteriet. But a new parcel is not automatically a buildable plot: its suitability for a home, access, water and wastewater, and any applicable planning rules must also be acceptable.\n\n**How it works:**\n\n1. **Check whether the land is inside a detailed development plan (detaljplan).** Vallentuna says its kommunkarta can help identify the plan for your property. Inside a plan, check its minimum plot-size and other provisions; any subdivision must comply with the plan, subject to the limited possibility of minor deviations that do not undermine its purpose. [c:8e7609adc447bfe5; c:aa4db7994cfbbb53]\n\n2. **If it is outside a detailed plan and the new parcel is intended for a house, apply to Vallentuna for a preliminary ruling (förhandsbesked) first.** The municipality says this is needed before seeking to split off a building plot. It generally expects plots to be at least **2,000 m²** in this situation; that is local guidance, not a universal statutory minimum. A preliminary ruling addresses whether the house can be located there; it is not itself the subdivision or a building permit. [c:8e7609adc447bfe5; c:1f2cb83654a3676d]\n\n3. **Then apply to Lantmäteriet for avstyckning.** Vallentuna directs owners seeking a subdivision to Lantmäteriet, and the property owner may apply. Lantmäteriet assesses whether both the new parcel and the remainder will be suitable for their intended uses. For a building plot, that includes suitable shape and access to necessary roads, and the possibility of acceptable water and wastewater arrangements. [c:8e7609adc447bfe5; c:9416873b475232e9; c:abc145117054581e]\n\n4. **Allow for further checks and approvals.** Vallentuna’s rural-development guidance says location, usable agricultural land, disturbances and risks, nature and heritage values, water and wastewater, and safe access can matter. Depending on the site, separate checks may also be needed for matters such as shoreline protection or a permit for a private wastewater system. [c:4463112e3a73206d; c:5857ae2e2b2b1435]\n\n5. **If you are splitting off land for a neighbour rather than creating a building plot, the route may differ.** Vallentuna says that outside a detailed plan, where the detached land is not intended for building, the 2,000 m² guidance and preliminary ruling do not apply; you can contact Lantmäteriet directly. [c:8e7609adc447bfe5]\n\n**In Vallentuna:** Start by checking the property in the municipal map and identifying whether a detailed plan applies. If the proposal is for a new home outside a plan, contact the municipality about a förhandsbesked; for the actual subdivision, contact Lantmäteriet. The material I found does not give a fee or processing time for this case.\n\n**Uncertainties:** The property location, applicable plan, proposed plot boundary and intended use are not specified, so it is not possible to say whether this particular split will be approved. Those details may also affect access, water and wastewater, and site-specific constraints.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Vallentuna"
+    },
+    "chunks": [],
+    "output_chars": 211,
+    "image": false,
+    "ms": 1763,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "avstyckning dela fastighet sälja byggtomt lämplighetsvillkor fastighetsbildning",
+     "scope": "law",
+     "kommun": "",
+     "k": 6
+    },
+    "chunks": [
+     "9cedce33a7f5f3ba",
+     "38ca605cef47c8f7",
+     "9416873b475232e9",
+     "0d4264e16090013e",
+     "dd4a17549ae6ccfa",
+     "0c5969cf4a11a69b"
+    ],
+    "output_chars": 2613,
+    "image": false,
+    "ms": 1334,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "avstyckning ny fastighet byggtomt förhandsbesked fastighetsbildning Vallentuna",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 8
+    },
+    "chunks": [
+     "8e7609adc447bfe5",
+     "c25df6249df13e84",
+     "24bea3aa859a301e",
+     "e373821ef46dfec5",
+     "bf9165a7b470608e",
+     "4016c2bb0f79ec08",
+     "f3a6dfd5303b1610",
+     "e16e8d4c0820a38c"
+    ],
+    "output_chars": 4125,
+    "image": false,
+    "ms": 646,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Vallentuna översiktsplan förtätning bostäder fastighetsbildning avstyckning",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 6
+    },
+    "chunks": [
+     "bf9165a7b470608e",
+     "4016c2bb0f79ec08",
+     "c25df6249df13e84",
+     "129d4b219a0df89c",
+     "24bea3aa859a301e",
+     "f3a6dfd5303b1610"
+    ],
+    "output_chars": 3102,
+    "image": false,
+    "ms": 879,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:8e7609adc447bfe5",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 115,
+    "turn": 3
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Fastighetsbildningslagen 3 kap 1 § fastighet lämplig ändamål varaktigt lämpad utfart vatten avlopp",
+     "scope": "law",
+     "kommun": "",
+     "k": 5
+    },
+    "chunks": [
+     "abc145117054581e",
+     "ccaf89937a8cfb44",
+     "94e36feee0a2982d",
+     "3b2397d5c6d9a013",
+     "d9a43c311a2b7a61"
+    ],
+    "output_chars": 2059,
+    "image": false,
+    "ms": 1092,
+    "turn": 3
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "förhandsbesked avstyckning byggtomt utanför detaljplan Vallentuna bygglov",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 7
+    },
+    "chunks": [
+     "8e7609adc447bfe5",
+     "5857ae2e2b2b1435",
+     "89e5371cecc24621",
+     "b4f671c8b43b638d",
+     "4761394f8b933ddf",
+     "691ee1481c88d9a8",
+     "f1999ba7a3ce5a00"
+    ],
+    "output_chars": 3593,
+    "image": false,
+    "ms": 717,
+    "turn": 3
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "doc_type": "bygglov",
+     "title_contains": "förhandsbesked"
+    },
+    "chunks": [],
+    "output_chars": 111,
+    "image": false,
+    "ms": 3058,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "0115:22081e8f0a86fb8a",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [],
+    "output_chars": 37,
+    "image": false,
+    "ms": 19,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "law:fastighetsbildningslag",
+     "start": 0,
+     "count": 1
+    },
+    "chunks": [
+     "86dbdb35593539c3"
+    ],
+    "output_chars": 987,
+    "image": false,
+    "ms": 21,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "fastighetsbildning ansökan avstyckning Lantmäteriet Vallentuna avgift handläggning",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 6
+    },
+    "chunks": [
+     "c25df6249df13e84",
+     "40974e44391214f8",
+     "8e7609adc447bfe5",
+     "691ee1481c88d9a8",
+     "e16e8d4c0820a38c",
+     "c070cfb0e90f5728"
+    ],
+    "output_chars": 3124,
+    "image": false,
+    "ms": 779,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "förhandsbesked ny bostad utanför detaljplan ansökan Vallentuna bygglov",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 6
+    },
+    "chunks": [
+     "2ee610269da520e9",
+     "e92b0f024a35ecc8",
+     "5857ae2e2b2b1435",
+     "745e4312951dc663",
+     "8450bd10fbb47bbe",
+     "de0791458c0a19fb"
+    ],
+    "output_chars": 2844,
+    "image": false,
+    "ms": 1328,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "8e7609adc447bfe5",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [
+     "8e7609adc447bfe5"
+    ],
+    "output_chars": 1556,
+    "image": false,
+    "ms": 1,
+    "turn": 5
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "FBL",
+     "section": "3 kap. 1 §"
+    },
+    "chunks": [
+     "abc145117054581e"
+    ],
+    "output_chars": 1314,
+    "image": false,
+    "ms": 23,
+    "turn": 5
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "FBL",
+     "section": "10 kap. 6 §"
+    },
+    "chunks": [
+     "9416873b475232e9"
+    ],
+    "output_chars": 294,
+    "image": false,
+    "ms": 28,
+    "turn": 5
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 74 §"
+    },
+    "chunks": [
+     "1f2cb83654a3676d"
+    ],
+    "output_chars": 961,
+    "image": false,
+    "ms": 25,
+    "turn": 5
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "5857ae2e2b2b1435",
+     "doc_id": "",
+     "start": 0,
+     "count": 3
+    },
+    "chunks": [
+     "4463112e3a73206d",
+     "5857ae2e2b2b1435",
+     "c0660fe83f478279"
+    ],
+    "output_chars": 3797,
+    "image": false,
+    "ms": 3,
+    "turn": 5
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "FBL",
+     "section": "3 kap. 2 §"
+    },
+    "chunks": [
+     "aa4db7994cfbbb53"
+    ],
+    "output_chars": 856,
+    "image": false,
+    "ms": 39,
+    "turn": 6
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 56 §"
+    },
+    "chunks": [
+     "9a534c8969a1e156",
+     "4e62704f77195c61"
+    ],
+    "output_chars": 2341,
+    "image": false,
+    "ms": 36,
+    "turn": 6
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "förhandsbesked Vallentuna ansökan tomtstorlek 2000 kvadratmeter Lantmäteriet avstyckning",
+     "scope": "kommun",
+     "kommun": "0115",
+     "k": 5
+    },
+    "chunks": [
+     "8e7609adc447bfe5",
+     "b375408a382c4208",
+     "bf2701a1111ff84a",
+     "76b56302cfaa2238",
+     "a08b7f1f9895486f"
+    ],
+    "output_chars": 2525,
+    "image": false,
+    "ms": 634,
+    "turn": 6
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "4463112e3a73206d",
+     "doc_id": "",
+     "start": 59,
+     "count": 3
+    },
+    "chunks": [
+     "4b7d99e25d99bed8",
+     "4463112e3a73206d",
+     "5857ae2e2b2b1435"
+    ],
+    "output_chars": 2663,
+    "image": false,
+    "ms": 3,
+    "turn": 6
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "2 000|2000|förhandsbesked|avstyckning",
+     "kommun": "0115",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "89d33c05105bf1a6",
+     "9c3afa489efe6b78",
+     "4463112e3a73206d",
+     "5857ae2e2b2b1435",
+     "72086c61122e2b41",
+     "fde5f1738b3edcb2",
+     "48c1e68f37ae2a52",
+     "0bb6a0b69b26005b",
+     "efaa26704e05695f",
+     "98797ef510ada089",
+     "2d22e30718c7a46e",
+     "123b9f4d5c38a57f",
+     "90c2f35ba28bfdb8",
+     "3615634ae68e63ba",
+     "47f7783770b498f0"
+    ],
+    "output_chars": 7146,
+    "image": false,
+    "ms": 3615,
+    "turn": 7
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 74 §"
+    },
+    "chunks": [
+     "1f2cb83654a3676d"
+    ],
+    "output_chars": 961,
+    "image": false,
+    "ms": 61,
+    "turn": 7
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "ydre-barn-demolition",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.8333333333333334,
+  "point_scores": [
+   1,
+   2,
+   2
+  ],
+  "unsupported": 0,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "verdict",
+  "mode_ok": true,
+  "evidence": 1.0,
+  "tool_calls": 11,
+  "llm_calls": 5,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 27.1,
+  "first_token_s": 21.9,
+  "cost": 0.00335,
+  "judge_cost": 0.0006307,
+  "tokens_in": 41867,
+  "tokens_out": 1250,
+  "comment": "The answer correctly states the outside-detaljplan rule with citation and advises confirming with Ydre plus handling heritage and demolition waste, but it omits the reference's point that a rivningslov is always required inside detaljplan areas (9 kap. 43 §).",
+  "answer": "**Verdict: Feasible with conditions** — if the barn is outside a detailed development plan, demolition usually does not require a demolition permit, but a notification and municipal start clearance may still be required.\n\n**Key rules and constraints:**\n- Outside a detailed plan, a demolition permit is required if local *area regulations* require one or prohibit demolition, or if the barn is specially valuable for historical, cultural, environmental or artistic reasons—or is in a specially valuable built-up area. [PBL 9 kap. 44 §; c:0d65737ef59dfa72] The fact that it is an old farm barn does not by itself establish whether this protection applies.\n- If no demolition permit is required, demolition of a building with a building area **greater than 50 m²** requires a notification to the municipality. [PBF 6 kap. 1 §; c:e2bb583cd77075bd]\n- If notification is required, do not start demolition until the Building Committee has issued a *startbesked* (start clearance). [PBL 10 kap. 3 §; c:f8721e335f9c3e3b]\n- Ydre says the notification should disclose if hazardous waste is expected; it also asks for demolition-waste handling and, where relevant, reuse to be covered in the control plan. [Ydre, “Lov och anmälan”; c:36e16691d99aaee5]\n\n**Process and next steps:**\n1. Ask Ydre’s Building Committee to confirm whether the property is subject to *områdesbestämmelser* (area regulations) and whether the barn or its setting is considered specially valuable. Not being in a detailed-plan area does not itself rule out area regulations.\n2. If the barn is over 50 m² and no demolition permit is required, submit a demolition notification and wait for *startbesked* before work begins. If it is 50 m² or less and no permit requirement applies, the cited notification threshold is not met.\n3. Plan for safe handling of demolition materials, including identifying any hazardous waste; Ydre’s guidance calls for this information where hazardous waste is expected. [c:36e16691d99aaee5]\n\n**Uncertainties:** I do not know the barn’s size, exact property/location, heritage status, or whether area regulations apply there. Those facts determine whether you need a permit, a notification, or neither.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Ydre"
+    },
+    "chunks": [],
+    "output_chars": 200,
+    "image": false,
+    "ms": 3566,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "rivningslov utanför detaljplan ekonomibyggnad jordbruk rivning byggnad anmälan",
+     "scope": "law",
+     "kommun": "",
+     "k": 8
+    },
+    "chunks": [
+     "52e3de52219744a4",
+     "0d65737ef59dfa72",
+     "e2bb583cd77075bd",
+     "1495643edb0b8acb",
+     "6078305fa1774755",
+     "6ee185be3811726f",
+     "83c03c8c0b9e4db5",
+     "f6ec94e1bd7f711c"
+    ],
+    "output_chars": 3081,
+    "image": false,
+    "ms": 1062,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "rivning av byggnad utanför detaljplan ekonomibyggnad lantbruk rivningslov Ydre",
+     "scope": "kommun",
+     "kommun": "Ydre",
+     "k": 8
+    },
+    "chunks": [
+     "2a60677da1acc8d0",
+     "c7a7dddcd8de7c5e",
+     "b3754f99f55d482c",
+     "bbc18681c9473885",
+     "36e16691d99aaee5",
+     "c45693a1fe2739b4",
+     "b7cb1f583fedde89",
+     "9c9cbbd0184e6356"
+    ],
+    "output_chars": 2971,
+    "image": false,
+    "ms": 793,
+    "turn": 1
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 44 §"
+    },
+    "chunks": [
+     "0d65737ef59dfa72"
+    ],
+    "output_chars": 533,
+    "image": false,
+    "ms": 42,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBF",
+     "section": "6 kap. 1 §"
+    },
+    "chunks": [
+     "e2bb583cd77075bd",
+     "1be4c271eeceb3f6"
+    ],
+    "output_chars": 1301,
+    "image": false,
+    "ms": 38,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "8 kap. 13 §"
+    },
+    "chunks": [
+     "720626801923cf9d"
+    ],
+    "output_chars": 617,
+    "image": false,
+    "ms": 41,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c7a7dddcd8de7c5e",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [
+     "600b8989b00f2dd9",
+     "c7a7dddcd8de7c5e",
+     "36e16691d99aaee5"
+    ],
+    "output_chars": 4149,
+    "image": false,
+    "ms": 7,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c7a7dddcd8de7c5e",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [
+     "600b8989b00f2dd9",
+     "c7a7dddcd8de7c5e",
+     "36e16691d99aaee5"
+    ],
+    "output_chars": 4149,
+    "image": false,
+    "ms": 5,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "10 kap. 3 §"
+    },
+    "chunks": [
+     "f8721e335f9c3e3b"
+    ],
+    "output_chars": 550,
+    "image": false,
+    "ms": 31,
+    "turn": 3
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "områdesbestämmelser|särskilt värdefull|rivningsanmälan|50,0 kvadratmeter|farligt avfall",
+     "kommun": "Ydre",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "12e5d2e13e8e08f4",
+     "2a60677da1acc8d0",
+     "4048ea61635b6771",
+     "ee8e2a0a2df56089",
+     "9c9cbbd0184e6356",
+     "c7a7dddcd8de7c5e",
+     "36e16691d99aaee5",
+     "03d37b380d47f188",
+     "199e49acac4258db",
+     "14c455b98a248af7",
+     "7cb61b959550fadf",
+     "54b52e5d64c9f44d",
+     "1a011e5bb2a9992d",
+     "8390fc7d55a4aa2e",
+     "4ee4fdef9b85d25e"
+    ],
+    "output_chars": 6615,
+    "image": false,
+    "ms": 2025,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "36e16691d99aaee5",
+     "doc_id": "",
+     "start": 0,
+     "count": 3
+    },
+    "chunks": [
+     "c7a7dddcd8de7c5e",
+     "36e16691d99aaee5"
+    ],
+    "output_chars": 3273,
+    "image": false,
+    "ms": 3,
+    "turn": 3
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "ecovillage-vallentuna",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.875,
+  "point_scores": [
+   2,
+   2,
+   1,
+   2
+  ],
+  "unsupported": 1,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "develop",
+  "mode_ok": true,
+  "evidence": 1.0,
+  "tool_calls": 37,
+  "llm_calls": 8,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 89.3,
+  "first_token_s": 70.0,
+  "cost": 0.01177,
+  "judge_cost": 0.00126529,
+  "tokens_in": 166478,
+  "tokens_out": 5467,
+  "comment": "The answer clearly covers the detaljplan/planbesked route, the MB 3:4 farmland test and the need to check översiktsplan/site constraints, but never mentions that a shared plant can be organised as a gemensamhetsanläggning under anläggningslag (key point 3 only partly met), and it asserts that a förhandsbesked cannot circumvent a required plan, which none of the cited sources states.",
+  "answer": "## Your project as understood\n\nYou are considering about 20 homes, shared gardens and a jointly operated wastewater treatment plant on agricultural land somewhere outside Vallentuna town. **The first hurdle is not the eco-village design or the treatment technology: it is whether the municipality can accept housing on that particular farmland and will begin the planning needed for a group of homes.**\n\n## What could block it\n\n- **Loss of usable farmland is a major legal obstacle.** If the land is *brukningsvärd jordbruksmark* (farmland considered valuable for farming), it may be used for buildings or facilities only where they are needed for an “essential societal interest” and that need cannot be satisfactorily met on other land (MB 3 kap. 4 §). A private housing project does not automatically meet that test; the site, the public interest asserted and alternative locations would matter. [c:5e037b653f0fcde5] Vallentuna’s ÖP 2040 material likewise describes a restrictive approach to farmland development and says alternatives and the land’s value should be considered. [c:745fbff9d13bb848]\n\n- **A detailed plan is likely to be required.** PBL requires a detaljplan for new coherent development where the scale, effects or need for coordination make it necessary (PBL 4 kap. 2 §). Twenty homes, shared infrastructure, access and common land are much more than a small rural infill. The municipality decides whether to plan the site; a preliminary approval for individual homes is not a way around a plan where one is required. [c:701183a84b4afc0f] Vallentuna’s rural guidance says a group of homes needs planning and prioritises new development adjoining existing settlement. [c:4463112e3a73206d]\n\n- **The site must work as a place to live, not just as a parcel to buy.** Vallentuna’s guidance calls out public transport, farmland, traffic access, water and wastewater, groundwater protection, landscape, nature and cultural values, noise and other risks, and specifically mentions restrictions such as shoreline protection and flood risk. [c:4463112e3a73206d; c:5857ae2e2b2b1435] No parcel has been identified, so none of those site-specific constraints can yet be assessed.\n\n- **A shared sewage plant needs environmental approval and a credible operating arrangement.** A new system receiving wastewater from houses that have water toilets normally requires a municipal permit under FMH 13 §. [c:5ad3694cc417eb29] If the plant’s design load is **more than 200 but less than 2,000 person-equivalents**, it is subject to C-notification under MPF 28 kap. 4 §; the applicable route depends on the designed load, not simply the number of houses. [c:b7b89b5a5acc8ccb] Vallentuna requires an application or notification before a new or changed private sewage system is installed. [c:aee076ec846cd0e4]\n\n- **Municipal water and wastewater may be required instead.** If health or environmental protection means water or wastewater must be provided for a larger group of existing or planned development, the municipality has a duty under LAV 6 § to establish a public-service area and arrange public services, while considering whether an acceptable private system can meet the need. [c:5f93e6248c6c7621] Ask Roslagsvatten whether the candidate site is, or could be, served by municipal VA; Vallentuna says Roslagsvatten is responsible for the municipal water and wastewater system. [c:5383da7e176bfb60]\n\n## Ways to make it work\n\n- **Choose land that avoids the farmland test if possible.** Look first for already developed, less productive or otherwise non-agricultural land adjoining an existing settlement, rather than open, actively farmed fields. Vallentuna’s rural guidance prefers development next to existing settlement and says to account for productive farmland and the other site constraints. [c:4463112e3a73206d] This does not guarantee support, but it removes or reduces one of the biggest risks.\n\n- **Make the case about location and public benefit—not just the eco-village concept.** If you still want farmland, prepare evidence about the land’s farming value, the area actually taken out of production, realistic alternative sites, and why the project serves an essential societal interest. The legal test is demanding; shared gardens and a sustainable design are useful project qualities but do not themselves establish that test. [c:5e037b653f0fcde5]\n\n- **Test the whole scheme with the municipality before committing to buy.** Ask Vallentuna’s planning function whether it would consider a detaljplan for the specific property and the proposed 20 homes. A planbesked request should describe the proposal and show the area on a map; for a building project it should also describe the buildings’ character and approximate scale. [c:70a668f2f5048ba5] The municipality’s decision on whether to start planning is not binding and cannot be appealed. [c:70a668f2f5048ba5]\n\n- **Design the wastewater proposal alongside the land-use proposal.** Compare connection to municipal VA with a shared private treatment plant. For a private option, develop a preliminary design load and concept, and identify water supply, discharge destination, nearby wells, groundwater risks, servicing and long-term responsibility. Vallentuna’s application guidance calls for a site plan showing the homes, system components, discharge point, service-vehicle position and nearby drinking-water wells, among other details. [c:e55c1b5db84d07ec]\n\n## Suggested path\n\n1. **Shortlist parcels before buying.** For each one, establish whether it is cultivated or otherwise valuable farmland; whether it is in or near existing development; and whether shoreline, flood, nature, cultural-heritage, road or other restrictions may apply. The local guidance flags these as matters for review. [c:4463112e3a73206d; c:5857ae2e2b2b1435]\n\n2. **Request a pre-application discussion with Vallentuna’s planning and environmental teams**, and ask Roslagsvatten about municipal VA. Present the full concept—20 homes, gardens, roads/access, water supply and sewage—not just an outline of the houses. A planbesked is the formal next step if the project may require a detailed plan. [c:70a668f2f5048ba5]\n\n3. **Use a conditional purchase or option, not an unconditional acquisition, while feasibility is unresolved.** In the planbesked process Vallentuna says it normally responds within four months of a complete request; the request is charged, with a stated minimum of 200 milliprice-base amounts, and the fee varies. [c:70a668f2f5048ba5] A favourable planbesked is not itself permission to build.\n\n4. **If the municipality is willing to plan, develop the plan evidence and infrastructure scheme.** Expect the plan process to examine the site’s suitability and coordinate the development; the wastewater authority should be consulted early. Individual building permits and the necessary environmental approval for sewage come later, not instead of resolving the planning question. [c:701183a84b4afc0f; c:5ad3694cc417eb29]\n\n## Questions for you\n\n- Which property or area are you considering, and is the land actively cultivated?\n- Are the homes intended to be detached houses, clustered or mixed in form, and how many residents do you anticipate?\n- Is municipal water/VA nearby, or are you assuming a private water supply and treatment plant?\n- Would the project be resident-led/cooperative, commercial, or include a defined public/community service element?\n\n## Uncertainties\n\nThe site is not specified, so its zoning, farmland status, access, water capacity, protected values, shoreline or flood constraints and nearby infrastructure are unknown. Vallentuna’s website says its Översiktsplan 2040 was adopted in 2018 and that a planning strategy was adopted in 2024, but the detailed rural-guidance extract available here is from the 2017 consultation material; confirm its wording against the adopted plan and the 2024 strategy for the actual parcel. [c:8a903e92eb31c215; c:4463112e3a73206d]",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Vallentuna"
+    },
+    "chunks": [],
+    "output_chars": 211,
+    "image": false,
+    "ms": 3368,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Vallentuna översiktsplan nya bostäder utvecklingsområden landsbygd jordbruksmark sammanhållen bebyggelse",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 10
+    },
+    "chunks": [
+     "a722a09ebbf43337",
+     "ebf66f041ba8bab8",
+     "637902bddcb389d6",
+     "34c6e7315ffd3777",
+     "0398896ded8d9ee6",
+     "c8b6b96c00f94d58",
+     "50c731588eacf1ba",
+     "fe1cc8d97f43a48f",
+     "8a70123716ca856e",
+     "e4e499640ed0db52"
+    ],
+    "output_chars": 4810,
+    "image": false,
+    "ms": 751,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "jordbruksmark brukningsvärd exploatering bostadsbebyggelse 3 kap. 4 § miljöbalken",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 6
+    },
+    "chunks": [
+     "5e037b653f0fcde5",
+     "10dac4e4d328e52a",
+     "5ff487a4cf21124e",
+     "19806057de680962",
+     "8412bf084c4ddeda",
+     "ac7337291aa2dca7"
+    ],
+    "output_chars": 1789,
+    "image": false,
+    "ms": 1042,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "detaljplan krav sammanhållen bebyggelse 20 bostäder PBL 4 kap 2 §",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 6
+    },
+    "chunks": [
+     "701183a84b4afc0f",
+     "fdac981260fb87d6",
+     "353f9462b6c80ca6",
+     "b93e8aa092b0214a",
+     "6175bd6a7580e278",
+     "a9f43024c03bbcaa"
+    ],
+    "output_chars": 2516,
+    "image": false,
+    "ms": 1506,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "enskilt avlopp gemensam avloppsanläggning tillstånd 20 hushåll miljöprövningsförordningen",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 6
+    },
+    "chunks": [
+     "ecf68657a4dc91ee",
+     "e1d84d2000067ce6",
+     "e24bcb6d3074cdd5",
+     "d2776fff3df070fb",
+     "9f0f2f2c92a592ef",
+     "e9d220df85a37d41"
+    ],
+    "output_chars": 2607,
+    "image": false,
+    "ms": 1811,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "kommunalt vatten avlopp verksamhetsområde behov större sammanhang LAV",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "5f93e6248c6c7621",
+     "c16921be12922cc7",
+     "ab7ed0751cdea1c0",
+     "ca3cc9c94e94c4cb",
+     "d740832d646c9a51"
+    ],
+    "output_chars": 1969,
+    "image": false,
+    "ms": 2149,
+    "turn": 1
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "doc_type": "oversiktsplan",
+     "title_contains": ""
+    },
+    "chunks": [],
+    "output_chars": 748,
+    "image": false,
+    "ms": 4134,
+    "turn": 2
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Vallentuna",
+     "doc_type": "avlopp",
+     "title_contains": ""
+    },
+    "chunks": [],
+    "output_chars": 1312,
+    "image": false,
+    "ms": 3979,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "avloppsreningsanläggning 200 2 000 personekvivalenter anmälningsplikt miljöprövningsförordningen 28 kap 1 §",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "b7b89b5a5acc8ccb",
+     "e9d220df85a37d41",
+     "b32ace33c5a247d8",
+     "d2d8e6e94c62b34f",
+     "1ccd30ba65eaf43c"
+    ],
+    "output_chars": 1981,
+    "image": false,
+    "ms": 722,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "förhandsbesked utanför detaljplan bygglov PBL 9 kap. 57 § 74 §",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "e9f08262c39a9ba6",
+     "01156e3238dfc9f8",
+     "05a5a3c545857fb7",
+     "d728b2bd274bd15b",
+     "1f2cb83654a3676d"
+    ],
+    "output_chars": 2262,
+    "image": false,
+    "ms": 1114,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "PBL detaljplan ansökan planbesked kommun planläggning 5 kap 2 §",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "3950f313f913ae2f",
+     "72b182d1aced1865",
+     "abc559ade86bbe20",
+     "5465bd6ea243d262",
+     "a19fa409276f65a2"
+    ],
+    "output_chars": 2020,
+    "image": false,
+    "ms": 1628,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Vallentuna översiktsplan landsbygd bebyggelse anslutning befintlig bebyggelse kollektivtrafik jordbruksmark vatten avlopp",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 10
+    },
+    "chunks": [
+     "ebf66f041ba8bab8",
+     "34c6e7315ffd3777",
+     "4463112e3a73206d",
+     "f788b4931b2d89db",
+     "fe1cc8d97f43a48f",
+     "5973ce4d4d392064",
+     "b8627e5f0c8a0fea",
+     "50c731588eacf1ba",
+     "c8b6b96c00f94d58",
+     "a1100638711e5233"
+    ],
+    "output_chars": 4749,
+    "image": false,
+    "ms": 1995,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:4463112e3a73206d",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 1,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:5973ce4d4d392064",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 1,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:f788b4931b2d89db",
+     "doc_id": "",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 12,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0115:b4c890104f878894",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [
+     "aee076ec846cd0e4",
+     "3000889d6c84cedc",
+     "e55c1b5db84d07ec",
+     "b2340a6aee8ca9eb",
+     "47532c836ecac3cc"
+    ],
+    "output_chars": 7301,
+    "image": false,
+    "ms": 13,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0115:5dd18a48f94177e1",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [
+     "5383da7e176bfb60",
+     "c4adb47e06430681"
+    ],
+    "output_chars": 3005,
+    "image": false,
+    "ms": 16,
+    "turn": 3
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "jordbruksmark|brukningsvärd|bebyggelse.*anslutning|kollektivtrafik|avlopp|förhandsbesked",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "89d33c05105bf1a6",
+     "07aba34e13788656",
+     "2d49597833b88653",
+     "12e5b85ec555951f",
+     "be103b9fb9233c09",
+     "07d5ddaeb02dcef5",
+     "8010f1ebabb78981",
+     "8228f9d89c56d1a6",
+     "feedda8c87cf082e",
+     "35581005824cc564",
+     "4463112e3a73206d",
+     "5857ae2e2b2b1435",
+     "c0660fe83f478279",
+     "f87dd5487466ba78",
+     "2a5012e2c9016354"
+    ],
+    "output_chars": 7519,
+    "image": false,
+    "ms": 2534,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "legacy:2040vision",
+     "start": 0,
+     "count": 224
+    },
+    "chunks": [
+     "010c884adb1eb5ea",
+     "80ee6b0334efb949",
+     "89d33c05105bf1a6",
+     "0c6f068563d546f5",
+     "b9b69820f9206ac3",
+     "38f1f41a14f3b4cb",
+     "d301add6a0540b8e",
+     "4440d77188b39012",
+     "a682d96a9e97e821",
+     "f13d9c4e5ab6dafd",
+     "07aba34e13788656",
+     "a5771c1b16b1b625"
+    ],
+    "output_chars": 7299,
+    "image": false,
+    "ms": 16,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0115:7489683a093edf3f",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [
+     "8a903e92eb31c215"
+    ],
+    "output_chars": 1717,
+    "image": false,
+    "ms": 1,
+    "turn": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "MB",
+     "section": "3 kap. 4 §"
+    },
+    "chunks": [
+     "5e037b653f0fcde5",
+     "38b3347f4bcf66f3"
+    ],
+    "output_chars": 1566,
+    "image": false,
+    "ms": 26,
+    "turn": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "4 kap. 2 §"
+    },
+    "chunks": [
+     "701183a84b4afc0f",
+     "1a9b7f2f6378a055"
+    ],
+    "output_chars": 2551,
+    "image": false,
+    "ms": 28,
+    "turn": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "5 kap. 2 §"
+    },
+    "chunks": [
+     "72b182d1aced1865"
+    ],
+    "output_chars": 416,
+    "image": false,
+    "ms": 27,
+    "turn": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 74 §"
+    },
+    "chunks": [
+     "1f2cb83654a3676d"
+    ],
+    "output_chars": 961,
+    "image": false,
+    "ms": 25,
+    "turn": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "LAV",
+     "section": "6 §"
+    },
+    "chunks": [
+     "5f93e6248c6c7621"
+    ],
+    "output_chars": 810,
+    "image": false,
+    "ms": 27,
+    "turn": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "miljöprövningsförordning",
+     "section": "28 kap. 4 §"
+    },
+    "chunks": [
+     "b7b89b5a5acc8ccb"
+    ],
+    "output_chars": 327,
+    "image": false,
+    "ms": 19,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "4463112e3a73206d",
+     "doc_id": "",
+     "start": 0,
+     "count": 0
+    },
+    "chunks": [
+     "4b7d99e25d99bed8",
+     "4463112e3a73206d",
+     "5857ae2e2b2b1435"
+    ],
+    "output_chars": 2663,
+    "image": false,
+    "ms": 90,
+    "turn": 5
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "Riktlinjer för bebyggelseutveckling utanför tätort|Ny bebyggelse ska i första hand lokaliseras|Planläggning krävs om en grupp bostäder",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "4463112e3a73206d",
+     "5857ae2e2b2b1435",
+     "8a70123716ca856e",
+     "f1999ba7a3ce5a00",
+     "5ec3f9ee6423b8b6",
+     "6db4c1f00bdde801"
+    ],
+    "output_chars": 3153,
+    "image": false,
+    "ms": 5274,
+    "turn": 5
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "enskild avloppsanläggning|enskilt avlopp|miljöbalken|tillstånd",
+     "kommun": "Vallentuna",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "251f16e9dc22db12",
+     "5857ae2e2b2b1435",
+     "aa2b0442eea255fa",
+     "20f72a89cd63ed3b",
+     "e8c1394dd7956ea1",
+     "b610caf34667dfef",
+     "efaa26704e05695f",
+     "0f56e3bf82874bee",
+     "97ea65684a5b79f2",
+     "f908cd0d66cc7b3d",
+     "1241ccc42c2968d3",
+     "7c2a52a1fda844a1",
+     "376ec66c613daea4",
+     "c4d329eef1759ce5",
+     "074c3f05fec7960c"
+    ],
+    "output_chars": 7210,
+    "image": false,
+    "ms": 5356,
+    "turn": 5
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Vallentuna planbesked avgift handläggningstid planläggning planbesked taxa",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "70a668f2f5048ba5",
+     "26cf81c1dbd7cee9",
+     "786b7f39589ace9e",
+     "f534e27e5983f5de",
+     "f8805f7162f82b10"
+    ],
+    "output_chars": 2247,
+    "image": false,
+    "ms": 1058,
+    "turn": 5
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Vallentuna jordbruksmark bebyggelse väsentligt samhällsintresse översiktsplan riktlinjer landsbygd",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "745fbff9d13bb848",
+     "34c6e7315ffd3777",
+     "1440a7cca5adae0b",
+     "9b7f0b20720f72ba",
+     "c8b6b96c00f94d58"
+    ],
+    "output_chars": 2354,
+    "image": false,
+    "ms": 766,
+    "turn": 5
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "70a668f2f5048ba5",
+     "doc_id": "",
+     "start": 0,
+     "count": 0
+    },
+    "chunks": [
+     "70a668f2f5048ba5"
+    ],
+    "output_chars": 1647,
+    "image": false,
+    "ms": 36,
+    "turn": 6
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "745fbff9d13bb848",
+     "doc_id": "",
+     "start": 0,
+     "count": 0
+    },
+    "chunks": [
+     "52e9f307626ea6b0",
+     "745fbff9d13bb848",
+     "ab04e37a880fc697"
+    ],
+    "output_chars": 3287,
+    "image": false,
+    "ms": 24,
+    "turn": 6
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "FMH",
+     "section": "13 §"
+    },
+    "chunks": [
+     "5ad3694cc417eb29"
+    ],
+    "output_chars": 954,
+    "image": false,
+    "ms": 47,
+    "turn": 6
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "5 kap. 4 §"
+    },
+    "chunks": [
+     "5465bd6ea243d262"
+    ],
+    "output_chars": 340,
+    "image": false,
+    "ms": 53,
+    "turn": 6
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Vallentuna enskilt avlopp gemensamhetsanläggning flera fastigheter gemensam avloppsanläggning tillstånd",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 5
+    },
+    "chunks": [
+     "aee076ec846cd0e4",
+     "3dcbe8adb3beabae",
+     "376ec66c613daea4",
+     "e2bcc34a6a20b091",
+     "3000889d6c84cedc"
+    ],
+    "output_chars": 2304,
+    "image": false,
+    "ms": 1142,
+    "turn": 6
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "detaljplan planbeskrivning undersökning betydande miljöpåverkan miljökonsekvensbeskrivning PBL",
+     "scope": "law",
+     "kommun": "Vallentuna",
+     "k": 4
+    },
+    "chunks": [
+     "907549d2beb2ecdd",
+     "6689341c395e5919",
+     "c72d20acf5219b44",
+     "277b66ebac781277"
+    ],
+    "output_chars": 1777,
+    "image": false,
+    "ms": 881,
+    "turn": 6
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "norrtalje-rezone",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.625,
+  "point_scores": [
+   1,
+   2,
+   1,
+   1
+  ],
+  "unsupported": 0,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "develop",
+  "mode_ok": true,
+  "evidence": 1.0,
+  "tool_calls": 24,
+  "llm_calls": 10,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 50.4,
+  "first_token_s": 39.2,
+  "cost": 0.0057,
+  "judge_cost": 0.001844422,
+  "tokens_in": 112052,
+  "tokens_out": 2543,
+  "comment": "The answer gives a well-sourced conditional path (planbesked first, four-month deadline, farmland test, samråd and adoption stages, multi-year Norrtälje timetable) but omits the planbesked fee per taxa (including for negative decisions), the planprioriteringsverktyg and backlog of approved planbesked, and does not mention the granskning stage.",
+  "answer": "**Your project as understood:** You want a new detailed development plan for about 30 homes on farmland near Norrtälje. This would usually start with a **planbesked** application; a positive planbesked is permission to begin planning work, not approval of the homes.\n\n**What could block it:**\n- **Use of farmland is the key hurdle.** If the land is *brukningsvärd jordbruksmark* (“valuable/useable agricultural land”), it may be used for housing only where the project meets a substantial public interest and that need cannot be met satisfactorily on other land. The municipality will need to assess and support that case; 30 homes on their own do not establish that the legal test is met. [MB 3 kap. 4 §; c:5e037e653f0fcde5]\n- The municipality must assess whether the land is suitable for the proposed use and whether it is consistent with good land-use planning. [PBL 2 kap. 2 §; c:dea578a74bf0c2e5]\n- Norrtälje’s initial assessment considers matters including water and wastewater, environment, national interests and traffic. Whether the site is within a municipal water-and-wastewater service area can be relevant. [Norrtälje, “Vanliga frågor och svar om planbesked”; c:ebd8ed272a3bdb5f; c:96b30ed4304b0818]\n- A positive planbesked does **not** guarantee that a detailed plan will be adopted. The municipality may decline to start planning if it considers the proposal unsuitable, including because it conflicts with the comprehensive plan. [Norrtälje, “Planbesked”; c:f8da78b1a8c64c50; c:b8e307fd4664d8f9]\n\n**Ways to make it work:**\n- Make the first discussion with the municipality a genuine location-and-alternatives test: explain why 30 homes are needed there, why a less valuable or non-agricultural site would not satisfactorily meet the need, and whether a smaller footprint or a layout concentrated away from the best farmland could address concerns. The agricultural-land test makes alternatives important. [MB 3 kap. 4 §; c:5e037e653f0fcde5]\n- Ask the municipality to check the specific parcel against its comprehensive plan and plan priorities before you commit to extensive design work. Norrtälje says a positive planbesked gives a preliminary timetable, and the work formally starts with a planning-cost agreement and start meeting. [Norrtälje, “Planbesked”; c:f8da78b1a8c64c50; “Vanliga frågor och svar om planbesked”; c:b838ecac769823a3]\n\n**Suggested path:**\n1. **Contact Norrtälje’s planning unit before applying.** Give them the property designation or map, approximate area, proposed number and types of homes, access proposal, and information about existing water and wastewater arrangements. The municipality says an early discussion can be useful, including where the site’s VA status matters. [Norrtälje, “Vanliga frågor och svar om planbesked”; c:ebd8ed272a3bdb5f; c:96b30ed4304b0818]\n2. **Apply for planbesked.** The municipality assesses whether it intends to start a detailed-planning process. Under PBL, it must issue the planbesked within four months after receiving a complete request, unless you and the municipality agree otherwise. [PBL 5 kap. 2 and 4 §§; c:72b182d1aced1865; c:5465bd6ea243d262]\n3. **If the planbesked is positive, agree the plan scope, timetable and costs.** Norrtälje says the applicant normally pays planning costs under a plankostnadsavtal; its FAQ says detailed-plan costs are often **over SEK 500,000 and may reach several million**, depending on complexity and investigations. [Norrtälje, “Planbesked”; c:05a1878150c65d07; “Vanliga frågor och svar om planbesked”; c:b838ecac769823a3]\n4. **Prepare and assess the plan.** The detailed-plan process includes consultation with relevant authorities, affected parties and others with a substantial interest. [PBL 5 kap. 11 §; c:44bb92439f75fc36]\n5. **Allow for adoption and possible appeal.** Norrtälje estimates about **1.5 years** from the municipality starting work to adoption for a simple plan with limited investigations, and usually **2–4 years** for a more complicated plan. If appealed, it says the plan may take a further **6–12 months or longer** to come into force. [Norrtälje, “Vanliga frågor och svar om planbesked”; c:b838ecac769823a3]\n\n**Questions for you:** What is the property designation or nearest named place? Is the land actively farmed, and do you know whether it is classified as valuable agricultural land? Is it within a municipal VA service area, and are you proposing detached homes, a denser layout, or a mix?\n\n**Uncertainties:** “Near Norrtälje” is not precise enough to check the applicable comprehensive-plan guidance, existing detailed plans, farmland status, VA capacity, access, environmental constraints or other site-specific interests. The municipal plan-cost estimate is not a quote, and the plan timetable is an estimate rather than a guaranteed completion date.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Norrtälje"
+    },
+    "chunks": [],
+    "output_chars": 139,
+    "image": false,
+    "ms": 3560,
+    "turn": 1
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "utvecklingsområde|utbyggnadsområde|nya bostäder|prioriterade|serviceort|jordbruksmark",
+     "kommun": "0188",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "babdb4148a0ee58c",
+     "97be5558d0d261ff",
+     "c9be7e9b89ebc687",
+     "60771a4dca5fb0af",
+     "0f757f488fafea2b",
+     "7f18a574bf2aa13e",
+     "8c13916511e34a20",
+     "1ee586743b436e07",
+     "d0c8cabdbdb2a94d",
+     "ed73fb845d1e32c3",
+     "e8bda9b047b17208",
+     "3b482d32abcb9bac",
+     "749fb9ee3e7e3796",
+     "164f5a0c7872279c",
+     "72cfd02de62edc9c"
+    ],
+    "output_chars": 7159,
+    "image": false,
+    "ms": 3707,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "planbesked detaljplan bostäder jordbruksmark brukningsvärd jordbruksmark 30 bostäder process tid",
+     "scope": "kommun",
+     "kommun": "0188",
+     "k": 8
+    },
+    "chunks": [
+     "61428a51c45b80c2",
+     "8375824adb464a57",
+     "049f71b815b8b9c5",
+     "b838ecac769823a3",
+     "41e1ed7342c9e7e0",
+     "4e7279894fb620e1",
+     "6966cf182960c1e5",
+     "f8da78b1a8c64c50"
+    ],
+    "output_chars": 3847,
+    "image": false,
+    "ms": 837,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "brukningsvärd jordbruksmark får tas i anspråk endast väsentligt samhällsintresse alternativ lokalisering miljöbalken 3 kap 4 §",
+     "scope": "law",
+     "kommun": "",
+     "k": 5
+    },
+    "chunks": [
+     "5e037b653f0fcde5",
+     "5ff487a4cf21124e",
+     "59e5bac508736b1a",
+     "cf6505587272a109",
+     "42fa97675c9820ab"
+    ],
+    "output_chars": 2060,
+    "image": false,
+    "ms": 1183,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "5 kap. 2 §"
+    },
+    "chunks": [
+     "72b182d1aced1865"
+    ],
+    "output_chars": 416,
+    "image": false,
+    "ms": 251,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "5 kap. 4 §"
+    },
+    "chunks": [
+     "5465bd6ea243d262"
+    ],
+    "output_chars": 340,
+    "image": false,
+    "ms": 146,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:b838ecac769823a3",
+     "doc_id": "",
+     "start": 0,
+     "count": 1
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 39,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:f8da78b1a8c64c50",
+     "doc_id": "",
+     "start": 0,
+     "count": 1
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 38,
+    "turn": 3
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "detaljplan process samråd granskning antagande standardförfarande utökat förfarande planbeskrivning",
+     "scope": "law",
+     "kommun": "",
+     "k": 8
+    },
+    "chunks": [
+     "8b943047494a7713",
+     "b2852d3abbaeeb84",
+     "7ef62850fe5bbd95",
+     "f7741a74e4c3df37",
+     "c31ccf815baec16b",
+     "11e3d921098d0aea",
+     "ac58dfab7b0e4a4a",
+     "622e3566e97a521a"
+    ],
+    "output_chars": 2953,
+    "image": false,
+    "ms": 1101,
+    "turn": 3
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "handläggningstid detaljplan planbesked tidplan planarbete Norrtälje kommun planbesked avgift",
+     "scope": "kommun",
+     "kommun": "0188",
+     "k": 8
+    },
+    "chunks": [
+     "b838ecac769823a3",
+     "05a1878150c65d07",
+     "f8da78b1a8c64c50",
+     "7db9ea55fee5b006",
+     "441ece96af5ed86e",
+     "2aea4fb4d1dd4e92",
+     "2355d25d55c5710e",
+     "169981c7abcbfce7"
+    ],
+    "output_chars": 3446,
+    "image": false,
+    "ms": 803,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "5 kap. 11 §"
+    },
+    "chunks": [
+     "44bb92439f75fc36"
+    ],
+    "output_chars": 1075,
+    "image": false,
+    "ms": 87,
+    "turn": 3
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "0188",
+     "doc_type": "other",
+     "title_contains": "Planbesked"
+    },
+    "chunks": [],
+    "output_chars": 111,
+    "image": false,
+    "ms": 3399,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0188:5d1be481e03502e5",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [
+     "f8da78b1a8c64c50",
+     "b8e307fd4664d8f9",
+     "05a1878150c65d07"
+    ],
+    "output_chars": 4480,
+    "image": false,
+    "ms": 1,
+    "turn": 5
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:7db9ea55fee5b006",
+     "doc_id": "",
+     "start": 0,
+     "count": 2
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 30,
+    "turn": 6
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "MB",
+     "section": "3 kap. 4 §"
+    },
+    "chunks": [
+     "5e037b653f0fcde5",
+     "38b3347f4bcf66f3"
+    ],
+    "output_chars": 1566,
+    "image": false,
+    "ms": 84,
+    "turn": 6
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:3b482d32abcb9bac",
+     "doc_id": "",
+     "start": 0,
+     "count": 1
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 30,
+    "turn": 6
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "ansökan planbesked innehåll karta fastighetsbeteckning beskrivning omfattning detaljplan",
+     "scope": "kommun",
+     "kommun": "0188",
+     "k": 5
+    },
+    "chunks": [
+     "f8da78b1a8c64c50",
+     "ebd8ed272a3bdb5f",
+     "96b30ed4304b0818",
+     "823f801ff0e25e62",
+     "05a1878150c65d07"
+    ],
+    "output_chars": 2397,
+    "image": false,
+    "ms": 542,
+    "turn": 6
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "detaljplan standardförfarande samråd granskning antagande laga kraft överklaga",
+     "scope": "law",
+     "kommun": "",
+     "k": 5
+    },
+    "chunks": [
+     "cae60ef4cf9c8c11",
+     "c8bf6f530cd8d09b",
+     "2cea9c5563d62926",
+     "187cb6bec6239774",
+     "dfdd7031ab52aea2"
+    ],
+    "output_chars": 2057,
+    "image": false,
+    "ms": 901,
+    "turn": 6
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0188:fa98ed417e4d4fc3",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [
+     "ebd8ed272a3bdb5f",
+     "96b30ed4304b0818",
+     "7db9ea55fee5b006",
+     "b838ecac769823a3"
+    ],
+    "output_chars": 6211,
+    "image": false,
+    "ms": 1,
+    "turn": 7
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:823f801ff0e25e62",
+     "doc_id": "",
+     "start": 0,
+     "count": 1
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 1,
+    "turn": 8
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:3b482d32abcb9bac",
+     "doc_id": "",
+     "start": 0,
+     "count": 1
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 0,
+    "turn": 8
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "2 kap. 2 §"
+    },
+    "chunks": [
+     "dea578a74bf0c2e5"
+    ],
+    "output_chars": 564,
+    "image": false,
+    "ms": 18,
+    "turn": 8
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "5 kap. 11 c §"
+    },
+    "chunks": [
+     "96bf27249d4074d6"
+    ],
+    "output_chars": 415,
+    "image": false,
+    "ms": 19,
+    "turn": 8
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "5 kap. 12 §"
+    },
+    "chunks": [
+     "45b8e8b60126add1"
+    ],
+    "output_chars": 271,
+    "image": false,
+    "ms": 17,
+    "turn": 8
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "norrtalje-permanent-home",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.8333333333333334,
+  "point_scores": [
+   2,
+   2,
+   1
+  ],
+  "unsupported": 0,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "verdict",
+  "mode_ok": true,
+  "evidence": 1.0,
+  "tool_calls": 19,
+  "llm_calls": 7,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 61.8,
+  "first_token_s": 54.4,
+  "cost": 0.00765,
+  "judge_cost": 0.00097191,
+  "tokens_in": 103342,
+  "tokens_out": 2295,
+  "comment": "The answer correctly frames the project as feasible with conditions, covering the översiktsplan context and the VA/water capacity issue in detail, but it only indirectly addresses detaljplan limits on building size and extension permits.",
+  "answer": "**Verdict: Feasible with conditions** — moving into a holiday cottage as your permanent home is not automatically prohibited because it is in a *fritidshusområde* (holiday-home area), but the exact property’s detailed plan and its water and wastewater arrangements matter.\n\n**Key rules and constraints:**\n- The decisive local rule is the **detailed plan for your property**. PBL requires a building permit when a building is taken into use for a “substantially different purpose” (*väsentligen annat ändamål*); whether the particular plan or the cottage’s approved use makes your proposed change a permit issue cannot be settled without the property details. [PBL 9 kap. 15 §; c:c378e75f5235e968]\n- Norrtälje’s Översiktsplan 2050 recognises that people are moving permanently into holiday-home areas, but warns that water and wastewater may not work sustainably if demands change. In a VA monitoring area, the applicant must show that VA can be arranged sustainably without worsening the area’s situation. [c:93d248e63b8a409b] [c:a5fae1da55482142]\n- If you rely on a private well, the property owner is responsible for ensuring it provides enough water of adequate quality. Norrtälje identifies water-shortage risks in some coastal areas with substantial holiday-home development, including Herräng, Norra Väddökusten, parts of Vätö, Björknäs, Grovstanäs, Yxlan and Blidö. [c:a5fae1da55482142] [c:6c031c0e47dd4ba9]\n- If you need to install or alter wastewater facilities, a permit is required for a system serving a water toilet, or for connecting a water toilet to an existing system; other wastewater systems generally require notification to the municipal committee. [FMH 13 §; c:5ad3694cc417eb29]\n- Where a permit or planning assessment is involved, suitability includes whether water supply, sewage and other services can be arranged; a building must also be suitable for its purpose. [PBL 2 kap. 5 §; c:945fef370731f443] [PBL 8 kap. 1 §; c:f994b598bb77e701]\n\n**Process and next steps:**\n1. Ask Norrtälje’s building-permit team to confirm the applicable detailed plan and whether it restricts the property to holiday use. The municipality’s Översiktsplan 2050 describes the general context, but does not determine the rules for your specific plot. [c:75a4613073d28d92]\n2. Check your property’s VA category and the capacity/condition of its well and wastewater system with the municipality/Norrtälje Vatten och Avfall. If you need new or altered wastewater facilities, check the permit or notification requirement before doing the work. [c:27587d715f02aa46] [c:5ad3694cc417eb29]\n3. If you plan renovations or extensions to make the cottage suitable for year-round living, ask whether those particular works need a permit or notification.\n\n**Uncertainties:** I can’t determine the detailed-plan provisions, VA category, or approved building use without the property designation or the name of the fritidshusområde. Share the property designation (for example, *X 1:23*) or area name, and I can check the applicable local plan.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Norrtälje fritidshusområde"
+    },
+    "chunks": [],
+    "output_chars": 139,
+    "image": false,
+    "ms": 1758,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Norrtälje fritidshusområde permanentboende omvandling fritidsboende permanentboende vatten avlopp detaljplan",
+     "scope": "kommun",
+     "kommun": "Norrtälje",
+     "k": 10
+    },
+    "chunks": [
+     "397d6f39aa448896",
+     "75a4613073d28d92",
+     "5aafa712fc46dacb",
+     "f8a3b9dfbd5fc55e",
+     "46678f360e8a2783",
+     "6eb98ec9c6487af3",
+     "1e7477f8dd8a8e12",
+     "84f95c374d460b9b",
+     "eecbd2584926af28",
+     "878764151d9a8560"
+    ],
+    "output_chars": 4754,
+    "image": false,
+    "ms": 1017,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "permanentbostad fritidshus bygglov ändrad användning bostad fritidsbostad",
+     "scope": "law",
+     "kommun": "",
+     "k": 10
+    },
+    "chunks": [
+     "c378e75f5235e968",
+     "1d3d3e588b5a00f6",
+     "bab24eaf474250a8",
+     "64207604d7566f04",
+     "5308b1e8873a9fa5",
+     "6c29660511658e47",
+     "4c30bd04758b1b22",
+     "c05a57ca9446f7b5",
+     "62d9608f5974bad1",
+     "f9a6e0d655f39cd1"
+    ],
+    "output_chars": 4361,
+    "image": false,
+    "ms": 1348,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Norrtälje översiktsplan fritidshusområden permanentboende VA",
+     "scope": "kommun",
+     "kommun": "0188",
+     "k": 10
+    },
+    "chunks": [
+     "75a4613073d28d92",
+     "a5fae1da55482142",
+     "93d248e63b8a409b",
+     "5aafa712fc46dacb",
+     "27587d715f02aa46",
+     "76767c7c1b3489bc",
+     "7ae678e6f28dcc8f",
+     "1ec094b9e585e486",
+     "57f05d8298e9ce7e",
+     "e2618e458116dde0"
+    ],
+    "output_chars": 4884,
+    "image": false,
+    "ms": 1063,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 56 §"
+    },
+    "chunks": [
+     "9a534c8969a1e156",
+     "4e62704f77195c61"
+    ],
+    "output_chars": 2341,
+    "image": false,
+    "ms": 61,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "75a4613073d28d92",
+     "doc_id": "",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "75a4613073d28d92"
+    ],
+    "output_chars": 1292,
+    "image": false,
+    "ms": 4,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "a5fae1da55482142",
+     "doc_id": "",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "1ec094b9e585e486",
+     "a5fae1da55482142"
+    ],
+    "output_chars": 3664,
+    "image": false,
+    "ms": 3,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "93d248e63b8a409b",
+     "doc_id": "",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "93d248e63b8a409b",
+     "27587d715f02aa46",
+     "1ec094b9e585e486",
+     "a5fae1da55482142"
+    ],
+    "output_chars": 6378,
+    "image": false,
+    "ms": 2,
+    "turn": 3
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "permanentboende|fritidshusområden|ändrad användning|enskilt avlopp|VA-bevakningsområde",
+     "kommun": "0188",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "93d248e63b8a409b",
+     "27587d715f02aa46",
+     "1ec094b9e585e486",
+     "a5fae1da55482142",
+     "397d6f39aa448896",
+     "cd5b1ce99e920d63",
+     "0bf2c2466aa6bde2",
+     "76767c7c1b3489bc",
+     "244914bc90aaf774",
+     "75a4613073d28d92",
+     "669813df04c73560",
+     "b683ebabbfc50a92",
+     "8313448fb968191a",
+     "77f6b7eb02d92624",
+     "8dcfb1ea2424a9ac"
+    ],
+    "output_chars": 7202,
+    "image": false,
+    "ms": 3535,
+    "turn": 3
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "0188",
+     "doc_type": "other",
+     "title_contains": "ändrad användning"
+    },
+    "chunks": [],
+    "output_chars": 111,
+    "image": false,
+    "ms": 2538,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 15 §"
+    },
+    "chunks": [
+     "c378e75f5235e968"
+    ],
+    "output_chars": 829,
+    "image": false,
+    "ms": 67,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "fritidshus permanentboende bygglov ändrad användning fritidsbostad permanent bostad samma ändamål",
+     "scope": "law",
+     "kommun": "",
+     "k": 12
+    },
+    "chunks": [
+     "c378e75f5235e968",
+     "1d3d3e588b5a00f6",
+     "b204dcbbb84e82a7",
+     "bab24eaf474250a8",
+     "bdf5ff7823667113",
+     "6cbf680703b43348",
+     "fa749b74eb53ac53",
+     "5308b1e8873a9fa5",
+     "b266601e131c9e7c",
+     "9a658c0a20b9cfbe",
+     "f9a6e0d655f39cd1",
+     "6c29660511658e47"
+    ],
+    "output_chars": 4912,
+    "image": false,
+    "ms": 1121,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Norrtälje bygglov fritidshus permanentboende bygglov anmälan ändrad användning",
+     "scope": "kommun",
+     "kommun": "0188",
+     "k": 10
+    },
+    "chunks": [
+     "edb7c7af9bac12ea",
+     "5f788ca9670ca049",
+     "75a4613073d28d92",
+     "92130cb953a20821",
+     "964c737210fdd48f",
+     "8313448fb968191a",
+     "244914bc90aaf774",
+     "fb064ae789682305",
+     "4f47db9db783dcdb",
+     "76767c7c1b3489bc"
+    ],
+    "output_chars": 4831,
+    "image": false,
+    "ms": 683,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Norrtälje enskilt avlopp permanentboende fritidshus belastning tillstånd avlopp",
+     "scope": "kommun",
+     "kommun": "0188",
+     "k": 10
+    },
+    "chunks": [
+     "669813df04c73560",
+     "a5fae1da55482142",
+     "db6d6d0dd5592aea",
+     "eecbd2584926af28",
+     "5aafa712fc46dacb",
+     "6fcacd7bfb7526c0",
+     "2424c4df0256bc78",
+     "d6bb8732731c42f3",
+     "8313448fb968191a",
+     "49f002a762002cf1"
+    ],
+    "output_chars": 4618,
+    "image": false,
+    "ms": 945,
+    "turn": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "FMH",
+     "section": "13 §"
+    },
+    "chunks": [
+     "5ad3694cc417eb29"
+    ],
+    "output_chars": 954,
+    "image": false,
+    "ms": 146,
+    "turn": 4
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "endast fritidsändamål|fritidsändamål|fritidsbebyggelse|permanentboende",
+     "kommun": "0188",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "397d6f39aa448896",
+     "6c031c0e47dd4ba9",
+     "76767c7c1b3489bc",
+     "244914bc90aaf774",
+     "b683ebabbfc50a92",
+     "8313448fb968191a",
+     "57f05d8298e9ce7e",
+     "c8dd055042957db5",
+     "476b87c6ada94ffb",
+     "1e5fc2e861c503b6",
+     "e2618e458116dde0",
+     "8dcfb1ea2424a9ac",
+     "ad702396942c7e6e"
+    ],
+    "output_chars": 6049,
+    "image": false,
+    "ms": 5847,
+    "turn": 5
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "2 kap. 5 §"
+    },
+    "chunks": [
+     "945fef370731f443"
+    ],
+    "output_chars": 837,
+    "image": false,
+    "ms": 80,
+    "turn": 5
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "8 kap. 1 §"
+    },
+    "chunks": [
+     "f994b598bb77e701"
+    ],
+    "output_chars": 362,
+    "image": false,
+    "ms": 66,
+    "turn": 5
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "bygglov permanentboende fritidshus område enskilt vatten avlopp ändrad användning",
+     "scope": "all",
+     "kommun": "Norrtälje",
+     "k": 8
+    },
+    "chunks": [
+     "5308b1e8873a9fa5",
+     "1d3d3e588b5a00f6",
+     "b93e8aa092b0214a",
+     "5ca25e3c45aa1f14",
+     "cfffbde7885e1641",
+     "c378e75f5235e968",
+     "f9a6e0d655f39cd1",
+     "3b8f4cbf239fddb1",
+     "669813df04c73560",
+     "a5fae1da55482142",
+     "cd5b1ce99e920d63",
+     "48e434ba12f46c7b",
+     "303dea4c83d26b4b",
+     "27587d715f02aa46",
+     "edb7c7af9bac12ea",
+     "397d6f39aa448896"
+    ],
+    "output_chars": 7403,
+    "image": false,
+    "ms": 753,
+    "turn": 5
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "vallentuna-tower",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.6666666666666666,
+  "point_scores": [
+   1,
+   2,
+   1
+  ],
+  "unsupported": 0,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "verdict",
+  "mode_ok": true,
+  "evidence": 0.0,
+  "tool_calls": 17,
+  "llm_calls": 8,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 44.9,
+  "first_token_s": 38.5,
+  "cost": 0.00507,
+  "judge_cost": 0.000570892,
+  "tokens_in": 96339,
+  "tokens_out": 1322,
+  "comment": "The answer correctly states that a bygglov is required for a >20 m tower and flags the översiktsplan/landscape/site constraints, but it only indirectly raises the Armed Forces consultation (>20 m rule) and does not explicitly name riksintressen as something to check, instead framing consultation as aviation-related.",
+  "answer": "**Verdict: Feasible with conditions** — a 30 m lookout tower is not automatically barred because the site is outside the built-up area, but it would need a building permit and approval would depend heavily on the exact site and its effects.\n\n**Key rules and constraints:**\n- A tower higher than 20 m requires a building permit under PBL 9 kap. 28 §; the rule applies whether or not the land is inside a built-up area. [c:3607d5877847ba05]\n- Outside a detailed development plan, a permit can be granted only if the project does not require planning, complies with applicable area regulations and meets the relevant planning and building requirements under PBL 9 kap. 57 §. [c:01156e3238dfc9f8]\n- A detailed plan may be required if the tower or its use would have a significant effect on its surroundings; in some cases the tower can instead be assessed through the permit or advance-ruling process. PBL 4 kap. 2 §. [c:701183a84b4afc0f]\n- Vallentuna’s Översiktsplan 2040 (consultation draft) says development outside built-up areas should respect the landscape, nature and cultural values, recreation, farmland, risks, access and water/sewer constraints. It also flags possible site-specific restrictions such as roads, railways and shoreline protection. [c:4463112e3a73206d; c:5857ae2e2b2b1435]\n- **Aviation constraints need early checking:** Vallentuna’s planning material notes that height limits for objects may need to be considered in consultation with Swedavia, the Armed Forces, the Swedish Transport Administration and LFV. A 30 m tower’s acceptability will therefore depend on its exact location. [c:5e54d382c8df758f]\n\n**Process and next steps:**\n1. Give Vallentuna’s building-permit/planning department the property designation or coordinates, tower height and footprint, public-access arrangements, and any proposed parking or access road. Ask them to check the applicable plan or area regulations and whether a detailed plan is needed.\n2. Ask the municipality to identify relevant aviation consultations early, especially given the proposed height. [c:5e54d382c8df758f]\n3. If the site is outside a detailed plan, consider applying for an advance ruling on the site’s suitability before preparing a full permit application; the municipality’s assessment will still depend on the site-specific constraints. [c:01156e3238dfc9f8; c:4463112e3a73206d]\n\n**Uncertainties:** “Open land outside the built-up area” is not precise enough to assess the site. The corpus does not establish whether the land is within a detailed plan, shoreline-protection area, protected cultural or natural landscape, aviation restriction area, or other site-specific constraint. A location or property designation is needed to check these.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Vallentuna"
+    },
+    "chunks": [],
+    "output_chars": 211,
+    "image": false,
+    "ms": 2651,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "bygglov torn utsiktstorn 30 meter utanför detaljplan byggnadsverk",
+     "scope": "law",
+     "kommun": "",
+     "k": 8
+    },
+    "chunks": [
+     "3607d5877847ba05",
+     "1f3785cdaff91268",
+     "c153b69d1648f70b",
+     "7386ffc09148425f",
+     "16ab6da2f1a9c09f",
+     "42ceaa2d71a734f0",
+     "1a9b7f2f6378a055",
+     "701183a84b4afc0f"
+    ],
+    "output_chars": 3449,
+    "image": false,
+    "ms": 814,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "översiktsplan utvecklingsområden landsbygd friluftsliv utsiktstorn landskap",
+     "scope": "kommun",
+     "kommun": "Vallentuna",
+     "k": 8
+    },
+    "chunks": [
+     "8a70123716ca856e",
+     "5973ce4d4d392064",
+     "fe1cc8d97f43a48f",
+     "50c731588eacf1ba",
+     "0bea7252c081f803",
+     "637902bddcb389d6",
+     "2072747f1d215ca8",
+     "d573d80ebb709043"
+    ],
+    "output_chars": 3825,
+    "image": false,
+    "ms": 538,
+    "turn": 2
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "torn|utsikt|30 meter|bygglov utanför detaljplan",
+     "kommun": "0115",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "fda9a8fc64d21b80",
+     "c36c00c8291f2296",
+     "45419730ce936429",
+     "6b0f8da1d7e1609b",
+     "8f1759ba41beaa18",
+     "705c5fe35a1afe28",
+     "57e8b8f67e832483",
+     "4ad334a7f46961d1",
+     "3d25a677e07c9ef4",
+     "f487f455a925fb01",
+     "53fe31bd2ff99481",
+     "84547284f409f645",
+     "73e9b8c6f77fa69f",
+     "700503298b8fc3ff",
+     "600a8783444e200f"
+    ],
+    "output_chars": 7223,
+    "image": false,
+    "ms": 3903,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 57 §"
+    },
+    "chunks": [
+     "01156e3238dfc9f8",
+     "e9f08262c39a9ba6"
+    ],
+    "output_chars": 2469,
+    "image": false,
+    "ms": 34,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "2 kap. 2 §"
+    },
+    "chunks": [
+     "dea578a74bf0c2e5"
+    ],
+    "output_chars": 564,
+    "image": false,
+    "ms": 34,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 28 §"
+    },
+    "chunks": [
+     "3607d5877847ba05"
+    ],
+    "output_chars": 610,
+    "image": false,
+    "ms": 77,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "4 kap. 2 §"
+    },
+    "chunks": [
+     "701183a84b4afc0f",
+     "1a9b7f2f6378a055"
+    ],
+    "output_chars": 2551,
+    "image": false,
+    "ms": 70,
+    "turn": 3
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "förhandsbesked bygglov utanför detaljplan platsens lämplighet landskapsbild natur kulturmiljö tillfart",
+     "scope": "law",
+     "kommun": "",
+     "k": 6
+    },
+    "chunks": [
+     "d0875a14d8e489b7",
+     "cfffbde7885e1641",
+     "01156e3238dfc9f8",
+     "e9f08262c39a9ba6",
+     "65adb23d8ae54859",
+     "0ecfdba1696309e8"
+    ],
+    "output_chars": 2550,
+    "image": false,
+    "ms": 706,
+    "turn": 3
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "Arlanda|MSA|hinderbegränsande|landskapsbild|kulturmiljö|jordbruksmark|strandskydd",
+     "kommun": "0115",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "0c6f068563d546f5",
+     "4440d77188b39012",
+     "05dafbd7085d7fcc",
+     "2d49597833b88653",
+     "a985a7dabb599eef",
+     "f1a8017f522ebe3b",
+     "cbaf8bb41e855d7a",
+     "be103b9fb9233c09",
+     "8228f9d89c56d1a6",
+     "feedda8c87cf082e",
+     "dc9642e8cd256836",
+     "5c6f7a6c2578486d",
+     "3ae91dff6e1f8e09",
+     "7b240b009631b7e8",
+     "a260db0051003268"
+    ],
+    "output_chars": 6751,
+    "image": false,
+    "ms": 3739,
+    "turn": 3
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "0115",
+     "doc_type": "oversiktsplan",
+     "title_contains": ""
+    },
+    "chunks": [],
+    "output_chars": 748,
+    "image": false,
+    "ms": 2879,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "3607d5877847ba05",
+     "doc_id": "",
+     "start": 0,
+     "count": 1
+    },
+    "chunks": [
+     "1f3785cdaff91268",
+     "3607d5877847ba05",
+     "146e86a4e39420e7"
+    ],
+    "output_chars": 1654,
+    "image": false,
+    "ms": 44,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "5973ce4d4d392064",
+     "doc_id": "",
+     "start": 0,
+     "count": 1
+    },
+    "chunks": [
+     "280342987af41d85",
+     "5973ce4d4d392064",
+     "4b7d99e25d99bed8"
+    ],
+    "output_chars": 1728,
+    "image": false,
+    "ms": 18,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "05dafbd7085d7fcc",
+     "doc_id": "",
+     "start": 0,
+     "count": 1
+    },
+    "chunks": [
+     "a5771c1b16b1b625",
+     "05dafbd7085d7fcc",
+     "15436271999d9cb5"
+    ],
+    "output_chars": 1191,
+    "image": false,
+    "ms": 11,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "anläggning på landsbygden bygglov förhandsbesked tillstånd kulturmiljö strandskydd översiktsplan Vallentuna",
+     "scope": "kommun",
+     "kommun": "0115",
+     "k": 5
+    },
+    "chunks": [
+     "f1999ba7a3ce5a00",
+     "5857ae2e2b2b1435",
+     "33cb8372af61f50e",
+     "fe1cc8d97f43a48f",
+     "745e4312951dc663"
+    ],
+    "output_chars": 2405,
+    "image": false,
+    "ms": 639,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "5857ae2e2b2b1435",
+     "doc_id": "",
+     "start": 0,
+     "count": 1
+    },
+    "chunks": [
+     "4463112e3a73206d",
+     "5857ae2e2b2b1435",
+     "c0660fe83f478279"
+    ],
+    "output_chars": 3797,
+    "image": false,
+    "ms": 6,
+    "turn": 5
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "MSA Arlanda Vallentuna high structures tower aviation obstacle notice",
+     "scope": "kommun",
+     "kommun": "0115",
+     "k": 4
+    },
+    "chunks": [
+     "8f1759ba41beaa18",
+     "bd2202caa0bd923d",
+     "f487f455a925fb01",
+     "5e54d382c8df758f"
+    ],
+    "output_chars": 1902,
+    "image": false,
+    "ms": 586,
+    "turn": 6
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "uppsala-advance-ruling",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "feasible",
+  "verdict_ok": true,
+  "points": 0.8333333333333334,
+  "point_scores": [
+   2,
+   2,
+   1
+  ],
+  "unsupported": 0,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "explain",
+  "mode_ok": true,
+  "evidence": 1.0,
+  "tool_calls": 25,
+  "llm_calls": 9,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 59.6,
+  "first_token_s": 53.3,
+  "cost": 0.00731,
+  "judge_cost": 0.000711902,
+  "tokens_in": 132330,
+  "tokens_out": 2312,
+  "comment": "The answer clearly covers förhandsbesked under PBL 9 kap. 41 §, the two-year binding deadline and non-extendability, and Uppsala's fees, location assessment and VA requirements, though the 'access' aspect of the third key point is not addressed.",
+  "answer": "**Answer:** Yes. For a specific plot outside a detailed development plan, you can apply to Uppsala Municipality for a **förhandsbesked**—a preliminary decision on whether a house can be located on that particular site. It addresses the site’s suitability, not the final house design; you would still need to apply for building permission if the answer is positive. [c:123404bf6a6048b2]\n\n**How it works:**\n1. **Identify the exact plot and proposed house location.** A field “outside a village” is not enough to determine the outcome: the municipality assesses the particular location and whether it is suitable, including whether it would require detailed planning. [c:f8ca2403503664cf; c:1f2cb83654a3676d]\n2. **Apply for a förhandsbesked.** Under PBL 9 kap. 41 §, this can be requested for a building-permit-required project outside a detailed-plan area. The municipality’s page says it is commonly used for a house on an undeveloped plot. [c:f8ca2403503664cf; c:123404bf6a6048b2]\n3. **Expect the land and services to matter.** For example, productive agricultural land may be used for development only where an essential public interest requires it and that need cannot be met satisfactorily on other land (Environmental Code 3 kap. 4 §). [c:5e037b653f0fcde5] Uppsala’s comprehensive plan says rural housing should generally be individual detached houses in locations suited to future building groups, or additions to existing groups; it also says water and sewerage conditions must be secured in advance for new development outside municipal VA areas. [c:7cc0a2905b8f2371; c:898461efbb1e2c7a]\n4. **If the decision is positive, meet its deadline.** It binds the later building-permit assessment only if you apply for building permission within two years after the decision becomes legally final; Uppsala says it cannot be extended. [c:3839424b0d2cc19d; c:b33d377295c0dbe7]\n\n**In Uppsala:** The municipality provides an online application and a paper form. Its form asks for a site plan and a proposed water and sewer solution; where there is no municipal VA, the municipality specifically asks for a description of the proposed solution and a map showing it. [c:b33d377295c0dbe7; c:cde9ea40026b9fe2] The listed 2026 fee for a preliminary decision concerning a one- or two-dwelling house outside a detailed-plan area or area regulations is **SEK 25,300**. [c:60f4da4629c3f136]\n\n**Uncertainties:** The plot’s exact location could change the answer—for example, if it is covered by a detailed plan or affected by site-specific constraints. Before committing to buy, ask the municipality about the exact parcel and consider making the purchase conditional on a satisfactory preliminary decision. The decision is a useful early check, not the building permit itself.",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Uppsala"
+    },
+    "chunks": [],
+    "output_chars": 201,
+    "image": false,
+    "ms": 2751,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "förhandsbesked nybyggnad bostadshus utanför detaljplan jordbruksmark sammanhållen bebyggelse",
+     "scope": "law",
+     "kommun": "",
+     "k": 8
+    },
+    "chunks": [
+     "425064c420459682",
+     "6ee185be3811726f",
+     "9821607343973fde",
+     "c153b69d1648f70b",
+     "a9f43024c03bbcaa",
+     "62d9608f5974bad1",
+     "f8ca2403503664cf",
+     "1d3d3e588b5a00f6"
+    ],
+    "output_chars": 3126,
+    "image": false,
+    "ms": 998,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "förhandsbesked bygglov utanför detaljplan bostadshus",
+     "scope": "kommun",
+     "kommun": "Uppsala",
+     "k": 8
+    },
+    "chunks": [
+     "123404bf6a6048b2",
+     "bedf9d9bbe897a52",
+     "8ede1eda4178e465",
+     "868b3d927a763240",
+     "8f12129ab289d8e2",
+     "68a877865ee7deb8",
+     "f5cfe59e8e5679f3",
+     "b33d377295c0dbe7"
+    ],
+    "output_chars": 3745,
+    "image": false,
+    "ms": 668,
+    "turn": 1
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:123404bf6a6048b2",
+     "doc_id": "page:0380:569b1d34e862cdc8",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 0,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 41 §"
+    },
+    "chunks": [
+     "f8ca2403503664cf"
+    ],
+    "output_chars": 318,
+    "image": false,
+    "ms": 124,
+    "turn": 2
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 74 §"
+    },
+    "chunks": [
+     "1f2cb83654a3676d"
+    ],
+    "output_chars": 961,
+    "image": false,
+    "ms": 140,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "förhandsbesked prövning lokalisering markens lämplighet jordbruksmark väg vatten avlopp strandskydd giltighet två år",
+     "scope": "law",
+     "kommun": "",
+     "k": 8
+    },
+    "chunks": [
+     "7066cb0446bf54db",
+     "8e6bb7c987dedcc4",
+     "dea578a74bf0c2e5",
+     "3839424b0d2cc19d",
+     "14d7d5354d8c7c4e",
+     "d4b8ae3f25c94866",
+     "9bc642ec3595e6c7",
+     "1f2cb83654a3676d"
+    ],
+    "output_chars": 3424,
+    "image": false,
+    "ms": 773,
+    "turn": 2
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "förhandsbesked|jordbruksmark|avlopp|strandskydd",
+     "kommun": "0380",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "38285409c76a1582",
+     "d34a1c1bbe70f63b",
+     "282384e9e77a5143",
+     "2fa5456119212f4f",
+     "b11c232effb8df83",
+     "f618e8d3ab6ebafb",
+     "4e88fc54c37781e5",
+     "d9110e85cabd5b7b",
+     "9985a9b0e378b2d5",
+     "55cb60a173945916",
+     "47fe1e2dc5d51b85",
+     "731fa299eee0db80",
+     "c9c057653d837d0a",
+     "95d5c2b56b7529f9",
+     "3c92c2abb8fe71af"
+    ],
+    "output_chars": 6918,
+    "image": false,
+    "ms": 2553,
+    "turn": 2
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "0380",
+     "doc_type": "bygglov",
+     "title_contains": "Förhandsbesked"
+    },
+    "chunks": [],
+    "output_chars": 333,
+    "image": false,
+    "ms": 2879,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 42 §"
+    },
+    "chunks": [
+     "3839424b0d2cc19d"
+    ],
+    "output_chars": 351,
+    "image": false,
+    "ms": 27,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "2 kap. 2 §"
+    },
+    "chunks": [
+     "dea578a74bf0c2e5"
+    ],
+    "output_chars": 564,
+    "image": false,
+    "ms": 26,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "MB",
+     "section": "3 kap. 4 §"
+    },
+    "chunks": [
+     "5e037b653f0fcde5",
+     "38b3347f4bcf66f3"
+    ],
+    "output_chars": 1566,
+    "image": false,
+    "ms": 37,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 57 §"
+    },
+    "chunks": [
+     "01156e3238dfc9f8",
+     "e9f08262c39a9ba6"
+    ],
+    "output_chars": 2469,
+    "image": false,
+    "ms": 40,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0380:569b1d34e862cdc8",
+     "start": 0,
+     "count": 5
+    },
+    "chunks": [
+     "123404bf6a6048b2",
+     "b33d377295c0dbe7"
+    ],
+    "output_chars": 2819,
+    "image": false,
+    "ms": 2,
+    "turn": 4
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "pdf:0380:42588d154edf00cc",
+     "start": 0,
+     "count": 8
+    },
+    "chunks": [
+     "7c9b0b1e40d72150",
+     "d14e9fcb138fb697",
+     "cf530e144046f881",
+     "cde9ea40026b9fe2",
+     "eea7041af3ed8596"
+    ],
+    "output_chars": 2491,
+    "image": false,
+    "ms": 9,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Uppsala kommun förhandsbesked ansökan underlag karta situationsplan VA vatten avlopp avgift handläggningstid",
+     "scope": "kommun",
+     "kommun": "0380",
+     "k": 5
+    },
+    "chunks": [
+     "cde9ea40026b9fe2",
+     "06ff99c67c2817bc",
+     "b33d377295c0dbe7",
+     "8f12129ab289d8e2",
+     "f5cfe59e8e5679f3"
+    ],
+    "output_chars": 2406,
+    "image": false,
+    "ms": 983,
+    "turn": 4
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "förhandsbesked",
+     "kommun": "0380",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "8f9666ade85143fb",
+     "123404bf6a6048b2",
+     "b33d377295c0dbe7",
+     "898461efbb1e2c7a",
+     "04872638036f7920",
+     "663763e5a266bfb1",
+     "7037d391447c6dc5",
+     "60f4da4629c3f136",
+     "15ec9b562d883aef",
+     "868b3d927a763240",
+     "50a8f2cab502666c",
+     "8ede1eda4178e465",
+     "034c18946099b5ef",
+     "8f12129ab289d8e2",
+     "bedf9d9bbe897a52"
+    ],
+    "output_chars": 7019,
+    "image": false,
+    "ms": 3095,
+    "turn": 5
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "0380",
+     "doc_type": "bygglov",
+     "title_contains": "lokaliseringsprövning"
+    },
+    "chunks": [],
+    "output_chars": 244,
+    "image": false,
+    "ms": 3071,
+    "turn": 5
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "9 kap. 3 §"
+    },
+    "chunks": [
+     "5d3d8f2cba8bc679"
+    ],
+    "output_chars": 171,
+    "image": false,
+    "ms": 23,
+    "turn": 5
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "4 kap. 2 §"
+    },
+    "chunks": [
+     "701183a84b4afc0f",
+     "1a9b7f2f6378a055"
+    ],
+    "output_chars": 2551,
+    "image": false,
+    "ms": 22,
+    "turn": 5
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "Uppsala riktlinje lokaliseringsprövning förhandsbesked landsbygd enbostadshus placering jordbruksmark bebyggelsegrupp",
+     "scope": "kommun",
+     "kommun": "0380",
+     "k": 5
+    },
+    "chunks": [
+     "123404bf6a6048b2",
+     "04872638036f7920",
+     "7cc0a2905b8f2371",
+     "cf530e144046f881",
+     "c3aff81251b97701"
+    ],
+    "output_chars": 2168,
+    "image": false,
+    "ms": 778,
+    "turn": 6
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0380:595a3674a1bb8c0a",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [
+     "00621b3892c8b044",
+     "47a83d47744c989b",
+     "602213b56a912d56",
+     "d0133a43d601efd3",
+     "6f2274af3770c447",
+     "c4919f2e07b9379e"
+    ],
+    "output_chars": 8947,
+    "image": false,
+    "ms": 15,
+    "turn": 6
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0380:921ff8c748c42f48",
+     "start": 0,
+     "count": 3
+    },
+    "chunks": [
+     "60f4da4629c3f136",
+     "15ec9b562d883aef",
+     "868b3d927a763240"
+    ],
+    "output_chars": 4862,
+    "image": false,
+    "ms": 10,
+    "turn": 6
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "Ny bostadsbebyggelse bör tillkomma|VA-försörjningen är säkerställd|förhandsbesked och bygglov",
+     "kommun": "0380",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "7cc0a2905b8f2371",
+     "898461efbb1e2c7a",
+     "04872638036f7920"
+    ],
+    "output_chars": 1407,
+    "image": false,
+    "ms": 1776,
+    "turn": 7
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "c:04872638036f7920",
+     "doc_id": "",
+     "start": 0,
+     "count": 1
+    },
+    "chunks": [],
+    "output_chars": 36,
+    "image": false,
+    "ms": 0,
+    "turn": 7
+   }
+  ],
+  "error": null
+ },
+ {
+  "case": "gotland-own-va",
+  "system": "agent",
+  "model": "openai/gpt-6-luna",
+  "prompt": "v3",
+  "repeat": 0,
+  "effort": "medium",
+  "explore_effort": "medium",
+  "task": "verdict",
+  "verdict": "conditional",
+  "verdict_ok": true,
+  "points": 0.6666666666666666,
+  "point_scores": [
+   2,
+   2,
+   0
+  ],
+  "unsupported": 0,
+  "judge_model": "xiaomi/mimo-v2.6-flash",
+  "mode": "explain",
+  "mode_ok": true,
+  "evidence": 1.0,
+  "tool_calls": 15,
+  "llm_calls": 7,
+  "map_views": 0,
+  "map_doc_viewed": null,
+  "seconds": 40.1,
+  "first_token_s": 31.0,
+  "cost": 0.00575,
+  "judge_cost": 0.001103348,
+  "tokens_in": 88184,
+  "tokens_out": 1702,
+  "comment": "The answer clearly covers the documentation required in the bygglov case and the permit/notification rules for own VA (including the water-toilet permit rule from FMH 13 §), with all figures supported by the cited sources, but it never mentions the översiktsplan's guidance on VA conditions.",
+  "answer": "**Answer:** Region Gotland requires you to show in the building-permit case that both a safe, sufficient water supply and a workable sewage solution can be provided on the site. The site’s suitability for water supply and sewage is part of the legal location assessment for building permits under PBL 2 kap. 5 §. [c:945fef370731f443]\n\n**How it works:**\n\n- **Show the proposed layout.** Submit a site plan showing existing and proposed buildings, and all existing and proposed wells and infiltration areas within 200 metres. [c:d2f71943ccf3a7b3]\n- **Demonstrate that sewage treatment is feasible.** Region Gotland usually requires documentation from one or more test pits at the proposed infiltration location. The pit must be at that location, at least 2 metres deep, and at least 50 metres from surrounding wells. [c:d2f71943ccf3a7b3]\n- **Demonstrate adequate water quantity and quality.** The information required depends on the area and the scale of the development. If capacity testing is required, nearby wells—normally those within about 80 metres—must be considered, including the effect of neighbouring water needs on the proposed abstraction. [c:d2f71943ccf3a7b3; c:0ee702e871d28575]\n- **Allow for key separation distances.** Region Gotland’s building-case guidance says at least 50 metres is required between the well and the nearest farmland or infiltration area. [c:d2f71943ccf3a7b3] For the separate well application, the Region lists further distances as *guidelines* (“riktvärde”), including 30 metres to other water wells, 50 metres to energy wells and sewage discharge points, and 15 metres to the property boundary. These are assessed in the well application and should be checked against the site conditions. [c:b36ccc25ca19a017]\n- **Apply separately for the well and the septic system.** A new well must be notified to the Environment and Building Committee, and you must wait for its decision before starting work; a permit is required instead in certain water-protection areas. [c:cd6432a57af25442] A new private sewage installation requires a separate permit from the same committee. [c:ed5d00e455e86e1e] Under the national rules, a system serving a water toilet requires a permit; other sewage systems require notification, although local rules can require a permit in specified areas. [c:5ad3694cc417eb29]\n- **Provide a fuller sewage application.** Region Gotland asks for a scaled site plan—about 1:500—showing the whole system, its distances to wells, buildings, surface water and property boundaries, test-pit locations, access for the desludging vehicle, and the proposed pipe route and discharge point. It also asks for a technical description, including system function, sizing and position relative to groundwater. [c:b9f9c9e343874372; c:0595f74299a0d0fb]\n- **Plan the order of work.** Region Gotland advises resolving the sewage question before proceeding with the water question in the building case. It also says to apply for the separate sewage permit after the advance decision or building permit is granted, to avoid unnecessary expense. [c:0ee702e871d28575; c:5e242b39312f43b1]\n\n**In Gotland:** The Region warns that the island’s thin soils, fractured limestone and underlying saline water make groundwater vulnerable, so it expects careful, site-specific VA planning. [c:fb071896f3c6cb5c] The well application is charged at the current hourly rate; the sewage application is charged under the current fee tariff. [c:b36ccc25ca19a017; c:ed5d00e455e86e1e]\n\n**Uncertainties:** The exact evidence required—and whether a proposed well and sewage design will be acceptable—depends on the property, nearby wells and discharge points, soil and groundwater conditions, and whether the site is in a water-protection area. The Region’s guidance says the required water assessment varies by location and development size. [c:d2f71943ccf3a7b3; c:cd6432a57af25442]",
+  "steps": [
+   {
+    "tool": "find_kommun",
+    "arguments": {
+     "place": "Gotland"
+    },
+    "chunks": [],
+    "output_chars": 201,
+    "image": false,
+    "ms": 2406,
+    "turn": 1
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "enskilt vatten egen brunn avlopp bygglov yttrande miljö och hälsoskydd",
+     "scope": "kommun",
+     "kommun": "Gotland",
+     "k": 10
+    },
+    "chunks": [
+     "cd6432a57af25442",
+     "a8f83164faa63d4e",
+     "29265d3877efecbc",
+     "fb071896f3c6cb5c",
+     "0ee702e871d28575",
+     "21422580b1e5718d",
+     "3e855ef3f2b80490",
+     "d2f71943ccf3a7b3",
+     "b36ccc25ca19a017",
+     "ed5d00e455e86e1e"
+    ],
+    "output_chars": 4649,
+    "image": false,
+    "ms": 790,
+    "turn": 2
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "enskilt avlopp tillstånd anmälan vattentäkt dricksvatten bygglov bostad",
+     "scope": "law",
+     "kommun": "Gotland",
+     "k": 8
+    },
+    "chunks": [
+     "43d301b1c50d9e42",
+     "0970ca2b62d3793e",
+     "5ad3694cc417eb29",
+     "e2bb583cd77075bd",
+     "33eb278f6bffb0a7",
+     "f95df3a61b5dbd5e",
+     "5fa41941e5898eae",
+     "a0a038df3fba8074"
+    ],
+    "output_chars": 3568,
+    "image": false,
+    "ms": 1172,
+    "turn": 2
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Gotland",
+     "doc_type": "avlopp",
+     "title_contains": ""
+    },
+    "chunks": [],
+    "output_chars": 1913,
+    "image": false,
+    "ms": 4620,
+    "turn": 2
+   },
+   {
+    "tool": "list_documents",
+    "arguments": {
+     "kommun": "Gotland",
+     "doc_type": "bygglov",
+     "title_contains": "vatten"
+    },
+    "chunks": [],
+    "output_chars": 111,
+    "image": false,
+    "ms": 4662,
+    "turn": 2
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0980:072d4c292d4db576",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [
+     "d2f71943ccf3a7b3",
+     "0ee702e871d28575",
+     "5e242b39312f43b1",
+     "b21a95066380218f"
+    ],
+    "output_chars": 6315,
+    "image": false,
+    "ms": 3,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0980:0ff80c467336b261",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [
+     "fb071896f3c6cb5c",
+     "cd6432a57af25442",
+     "bcd5b5ffb14d1d68",
+     "b36ccc25ca19a017",
+     "a8f83164faa63d4e",
+     "6fa6543f284d20ef"
+    ],
+    "output_chars": 8579,
+    "image": false,
+    "ms": 6,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0980:051530f6ac692752",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [
+     "ed5d00e455e86e1e",
+     "b9f9c9e343874372",
+     "0595f74299a0d0fb",
+     "67b797962ad0cf5e"
+    ],
+    "output_chars": 5830,
+    "image": false,
+    "ms": 3,
+    "turn": 3
+   },
+   {
+    "tool": "read",
+    "arguments": {
+     "chunk_id": "",
+     "doc_id": "page:0980:ac96ec7c812fc9f2",
+     "start": 0,
+     "count": 10
+    },
+    "chunks": [
+     "280335ae16c5d27a",
+     "131fcbba6bb6ee88",
+     "365cb03f47865c14",
+     "813f1f34fe0373e4",
+     "81eddcb51aae55ef"
+    ],
+    "output_chars": 7970,
+    "image": false,
+    "ms": 6,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "FMH",
+     "section": "13 §"
+    },
+    "chunks": [
+     "5ad3694cc417eb29"
+    ],
+    "output_chars": 954,
+    "image": false,
+    "ms": 27,
+    "turn": 3
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "MB",
+     "section": "9 kap. 7 §"
+    },
+    "chunks": [
+     "33eb278f6bffb0a7"
+    ],
+    "output_chars": 659,
+    "image": false,
+    "ms": 31,
+    "turn": 3
+   },
+   {
+    "tool": "grep",
+    "arguments": {
+     "pattern": "200 meter|50 meter|80 meter|provgrop|vattenredovisning|helt löst",
+     "kommun": "Gotland",
+     "scope": "kommun"
+    },
+    "chunks": [
+     "b9f9c9e343874372",
+     "67b797962ad0cf5e",
+     "d2f71943ccf3a7b3",
+     "0ee702e871d28575",
+     "946eb6807f3f2105",
+     "4aa86f83cfb1d01d",
+     "62aafbcc5aba744c",
+     "d998887c703eed22",
+     "25bf45cb4507860d",
+     "707937066b5b7101",
+     "713709a08fa1a2e7",
+     "42f0c4611f80db01",
+     "3215e377880c9a0a",
+     "a30fb42478e5694c",
+     "9a0c90ae635c861d"
+    ],
+    "output_chars": 6929,
+    "image": false,
+    "ms": 3004,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "PBL bygglov vattenförsörjning avlopp platsens lämplighet ny byggnad enskilt vatten avlopp",
+     "scope": "law",
+     "kommun": "Gotland",
+     "k": 6
+    },
+    "chunks": [
+     "945fef370731f443",
+     "ab7ed0751cdea1c0",
+     "5308b1e8873a9fa5",
+     "b93e8aa092b0214a",
+     "e2bb583cd77075bd",
+     "abc145117054581e"
+    ],
+    "output_chars": 2757,
+    "image": false,
+    "ms": 678,
+    "turn": 4
+   },
+   {
+    "tool": "search",
+    "arguments": {
+     "query": "bygglov enskilt vatten avlopp provgrop vattenredovisning situationsplan",
+     "scope": "kommun",
+     "kommun": "Gotland",
+     "k": 5
+    },
+    "chunks": [
+     "d2f71943ccf3a7b3",
+     "b9f9c9e343874372",
+     "946eb6807f3f2105",
+     "21422580b1e5718d",
+     "25bf45cb4507860d"
+    ],
+    "output_chars": 2304,
+    "image": false,
+    "ms": 916,
+    "turn": 4
+   },
+   {
+    "tool": "law_section",
+    "arguments": {
+     "law": "PBL",
+     "section": "2 kap. 5 §"
+    },
+    "chunks": [
+     "945fef370731f443"
+    ],
+    "output_chars": 837,
+    "image": false,
+    "ms": 13,
+    "turn": 5
+   }
+  ],
+  "error": null
+ }
+]

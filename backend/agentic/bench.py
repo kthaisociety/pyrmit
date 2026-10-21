@@ -1,20 +1,33 @@
 """
-Case-study benchmark: classic RAG vs. the tool-calling agent on feasibility questions with a
-known outcome (agentic/cases.jsonl).
+Case-study benchmark: classic RAG vs. the tool-calling agent on planning questions with a reference
+(agentic/cases*.jsonl). A case's `task` (default "verdict") says what kind of answer is expected:
+
+  verdict   a defined project: is it feasible? (cases.jsonl, cases_caselaw.jsonl, cases_plans.jsonl)
+  explain   how a rule / procedure / fee works (cases_tasks.jsonl, cases_generated.jsonl)
+  propose   where a project could go: options named in the kommun's plans (`anchors`)
+  develop   complete a project idea: key points prefixed "Obstacle:", "Lever:", "Ask:"
 
 Per case and system:
   evidence  share of the case's evidence groups (law sections / kommun passages) that the system
             put in front of the model (retrieved chunks for RAG, every chunk a tool showed for the agent)
-  verdict   did the answer reach one of the acceptable verdicts (LLM judge)
-  points    coverage of the expected key points, 0-2 each (LLM judge), reported as 0-1
+  verdict   did the answer reach one of the acceptable verdicts (LLM judge; cases with `verdicts` only)
+  points    coverage of the expected key points, 0-2 each (LLM judge), reported as 0-1;
+            develop: also per kind (obstacles / levers / asks)
+  anchors   propose: share of the `min_anchors` places of the reference the answer names (string match, no LLM)
+  proposals propose: options the answer gives, and the share the cited sources support (LLM judge)
+  mode      agent: the kind of question it chose in answer_ready, and whether it is the case's task
   cost, seconds, tool calls
 
-The judge is the same model as the systems (GPT-6 Luna by default): cheap but self-preferential,
-so read its scores as relative between systems, not absolute.
+The judge defaults to the systems' model (GPT-6 Luna): cheap but self-preferential, so read its scores as
+relative between systems. --judge-model xiaomi/mimo-v2.6-flash grades with another model family.
+--leakage (no LLM) prints the rank of each case's evidence in a plain search with the question as asked:
+evidence ranked first means the question gives the answer away.
 
     cd backend
     LLM_PROVIDER=openrouter python -m agentic.bench --systems rag agent
     python -m agentic.bench --systems agent --effort medium --cases kumla-200m2 attefall-vallentuna
+    python -m agentic.bench --cases-file cases_tasks.jsonl --store disk --judge-model xiaomi/mimo-v2.6-flash
+    CUDA_VISIBLE_DEVICES= python -m agentic.bench --cases-file cases_tasks.jsonl --store disk --leakage
 """
 
 import argparse
@@ -28,7 +41,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
-from agentic.agent import ANSWER_FORMAT, DEFAULT_MODEL, ROLE, AgentRun, _add_usage, run_agent
+from agentic.agent import ANSWER_FORMAT, DEFAULT_MODEL, MODES_GUIDE, ROLE, AgentRun, _add_usage, run_agent
 from agentic.run import build_tools
 from corpus.common import read_jsonl
 from llm import get_openai_client, get_response_output_text, resolve_model_name
@@ -44,6 +57,8 @@ RAG_INSTRUCTIONS = f"""{ROLE}
 Answer only from the numbered sources below (Swedish statutes and municipal documents). Each source starts with its
 chunk id [c:<id>]; cite it like that.
 
+{MODES_GUIDE}
+
 {ANSWER_FORMAT}"""
 
 JUDGE_INSTRUCTIONS = """You grade answers of a Swedish planning assistant against a reference.
@@ -54,8 +69,44 @@ Return JSON only: {"verdict": "<feasible|conditional|not_feasible|unclear>", "po
   in the cited sources given below, or that contradict them. A claim the cited sources state is supported even when
   the reference does not mention it (the reference is not exhaustive)."""
 
-MAX_JUDGE_SOURCES, MAX_SOURCE_CHARS = 15, 1500
+_POINTS = "- points: 2 = the key point is clearly stated, 1 = partially / vaguely, 0 = missing or contradicted."
+_UNSUPPORTED = """- unsupported_claims: number of specific rules/numbers/facts in the answer that are stated neither in the reference nor
+  in the cited sources given below, or that contradict them. A claim the cited sources state is supported even when
+  the reference does not mention it (the reference is not exhaustive)."""
+_VERDICT = ("- verdict: only if the reference lists acceptable verdicts, how the answer classifies the project (Feasible -> "
+            "feasible, Feasible with conditions -> conditional, Not feasible as described -> not_feasible, Unclear -> "
+            "unclear); \"none\" if it gives no classification.")
+
+# Per task: the answer is graded on the reference key points; no verdict unless the case has accepted verdicts
+TASK_JUDGE_INSTRUCTIONS = {
+    "explain": f"""You grade answers of a Swedish planning assistant to a question about rules or procedures, against a reference.
+Return JSON only: {{"verdict": "<...|none>", "points": [<0|1|2> per key point, in order], "unsupported_claims": <int>, "comment": "<one sentence>"}}.
+{_VERDICT}
+{_POINTS}
+{_UNSUPPORTED}""",
+    "develop": f"""You grade answers of a Swedish planning assistant that helps a user develop a project idea, against a reference.
+The reference key points are labelled Obstacle (what could block the project), Lever (a way to make it work) or Ask
+(information the assistant should ask the user for or say it needs).
+Return JSON only: {{"verdict": "<...|none>", "points": [<0|1|2> per key point, in order], "unsupported_claims": <int>, "comment": "<one sentence>"}}.
+{_VERDICT}
+{_POINTS} A Lever counts when the answer proposes it as an option; an Ask counts when the answer asks for or flags
+  that missing information.
+{_UNSUPPORTED}""",
+    "propose": f"""You grade answers of a Swedish planning assistant that proposes where or what a user could build, against a reference.
+Return JSON only: {{"verdict": "<...|none>", "proposals": [{{"place": "<as the answer names it>", "sourced": true|false}}], "points": [<0|1|2> per key point, in order], "unsupported_claims": <int>, "comment": "<one sentence>"}}.
+- proposals: each distinct option (place or kind of project) the answer proposes. sourced = the cited sources given
+  below show that the kommun's plans designate or support this place for this kind of development (not only that the
+  place exists), or the reference does.
+{_VERDICT}
+{_POINTS}
+{_UNSUPPORTED}""",
+}
+
+# Every cited chunk, whole: with 15 x 1500 chars, a quarter of the agent answers had cited facts the judge never saw
+# (counted as unsupported)
+MAX_JUDGE_SOURCES, MAX_SOURCE_CHARS = 40, 3000
 MAP_TOOLS = {"view_map_area", "view_pdf_page"}
+POINT_KINDS = ("Obstacle", "Lever", "Ask")
 
 
 def run_rag(question: str, tools, model: str, effort: str, k: int = 10) -> AgentRun:
@@ -105,14 +156,19 @@ def cited_sources(answer: str, tools) -> str:
 
 def judge(case: dict, answer: str, model: str, sources: str = "") -> dict:
     client = get_openai_client()
+    task = case.get("task", "verdict")
     points = "\n".join(f"{i + 1}. {point}" for i, point in enumerate(case["key_points"]))
+    verdicts = f"Acceptable verdicts: {case['verdicts']}" if case.get("verdicts") else "Acceptable verdicts: none (no verdict expected)"
+    anchors = (f"Places the kommun's plans designate (reference, not exhaustive): "
+               f"{', '.join(anchor['name'] for anchor in case['anchors'])}\n\n" if case.get("anchors") else "")
     response = client.responses.create(
-        model=model, reasoning={"effort": "medium"}, instructions=JUDGE_INSTRUCTIONS,
-        input=f"Question: {case['question']}\n\nReference key points:\n{points}\n\n"
-              f"Acceptable verdicts: {case['verdicts']}\n\nAnswer to grade:\n{answer}\n\n"
+        model=model, reasoning={"effort": "medium"}, instructions=TASK_JUDGE_INSTRUCTIONS.get(task, JUDGE_INSTRUCTIONS),
+        input=f"Question: {case['question']}\n\nReference key points:\n{points}\n\n{anchors}"
+              f"{verdicts}\n\nAnswer to grade:\n{answer}\n\n"
               f"Cited sources (excerpts):\n{sources or '(none)'}",
     )
-    text = get_response_output_text(response).strip().strip("`").removeprefix("json").strip()
+    text = get_response_output_text(response).strip()
+    text = text[text.find("{"):text.rfind("}") + 1]  # some models wrap the JSON in prose or a code fence
     try:
         grade = json.loads(text)
     except json.JSONDecodeError:
@@ -120,6 +176,51 @@ def judge(case: dict, answer: str, model: str, sources: str = "") -> dict:
                  "comment": f"unparseable judge output: {text[:200]}"}
     grade["judge_cost"] = float(getattr(response.usage, "cost", 0) or 0)
     return grade
+
+
+def anchor_hits(case: dict, answer: str) -> list[str]:
+    """Reference places (name or alias) the answer names, case-insensitive, whole words."""
+    hits = []
+    for anchor in case.get("anchors") or []:
+        names = [anchor["name"], *anchor.get("aliases", [])]
+        if any(re.search(rf"(?<!\w){re.escape(name)}(?!\w)", answer, re.I) for name in names):
+            hits.append(anchor["name"])
+    return hits
+
+
+def mode_ok(case: dict, mode: str | None) -> bool:
+    """The agent's mode (answer_ready) is one the case accepts: `modes` when a question mixes kinds (e.g. a
+    verdict case asking "how does that work?"), else its task."""
+    return mode in (case.get("modes") or [case.get("task", "verdict")])
+
+
+def grade_answer(case: dict, answer: str, tools, judge_model: str) -> dict:
+    """The task-dependent scores of one answer (LLM judge + string matching), as stored in a result row."""
+    grade = judge(case, answer, judge_model, cited_sources(answer, tools))
+    scores = grade.get("points") or []
+    scores = (list(scores) + [0] * len(case["key_points"]))[:len(case["key_points"])]  # judge returned too few / many
+    row = {
+        "task": case.get("task", "verdict"),
+        "verdict": grade.get("verdict"),
+        "verdict_ok": grade.get("verdict") in case["verdicts"] if case.get("verdicts") else None,
+        "points": sum(scores) / (2 * len(case["key_points"])),
+        "point_scores": scores,
+        "unsupported": grade.get("unsupported_claims", 0),
+        "comment": grade.get("comment"), "judge_cost": grade.get("judge_cost", 0), "judge_model": judge_model,
+    }
+    if row["task"] == "develop":  # coverage per kind of key point
+        for kind in POINT_KINDS:
+            mine = [s for point, s in zip(case["key_points"], scores) if point.startswith(kind + ":")]
+            row[f"points_{kind.lower()}"] = sum(mine) / (2 * len(mine)) if mine else None
+    if case.get("anchors"):
+        hits = anchor_hits(case, answer)
+        needed = min(case.get("min_anchors") or len(case["anchors"]), len(case["anchors"]))
+        row["anchors_hit"], row["anchors"] = hits, min(len(hits), needed) / needed
+    if row["task"] == "propose":
+        proposals = [p for p in grade.get("proposals") or [] if isinstance(p, dict)]
+        row["proposals"] = len(proposals)
+        row["proposals_sourced"] = sum(bool(p.get("sourced")) for p in proposals) / len(proposals) if proposals else None
+    return row
 
 
 def evidence_recall(case: dict, seen: list[str], tools) -> float | None:
@@ -160,6 +261,9 @@ def sample_cases(cases: list[dict], n: int, seed: int = 0) -> list[dict]:
     rng = random.Random(seed)
     strata: dict[str, list[dict]] = {}
     for case in cases:
+        if not case.get("verdicts"):  # explain / propose / develop: one stratum per task
+            strata.setdefault(case.get("task", "verdict"), []).append(case)
+            continue
         verdicts = set(case["verdicts"])
         key = ("negative" if verdicts <= {"not_feasible", "unclear"} and "not_feasible" in verdicts
                else "open" if verdicts <= {"unclear", "conditional"} else "positive")
@@ -175,8 +279,27 @@ def sample_cases(cases: list[dict], n: int, seed: int = 0) -> list[dict]:
     return picked
 
 
+def evidence_ranks(case: dict, tools, k: int = 20) -> list[int | None]:
+    """Per evidence group: the best rank (1-based) of a matching chunk in the agent's search tool run on the question
+    as asked (hybrid, kommun filter from the question), None when not in the top k. Rank 1-3 for most groups means the
+    question gives the answer away: a single search finds it."""
+    result = tools.retriever.search(case["question"], query_sv=case["question"], k=k,
+                                    mode="hybrid" if "stem" in tools.retriever.bm25 else "dense", dense_lang="sv",
+                                    bm25_mode="stem" if "stem" in tools.retriever.bm25 else None, kommuner="auto")
+    ranked = {"law": [hit.chunk for hit in result["law"]], "local": [hit.chunk for hit in result["local"]]}
+    ranks = []
+    for matcher in case["evidence"]:
+        best = None
+        for pool in ranked.values():
+            rank = next((i + 1 for i, chunk in enumerate(pool) if matches(chunk, matcher)), None)
+            if rank is not None and (best is None or rank < best):
+                best = rank
+        ranks.append(best)
+    return ranks
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Agent vs. RAG on feasibility case studies")
+    parser = argparse.ArgumentParser(description="Agent vs. RAG on planning case studies")
     parser.add_argument("--systems", nargs="+", default=["rag", "agent"], choices=["rag", "agent"])
     parser.add_argument("--cases", nargs="*", help="case ids (default: all)")
     parser.add_argument("--effort", default="medium", help="reasoning effort of the answer (RAG answer / agent final answer)")
@@ -193,9 +316,15 @@ def main() -> None:
     parser.add_argument("--disable-tools", nargs="*", help="agent tools removed for this run (ablation), e.g. view_map_area")
     parser.add_argument("--workers", type=int, default=1,
                         help="cases run in parallel (faster; latencies then include some contention)")
+    parser.add_argument("--judge-model", help="grading model (default: --model), e.g. xiaomi/mimo-v2.6-flash")
+    parser.add_argument("--label", help="tag appended to the result file name (-x-<label>) for experiments the name does "
+                                        "not describe (another agent model or prompt), e.g. mimo-flash")
+    parser.add_argument("--leakage", action="store_true",
+                        help="no LLM: print the rank of each evidence group in a plain search on the question, then exit")
     args = parser.parse_args()
     os.environ.setdefault("LLM_PROVIDER", "openrouter")
     model = resolve_model_name(args.model)
+    judge_model = resolve_model_name(args.judge_model or args.model)
 
     cases = list(read_jsonl(CASES_PATH.parent / args.cases_file))
     if args.cases:
@@ -216,7 +345,16 @@ def main() -> None:
         tools = build_tools(kommuner)
         corpus = f"laws + {kommuner} ({len(tools.corpus.chunks)} chunks)"
     check_labels(cases, tools)
-    print(f"{len(cases)} cases, corpus: {corpus}, model {model}, effort {args.effort}")
+    if args.leakage:
+        given_away = 0
+        for case in cases:
+            ranks = evidence_ranks(case, tools)
+            top3 = sum(1 for rank in ranks if rank is not None and rank <= 3)
+            given_away += bool(ranks) and top3 > len(ranks) / 2
+            print(f"  {case['id']:<40} {case.get('task', 'verdict'):<8} evidence ranks {ranks}")
+        print(f"{given_away} of {len(cases)} cases have most evidence in the top 3 of a search on the question")
+        return
+    print(f"{len(cases)} cases, corpus: {corpus}, model {model}, effort {args.effort}, judge {judge_model}")
 
     def run_case(job: tuple[dict, str, int]) -> dict:
         case, system, repeat = job
@@ -227,14 +365,17 @@ def main() -> None:
                                   disabled_tools=set(args.disable_tools or ())))
         except Exception as exc:  # keep the benchmark going; the failure is reported
             run = AgentRun(error=repr(exc))
-        grade = (judge(case, run.answer, model, cited_sources(run.answer, tools)) if run.answer
-                 else {"verdict": "none", "points": [], "unsupported_claims": 0, "comment": run.error})
+        grade = (grade_answer(case, run.answer, tools, judge_model) if run.answer
+                 else {"task": case.get("task", "verdict"), "verdict": "none",
+                       "verdict_ok": False if case.get("verdicts") else None, "points": 0.0, "unsupported": 0,
+                       "comment": run.error, "judge_cost": 0, "judge_model": judge_model})
         row = {
-            "case": case["id"], "system": system, "repeat": repeat, "effort": args.effort,
+            "case": case["id"], "system": system, "model": model,
+            "repeat": repeat, "effort": args.effort,
             "explore_effort": args.explore_effort,
-            "verdict": grade.get("verdict"), "verdict_ok": grade.get("verdict") in case["verdicts"],
-            "points": sum(grade.get("points") or [0]) / (2 * len(case["key_points"])),
-            "unsupported": grade.get("unsupported_claims", 0),
+            **{key: value for key, value in grade.items() if key not in ("comment", "judge_cost")},
+            # agent: the kind of question it chose (answer_ready), against the case's task
+            "mode": run.mode, "mode_ok": mode_ok(case, run.mode) if system == "agent" else None,
             "evidence": evidence_recall(case, run.seen_chunks, tools),
             "tool_calls": len(run.steps) if system == "agent" else 0, "llm_calls": run.llm_calls,
             # Map reading (plankarta cases): image views, and whether the case's own plankarta was viewed
@@ -247,7 +388,9 @@ def main() -> None:
             "comment": grade.get("comment"), "answer": run.answer, "steps": run.steps, "error": run.error,
         }
         evidence = "-" if row["evidence"] is None else format(row["evidence"], ".2f")
-        print(f"  {case['id']:<26} {system:<6} verdict {row['verdict']:<13}{'OK ' if row['verdict_ok'] else 'NO '} "
+        verdict = (f"verdict {row['verdict']:<13}{'OK ' if row['verdict_ok'] else 'NO '}" if row["verdict_ok"] is not None
+                   else f"mode {row['mode'] or '-':<8}" + (f" anchors {row['anchors']:.2f}" if "anchors" in row else ""))
+        print(f"  {case['id']:<26} {system:<6} {verdict} "
               f"points {row['points']:.2f}  evidence {evidence:>4}  tools {row['tool_calls']:>2}  "
               f"{row['seconds']:>5.0f}s (1st token {row['first_token_s'] or '-'})  ${row['cost']:.4f}", flush=True)
         return row
@@ -258,7 +401,8 @@ def main() -> None:
     if args.disable_tools:
         cases_tag += "-no-" + "-".join(sorted(args.disable_tools))
     out = args.resume or RESULTS_DIR / (f"bench-{datetime.now():%Y%m%d-%H%M%S}-{'-'.join(args.systems)}-{args.effort}"
-                                        f"-explore-{args.explore_effort}{cases_tag}.json")
+                                        f"-explore-{args.explore_effort}{cases_tag}"
+                                        f"{f'-x-{args.label}' if args.label else ''}.json")
     rows: list[dict] = json.loads(out.read_text(encoding="utf-8")) if args.resume and out.exists() else []
     rows = [row for row in rows if not row.get("error")]  # resumed: failed runs (e.g. network errors) are redone
     done = {(row["case"], row["system"], row.get("repeat", 0)) for row in rows}
@@ -282,18 +426,31 @@ def main() -> None:
         mine = [row for row in rows if row["system"] == system]
         if not mine:
             continue
-        def mean(key: str) -> float:
-            values = [row[key] for row in mine if row[key] is not None]
+        def mean(key: str, subset: list[dict] | None = None) -> float:
+            values = [row[key] for row in (mine if subset is None else subset) if row.get(key) is not None]
             return sum(values) / len(values) if values else 0.0
+
+        def shown(key: str, subset: list[dict] | None = None) -> str:  # "-" when no row has the score
+            has = any(row.get(key) is not None for row in (mine if subset is None else subset))
+            return f"{mean(key, subset):.2f}" if has else "-"
         first = [row["first_token_s"] for row in mine if row["first_token_s"] is not None]
-        print(f"{system:<8} {mean('verdict_ok'):>10.2f}  {mean('points'):>6.2f}  {mean('evidence'):>8.2f}  "
+        print(f"{system:<8} {shown('verdict_ok'):>10}  {mean('points'):>6.2f}  {mean('evidence'):>8.2f}  "
               f"{mean('unsupported'):>11.2f}  {mean('tool_calls'):>10.1f}  {mean('seconds'):>7.0f}  ${mean('cost'):.4f}"
               f"  llm_calls {mean('llm_calls'):.1f}  first_token {sum(first) / len(first) if first else 0:.0f}s")
+        tasks = sorted({row.get("task", "verdict") for row in mine})
+        if tasks != ["verdict"]:  # the task-specific scores, per task
+            for task in tasks:
+                rows_task = [row for row in mine if row.get("task", "verdict") == task]
+                extra = {"develop": ("points_obstacle", "points_lever", "points_ask"),
+                         "propose": ("anchors", "proposals", "proposals_sourced")}.get(task, ())
+                print(f"         {task:<8} n {len(rows_task):>3}  points {mean('points', rows_task):.2f}  "
+                      f"evidence {shown('evidence', rows_task)}  mode_ok {shown('mode_ok', rows_task)}  "
+                      + "  ".join(f"{key} {shown(key, rows_task)}" for key in extra))
         if args.repeats > 1:  # spread of the per-repeat means: how much of a difference is noise
             for key in ("verdict_ok", "points", "evidence"):
                 per_repeat = []
                 for repeat in range(args.repeats):
-                    values = [r[key] for r in mine if r["repeat"] == repeat and r[key] is not None]
+                    values = [r[key] for r in mine if r["repeat"] == repeat and r.get(key) is not None]
                     per_repeat.append(sum(values) / len(values) if values else 0.0)
                 print(f"         {key:<11} per repeat: {', '.join(f'{v:.2f}' for v in per_repeat)}")
 

@@ -21,8 +21,10 @@ from datetime import date, datetime
 from pathlib import Path
 
 from agentic import report
-from agentic.bench import CASES_PATH, JUDGE_INSTRUCTIONS, sample_cases
+from agentic.agent import MODES_GUIDE
+from agentic.bench import CASES_PATH, JUDGE_INSTRUCTIONS, TASK_JUDGE_INSTRUCTIONS, sample_cases
 from agentic.cases_from_caselaw import INSTRUCTIONS as CASE_INSTRUCTIONS
+from agentic.cases_from_corpus import IDEAS, INSTRUCTIONS as TASK_CASE_INSTRUCTIONS, REVIEW
 from agentic.grounding import INSTRUCTIONS as GROUNDING_INSTRUCTIONS
 from corpus.common import DATA_DIR, LAWS_DIR, WEB_DIR, read_jsonl
 
@@ -182,6 +184,29 @@ def build_html() -> str:
     examples14 = [c for c in cases14 if c["id"] in ("kumla-200m2", "ydre-lake-house")]
     examples_mod = [c for c in sample if c["id"] in ("mod-2026-13", "mod-2026-17")] or sample[:2]
     examples = report.examples_html(runs, "cases14", examples14) + report.examples_html(runs, "mod", examples_mod)
+    # Section 7.9: the explain / propose / develop sets
+    seed_cases = list(read_jsonl(CASES_PATH.parent / "cases_tasks.jsonl")) if (CASES_PATH.parent / "cases_tasks.jsonl").exists() else []
+    gen_cases = (list(read_jsonl(CASES_PATH.parent / "cases_generated.jsonl"))
+                 if (CASES_PATH.parent / "cases_generated.jsonl").exists() else [])
+    task_counts = Counter(c["task"] for c in seed_cases + gen_cases)
+    gen_kommuner = len({c["kommun"][0] for c in gen_cases})
+    seed_table = ("<table><tr><th>Case</th><th>Task</th><th>Question</th><th>Source</th></tr>"
+                  + "".join(f"<tr><td><code>{esc(c['id'])}</code></td><td>{esc(c['task'])}</td><td>{esc(c['question'])}</td>"
+                            f"<td>{esc(c.get('source', ''))}</td></tr>" for c in seed_cases) + "</table>")
+    task_examples = "".join(
+        f"<div class='case'><p class='q'>“{esc(c['question'])}”</p><p><b>Task</b>: {esc(c['task'])}. <b>Source</b>: "
+        f"{esc(c.get('source', ''))}</p>"
+        + (f"<p><b>Designated places (anchors)</b>: {esc(', '.join(a['name'] for a in c['anchors']))} (at least "
+           f"{c['min_anchors']} expected)</p>" if c.get("anchors") else "")
+        + "<p><b>Expected key points</b>:</p><ul>" + "".join(f"<li>{esc(p)}</li>" for p in c["key_points"]) + "</ul></div>"
+        for c in [next((c for c in gen_cases if c["task"] == t), None) for t in ("explain", "propose", "develop")] if c)
+    task_rows = report.mode_rows()
+    tasks_table = report.task_table([r for r in task_rows if r["set"] in report.TASK_SETS]) if task_rows else ""
+    agreement = report.judge_agreement()
+    modes_prompt = prompt_block(MODES_GUIDE)
+    propose_judge_prompt = prompt_block(TASK_JUDGE_INSTRUCTIONS["propose"])
+    develop_case_prompt = prompt_block(TASK_CASE_INSTRUCTIONS["develop"])
+
     plan_example = ""
     if plan_cases:
         case = plan_cases[0]
@@ -391,7 +416,7 @@ fusion nor the reranker beat dense retrieval on the Swedish query. The agent sti
 wording (plan names, “20 meter”) matters inside its tool calls.</p>
 
 <h2>7. Evaluation: how the benchmarks are built and scored</h2>
-<p>Three benchmark sets, each built to answer a different question. All cases share one format (one JSON line per case):
+<p>Four benchmark sets, each built to answer a different question. All cases share one format (one JSON line per case):
 the <code>question</code> as a user would ask it, in English; the <code>kommun</code> codes it concerns; the accepted
 <code>verdicts</code> (feasible / conditional / not_feasible / unclear); 3–5 <code>key_points</code> an expert answer must
 make; the <code>evidence</code> the system should have read (matchers, section 7.5); and the <code>source</code>. They
@@ -408,6 +433,10 @@ generated, 50 sampled</td></tr>
 <tr><td><b>Plankarta</b><br>{code('agentic/cases_plans.jsonl')}</td><td><b>Real</b> plan maps and property numbers;
 the project is designed</td><td>Plan maps (plankartor) in force or adopted, and the plan legend from the plan
 registry</td><td>Vision LLM, from a crop of the map + the legend; only confident labels kept</td><td>{len(plan_cases)}</td></tr>
+<tr><td><b>Explain / propose / develop</b><br>{code('agentic/cases_tasks.jsonl')}<br>{code('agentic/cases_generated.jsonl')}</td>
+<td>Questions beyond the verdict: how a procedure works, where a project could go, what an idea is missing (section
+7.9)</td><td>Municipal guidance pages, comprehensive plans (growth and rural passages), statutes</td><td>Hand
+({len(seed_cases)}), and MiMo v2.6 Flash with verbatim quotes checked ({len(gen_cases)})</td><td>{len(seed_cases) + len(gen_cases)}</td></tr>
 </table>
 
 <h3>7.1 The 14 case studies (hand-written)</h3>
@@ -502,6 +531,13 @@ useful passages would count as irrelevant, and more so for the agent, which read
 <tr><td>grounded</td><td>supported claims / claims, second judge with the full text of the cited chunks</td>
 <td>{code('agentic/grounding.py')}</td></tr>
 <tr><td>unsupported</td><td>claims in neither the reference nor the cited sources (first judge)</td><td><code>judge</code></td></tr>
+<tr><td>mode_ok</td><td>the agent's <code>answer_ready(mode)</code> equals the case's task (explain / propose / develop
+sets)</td><td><code>run_case</code></td></tr>
+<tr><td>anchors</td><td>propose: min(places named, <code>min_anchors</code>) / <code>min_anchors</code>; a place counts when
+its name or an alias appears as a whole word in the answer, no LLM</td><td><code>anchor_hits</code>, <code>grade_answer</code></td></tr>
+<tr><td>proposals, proposals_sourced</td><td>propose: options the judge finds in the answer, and the share the cited
+sources (or the reference) support</td><td><code>grade_answer</code></td></tr>
+<tr><td>points_obstacle / lever / ask</td><td>develop: the key-point score per kind of point</td><td><code>grade_answer</code></td></tr>
 <tr><td>seconds, first_token_s, cost</td><td>wall time; time to the first streamed answer token; OpenRouter
 <code>usage.cost</code> summed over calls</td><td>{code('agentic/agent.py')} <code>AgentRun</code></td></tr>
 </table>
@@ -517,7 +553,14 @@ useful passages would count as irrelevant, and more so for the agent, which read
 dense search on it with the municipality filter, the top 10 statute sections + top 10 municipal passages, one streamed
 answer in the same format). Evidence for the RAG = the passages it retrieved.</li>
 <li>Corpus: the full disk store (<code>--store disk</code>), so cases from any municipality are answerable.</li>
-<li>Same model for agent and judges (GPT-6 Luna via OpenRouter); judge effort medium.</li>
+<li>Same model for agent and judges (GPT-6 Luna via OpenRouter); judge effort medium. The explain / propose / develop
+sets are judged by MiMo v2.6 Flash (<code>--judge-model</code>), another model family; result rows store
+<code>judge_model</code>.</li>""" + (f"""
+<li><b>Judge check</b> ({code('agentic/rejudge.py')}): {agreement['n']} stored answers graded again by
+{esc(agreement['judge'])}: same verdict class in {agreement['same_verdict'] * 100:.0f} % (kappa {agreement['kappa']:.2f}),
+key points {agreement['points_old']:.2f} vs {agreement['points_new']:.2f} (correlation {agreement['corr']:.2f}, mean gap
+{agreement['diff']:.2f}); MiMo counts fewer unsupported claims ({agreement['unsup_new']:.1f} vs {agreement['unsup_old']:.1f}).
+The Luna judge is consistent with another family and, if anything, stricter.</li>""" if agreement else "") + f"""
 <li>Repeats (<code>--repeats</code>) and merged files give 2–4 passes per configuration; per-pass means measure noise.</li>
 <li>Cases run in parallel (<code>--workers 3</code>): latencies include some contention.</li>
 <li>Results are written after every case (<code>data/agentic/bench-*.json</code>, one row per answer with the full
@@ -549,29 +592,76 @@ municipalities.</li>
 <li>Questions where the user does not know the property or the plan, and arguments addressed to the municipality or
 the neighbours.</li>
 </ul>
-<p>The scores therefore say how well Pyrmit <i>checks</i> a defined project, not how well it helps <i>build</i> one.
-The target use cases, and so the next benchmark, should come from the product vision defined with the project team
-and the client, for example real project briefs, written as the users would bring them.</p>
+<p>The scores of these three sets therefore say how well Pyrmit <i>checks</i> a defined project, not how well it helps
+<i>build</i> one. Section 7.9 adds sets for explaining, proposing places and developing an idea (single turn); multi-turn
+guidance, cross-municipality comparison and arguments for the municipality or neighbours are still not measured.</p>
+
+<h3>7.9 Beyond the verdict: explain, propose, develop</h3>
+<p><b>Why.</b> The product vision (ReGen Villages: help landowners and groups move a project into approval, find where
+the land allows what, explain the rules) and the user feedback (“what is the building permit process”, “how do I change
+the zoning”, “where can I look up zoning”) ask more than a verdict on a finished project. A case now has a
+<code>task</code>: <b>verdict</b> (the three sets above), <b>explain</b> (how a procedure, fee, deadline or map works),
+<b>propose</b> (the place is not fixed: where in the municipality could the project go?) or <b>develop</b> (an idea
+roughly placed: what could block it, how to make it work, what is still unknown).</p>
+<p><b>The agent picks the mode.</b> It classifies the question when it calls <code>answer_ready(mode)</code> and answers in
+that mode's format (a verdict line only for feasibility questions; propose = 2–4 options named in the municipality's
+plans, each with why it fits, its limits and the first step; develop = obstacles, ways to make it work, suggested path,
+questions for the user). On the last allowed turn only <code>answer_ready</code> is offered, so a run that reaches the
+step budget still picks its mode. Guide given to the agent ({code('agentic/agent.py')} <code>MODES_GUIDE</code>):</p>
+{modes_prompt}
+<p><b>Hand-written seeds</b> ({len(seed_cases)}, {code('agentic/cases_tasks.jsonl')}): Vallentuna (permit process, rezoning,
+where to look up zoning: the feedback questions; an eco-village near the Roslagsbanan stations; tiny houses near
+Kårsta), Norrtälje (co-housing: Rimbo, Hallstavik, Älmsta, Bergshamra), Uppsala (rural homes: the prioritised towns;
+farm housing) and Gotland (plan queue and prioritisation; farm-stay cabins with shared water and sewage). Every key
+point is backed by an exact excerpt of a municipal document or a statute.</p>
+{seed_table}
+<p><b>Generated cases</b> ({len(gen_cases)} in {gen_kommuner} other municipalities, {code('agentic/cases_from_corpus.py')}):
+explain = one municipal guidance page (permits, sewage, fees, shoreline, planbesked); propose = the comprehensive-plan
+passages of a municipality that name places for growth (utvecklingsområden, prioritised towns, LIS areas); develop =
+one of {len(IDEAS)} project ideas inspired by the vision (eco-village on farmland, tiny houses on a farm, barn or school
+turned into co-housing, farm-stay cabins, market garden, co-housing by a lake) + the municipality's rural and
+water/sewage passages + the core statutes. The drafting model is <b>MiMo v2.6 Flash</b>, another model family than the
+agent, so the reference is not written by the model under test; it must give each key point (and each place) with a
+quote of 6–15 words of one source, and only points whose quote is found in that source (longest run of ≥ 5 words, as
+for the MÖD cases) are kept. Checks: a propose question must not name the places; places reduced to one name each
+(area codes, roads and plan names dropped, the municipality itself excluded); develop questions must not mention the
+rules (finding them is the task). A manual review ({len(REVIEW)} corrections in <code>REVIEW</code>: misleading or
+mislabelled points, anchors re-read from the source) is applied on every rebuild. Split by task (seeds + generated):
+{', '.join(f"{k} {v}" for k, v in sorted(task_counts.items()))}. Prompt for develop cases:</p>
+{develop_case_prompt}
+<p><b>Leakage check</b> (<code>--leakage</code>, no LLM): the rank of each expected passage in a plain search on the
+question as asked; a case whose evidence mostly ranks in the top 3 gives its answer away. None of the seeds does.</p>
+<p><b>Scoring.</b> Key points as before (0/1/2), develop points split into Obstacle / Lever / Ask; no verdict unless the
+case lists accepted ones; propose adds the places named (string match on the anchors, at least <code>min_anchors</code>)
+and the options the judge finds, sourced or not. Judge prompt for propose ({code('agentic/bench.py')}
+<code>TASK_JUDGE_INSTRUCTIONS</code>):</p>
+{propose_judge_prompt}
+{task_examples}
 
 <h2>8. Results summary</h2>
 <p>Classic RAG and the agent at its default setting (exploration medium, answer medium) on the three sets; all
 configurations, charts and the reading of the results are in the benchmark report.</p>
 {overview}
-{results_text}
+{results_text}""" + (f"""
+<p><b>Explain / propose / develop</b> (section 7.9; MiMo judge; “Agent, propose fix” = the propose guide and forced
+<code>answer_ready</code> of 2026-10-21):</p>
+{tasks_table}""" if tasks_table else "") + f"""
 
 <h2>9. Limitations and roadmap</h2>
 <ul>
-<li><b>Evaluation</b>: LLM judge = agent model (possible leniency); key points written by an LLM; no human review yet.
-Next: expert review of a sample, a second judge model, inter-judge agreement.</li>
-<li><b>Scope of the benchmarks</b>: only feasibility checks of a defined project at a known place (section 7.8); helping
-shape a project from a vague idea, multi-turn guidance and site search are not measured. The use cases to evaluate
-next come from the product vision (project team and client).</li>
+<li><b>Evaluation</b>: the Luna judge agrees with a second model family (section 7.7); key points of the MÖD,
+plankarta and generated sets are written by an LLM and only a sample was reviewed (by the developers, not a planning
+expert). Next: expert review of a sample.</li>
+<li><b>Scope of the benchmarks</b>: explaining, proposing places and developing an idea are now measured in a single turn
+(section 7.9); multi-turn guidance, comparing municipalities and arguing a case to the municipality are not.</li>
 <li><b>Data</b>: coverage depends on each municipality's website; no property → plan link; no spatial layers; no
 provenance dates (section 4). Next: provenance metadata, scheduled incremental refresh, Lantmäteriet and county GIS data.</li>
 <li><b>Plans</b>: provisions are extracted as text; which map area carries which code needs a vision model on the plan
 map.</li>
 <li><b>Agent</b>: verdict calibration on refusals (prompt), default exploration effort medium, a fast low-effort mode.</li>
 </ul>
+<p><b>Next steps</b> (recommended order, after the optimisation round of 2026-10-21, benchmark report section 2.9):</p>
+{report.NEXT_STEPS}
 
 <h2>Appendix: commands and files</h2>
 <pre class="prompt">cd backend
@@ -583,6 +673,10 @@ python -m corpus.caselaw && python -m agentic.cases_from_caselaw
 python -m agentic.bench --systems agent --store disk --explore-effort medium --effort medium \\
     --cases-file cases_caselaw.jsonl --sample 50 --repeats 2 --workers 3
 python -m agentic.grounding data/agentic/bench-....json
+python -m agentic.cases_from_corpus --per-task 10          # explain / propose / develop cases (MiMo v2.6 Flash)
+python -m agentic.bench --cases-file cases_tasks.jsonl --store disk --systems rag agent \\
+    --explore-effort medium --effort medium --judge-model xiaomi/mimo-v2.6-flash --workers 4
+python -m agentic.rejudge data/agentic/bench-....json --sample 60   # second judge, agreement
 python -m agentic.report && python -m agentic.report_technical</pre>"""
     else:
         body = f"""
@@ -880,6 +974,10 @@ python -m corpus.caselaw && python -m agentic.cases_from_caselaw
 python -m agentic.bench --systems agent --store disk --explore-effort medium --effort medium \\
     --cases-file cases_caselaw.jsonl --sample 50 --repeats 2 --workers 3
 python -m agentic.grounding data/agentic/bench-....json
+python -m agentic.cases_from_corpus --per-task 10          # explain / propose / develop cases (MiMo v2.6 Flash)
+python -m agentic.bench --cases-file cases_tasks.jsonl --store disk --systems rag agent \\
+    --explore-effort medium --effort medium --judge-model xiaomi/mimo-v2.6-flash --workers 4
+python -m agentic.rejudge data/agentic/bench-....json --sample 60   # second judge, agreement
 python -m agentic.report && python -m agentic.report_technical</pre>"""
 
     title = tr("Pyrmit – rapport technique", "Pyrmit – technical report")

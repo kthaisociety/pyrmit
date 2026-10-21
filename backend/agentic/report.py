@@ -28,6 +28,10 @@ DOC_DIR = Path(__file__).resolve().parents[2].parent / "pyrmit_doc"
 OUTPUT_NAMES = {"fr": "pyrmit_rapport_benchmark", "en": "pyrmit_benchmark_report"}
 LANG = "en"  # set by main(); tr() and fmt() follow it
 FIRST_MATRIX_RUN = "20261007-211220"
+# From this run on the agent classifies the question (answer_ready(mode), formats per mode): later files are kept out of
+# the effort matrix and shown in the "tasks beyond the verdict" section (new sets + regression of the old ones)
+MODES_RUN = "20261019-000000"
+PROPOSE_FIX_RUN = "20261021-000000"  # propose guide + last turn forced to answer_ready
 # Short reading of the results for the technical report's summary (the benchmark report has the full one)
 NARRATIVE_RESULTS = {"en": """<p>The agent beats the classic RAG on key points and evidence on every set, and the gap
 grows with difficulty (MÖD and plan maps): a single search on the user's facts rarely reaches the deciding statute section
@@ -52,9 +56,11 @@ HISTORY = [  # (French name, English name), verdict, key points, evidence, groun
 ]
 
 FILE = re.compile(r"bench-(\d{8}-\d{6})-(?P<systems>[a-z-]+?)-(?P<answer>low|medium|high)"
-                  r"-explore-(?P<explore>low|medium|high|same)(?P<tag>-cases_caselaw|-cases_plans)?"
-                  r"(?:-no-(?P<ablation>[a-z_-]+))?\.json$")
-CASE_SETS = {None: "cases14", "-cases_caselaw": "mod", "-cases_plans": "plans"}
+                  r"-explore-(?P<explore>low|medium|high|same)(?P<tag>-cases_[a-z]+)?"
+                  r"(?:-no-(?P<ablation>[a-z_-]+?))?(?:-x-(?P<label>[\w.-]+))?\.json$")
+CASE_SETS = {None: "cases14", "-cases_caselaw": "mod", "-cases_plans": "plans", "-cases_tasks": "tasks",
+             "-cases_generated": "generated"}
+TASK_SETS = {"tasks", "generated"}
 
 
 def esc(value) -> str:
@@ -111,7 +117,8 @@ class StoreChunks:
 
 
 def all_cases() -> dict[str, dict]:
-    return {case["id"]: case for name in ("cases.jsonl", "cases_caselaw.jsonl", "cases_plans.jsonl")
+    return {case["id"]: case for name in ("cases.jsonl", "cases_caselaw.jsonl", "cases_plans.jsonl",
+                                          "cases_tasks.jsonl", "cases_generated.jsonl")
             if (CASES_PATH.parent / name).exists() for case in read_jsonl(CASES_PATH.parent / name)}
 
 
@@ -134,7 +141,8 @@ def load_runs() -> list[dict]:
     files: dict[tuple, list[Path]] = defaultdict(list)
     for path in sorted(RESULTS_DIR.glob("bench-*.json")):
         match = FILE.search(path.name)
-        if not match or match.group(1) < FIRST_MATRIX_RUN:
+        if (not match or match.group(1) < FIRST_MATRIX_RUN or match.group(1) >= MODES_RUN
+                or CASE_SETS.get(match.group("tag")) in TASK_SETS):
             continue
         key = (CASE_SETS[match.group("tag")], match.group("systems"), match.group("explore"), match.group("answer"),
                match.group("ablation") or "")
@@ -169,6 +177,166 @@ def load_runs() -> list[dict]:
     order = {"low": 0, "medium": 1, "high": 2, "–": 3, "same": 3}
     return sorted(runs, key=lambda r: (r["cases"], r["system"] != "agent", r["ablation"], order[r["explore"]],
                                        order[r["answer"]]))
+
+
+def mode_rows() -> list[dict]:
+    """Every answer of the runs made with the mode prompt (MODES_RUN on): new task sets and regression runs, with the
+    set, the run stamp and the reading measures."""
+    rows = []
+    cases_by_id, chunks = all_cases(), StoreChunks()
+    for path in sorted(RESULTS_DIR.glob("bench-*.json")):
+        match = FILE.search(path.name)
+        if not match or match.group(1) < MODES_RUN or match.group("ablation") or match.group("label"):
+            continue
+        for row in json.loads(path.read_text(encoding="utf-8")):
+            if row.get("error"):
+                continue
+            row = {**row, "set": CASE_SETS[match.group("tag")], "stamp": match.group(1),
+                   "task": row.get("task", "verdict")}
+            reading_metrics(row, cases_by_id.get(row["case"]), chunks)
+            rows.append(row)
+    return rows
+
+
+TASK_NAMES = {"explain": ("expliquer", "explain"), "propose": ("proposer", "propose"), "develop": ("développer", "develop")}
+
+
+def task_table(rows: list[dict]) -> str:
+    """Per task and system: key points, evidence, mode recognition and the task-specific scores."""
+    head = ("<tr><th>Task</th><th>System</th><th>n</th><th>Key points</th><th>Evidence seen</th><th>Evidence cited</th>"
+            "<th>Unsupported</th><th>Mode right</th><th>Task-specific</th><th>Latency</th><th>Cost / question</th></tr>")
+    body = []
+    for task in ("explain", "propose", "develop"):
+        groups = [("RAG", [r for r in rows if r["task"] == task and r["system"] == "rag"]),
+                  ("Agent", [r for r in rows if r["task"] == task and r["system"] == "agent" and r["stamp"] < PROPOSE_FIX_RUN])]
+        if task == "propose":
+            groups.append(("Agent, propose fix", [r for r in rows if r["task"] == task and r["system"] == "agent"
+                                                  and r["stamp"] >= PROPOSE_FIX_RUN]))
+        groups = [(name, mine) for name, mine in groups if mine]
+        for i, (name, mine) in enumerate(groups):
+            def m(key: str) -> float | None:
+                return mean([r.get(key) for r in mine])
+            if task == "propose":
+                specific = (f"places {fmt(m('anchors'))}, {fmt(m('proposals'), 1)} options, "
+                            f"{fmt(m('proposals_sourced'))} sourced")
+            elif task == "develop":
+                specific = (f"obstacles {fmt(m('points_obstacle'))}, levers {fmt(m('points_lever'))}, "
+                            f"asks {fmt(m('points_ask'))}")
+            else:
+                specific = "–"
+            first = f"<td rowspan='{len(groups)}'><b>{TASK_NAMES[task][1]}</b></td>" if i == 0 else ""
+            body.append(f"<tr>{first}<td>{esc(name)}</td><td>{len(mine)}</td><td>{fmt(m('points'))}</td>"
+                        f"<td>{fmt(m('evidence'))}</td><td>{fmt(m('evidence_cited'))}</td><td>{fmt(m('unsupported'), 1)}</td>"
+                        f"<td>{fmt(mean([float(r['mode_ok']) for r in mine if r.get('mode_ok') is not None]))}</td>"
+                        f"<td>{specific}</td><td>{fmt(m('seconds'), 0)} s</td><td>{money(m('cost'))}</td></tr>")
+    return f"<table>{head}{''.join(body)}</table>"
+
+
+def regression_table(matrix: list[dict], rows: list[dict]) -> str:
+    """The verdict sets before / after the mode prompt (agent, medium / medium, Luna judge), on the same cases."""
+    head = ("<tr><th>Set</th><th>Prompt</th><th>n</th><th>Verdict</th><th>Key points</th><th>Evidence seen</th>"
+            "<th>Unsupported</th><th>Mode “verdict”</th><th>Latency</th><th>Cost / question</th></tr>")
+    body = []
+    for key, name in (("cases14", "14 cases"), ("mod", "MÖD")):
+        new = [r for r in rows if r["set"] == key and r["system"] == "agent"]
+        old_run = next((r for r in matrix if r["cases"] == key and r["system"] == "agent" and r["explore"] == "medium"
+                        and r["answer"] == "medium" and not r["ablation"]), None)
+        if not new or not old_run:
+            continue
+        ids = {r["case"] for r in new}
+        old = [r for r in old_run["rows"] if r["case"] in ids]
+        for i, (prompt, mine) in enumerate((("before (verdict format)", old), ("with modes", new))):
+            first = f"<td rowspan='2'><b>{name}</b></td>" if i == 0 else ""
+            modes = [r.get("mode") for r in mine]
+            body.append(f"<tr>{first}<td>{prompt}</td><td>{len(mine)}</td>"
+                        + "".join(f"<td>{fmt(mean([float(r[k]) for r in mine if r.get(k) is not None]))}</td>"
+                                  for k in ("verdict_ok", "points", "evidence"))
+                        + f"<td>{fmt(mean([r['unsupported'] for r in mine]), 1)}</td>"
+                        + f"<td>{fmt(modes.count('verdict') / len(modes)) if any(modes) else '–'}</td>"
+                        + f"<td>{fmt(mean([r['seconds'] for r in mine]), 0)} s</td>"
+                        + f"<td>{money(mean([r['cost'] for r in mine]))}</td></tr>")
+    return f"<table>{head}{''.join(body)}</table>" if body else ""
+
+
+def judge_agreement() -> dict | None:
+    """The second-judge check (agentic.rejudge): stored answers graded again by another model family."""
+    files = [f for f in sorted(RESULTS_DIR.glob("rejudge-*.json")) if "-x-" not in f.name]  # not the experiments
+    if not files:
+        return None
+    rows = json.loads(files[-1].read_text(encoding="utf-8"))
+    pairs = [(r["old"], r["new"]) for r in rows if r["old"].get("points") is not None]
+    verdicts = [(o, n) for o, n in pairs if o.get("verdict_ok") is not None and n.get("verdict_ok") is not None]
+    if not pairs:
+        return None
+    from agentic.rejudge import correlation, kappa
+
+    return {"n": len(pairs), "judge": rows[0]["new"].get("judge_model", "?"),
+            "same_verdict": sum(o["verdict"] == n["verdict"] for o, n in verdicts) / max(len(verdicts), 1),
+            "kappa": kappa([(o["verdict_ok"], n["verdict_ok"]) for o, n in verdicts]),
+            "points_old": mean([o["points"] for o, _ in pairs]), "points_new": mean([n["points"] for _, n in pairs]),
+            "corr": correlation([o["points"] for o, _ in pairs], [n["points"] for _, n in pairs]),
+            "diff": mean([abs(o["points"] - n["points"]) for o, n in pairs]),
+            "unsup_old": mean([o.get("unsupported") or 0 for o, _ in pairs]),
+            "unsup_new": mean([n.get("unsupported") or 0 for _, n in pairs])}
+
+
+# Optimisation round (2026-10-21): result files tagged `bench --label`, the 52 dev cases (14 verdict + 10 seeds +
+# 28 generated), MiMo Flash judge in the run, Luna judge again with agentic.rejudge
+EXPERIMENTS = [("base", "Luna, prompt before 2026-10-21"),
+               ("v2", "Luna, + recipe per mode and site checklist"),
+               ("mimo-flash", "MiMo v2.6 Flash as the agent"),
+               ("v3", "Luna, + “complete answer” (adopted)")]
+
+
+# Recommended next steps after the optimisation round, in order (benchmark report section 4, technical report section 9)
+NEXT_STEPS = """<ol>
+<li><b>Confirm the adopted prompt</b> (“complete answer”): a second pass on the 52 dev cases, and the MÖD sample and
+plankarta set, which the optimisation round did not run (≈ $1). A +0.05 gain from one pass is close to the noise.</li>
+<li><b>Check step on the draft answer</b>: before streaming, check each claim against the chunk it cites and drop or
+flag what the chunk does not state, to bring the unsupported claims down (≈ 1.5–2 per answer for the Luna judge)
+without losing the coverage the “complete answer” instruction gained. Measure with both judges and 2 passes.</li>
+<li><b>A stronger model for the writing only</b>: the gains are in the answer, not in the exploration; test MiMo v2.6
+Pro or GPT-6 Sol on the final turn only (Luna keeps exploring), with the check step, on a subset first: Sol costs
+≈ 20× Luna per token.</li>
+<li><b>Expert review</b>: a Swedish planning expert scores a sample of answers and reviews the generated references
+(key points written by an LLM, reviewed only by the developers).</li>
+<li><b>Benchmark coverage</b>: “I have this land, what could I do with it?” (place fixed, project open); multi-turn
+cases (iterating on a project with the user); the localisation work as a <code>locate</code> task in the same case
+format, after the merge.</li>
+<li><b>Latency</b>: two of 52 answers waited over 6 minutes on a stalled provider stream: retry a stream that stalls,
+and bring propose (≈ 80 s) closer to the other modes.</li>
+</ol>"""
+
+
+def experiment_rows(label: str) -> list[dict]:
+    rows = []
+    for path in sorted(RESULTS_DIR.glob(f"bench-*-x-{label}.json")):
+        rows += [r for r in json.loads(path.read_text(encoding="utf-8")) if r["system"] == "agent" and not r.get("error")]
+    return rows
+
+
+def experiment_table() -> str:
+    """Per configuration: key points and unsupported claims under both judges, evidence, latency, cost."""
+    import statistics
+
+    head = ("<tr><th>Configuration</th><th>n</th><th>Key points<br>MiMo judge</th><th>Key points<br>Luna judge</th>"
+            "<th>Unsupported<br>MiMo / Luna</th><th>Evidence seen</th><th>Answer length</th><th>Median latency</th>"
+            "<th>Cost / question</th></tr>")
+    body = []
+    for label, name in EXPERIMENTS:
+        rows = experiment_rows(label)
+        if not rows:
+            continue
+        luna = next((json.loads(f.read_text(encoding="utf-8")) for f in RESULTS_DIR.glob(f"rejudge-gpt-6-luna-*-x-{label}-and-more.json")), [])
+        luna_points = mean([r["new"]["points"] for r in luna])
+        luna_unsup = mean([r["new"]["unsupported"] for r in luna])
+        body.append(f"<tr><td>{html.escape(name)}</td><td>{len(rows)}</td><td>{fmt(mean([r['points'] for r in rows]))}</td>"
+                    f"<td>{fmt(luna_points)}</td><td>{fmt(mean([r['unsupported'] for r in rows]), 1)} / {fmt(luna_unsup, 1)}</td>"
+                    f"<td>{fmt(mean([r['evidence'] for r in rows if r.get('evidence') is not None]))}</td>"
+                    f"<td>{round(mean([len(r['answer']) for r in rows]) or 0):,} chars</td>"
+                    f"<td>{statistics.median(r['seconds'] for r in rows):.0f} s</td>"
+                    f"<td>${fmt(mean([r['cost'] for r in rows]), 4)}</td></tr>")
+    return f"<table>{head}{''.join(body)}</table>" if body else ""
 
 
 def stratum(case: dict) -> str:
@@ -520,6 +688,22 @@ def build_html() -> str:
                                for key in ("cases14", "mod", "plans")])
     today = date.today()
 
+    # Tasks beyond the verdict (English body only): new sets, regression of the verdict sets, second judge
+    new_rows = mode_rows()
+    task_rows = [r for r in new_rows if r["set"] in TASK_SETS]
+    tasks_table = task_table(task_rows) if task_rows else ""
+    regression = regression_table(runs, new_rows)
+    agreement = judge_agreement()
+    experiment_table_html = experiment_table()
+    seed_cases = list(read_jsonl(CASES_PATH.parent / "cases_tasks.jsonl")) if (CASES_PATH.parent / "cases_tasks.jsonl").exists() else []
+    gen_cases = (list(read_jsonl(CASES_PATH.parent / "cases_generated.jsonl"))
+                 if (CASES_PATH.parent / "cases_generated.jsonl").exists() else [])
+
+    def task_mean(task: str, system: str, key: str, fixed: bool | None = None) -> str:
+        mine = [r for r in task_rows if r["task"] == task and r["system"] == system
+                and (fixed is None or (r["stamp"] >= PROPOSE_FIX_RUN) == fixed)]
+        return fmt(mean([float(r[key]) for r in mine if r.get(key) is not None]))
+
     def val(run: dict | None, key: str, digits: int = 2) -> str:
         return fmt(run[key], digits) if run and run.get(key) is not None else "–"
 
@@ -572,7 +756,14 @@ per question.</li>
 {val(low, 'evidence')} → {val(agent_mod, 'evidence')}, grounding {val(low, 'grounded')} → {val(agent_mod, 'grounded')} and
 key points {val(low, 'points')} → {val(agent_mod, 'points')}, for +{(agent_mod['seconds'] - low['seconds']) if low and agent_mod else 0:.0f} s
 and {(agent_mod['cost'] / low['cost']) if low and agent_mod else 0:.1f}× the cost; a <i>high</i> final answer brings nothing
-measurable.</li>"""
+measurable.</li>""" + (f"""
+<li><b>Beyond the verdict</b> ({len(seed_cases) + len(gen_cases)} cases asking to explain a procedure, propose where a
+project could go, or develop a project idea; section 2.7): agent vs RAG key points {task_mean('explain', 'agent', 'points')} vs
+{task_mean('explain', 'rag', 'points')} (explain), {task_mean('propose', 'agent', 'points', False)} vs
+{task_mean('propose', 'rag', 'points')} (propose), {task_mean('develop', 'agent', 'points')} vs {task_mean('develop', 'rag', 'points')}
+(develop). The agent recognises the kind of question (mode right {task_mean('explain', 'agent', 'mode_ok')} /
+{task_mean('propose', 'agent', 'mode_ok', False)} → {task_mean('propose', 'agent', 'mode_ok', True)} after the propose fix /
+{task_mean('develop', 'agent', 'mode_ok')}), and the mode prompt leaves the verdict sets unchanged (section 2.8).</li>""" if task_rows else "")
 
     overview_text = f"""<p>The agent reads {seen_range} passages per question through {tools_range} tool calls, each with its
 own query; the RAG reads the 20 passages of a single search. The number is not the point (a case has 1 to 2 expected
@@ -622,10 +813,15 @@ interest, shoreline protection without a special reason, a project that requires
 “not feasible as described”, and measure it on the refused MÖD cases.</li>
 <li><b>Map reading</b>: keep <code>view_map_area</code>; make it cheaper (one crop instead of crop + page, smaller
 images) since it doubles the time on plan questions.</li>
-<li><b>Benchmark</b>: run the MÖD sample (50 cases, 2 passes) and the plan-map set for every prompt or model change; add
-sets for the use cases of the product vision (shaping a project from a vague idea, multi-turn guidance), which these
-sets do not measure.</li>
-<li><b>Judge</b>: have a domain expert review a sample of scores and of plan-map references.</li>"""
+<li><b>Benchmark</b>: run the MÖD sample (50 cases, 2 passes), the plan-map set and the explain / propose / develop
+sets for every prompt or model change; next, multi-turn cases (iterating on a project with the user), which no set
+measures yet.</li>
+<li><b>Propose</b>: the fix makes the agent recognise every propose question and name more of the designated places,
+but it reads less of the expected evidence than before; keep the step budget, and check the cost of the extra
+places it names.</li>
+<li><b>Judge</b>: have a domain expert review a sample of scores and of plan-map references.</li>
+<li><b>Prompt</b> (section 2.9): the “complete answer” instruction is the default since 2026-10-21; more instructions
+on how to explore did not help, and MiMo Flash as the agent invents too much.</li>"""
 
     if LANG == "en":
         body = f"""
@@ -673,11 +869,25 @@ municipalities, a property number printed on the map; the project is designed so
 zone rules</td><td>{len(plan_cases)} (high-confidence references)</td><td>Reading the map: which zone the property is
 in, which codes apply</td><td>Codes and values read on the map crop + legend by a vision model; evidence = the plan
 map document</td></tr>
+<tr><td><b>Explain / propose / develop</b></td><td>{len(seed_cases)} cases written by hand from real documents (Vallentuna,
+Norrtälje, Uppsala, Gotland; questions from user feedback and the ReGen Villages vision) + {len(gen_cases)} drafted by
+MiMo v2.6 Flash from corpus documents (municipal guidance pages, the growth and rural passages of comprehensive plans,
+statutes), in other municipalities</td><td>all</td><td>Explaining a procedure; proposing where a project could go
+(places the comprehensive plan designates); developing a project idea (obstacles, ways to make it work, what to ask
+the user)</td><td>Key points with a verbatim quote each (checked automatically); propose: the designated places
+(anchors); develop: points labelled Obstacle / Lever / Ask; no verdict</td></tr>
 </table>
 
 <h3>1.3 Protocol and scoring</h3>
 <ul>
-<li>Same model for the systems and the judges (GPT-6 Luna via OpenRouter); judge effort medium.</li>
+<li>Same model for the systems and the judges (GPT-6 Luna via OpenRouter); judge effort medium. The explain / propose /
+develop sets are judged by MiMo v2.6 Flash, another model family, which also drafted their generated cases.</li>""" + (f"""
+<li><b>Judge check</b>: {agreement['n']} stored answers (14 cases and MÖD, agent and RAG) graded again by
+{esc(agreement['judge'])}: same verdict class in {fmt(agreement['same_verdict'] * 100, 0)} % (kappa on “verdict correct”
+{fmt(agreement['kappa'])}), key points {fmt(agreement['points_old'])} vs {fmt(agreement['points_new'])} (correlation
+{fmt(agreement['corr'])}, mean gap {fmt(agreement['diff'])}). The second judge counts fewer unsupported claims
+({fmt(agreement['unsup_new'], 1)} vs {fmt(agreement['unsup_old'], 1)}): Luna is stricter, not lenient towards its own
+answers.</li>""" if agreement else "") + f"""
 <li>Each configuration runs 2 passes or more (n = answers = cases × passes); cases run 3 in parallel, so latencies
 include some contention. Answers are streamed: “1st token” is the time until the first word of the answer.</li>
 <li>Results are written per answer (<code>data/agentic/bench-*.json</code>) with the full answer, the tool calls and the
@@ -705,9 +915,9 @@ precision (“relevant / read”) is not measurable: the labels list the decisiv
 <div class="warn"><b>Limits.</b> The judge is the system's own model: cheap but possibly lenient, so its scores
 <i>compare</i> settings rather than give absolute quality. MÖD key points and plankarta references are written by an
 LLM (from the ruling, from the map); no human review yet. A difference below ~0.05 between configurations is within the
-pass-to-pass noise (section 2.6). <b>Scope</b>: every case is a feasibility check of a defined project at a known place;
-the results say nothing about helping shape a project from a vague idea, multi-turn guidance or finding where a project
-is possible (technical report, section 7.8).</div>
+pass-to-pass noise (section 2.6). <b>Scope</b>: the first three sets check the feasibility of a defined project at a known place; the
+explain / propose / develop sets (section 2.7) add explaining, proposing places and developing an idea, in a single
+turn; multi-turn guidance is still not measured (technical report, section 7.8).</div>
 
 <h2>2. Results</h2>
 <h3>2.1 Overview: classic RAG vs. agent (default setting, medium / medium)</h3>
@@ -748,6 +958,50 @@ decision, accepted verdicts “with conditions” / “unclear”):</p>
 
 {'<h3>2.6 Variance between passes</h3><ul>' + spread + '</ul><p>Typical gap between two identical passes: a few hundredths; a difference below ~0.05 between configurations is not significant.</p>' if spread else ''}
 
+""" + (f"""<h3>2.7 Tasks beyond the verdict: explain, propose, develop</h3>
+<p>From 2026-10-19 the agent first classifies the question (<code>answer_ready(mode)</code>: verdict, explain, propose,
+develop) and answers in that mode's format; the RAG gets the same format instructions in one prompt. Judge: MiMo v2.6
+Flash. “Mode right” = the agent chose the case's task. Places = share of the plan-designated places the answer names
+(string match, at least <code>min_anchors</code> needed); options sourced = share of the proposed options the cited
+sources support (judge). Latencies of these runs include the query embedding on the CPU (ONNX), not the GPU.</p>
+{tasks_table}
+<p>“Agent, propose fix”: the propose guide rewritten (the place is not fixed → propose; work from the comprehensive
+plan's growth passages in 4–6 turns) and the last turn forced to <code>answer_ready</code>, so a run that reaches the step
+budget still picks its mode.</p>""" if tasks_table else "") + (f"""
+<h3>2.8 Verdict sets with the mode prompt (regression)</h3>
+{regression}
+<p>Same cases, agent medium / medium, Luna judge as in the matrix above. The mode runs used CPU embeddings, hence part
+of the extra latency.</p>""" if regression else "") + (f"""
+<h3>2.9 Optimisation round (2026-10-21)</h3>
+<p>Goal: improve the agent on the four uses (verdict, explain, propose, develop), in order of importance accuracy,
+usefulness, cost, time, with cheap models (budget $3.50). Dev set: the 52 cases of the 14-case set, the 10 seeds and
+the 28 generated cases, one pass per configuration, graded by MiMo v2.6 Flash in the run and again by GPT-6 Luna
+(<code>agentic.rejudge</code>), so that a gain counts only if both model families see it. Before the runs, the
+benchmark was fixed: the judge now gets every cited source in full (40 × 3,000 characters instead of 15 × 1,500: a
+quarter of the answers cited more than 15 sources, whose facts were counted as unsupported); the 9 of the 14 cases
+whose question also asks “how does it work” or “what would it take” accept explain / develop as mode
+(<code>modes</code>); 3 reference points the asker does not need were dropped (<code>REVIEW</code>).</p>
+{experiment_table_html}
+<ul>
+<li><b>Recipe per mode + site checklist</b> (choose the mode in the first turn; for explain, read the kommun's page in
+full; grep the place's constraints: strandskydd, farmland, flood, noise, risk, radon…): key points unchanged
+(−0.00, 90 % CI −0.05 to +0.04), less of the expected evidence read (−0.09): rejected. More instructions on how to
+explore do not move the scores.</li>
+<li><b>MiMo v2.6 Flash as the agent</b>: more key points under both judges (+0.10 MiMo, +0.09 Luna, CI +0.04 to
++0.15), but 7.5 unsupported claims per answer for the Luna judge (Luna as the agent: 1.4), answers 2.3× slower (median
+≈ 2 min, 11k reasoning tokens) and twice the cost: rejected (accuracy first). It read less of the evidence than Luna
+yet covered more points: Luna's losses are in writing the answer, not in finding the sources.</li>
+<li><b>“Complete answer”</b> (the answer instruction “prefer fewer, well-sourced points” replaced by “include every
+rule, condition, step, fee, deadline and site constraint from your tool results, each with its source; silent on what
+they do not say”): +0.03 key points with the MiMo judge (CI −0.00 to +0.06), +0.05 with the Luna judge (CI +0.02 to
++0.09), gains on explain / propose / develop, verdict unchanged; same latency and cost; unsupported claims equal for
+MiMo, +0.5 for Luna (CI −0.0 to +1.0). <b>Adopted</b> as the default prompt.</li>
+<li>Not tried: GPT-6 Sol (≈ 20× Luna's price per token, ≈ $0.10 per answer) and MiMo v2.6 Pro (≈ 4×): MiMo Flash
+showed that a stronger writer covers more but invents more, and the budget did not allow measuring them properly.</li>
+</ul>
+<p>Two runs were cut by the machine (memory) and finished from their saved results; latencies are with the query
+embedding on the CPU. One pass per configuration: differences below ~0.05 are within the noise of a single pass.</p>""" if experiment_table_html else "") + f"""
+
 <h2>3. Reading the results</h2>
 <ul>
 {reading}
@@ -757,6 +1011,8 @@ decision, accepted verdicts “with conditions” / “unclear”):</p>
 <ul>
 {recommendations}
 </ul>
+<h3>Next steps (recommended order, 2026-10-21)</h3>
+{NEXT_STEPS}
 
 <h2>Appendix: reproduce</h2>
 <p><code>python -m agentic.bench --systems agent --store disk --explore-effort medium --effort medium --cases-file

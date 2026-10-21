@@ -35,9 +35,14 @@ SETS = {
     "cases": ("cases.jsonl", "Case studies", "Hand-written feasibility cases on real projects in the corpus municipalities"),
     "caselaw": ("cases_caselaw.jsonl", "MÖD rulings", "Cases generated from rulings of the Land and Environment Court of Appeal: the court's outcome is the reference"),
     "plans": ("cases_plans.jsonl", "Plankarta", "Questions about a specific property: the answer is only on the plan map (reference read by the vision model)"),
+    "tasks": ("cases_tasks.jsonl", "Explain / propose / develop", "Hand-written cases beyond the verdict: explain a procedure, propose where a project could go, develop a project idea"),
+    "generated": ("cases_generated.jsonl", "Generated tasks", "Explain / propose / develop cases drafted from corpus documents by another model family, evidence checked verbatim"),
 }
 RESULT_FILE = re.compile(r"bench-(\d{8}-\d{6})-(?P<systems>[a-z-]+?)-(?P<answer>low|medium|high)"
-                         r"-explore-(?P<explore>low|medium|high|same)(?P<tag>-cases_[a-z]+)?(?:-no-(?P<off>[\w-]+))?\.json$")
+                         r"-explore-(?P<explore>low|medium|high|same)(?P<tag>-cases_[a-z]+)?(?:-no-(?P<off>[a-z_-]+?))?(?:-x-(?P<label>[\w.-]+))?\.json$")
+RESULT_KEYS = ("task", "verdict", "verdict_ok", "points", "point_scores", "points_obstacle", "points_lever", "points_ask",
+               "anchors", "anchors_hit", "proposals", "proposals_sourced", "mode", "mode_ok", "evidence", "grounded",
+               "tool_calls", "map_views", "seconds", "cost", "comment", "answer", "judge_model")
 JOBS: dict[str, dict] = {}
 
 
@@ -67,7 +72,7 @@ def _result_rows(path: str, mtime: float) -> dict[str, list[dict]]:
 def _results(set_name: str, case_id: str) -> list[dict]:
     from agentic.bench import RESULTS_DIR
 
-    tag = {"cases": None, "caselaw": "-cases_caselaw", "plans": "-cases_plans"}[set_name]
+    tag = None if set_name == "cases" else "-" + Path(SETS[set_name][0]).stem
     out = []
     for path in sorted(RESULTS_DIR.glob("bench-*.json")):
         match = RESULT_FILE.search(path.name)
@@ -76,13 +81,9 @@ def _results(set_name: str, case_id: str) -> list[dict]:
         for row in _result_rows(str(path), path.stat().st_mtime).get(case_id, []):
             config = (f"{row['system']}" + (f", explore {match.group('explore')} / answer {match.group('answer')}"
                                             if row["system"] == "agent" else f", answer {match.group('answer')}")
-                      + (f", without {match.group('off').replace('-', ', ')}" if match.group("off") else ""))
-            out.append({"run": match.group(1), "config": config, "verdict": row.get("verdict"),
-                        "verdict_ok": row.get("verdict_ok"), "points": row.get("points"),
-                        "evidence": row.get("evidence"), "grounded": row.get("grounded"),
-                        "tool_calls": row.get("tool_calls"), "map_views": row.get("map_views"),
-                        "seconds": row.get("seconds"), "cost": row.get("cost"), "comment": row.get("comment"),
-                        "answer": row.get("answer")})
+                      + (f", without {match.group('off').replace('-', ', ')}" if match.group("off") else "")
+                      + (f", judge {row['judge_model']}" if row.get("judge_model") else ""))
+            out.append({"run": match.group(1), "config": config, **{key: row.get(key) for key in RESULT_KEYS}})
     return out
 
 
@@ -99,8 +100,9 @@ def cases(set: str = Query(...), q: str | None = None, offset: int = Query(0, ge
     if q:
         needle = q.lower()
         rows = [c for c in rows if needle in json.dumps(c, ensure_ascii=False).lower()]
-    items = [{"id": c["id"], "question": c["question"], "verdicts": c["verdicts"], "kommun": c.get("kommun"),
-              "source": c.get("source"), "has_image": bool(c.get("image"))} for c in rows[offset:offset + limit]]
+    items = [{"id": c["id"], "question": c["question"], "task": c.get("task", "verdict"), "verdicts": c.get("verdicts") or [],
+              "kommun": c.get("kommun"), "source": c.get("source"), "has_image": bool(c.get("image"))}
+             for c in rows[offset:offset + limit]]
     return {"total": len(rows), "offset": offset, "limit": limit, "items": items}
 
 
@@ -127,7 +129,7 @@ class RunRequest(BaseModel):
 
 def _run_job(job: dict, case: dict) -> None:
     from agentic.agent import DEFAULT_MODEL, run_agent
-    from agentic.bench import MAP_TOOLS, cited_sources, evidence_recall, judge
+    from agentic.bench import MAP_TOOLS, evidence_recall, grade_answer, mode_ok
     from agentic.service import CitationNumberer, get_tools
     from llm import resolve_model_name
 
@@ -146,18 +148,16 @@ def _run_job(job: dict, case: dict) -> None:
         job["progress"].append("grading the answer")
         numberer = CitationNumberer(tools.get_chunk)
         answer = numberer.feed(run.answer) + numberer.close()
-        grade = judge(case, run.answer, model, cited_sources(run.answer, tools))
+        grade = grade_answer(case, run.answer, tools, resolve_model_name(os.getenv("BENCH_JUDGE_MODEL", "").strip() or model))
         job["result"] = {
-            "answer": answer, "citations": numberer.citations(),
-            "verdict": grade.get("verdict"), "verdict_ok": grade.get("verdict") in case["verdicts"],
-            "points": sum(grade.get("points") or [0]) / (2 * len(case["key_points"])),
-            "point_scores": grade.get("points"), "comment": grade.get("comment"),
-            "unsupported": grade.get("unsupported_claims"),
+            **grade, "answer": answer, "citations": numberer.citations(),
+            "mode": run.mode, "mode_ok": mode_ok(case, run.mode),
             "evidence": evidence_recall(case, run.seen_chunks, tools),
             "map_views": sum(1 for s in run.steps if s["tool"] in MAP_TOOLS),
             "tool_calls": len(run.steps), "llm_calls": run.llm_calls, "seconds": run.seconds,
             "cost": round(run.usage["cost"] + float(grade.get("judge_cost") or 0), 5),
         }
+        job["result"].pop("judge_cost", None)
         job["status"] = "done"
     except Exception as exc:  # reported to the page
         job["status"], job["error"] = "error", repr(exc)

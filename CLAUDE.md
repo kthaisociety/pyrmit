@@ -177,7 +177,10 @@ dense + BM25 "stem"), `grep`, `list_documents`, `read`, `law_section` ("PBL", "9
 (plan registry from `data/corpus/plans.jsonl`, loaded on first use), `view_map_area` (zoomed crop of a text-layer
 plankarta around a printed label such as a property number "5:125", plus the codes printed in that area with their
 meaning from the registry; search/word coordinates are unrotated, rendering uses `rect * page.rotation_matrix`),
-`view_pdf_page` (whole page image sent to the model), plus `answer_ready`. Latency is almost all model turns, so: exploration turns run at
+`view_pdf_page` (whole page image sent to the model), plus `answer_ready(mode)`: the agent classifies the question
+(`MODES`: verdict / explain / propose / develop, described in `MODES_GUIDE`) and the final answer uses that mode's format
+from `ANSWER_FORMAT` (a **Verdict:** line only for feasibility questions; propose = options named in the kommun's plans;
+develop = obstacles, ways to make it work, questions for the user); `AgentRun.mode` records it. Latency is almost all model turns, so: exploration turns run at
 `AGENT_EXPLORE_EFFORT` (default medium, chosen on the benchmark; low = fast mode), the tool calls of one turn run in parallel, the model calls `answer_ready` when
 it has enough, and only the final answer runs at `AGENT_EFFORT` (default medium), **streamed** (`answer_delta`
 events); `AGENT_MAX_STEPS` (default 10) forces the answer. `CorpusTools.warm_up()` loads the query embedding model
@@ -225,6 +228,53 @@ carry one (scales, legend / title-block areas and unconfirmed tract names filter
 meanings into a reference (applicable codes, values, a project whose feasibility depends on them) and keeps only
 high-confidence ones -> `agentic/cases_plans.jsonl` (evidence = the plankarta `doc_id`; `localrag.eval.matches`
 accepts `doc_id`). Check a sample of crops / labels by hand.
+Tasks beyond the verdict (the product vision: also explain rules, propose projects, develop ideas): a case's `task`
+(default "verdict") selects the judge prompt (`TASK_JUDGE_INSTRUCTIONS`) and the scores (`grade_answer`, shared by the
+bench and the Benchmark view): `verdicts` are optional (`verdict_ok` null without them); propose cases carry `anchors`
+(places the plans designate, scored by whole-word string match, `min_anchors` needed) and the judge lists the answer's
+`proposals` (sourced or not); develop key points are prefixed "Obstacle:" / "Lever:" / "Ask:" (scored per kind); agent rows
+get `mode` / `mode_ok`. `agentic/cases_tasks.jsonl` = 10 hand-written seeds (Vallentuna, Norrtälje, Uppsala, Gotland,
+verbatim evidence); `python -m agentic.cases_from_corpus` drafts more from corpus documents (guidance pages / ÖP growth
+passages / rural + VA passages + statutes) with **MiMo v2.6 Flash** (another model family than the agent), keeps only
+points whose quote is found verbatim (`longest_phrase`), drafts cached in `data/agentic/task_drafts.jsonl` ->
+`agentic/cases_generated.jsonl`. `--judge-model xiaomi/mimo-v2.6-flash` grades with another family (rows store
+`judge_model`); `python -m agentic.rejudge <results.json> --sample 50` re-grades stored answers and prints the
+inter-judge agreement; `--leakage` (no LLM) prints each evidence group's rank in a plain search on the question (rank 1-3
+= the question gives the answer away). Run embedding steps on the CPU with `CUDA_VISIBLE_DEVICES= EMBEDDING_RUNTIME=onnx`
+(ONNX int8 ~0.9 GB instead of torch on the CPU; the disk store falls back to numpy). Tests: `tests/test_bench_tasks.py`.
+`cases_from_corpus.REVIEW` = manual corrections of generated cases by id (drop / relabel points, replace propose
+anchors), applied on every rebuild: re-review after `--regenerate` (ids change when sources change). On the last allowed
+turn the agent is only offered `answer_ready` (`tool_choice=required`), so a run that hits `AGENT_MAX_STEPS` still picks
+its mode (before: 5/12 propose runs ended without a mode). Reports: `report.MODES_RUN` (2026-10-19) splits the effort
+matrix (older runs, verdict-only prompt) from the mode-prompt runs; `mode_rows` / `task_table` / `regression_table` /
+`judge_agreement` feed benchmark-report sections 2.7-2.8 and technical-report section 7.9 (English bodies only;
+`PROPOSE_FIX_RUN` separates the propose re-run). `llm.get_openai_client` sets `LLM_TIMEOUT_S` (default 180 s per
+response / stream chunk) and 1 retry: the SDK default (600 s, 2 retries) could hold a worker 30 min.
+
+Status of the benchmark-scope work (2026-10-21; numbers in the reports, `data/agentic/bench-2026101[9]*`,
+`bench-20261021-*`, `rejudge-*.json`): second judge MiMo agrees with Luna (same verdict 57/60, kappa 0.89, key points
+r = 0.90; Luna counts ~2x more unsupported claims); the mode prompt leaves the verdict sets unchanged (14 cases 0.77 ->
+0.73 key points, MÖD 0.48 -> 0.49, verdict equal); on the new tasks the agent beats the RAG (key points explain 0.69 vs
+0.63, propose 0.53 vs 0.41, develop 0.70 vs 0.47). The propose fix (2026-10-21: `MODES_GUIDE` propose = "the place is
+not fixed", work from the ÖP growth passages; last turn forced to `answer_ready`) took mode recognition 0.42 -> 1.00,
+key points 0.53 -> 0.62, places named 0.68 -> 0.88, but evidence seen 0.64 -> 0.51 and ~85 s per answer. The manual
+review rescored stored rows of 6 generated cases without LLM (rows marked `rescored`). Reports regenerated and copied
+to `reports/` on 2026-10-21.
+Optimisation round (2026-10-21, benchmark report 2.9, ~$2.9): dev set = the 52 cases of `cases.jsonl` +
+`cases_tasks.jsonl` + `cases_generated.jsonl`, `bench --label <name>` tags the result file (`-x-<name>.json`, kept out
+of the older report tables; rows store `model`), MiMo Flash judge in the run, then `agentic.rejudge --judge-model
+openai/gpt-6-luna` (a gain counts only if both judges see it). Benchmark fixes first: the judge gets every cited chunk
+whole (`MAX_JUDGE_SOURCES, MAX_SOURCE_CHARS = 40, 3000`; before, 15 x 1500 cut the sources of a quarter of the answers,
+inflating "unsupported"); verdict cases whose question also asks how / what it takes list `modes` (`bench.mode_ok`);
+3 incidental reference points dropped in `REVIEW`. Results: per-mode recipes + a site-constraint grep checklist = no
+gain, less evidence read (rejected); MiMo v2.6 Flash as the agent = +0.09 key points but ~5x the unsupported claims
+(Luna judge), 2.3x slower, 2x cost (rejected); "Completeness" in `ANSWER_FORMAT` (replacing "prefer fewer,
+well-sourced points": the agent left facts it had read out of the answer) = +0.03 / +0.05 key points (MiMo / Luna
+judge), same latency and cost, unsupported +0.5 for Luna only (adopted, now the default). Not tried: Sol (~20x Luna)
+and MiMo Pro. Lesson: exploration instructions do not move the scores; the answer writing does.
+Next: a check step on the draft answer (each claim against its cited chunk) to cut unsupported claims; expert review of a sample of generated cases; multi-turn cases (iterating on a project with the user); merge with
+the localisation work of the other developer (agent `TOOLS_GUIDE` / `tools.py` are theirs, `ROLE` / `MODES_GUIDE` /
+`ANSWER_FORMAT` / bench are ours; their localisation cases can be a `locate` task in the same case format).
 `python -m agentic.report [--lang en|fr|both]` (default en: the project language is English) builds the PDF report in English
 (`../pyrmit_doc/pyrmit_benchmark_report.pdf`) or French (`../pyrmit_doc/pyrmit_rapport_benchmark.pdf`) from the matrix result files (merged per configuration), via
 headless Chrome/Edge, charts as inline SVG; `tr(fr, en)` / `fmt` / `money` follow the module-level `LANG`.
@@ -243,7 +293,11 @@ so sections are top level). The bench's RAG answer is streamed
 The key reports (benchmark, technical, hosting PDF + Markdown) are copied into `reports/` (versioned; the generators
 write to `../pyrmit_doc/`, so copy them again after regenerating).
 Gotcha (Windows): stopping a background shell does not kill its Python children; a "killed" benchmark can keep running
-and spending credits. Check with `Get-CimInstance Win32_Process` and `Stop-Process`.
+and spending credits. Check with `Get-CimInstance Win32_Process` and `Stop-Process`; for a chained `sh script.sh`, stop
+the `sh.exe` first or it starts the next step. Claude Code reaps background shells when RAM runs low (16 GB machine):
+run one benchmark process at a time (threads via `--workers` are fine); results are saved per answer, `--resume` /
+rerunning `agentic.rejudge` continues. A run that sits a long time before its first case may be stuck at startup
+(Hugging Face model check): the result file name is stamped when the cases start.
 
 ### Chat Request
 
@@ -416,6 +470,7 @@ DATABASE_URL=postgresql://...          # Neon pooled endpoint with pgvector
 AI_GATEWAY_API_KEY=                    # Vercel AI Gateway for chat (preferred if set)
 OPENAI_API_KEY=                        # Required for embeddings with the default EMBEDDING_PROVIDER=openai; chat fallback
 LLM_PROVIDER= / LLM_MODEL=             # Optional chat override: openai | gateway | openrouter (+ OPENROUTER_API_KEY or OPENROUTER_KEY)
+LLM_TIMEOUT_S=180                      # max wait per API response / stream chunk (llm.get_openai_client), 1 retry
 LLM_REASONING_EFFORT=                  # e.g. high / xhigh for answers (Responses API `reasoning`); rewrites use
                                        # LLM_REWRITE_REASONING_EFFORT (default low) -- observability.create_chat_completion
 EMBEDDING_PROVIDER/MODEL/DIM/...       # Optional, see backend/embeddings.py; default openai text-embedding-3-large, 3072
@@ -463,7 +518,7 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/routers/agents.py` -- `/api/analyze`
 - `backend/routers/db_browser.py` -- Read-only chunk browser + semantic search (never exposes user/auth tables or embeddings)
 - `backend/routers/docs.py` -- Open a cited chunk in its original document (PDF page + highlight, or URL text fragment)
-- `backend/routers/benchmark.py` -- Benchmark view API: case sets (`SETS`: cases / caselaw / plans), past results per case
+- `backend/routers/benchmark.py` -- Benchmark view API: case sets (`SETS`: cases / caselaw / plans / tasks / generated), past results per case
   parsed from the result file names (`RESULT_FILE`), and in-memory run jobs (`JOBS`, lost on restart)
 - `backend/routers/queryDB.py` -- Legacy standalone `RAG()` retrieval helper, not imported anywhere (chat retrieves via agents)
 - `backend/chunking/ingest_pipeline.py` -- OCR, chunk, embed, push
@@ -487,13 +542,15 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   index (easyocr pulled in a CPU torch once)
 - `backend/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat
   integration, `CitationNumberer`), `run.py` (CLI), `bench.py` + `cases.jsonl` (case benchmark),
-  `cases_from_caselaw.py` (cases from MÖD rulings), `grounding.py`
+  `cases_from_caselaw.py` (cases from MÖD rulings), `cases_tasks.jsonl` + `cases_from_corpus.py` (explain / propose /
+  develop cases), `rejudge.py` (second judge, agreement), `grounding.py`
 - `backend/tests/test_agents.py` -- Agent / parser tests (incl. `TestParseQuery`); 3 `_extract_json` fallback tests
   fail (they expect the old raising behaviour). It stubs `sqlalchemy` in `sys.modules`, so run it in its own pytest
   process: collected together with `test_chat_background.py` the latter fails to import
 - `backend/tests/test_chat_background.py` -- the streamed answer is saved when the client disconnects (SQLite + fake
   LLM). Run with `.venv/Scripts/python -m pytest tests/<file>` (not `uv run`, which re-syncs the venv to uv.lock)
 - `backend/tests/test_agent_citations.py` -- streamed citation numbering for every delta size
+- `backend/tests/test_bench_tasks.py` -- explain / propose / develop scoring (anchors, proposals, points per kind), fake judge
 
 ### Agents (Multi-Agent RAG)
 

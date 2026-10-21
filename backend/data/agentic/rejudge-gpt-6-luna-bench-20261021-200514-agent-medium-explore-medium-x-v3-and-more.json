@@ -1,0 +1,1667 @@
+[
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "kumla-200m2",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.625,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.5,
+   "point_scores": [
+    2,
+    2,
+    0,
+    0
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.0006253,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer identifies the footprint cap and garage allowance, but omits the building-permit and shared water/sewage requirements; its claim that the available records lack the plan map is not established by the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "kristineberg-terraced",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.25,
+   "unsupported": 2,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.375,
+   "point_scores": [
+    1,
+    1,
+    0,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000665925,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer correctly says radhus are allowed and gives cited plan constraints, but omits the reference’s housing counts, typical plot sizes, two-storey/120–140 m² detail, and explicit requirement for a building permit for each building."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "attefall-vallentuna",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.625,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.5,
+   "point_scores": [
+    2,
+    1,
+    1,
+    0
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000876675,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer gives the main size and height limits, but understates the notification requirement, does not state that a permit is always required in culturally valuable areas or mention neighbour consent, and cites §37 for a rule attributed to the supplied §38 excerpt."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "uppsala-septic",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 1.0,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.001317425,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "It correctly explains the permit, written-decision, application-material and fee requirements, while noting that the approved solution depends on site conditions; the detailed site-plan checklist, 100-metre well-information requirement and claim that no total installation estimate is provided are not supported by the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "ydre-lake-house",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 1.0,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.001164925,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer clearly states the 100-metre protection, building prohibition, exemption requirement and building-permit process, but classifies the outcome as unclear because the exact site and qualifying grounds are unknown."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "morby-five-storeys",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.875,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.001082925,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer correctly identifies that the stated area and a fifth full storey do not fit the plan, notes the 15-metre risk setback, and says a larger proposal would require a plan amendment; its claims about the plan being in force, the junction location, and a consultation-stage map are not supported by the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "ydre-barn-demolition",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.8333333333333334,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.0005533,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer correctly explains the usual permit position and relevant heritage, notification, and waste conditions, but its claim that Ydre requires hazardous-waste information in the notification is not supported by the cited excerpt."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "vallentuna-subdivide",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.875,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.00091255,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer clearly explains the subdivision route and suitability checks, while correctly noting that approval depends on the site; its statement about fees and processing times is not supported by the cited material."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "uppsala-advance-ruling",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "feasible",
+   "verdict_ok": true,
+   "points": 0.8333333333333334,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.00068505,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer clearly explains how to seek a preliminary decision, its two-year binding period, and Uppsala’s site, land, VA, and fee considerations; the outcome for the specific plot remains uncertain."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "ecovillage-vallentuna",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.875,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.875,
+   "point_scores": [
+    2,
+    2,
+    1,
+    2
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.001325175,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer identifies the planning and farmland hurdles, flags the sewage permit, and calls for checking Vallentuna’s ÖP, but omits gemensamhetsanläggning and makes one unsupported claim about the timing of individual building permits."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "gotland-own-va",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.6666666666666666,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.6666666666666666,
+   "point_scores": [
+    2,
+    2,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.00099155,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer correctly explains the required VA documents and separate permit requirements, but omits the overview plan’s guidance on area-specific VA conditions."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "vallentuna-tower",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.6666666666666666,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.6666666666666666,
+   "point_scores": [
+    1,
+    2,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.0008803,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer clearly states that a building permit is required and flags site-specific checks, but it does not explicitly state the Armed Forces consultation requirement for objects over 20 m outside built-up areas and omits riksintressen; its detailed-plan trigger claim is not established by the cited excerpt."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "norrtalje-rezone",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.625,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.625,
+   "point_scores": [
+    1,
+    2,
+    1,
+    1
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.00124205,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer gives a conditional assessment and covers the main process, but omits the planbesked fee and review stage, while adding an uncited farmland test and describing planbesked as permission to begin planning."
+  }
+ },
+ {
+  "file": "bench-20261021-200514-agent-medium-explore-medium-x-v3.json",
+  "case": "norrtalje-permanent-home",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.8333333333333334,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.6666666666666666,
+   "point_scores": [
+    2,
+    1,
+    1
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.0012318,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer correctly makes the outcome conditional on local planning and VA, but does not clearly state that individual sewage must meet requirements or that plans may limit building size, and it asserts that permanent residence is not automatically prohibited and that a plan may restrict holiday use without support in the cited material."
+  }
+ },
+ {
+  "file": "bench-20261021-200958-agent-medium-explore-medium-cases_tasks-x-v3.json",
+  "case": "explain-gotland-plan-queue",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.7,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.6,
+   "point_scores": [
+    2,
+    1,
+    1,
+    1,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.0008308,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer covers the planbesked process, priority factors and four-month decision deadline, but omits some priority details and adds an unsupported claim about priority 3 being considered only after priorities 1 and 2 are allocated."
+  }
+ },
+ {
+  "file": "bench-20261021-200958-agent-medium-explore-medium-cases_tasks-x-v3.json",
+  "case": "explain-vallentuna-zoning-lookup",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.5,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.375,
+   "point_scores": [
+    1,
+    0,
+    2,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000709925,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer gives useful ways to find detailed plans and correctly distinguishes the required map types, but omits the building-planning-support map and the role of the overview plan."
+  }
+ },
+ {
+  "file": "bench-20261021-200958-agent-medium-explore-medium-cases_tasks-x-v3.json",
+  "case": "explain-vallentuna-rezoning",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9,
+   "point_scores": [
+    2,
+    2,
+    2,
+    2,
+    1
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.00100655,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer covers the request process, timing, fee and non-binding nature, but only partially explains the comprehensive plan’s role; it also makes three uncited claims about later approvals, variable plan duration and cost depending on required work."
+  }
+ },
+ {
+  "file": "bench-20261021-200958-agent-medium-explore-medium-cases_tasks-x-v3.json",
+  "case": "propose-norrtalje-cohousing",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.75,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.625,
+   "point_scores": [
+    1,
+    2,
+    1,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.00161455,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [
+    "Rimbo"
+   ],
+   "anchors": 0.5,
+   "proposals": 3,
+   "proposals_sourced": 1.0,
+   "comment": "The answer covers shoreline constraints and investigation areas well, but omits several designated centres and does not state the detailed-plan and shared-VA requirements as firmly as the reference."
+  }
+ },
+ {
+  "file": "bench-20261021-200958-agent-medium-explore-medium-cases_tasks-x-v3.json",
+  "case": "explain-vallentuna-permit-process",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.8333333333333334,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.75,
+   "point_scores": [
+    1,
+    2,
+    1,
+    1,
+    2,
+    2
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.00127855,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer covers the main process and deadlines, but does not explicitly identify publication in Post- och Inrikes Tidningar or the risk of a byggsanktionsavgift, and the proposed control-plan claim is not supported by the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-200958-agent-medium-explore-medium-cases_tasks-x-v3.json",
+  "case": "propose-uppsala-rural-homes",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.625,
+   "unsupported": 3,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.625,
+   "point_scores": [
+    1,
+    1,
+    1,
+    2
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.002022675,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [
+    "Storvreta",
+    "Björklinge"
+   ],
+   "anchors": 1.0,
+   "proposals": 5,
+   "proposals_sourced": 1.0,
+   "comment": "The answer gives relevant growth locations and site constraints, but omits Gunsta, Jälla and the eight-plot threshold; the Björklinge shoreline claim and the claimed adopted Storvreta detailed-plan framework are not supported by the supplied excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-200958-agent-medium-explore-medium-cases_tasks-x-v3.json",
+  "case": "develop-karsta-tiny-houses",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.8,
+   "point_scores": [
+    1,
+    2,
+    2,
+    1,
+    2
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.0017848,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 0.75,
+   "points_lever": 0.75,
+   "points_ask": 1.0,
+   "comment": "The answer covers the farmland constraint, location questions and planning route well, but softens the detailed-plan requirement and omits the gemensamhetsanläggning lever; it also claims a specific composting-toilet form exists without support in the supplied sources."
+  }
+ },
+ {
+  "file": "bench-20261021-200958-agent-medium-explore-medium-cases_tasks-x-v3.json",
+  "case": "develop-uppsala-farm-housing",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.8,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9,
+   "point_scores": [
+    2,
+    1,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.001612175,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 0.75,
+   "points_lever": 1.0,
+   "points_ask": 1.0,
+   "comment": "The answer covers the farm-housing route, farmland constraints, preliminary ruling and key questions, but omits the reference’s specific eight-plot threshold and limits on additions to existing clusters."
+  }
+ },
+ {
+  "file": "bench-20261021-200958-agent-medium-explore-medium-cases_tasks-x-v3.json",
+  "case": "propose-vallentuna-ecovillage",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.6,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.6,
+   "point_scores": [
+    1,
+    0,
+    1,
+    2,
+    2
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.002072675,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [
+    "Lindholmen",
+    "Kristineberg"
+   ],
+   "anchors": 1.0,
+   "proposals": 3,
+   "proposals_sourced": 1.0,
+   "comment": "The answer gives three plan-supported locations and a clear planbesked-to-detailed-plan route, but omits Kårsta and Ekskogen and makes two procedural or stormwater claims not established by the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-explain-0764-6b705b",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.6,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.6,
+   "point_scores": [
+    2,
+    2,
+    2,
+    0,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.00035055,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer correctly states who adopted the plan, that it was appealed and dismissed, and when it became final, but omits the review and consultation dates and related comments."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-explain-0883-889e4a",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.6,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.6,
+   "point_scores": [
+    2,
+    2,
+    2,
+    0,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.00062855,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer accurately explains where and how to report, what information to include, and anonymity, but omits examples of reportable building violations and the ten-year time limit."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-explain-1883-48b6f3",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 1.0,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.0006663,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer covers all six key points; its claim that processing time may depend on additions or a site visit is not explicitly established by the cited sources."
+  }
+ },
+ {
+  "file": "bench-20261021-200958-agent-medium-explore-medium-cases_tasks-x-v3.json",
+  "case": "develop-gotland-farm-cabins",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.7,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.6,
+   "point_scores": [
+    1,
+    1,
+    2,
+    1,
+    1
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.00212805,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 0.75,
+   "points_lever": 0.5,
+   "points_ask": 0.5,
+   "comment": "The answer covers the main water and wastewater issues and asks several relevant questions, but it misses the well-depth caution, the preferred shared-facility arrangement, and the farm-business connection."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-explain-0582-655262",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9,
+   "point_scores": [
+    1,
+    2,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.0007113,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer covers the required plan, payment preparation, fee calculator and three-month completion period, but omits the BankID-style login and temporary-connection details; its advice to confirm property availability and the final charge with customer service is not supported by the cited sources."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-explain-0765-6e5c76",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.00090555,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer covers all five key points; the claims that the application is open to residents and businesses and that an appeal can add cost are not supported by the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-explain-2421-78972e",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.8,
+   "point_scores": [
+    1,
+    1,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.00133605,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer covers the main application process and dispensation conditions, but only partially states the prohibitions and examples of conflicting installations, and its narrow-watercourse exception is not supported by the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-explain-0186-38f1a9",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 1.0,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.8333333333333334,
+   "point_scores": [
+    2,
+    1,
+    2
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000838175,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "It covers the submission options and contact details, but does not spell out all the application types handled by the same e-service or form."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-explain-1415-ba184f",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.6666666666666666,
+   "unsupported": 2,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.6666666666666666,
+   "point_scores": [
+    1,
+    1,
+    2,
+    2,
+    1,
+    1
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.0009343,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer covers the main booking and access instructions, but omits several procedural details and incorrectly says the source gives no general annual interval for sealed tanks."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-propose-2482-86070d",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.5,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.375,
+   "point_scores": [
+    2,
+    1,
+    0,
+    0
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.001727675,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [
+    "Skelleftedalen",
+    "Myckle",
+    "Byske"
+   ],
+   "anchors": 1.0,
+   "proposals": 5,
+   "proposals_sourced": 1.0,
+   "comment": "The answer explains the binding role of detailed plans and offers sourced locations, but omits the shoreline-exemption conditions, specific noise standards, and radon and contamination checks; it also mischaracterizes Västomviken as a later option."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-propose-0127-6f52e4",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 1.0,
+   "unsupported": 2,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.75,
+   "point_scores": [
+    2,
+    1,
+    1,
+    2
+   ],
+   "unsupported": 6,
+   "judge_cost": 0.001778175,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [
+    "Grödinge",
+    "Vårsta",
+    "Tegelvreten",
+    "Eldtomta"
+   ],
+   "anchors": 1.0,
+   "proposals": 3,
+   "proposals_sourced": 0.6666666666666666,
+   "comment": "The answer covers the main Grödinge locations and suitability constraints, but softens the municipal VA requirement and includes several location or approval details not substantiated by the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-explain-1563-5c768c",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.8,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "explain",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9,
+   "point_scores": [
+    2,
+    2,
+    1,
+    2,
+    2
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.001434925,
+   "judge_model": "openai/gpt-6-luna",
+   "comment": "The answer covers the key process and deadlines, but omits that review documents are also displayed at the administration and that substantial post-review changes require another review; the 400 mPBB fee and the claim that a positive planbesked does not guarantee adoption are not supported by the excerpts provided."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-propose-1880-53410c",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.375,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.625,
+   "point_scores": [
+    0,
+    1,
+    2,
+    2
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.00217755,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [
+    "Vintrosa"
+   ],
+   "anchors": 0.5,
+   "proposals": 5,
+   "proposals_sourced": 0.8,
+   "comment": "The answer gives several source-backed locations and a useful planning route, but omits the public-transport priority and does not state the flood restriction; its unsupported claims are that most growth must be in designated areas and that detached houses require permits, for which no cited excerpt is provided."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-propose-1881-7b1660",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.3333333333333333,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.3333333333333333,
+   "point_scores": [
+    2,
+    0,
+    0
+   ],
+   "unsupported": 4,
+   "judge_cost": 0.002113925,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [
+    "Brånsta",
+    "Sånnersta",
+    "Sörby",
+    "Fylsta",
+    "Åbytorp",
+    "Hällabrottet",
+    "Ekeby",
+    "Frommesta"
+   ],
+   "anchors": 1.0,
+   "proposals": 8,
+   "proposals_sourced": 1.0,
+   "comment": "The answer covers the agricultural-land test and several designated housing areas, but omits the 150-metre dangerous-goods-route review and the Kvarntorp railway safety issue, and makes unsupported claims about Hällabrottet constraints and planning requirements."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-propose-1083-56f7d9",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.375,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.375,
+   "point_scores": [
+    1,
+    1,
+    0,
+    1
+   ],
+   "unsupported": 5,
+   "judge_cost": 0.002134425,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [
+    "Norje"
+   ],
+   "anchors": 0.5,
+   "proposals": 4,
+   "proposals_sourced": 1.0,
+   "comment": "The answer identifies several plan-supported locations and useful next steps, but omits water-protection rules and does not clearly state the required public water/sewer connection or climate-safety condition."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-propose-1862-454f94",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.125,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.25,
+   "point_scores": [
+    1,
+    0,
+    1,
+    0
+   ],
+   "unsupported": 4,
+   "judge_cost": 0.001721675,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [
+    "Svartå",
+    "Åtorp"
+   ],
+   "anchors": 0.6666666666666666,
+   "proposals": 9,
+   "proposals_sourced": 1.0,
+   "comment": "The answer gives several supported housing directions and useful planning guidance, but omits the existing-development criterion and heritage adaptation, and only vaguely addresses flood studies and shared sewage."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-propose-0885-89f437",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.75,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.875,
+   "point_scores": [
+    2,
+    2,
+    2,
+    1
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.002080675,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [
+    "Rälla"
+   ],
+   "anchors": 0.5,
+   "proposals": 4,
+   "proposals_sourced": 0.75,
+   "comment": "The answer covers the main siting and planning conditions, but omits the stated requirement for soil and groundwater investigations and includes some unsupported specifics, including the 3.05 m elevation reference."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-propose-2161-04ba66",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.75,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.875,
+   "point_scores": [
+    2,
+    1,
+    2,
+    2
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.001837425,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [],
+   "anchors": 0.0,
+   "proposals": 3,
+   "proposals_sourced": 1.0,
+   "comment": "The answer gives well-sourced candidate areas and covers shoreline access, nature values and approval routes, but does not clearly state that national-interest sites are assessed individually."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-develop-0114-7e40db",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9166666666666666,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.0017423,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 1.0,
+   "points_lever": 1.0,
+   "points_ask": 1.0,
+   "comment": "The answer covers all six reference points; its only notable unsupported specific claim is the suggestion that a joint facility and association can secure ongoing management."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-propose-2581-cda9b5",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.625,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "propose",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.5,
+   "point_scores": [
+    1,
+    2,
+    1,
+    0
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.0024573,
+   "judge_model": "openai/gpt-6-luna",
+   "anchors_hit": [
+    "Rosvik",
+    "Norrfjärden",
+    "Jävre"
+   ],
+   "anchors": 1.0,
+   "proposals": 7,
+   "proposals_sourced": 0.7142857142857143,
+   "comment": "The answer gives useful location-specific guidance and covers planning, shoreline protection and VA, but omits the county-board approval condition and makes unsupported claims about housing support in all five rural centres and Granholmsviken’s bay and wastewater constraints."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-develop-2031-b2ce24",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9166666666666666,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.75,
+   "point_scores": [
+    2,
+    1,
+    2,
+    2,
+    1,
+    1
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.0013953,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 0.8333333333333334,
+   "points_lever": 0.75,
+   "points_ask": 0.5,
+   "comment": "The answer covers the farmland and shoreline barriers and checks for LIS status, but understates the local-plan requirement and only partially identifies shared wastewater and the built-up-land alternative."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-develop-0305-be02fc",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.75,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 8,
+   "judge_cost": 0.0017833,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 1.0,
+   "points_lever": 1.0,
+   "points_ask": 1.0,
+   "comment": "The answer covers all six reference points, but also makes several specific legal or technical claims that are not established by the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-develop-0840-72b110",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.4166666666666667,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.4166666666666667,
+   "point_scores": [
+    2,
+    0,
+    1,
+    1,
+    0,
+    1
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.001543675,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 0.5,
+   "points_lever": 0.25,
+   "points_ask": 0.5,
+   "comment": "The answer covers the farmland hurdle and raises wastewater, visitor use and parcel questions, but omits the municipality’s farmland policy and shared-facility route, and adds a few legal or regulatory claims not established by the reference or cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-develop-0486-70d763",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.75,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.75,
+   "point_scores": [
+    2,
+    2,
+    2,
+    1,
+    1,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.0017693,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 1.0,
+   "points_lever": 0.5,
+   "points_ask": 0.5,
+   "comment": "The answer covers the farmland, plan and wastewater hurdles well, but only partially captures the municipality’s preferred rural cluster pattern and the early written feasibility route; it also adds one wastewater-notification detail not supported by the supplied excerpts."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-develop-2062-e2573c",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.5833333333333334,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.6666666666666666,
+   "point_scores": [
+    2,
+    1,
+    0,
+    2,
+    2,
+    1
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.002024425,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 0.8333333333333334,
+   "points_lever": 0.5,
+   "points_ask": 0.5,
+   "comment": "The answer covers the farmland, planning, and shared-facility issues, but omits the extra grounds in flagged rural-development areas and does not ask how far the plot is from water; three specific claims are unsupported or overbroad."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-develop-1715-2d6d81",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.8,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.8,
+   "point_scores": [
+    2,
+    2,
+    2,
+    1,
+    1
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.0021748,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 1.0,
+   "points_lever": 0.5,
+   "points_ask": 0.5,
+   "comment": "The answer covers the main planning, farmland and shoreline obstacles, but only partly presents LIS as a route to explore and does not ask whether the cabins are clustered or split across properties."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-develop-2514-7e7b51",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.7142857142857143,
+   "unsupported": 1,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.7857142857142857,
+   "point_scores": [
+    2,
+    1,
+    2,
+    2,
+    2,
+    1,
+    1
+   ],
+   "unsupported": 4,
+   "judge_cost": 0.0019408,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 0.8333333333333334,
+   "points_lever": 0.8333333333333334,
+   "points_ask": 0.5,
+   "comment": "The answer covers the main constraints and route, but does not state the shoreline building and digging prohibitions or name gemensamhetsanläggning, and it adds unsupported claims about red-listed species and planning agreements and fees."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-develop-1766-0f3c4a",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.9166666666666666,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.8333333333333334,
+   "point_scores": [
+    2,
+    1,
+    2,
+    1,
+    2,
+    2
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.00173105,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 0.8333333333333334,
+   "points_lever": 0.75,
+   "points_ask": 1.0,
+   "comment": "The answer covers the farmland, wastewater, shared-facility and site-selection issues well, but only partially states the shoreline restriction and the compact-cluster lever; its mention of a possible shoreline exemption is unsupported by the cited sources."
+  }
+ },
+ {
+  "file": "bench-20261021-201812-agent-medium-explore-medium-cases_generated-x-v3.json",
+  "case": "gen-develop-0360-8f7076",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.25,
+   "unsupported": 0,
+   "judge_model": "xiaomi/mimo-v2.6-flash"
+  },
+  "new": {
+   "task": "develop",
+   "verdict": "none",
+   "verdict_ok": null,
+   "points": 0.3333333333333333,
+   "point_scores": [
+    0,
+    0,
+    1,
+    1,
+    0,
+    2
+   ],
+   "unsupported": 4,
+   "judge_cost": 0.001746175,
+   "judge_model": "openai/gpt-6-luna",
+   "points_obstacle": 0.16666666666666666,
+   "points_lever": 0.25,
+   "points_ask": 1.0,
+   "comment": "The answer addresses wastewater and some early planning steps, but misses the farmland, översiktsplan and village-school dialogue points; it also includes four specific claims not supported by the cited excerpts."
+  }
+ }
+]

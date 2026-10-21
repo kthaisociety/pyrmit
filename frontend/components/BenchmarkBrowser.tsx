@@ -10,19 +10,26 @@ import SourceViewer, { type Citation } from '@/components/SourceViewer';
 // benchmark runs answered each case, and run the agent on a case now (graded by the same LLM judge).
 
 interface CaseSet { set: string; title: string; description: string; cases: number }
-interface CaseRow { id: string; question: string; verdicts: string[]; source?: string; has_image: boolean }
+interface CaseRow { id: string; question: string; task?: string; verdicts: string[]; source?: string; has_image: boolean }
 interface Evidence { law?: string; section?: string; contains?: string; title?: string; kommun_code?: string; doc_id?: string; any?: Evidence[] }
 interface CaseDetail {
-  id: string; question: string; verdicts: string[]; key_points: string[]; evidence: Evidence[];
+  id: string; question: string; task?: string; verdicts?: string[]; key_points: string[]; evidence: Evidence[];
+  anchors?: { name: string; aliases?: string[] }[]; min_anchors?: number;
   source?: string; outcome?: string; url?: string; image?: string; label_explanation?: string;
 }
-interface PastResult {
-  run: string; config: string; verdict: string; verdict_ok: boolean; points: number; evidence: number | null;
+// Task-specific scores of a graded answer (agentic/bench.py grade_answer); verdict_ok is null without accepted verdicts
+interface TaskScores {
+  task?: string; mode?: string | null; mode_ok?: boolean | null; anchors?: number; anchors_hit?: string[];
+  proposals?: number; proposals_sourced?: number | null;
+  points_obstacle?: number | null; points_lever?: number | null; points_ask?: number | null;
+}
+interface PastResult extends TaskScores {
+  run: string; config: string; verdict: string; verdict_ok: boolean | null; points: number; evidence: number | null;
   grounded: number | null; tool_calls: number; map_views?: number; seconds: number; cost: number; comment?: string;
   answer?: string;
 }
-interface RunResult {
-  answer: string; citations: Citation[]; verdict: string; verdict_ok: boolean; points: number;
+interface RunResult extends TaskScores {
+  answer: string; citations: Citation[]; verdict: string; verdict_ok: boolean | null; points: number;
   point_scores?: number[]; comment?: string; evidence: number | null; map_views: number; tool_calls: number;
   llm_calls: number; seconds: number; cost: number;
 }
@@ -41,6 +48,33 @@ function evidenceText(e: Evidence): string {
   if (e.doc_id) return `the plan map (${e.doc_id})`;
   const where = e.law ? `${e.law}${e.section ? ` ${e.section}` : ''}` : e.kommun_code ? `kommun ${e.kommun_code}${e.title ? ` – ${e.title}` : ''}` : e.title ?? '';
   return e.contains ? `${where}: “${e.contains}”` : where;
+}
+
+const TASK_LABELS: Record<string, string> = {
+  verdict: 'Verdict', explain: 'Explain', propose: 'Propose', develop: 'Develop',
+};
+
+function TaskBadge({ task, ok }: { task: string; ok?: boolean | null }) {
+  const tone = ok === undefined || ok === null
+    ? 'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300'
+    : ok ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
+      : 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300';
+  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${tone}`}>{TASK_LABELS[task] ?? task}</span>;
+}
+
+// The scores beyond key points / evidence: anchors and proposals (propose), points per kind (develop)
+function taskScores(r: TaskScores): string {
+  const parts: string[] = [];
+  if (r.anchors !== undefined) parts.push(`places ${fmt(r.anchors)}${r.anchors_hit?.length ? ` (${r.anchors_hit.join(', ')})` : ''}`);
+  if (r.proposals !== undefined) parts.push(`${r.proposals} options, ${fmt(r.proposals_sourced)} sourced`);
+  if (r.points_obstacle !== undefined) parts.push(`obstacles ${fmt(r.points_obstacle)} · levers ${fmt(r.points_lever)} · asks ${fmt(r.points_ask)}`);
+  return parts.map((part) => ` · ${part}`).join('');
+}
+
+// Badge of a graded answer: the verdict when the case has accepted verdicts, else the mode the agent chose
+function ResultBadge({ r }: { r: PastResult | RunResult }) {
+  if (r.verdict_ok !== null && r.verdict_ok !== undefined) return <VerdictBadge verdict={r.verdict} ok={r.verdict_ok} />;
+  return <TaskBadge task={r.mode ?? r.task ?? '?'} ok={r.mode ? r.mode_ok : undefined} />;
 }
 
 function VerdictBadge({ verdict, ok }: { verdict: string; ok?: boolean }) {
@@ -75,9 +109,9 @@ function PastResults({ results }: { results: PastResult[] }) {
         <div key={`${r.run}-${i}`} className="rounded-lg border border-zinc-200 dark:border-zinc-700">
           <button onClick={() => setOpen(open === i ? null : i)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs">
             {open === i ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-            <VerdictBadge verdict={r.verdict} ok={r.verdict_ok} />
+            <ResultBadge r={r} />
             <span className="min-w-0 flex-1 truncate text-zinc-700 dark:text-zinc-300">{r.config}</span>
-            <span className="text-zinc-500">points {fmt(r.points)} · evidence {fmt(r.evidence)}{r.map_views ? ` · ${r.map_views} map views` : ''} · {Math.round(r.seconds)} s · ${fmt(r.cost, 4)}</span>
+            <span className="text-zinc-500">points {fmt(r.points)} · evidence {fmt(r.evidence)}{taskScores(r)}{r.map_views ? ` · ${r.map_views} map views` : ''} · {Math.round(r.seconds)} s · ${fmt(r.cost, 4)}</span>
           </button>
           {open === i && (
             <div className="space-y-2 border-t border-zinc-200 px-3 py-2 text-xs dark:border-zinc-700">
@@ -141,10 +175,11 @@ function RunPanel({ set, caseId }: { set: string; caseId: string }) {
       {result && (
         <div className="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            {result.verdict_ok ? <CheckCircle2 size={16} className="text-emerald-600" /> : <XCircle size={16} className="text-red-600" />}
-            <VerdictBadge verdict={result.verdict} ok={result.verdict_ok} />
+            {result.verdict_ok !== null && result.verdict_ok !== undefined && (result.verdict_ok
+              ? <CheckCircle2 size={16} className="text-emerald-600" /> : <XCircle size={16} className="text-red-600" />)}
+            <ResultBadge r={result} />
             <span className="text-zinc-600 dark:text-zinc-400">
-              key points {fmt(result.points)} · evidence {fmt(result.evidence)} · {result.tool_calls} tool calls
+              key points {fmt(result.points)} · evidence {fmt(result.evidence)}{taskScores(result)} · {result.tool_calls} tool calls
               {result.map_views ? ` · ${result.map_views} map views` : ''} · {Math.round(result.seconds)} s · ${fmt(result.cost, 4)}
             </span>
           </div>
@@ -235,6 +270,7 @@ export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
               >
                 <div className="mb-1 flex items-center gap-1.5">
                   <span className="font-mono text-[10px] text-zinc-500">{row.id}</span>
+                  {row.task && row.task !== 'verdict' && <TaskBadge task={row.task} />}
                   {row.verdicts.map((v) => <VerdictBadge key={v} verdict={v} />)}
                 </div>
                 <p className="line-clamp-2 text-zinc-700 dark:text-zinc-300">{row.question}</p>
@@ -253,7 +289,15 @@ export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
                 {detail.case.image && <CaseImage caseId={detail.case.id} />}
               </section>
               <section className="space-y-2 rounded-xl bg-zinc-50 p-4 text-sm dark:bg-zinc-900">
-                <div className="flex flex-wrap items-center gap-2"><b className="text-xs">Accepted verdicts</b>{detail.case.verdicts.map((v) => <VerdictBadge key={v} verdict={v} />)}</div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <b className="text-xs">Task</b><TaskBadge task={detail.case.task ?? 'verdict'} />
+                  {detail.case.verdicts?.length ? <><b className="ml-2 text-xs">Accepted verdicts</b>{detail.case.verdicts.map((v) => <VerdictBadge key={v} verdict={v} />)}</> : null}
+                </div>
+                {detail.case.anchors?.length ? (
+                  <p className="text-xs text-zinc-700 dark:text-zinc-300">
+                    <b>Places the plans designate</b> (the answer should name at least {detail.case.min_anchors ?? detail.case.anchors.length}): {detail.case.anchors.map((a) => a.name).join(', ')}
+                  </p>
+                ) : null}
                 <div><b className="text-xs">Expected key points</b>
                   <ul className="ml-4 list-disc text-xs text-zinc-700 dark:text-zinc-300">{detail.case.key_points.map((p, i) => <li key={i}>{p}</li>)}</ul>
                 </div>
