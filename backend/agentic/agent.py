@@ -98,6 +98,8 @@ Completeness: the user will act on this answer, so before writing go through you
 # its answer; +0.03 / +0.05 key points (MiMo / Luna judge) on the 52 dev cases, same latency and cost (benchmark
 # report 2.9, with the rejected variants: per-mode recipes + site checklist, MiMo Flash as the agent)
 
+IMAGE_REMOVED = "\n(Image removed after the turn it was shown in: use what you noted from it.)"
+
 SYSTEM_PROMPT = f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{MODES_GUIDE}\n\n{ANSWER_FORMAT}"
 
 
@@ -168,6 +170,17 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
     schemas = [schema for schema in TOOL_SCHEMAS if schema["name"] not in disabled] + [ANSWER_READY_TOOL]
     note = f"\n\nNot available in this session: {', '.join(sorted(disabled))}." if disabled else ""
     instructions = SYSTEM_PROMPT + note
+    # An image goes with the next model call only (re-sending every image each turn multiplied the input tokens):
+    # `fresh` = attached, not sent yet; `shown` = sent once, replaced by text before the following call
+    fresh: list[int] = []
+    shown: list[int] = []
+
+    def send_images_once() -> None:
+        for index in shown:
+            text = conversation[index]["content"][0]["text"]
+            conversation[index] = {"role": "user", "content": [{"type": "input_text", "text": text + IMAGE_REMOVED}]}
+        shown[:] = fresh
+        fresh.clear()
 
     def turn_event(step: int, turn_effort: str, response, turn_started: float, summary: str) -> None:
         turn_usage: dict = {}
@@ -181,6 +194,7 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
         if last:  # budget spent: the last turn only picks the mode, so the answer still gets its format
             conversation.append({"role": "user", "content": "Tool budget reached: call answer_ready now with the "
                                                             "mode of the question."})
+        send_images_once()
         response = client.responses.create(
             model=model, instructions=instructions, input=conversation,
             tools=[ANSWER_READY_TOOL] if last else schemas, reasoning={"effort": explore_effort},
@@ -214,12 +228,14 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
             run.seen_chunks.extend(chunk_id for chunk_id in result.chunk_ids if chunk_id not in run.seen_chunks)
             conversation.append({"type": "function_call_output", "call_id": call.call_id, "output": result.text})
             if result.image_png:
+                fresh.append(len(conversation))
                 conversation.append(image_message(result))
             run.steps.append({"tool": call.name, "arguments": arguments, "chunks": result.chunk_ids,
                               "output_chars": len(result.text), "image": bool(result.image_png), "ms": ms, "turn": step})
-            emit({"type": "tool_result", "name": call.name, "result": result.text[:300]})
+            emit({"type": "tool_result", "name": call.name, "result": result.text[:300],
+                  "chunks": len(result.chunk_ids), "ms": ms})
             emit({"type": "tool_done", "name": call.name, "input": json.dumps(arguments, ensure_ascii=False),
-                  "output": result.text[:4000], "chunks": len(result.chunk_ids), "ms": ms,
+                  "output": result.text[:4000], "chunks": len(result.chunk_ids), "chunk_ids": result.chunk_ids, "ms": ms,
                   "image": bool(result.image_png)})
         if ready:
             break
@@ -231,6 +247,7 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
             conversation.append({"role": "user", "content": "Tool budget reached: answer now with the evidence you "
                                                             "have, in the required format."})
         turn_started = time.perf_counter()
+        send_images_once()
         stream = client.responses.create(model=model, instructions=instructions, input=conversation,
                                          reasoning={"effort": effort}, stream=True)
         parts, final = [], None

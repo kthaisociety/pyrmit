@@ -148,11 +148,17 @@ python -m corpus.plans            # detaljplan registry + planbestämmelser -> d
 - `corpus.ocr` processes detaljplaner first, short documents first (hours on the GPU for the 769 scanned PDFs);
   then rerun `corpus.extract`, `corpus.chunk`, `localrag.index`, `localrag.store`, `corpus.plans`.
 
+- The crawler parses HTML with the charset httpx found (lxml alone read pages without a declared charset as latin-1:
+  "fÃ¶r" in titles and link texts, ~285 documents of Haninge, Göteborg, Sala, Tranås...); `corpus.extract` repairs titles
+  crawled before (`common.repair_mojibake`). Their pages were also scored on garbled titles when crawled.
 - The crawler honours robots.txt, 1 req/s per host, caps per kommun, resumes (a kommun whose manifest ends with
   `{"done": true}` is skipped). Pages are kept on topic keywords (`content_relevance`), PDFs when linked from relevant pages.
 - `corpus.chunk` recognises a chapter only on its own line after a blank line, so wrapped references ("4 kap.
-  miljöbalken") don't open chapters; lettered paragraphs (`6 a §`) are separate chunks; transitional provisions dropped.
-  Chunk ids include a text hash, so re-chunking never reuses stale vectors.
+  miljöbalken") don't open chapters; also "10 Kap." (JB) and a bare "14 kap." before its title or its 1 § (FBL), and a
+  heading wrapped onto two lines is not glued to the next one (before 2026-10-22: MB 4 kap., JB 7/10/11 kap., FBL 1/14 kap.,
+  MPF 4 kap., PBF 7 kap. were filed under the previous chapter; the text and chunk ids did not change); lettered paragraphs (`6 a §`) are separate chunks; transitional provisions dropped.
+  Chunk ids include a text hash (not the header): `localrag.index` keeps a digest of each embedded header + text
+  (`dense/<model>/digests.json`) and re-embeds in place the chunks whose header changed.
 - `LocalRetriever` searches two pools like the chat (laws / kommun documents). The kommun pool is filtered to the
   kommuner named in the question (`gazetteer.detect_kommuner`, fallback `CorpusPlaces` for places missing from
   Wikidata, e.g. "Veda"). Modes (`LOCAL_RAG_MODE`): dense (default), bm25 (Swedish stems + compound 5-grams),
@@ -191,7 +197,15 @@ each model turn and tool call is recorded for the inspector ("Explore (agent)" s
 partial `c:` ids and open `[...]` groups held back until complete, repeats merged); the numbered source list
 ("- [n] label") is appended at the end and a `citations` pipeline event maps each n to its label and cited chunks.
 The answer format asks for the law reference in the sentence and `[c:id]` right after the claim, never nested.
-Robustness: ids of 8-15 hex characters (the model sometimes truncates) resolve by unique prefix
+`read` also takes the id as printed (`c:<id>`, `[c:<id>]`), a doc_id passed as chunk_id, without its `pdf:` / `page:`
+prefix or reduced to its hash (`doc_ids_ending`) (before 2026-10-22, 1,845 benchmark reads failed on the `c:` prefix, 88 % never retried); `law_section` takes
+abbreviations (MPF, MBF, LRL...), names without diacritics and '9:4' / '4a §' / '18 c § punkt 1', and points to the
+SFS 2025:974 renumbering when a PBL 9 kap. number is missing; `grep` needs a kommun or scope='law' (a regex over every
+kommun took 12-28 s) and filters on the index; an image (`view_map_area` / `view_pdf_page`) goes with the next model
+call only, then is replaced by a note (`send_images_once` in `agent.py`; the agent is told to write down what it reads); `find_kommun` lists
+the kommun named outright first ("Kårsta, Vallentuna": Örebro also has a Kårsta). Disk-store queries on kommun
+chunks filter `kind IN LOCAL_KINDS` (page, pdf) so SQLite uses the (kind, kommun_code) index (`kind != 'law'` scanned
+the table, ~0.7 s per query). Robustness: ids of 8-15 hex characters (the model sometimes truncates) resolve by unique prefix
 (`CorpusTools.get_chunk` -> `ids_with_prefix`), unknown ids are dropped (no "?"), and groups are split on ";" (commas
 only between ids, so "PBL 9 kap. 3 §, 4 §" stays whole). The frontend turns "[n]" / "[n; m]" into clickable chips
 (`linkCitations` in `Chat.tsx`; mixed or nested groups such as "[1; MB 7 kap. 15 § [2]]" become chips followed by the
@@ -272,6 +286,13 @@ gain, less evidence read (rejected); MiMo v2.6 Flash as the agent = +0.09 key po
 well-sourced points": the agent left facts it had read out of the answer) = +0.03 / +0.05 key points (MiMo / Luna
 judge), same latency and cost, unsupported +0.5 for Luna only (adopted, now the default). Not tried: Sol (~20x Luna)
 and MiMo Pro. Lesson: exploration instructions do not move the scores; the answer writing does.
+Bug round (2026-10-22, `bench --label toolfix`, dev set x 3 repeats, ~$1.6 + $0.2 Luna rejudge): before it, 57 % of the
+agent answers lost a `read` (ids written `c:<id>`, 1,845 reads, 88 % never retried), MB 4 kap. and other chapters were
+missing, kommun-filtered SQLite queries scanned the table and every image was re-sent each turn. After the fixes
+(vs `x-v3`): failed reads 2.96 -> 0.32 per answer, answer time 55-71 s -> 33-45 s, first token 46-57 s -> 22-28 s,
+unsupported claims (Luna judge) 1.96 -> 1.45, key points unchanged (MiMo 0.71 -> 0.71, Luna 0.72 -> 0.69). Answers
+cite ~1 % of ids miscopied after their first characters: `tools.resolve_cited` maps them to the one shown chunk with the
+longest common prefix (>= 8) in the chat numbering and in the judge's sources. Reports not regenerated with this run.
 Next: a check step on the draft answer (each claim against its cited chunk) to cut unsupported claims; expert review of a sample of generated cases; multi-turn cases (iterating on a project with the user); merge with
 the localisation work of the other developer (agent `TOOLS_GUIDE` / `tools.py` are theirs, `ROLE` / `MODES_GUIDE` /
 `ANSWER_FORMAT` / bench are ours; their localisation cases can be a `locate` task in the same case format).
@@ -322,8 +343,11 @@ The frontend uses `POST /api/chat/stream` (SSE). `POST /api/chat` runs the same 
       _determine_feasibility applies fixed rules (max_units_allowed vs units,
       approval_rate thresholds 0.7 / 0.4) -> HIGHLY FEASIBLE / FEASIBLE WITH
       CHALLENGES / NOT FEASIBLE / UNCERTAIN; format_response -> markdown
-7. Stream SSE events: session_id, thinking, tool_call/tool_result,
-   pipeline, response.output_text.delta, response.completed, done (or error)
+7. Stream SSE events: session_id, thinking, tool_call/tool_result (agent: + `chunks`, `ms`),
+   pipeline, response.output_text.delta, response.completed, done (or error); `relay()` sends a
+   `: keep-alive` comment after 10 s idle (`SSE_HEARTBEAT_S`): the Next.js dev rewrite drops a stream idle for
+   30 s without closing it for the browser (corpus preload, long agent turns). The frontend aborts after 45 s
+   without bytes (`STREAM_STALL_MS`) or a stream cut before `done`, and reloads the session (polled until done)
 8. The worker updates that assistant message from the streamed events: partial content every 2 s, then
    final content + `trace` (all pipeline events) + status "done" (or "error")
 ```
@@ -483,7 +507,7 @@ CHAT_MODE=rag                          # or "agent" (agentic/service.py) + AGENT
 HF_HUB_DISABLE_XET=1                   # Hugging Face downloads can hang on Windows without it
 MISTRAL_API_KEY=                       # PDF OCR
 JWT_SECRET_KEY=                        # Required
-ACCESS_TOKEN_EXPIRE_MINUTES=15         # Default 30 if unset
+ACCESS_TOKEN_EXPIRE_MINUTES=10080      # 7 days (also the default): the token is not refreshed
 ACCESS_GATE_PASSWORD=                  # Enables the access gate when set
 APP_ENV=development                    # development -> gpt-5.4-nano, production -> gpt-5.4-mini
 CORS_ALLOWED_ORIGINS=http://localhost:3000
@@ -519,7 +543,8 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/routers/db_browser.py` -- Read-only chunk browser + semantic search (never exposes user/auth tables or embeddings)
 - `backend/routers/docs.py` -- Open a cited chunk in its original document (PDF page + highlight, or URL text fragment)
 - `backend/routers/benchmark.py` -- Benchmark view API: case sets (`SETS`: cases / caselaw / plans / tasks / generated), past results per case
-  parsed from the result file names (`RESULT_FILE`), and in-memory run jobs (`JOBS`, lost on restart)
+  parsed from the result file names (`RESULT_FILE`; files from before `-explore-` count as explore = answer effort; `-x-<label>`
+  runs show the label and model), and in-memory run jobs (`JOBS`, lost on restart)
 - `backend/routers/queryDB.py` -- Legacy standalone `RAG()` retrieval helper, not imported anywhere (chat retrieves via agents)
 - `backend/chunking/ingest_pipeline.py` -- OCR, chunk, embed, push
 - `backend/chunking/ingest_data_folder.py` -- Folder-level ingestion
@@ -544,13 +569,16 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   integration, `CitationNumberer`), `run.py` (CLI), `bench.py` + `cases.jsonl` (case benchmark),
   `cases_from_caselaw.py` (cases from MÖD rulings), `cases_tasks.jsonl` + `cases_from_corpus.py` (explain / propose /
   develop cases), `rejudge.py` (second judge, agreement), `grounding.py`
-- `backend/tests/test_agents.py` -- Agent / parser tests (incl. `TestParseQuery`); 3 `_extract_json` fallback tests
-  fail (they expect the old raising behaviour). It stubs `sqlalchemy` in `sys.modules`, so run it in its own pytest
+- `backend/tests/test_agents.py` -- Agent / parser tests (incl. `TestParseQuery`); `_extract_json` returns {} on bad
+  output and the agents then return their fallback result. It stubs `sqlalchemy` in `sys.modules`, so run it in its own pytest
   process: collected together with `test_chat_background.py` the latter fails to import
 - `backend/tests/test_chat_background.py` -- the streamed answer is saved when the client disconnects (SQLite + fake
   LLM). Run with `.venv/Scripts/python -m pytest tests/<file>` (not `uv run`, which re-syncs the venv to uv.lock)
 - `backend/tests/test_agent_citations.py` -- streamed citation numbering for every delta size
 - `backend/tests/test_bench_tasks.py` -- explain / propose / develop scoring (anchors, proposals, points per kind), fake judge
+- `backend/tests/test_tools.py` -- agent tools on a fake corpus (ids as the model writes them, section formats, grep
+  filters, miscopied citations), law chapter chunking, title repair
+- `backend/tests/test_agent_images.py` -- an image goes with the next model call only (fake LLM)
 
 ### Agents (Multi-Agent RAG)
 
@@ -572,7 +600,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `frontend/app/dev-access/` -- Access-gate password page
 - `frontend/components/Chat.tsx` -- Message list, SSE stream consumption, session history fetch; a new chat is announced
   to the sidebar on the `session_id` event; opening another chat aborts the local stream only, and history
-  messages with status "streaming" are re-fetched every 2 s until done; live Reasoning/Process steps while streaming; once finished, "Inspect pipeline" and a clickable "Sources" list (retrieved chunks per source, from `pipeline` events) below the answer
+  messages with status "streaming" are re-fetched every 2 s until done; "Process" timeline (`LiveProgress`): one line
+  per step / tool call (tool, its query or arguments, result summary, duration), the last 3 ("Show all" expands), shown
+  only until the answer text starts (rebuilt from the saved trace for an answer still generating, `stepsFromTrace`); once finished, "Inspect pipeline" and a clickable "Sources" list (retrieved chunks per source, from `pipeline` events) below the answer
 - `frontend/components/PipelineTrace.tsx` -- "Inspect pipeline" panel rendering `pipeline` events (live or from saved `trace`): a totals line (time, tokens, cost) then one collapsible step per stage (Understand, Retrieve, Agents, Verdict, Answer) with a one-line summary, and the stage's API calls nested inside (assigned by call kind/name in `stepOf`). An expanded `view_map_area` / `view_pdf_page` tool call shows the image the agent looked at: traces store no images (tool records carry `tool` + `image`), `ToolImage` re-renders them from the call's arguments via `/api/docs/tool-image` (older traces: tool taken from the call name)
 - `frontend/components/DatabaseBrowser.tsx` -- Database view with a Neon / Local corpus toggle: stats, chunk browsing, search playground
 - `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)

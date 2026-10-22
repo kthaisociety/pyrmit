@@ -44,6 +44,7 @@ router = APIRouter()
 
 # Chunks per pool (laws / documents) given to the answer model; the local eval reaches ~0.93 recall at 10
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "10"))
+SSE_HEARTBEAT_S = 10  # idle stream -> keep-alive comment, well under proxy idle timeouts
 
 
 def _get_user_session(session_id: str, user_id: str, db: Session) -> models.ChatSession:
@@ -747,7 +748,16 @@ def chat_stream(
 
     def relay() -> Generator[str, None, None]:
         # If the client disconnects, this generator just stops; the worker keeps going
-        while (chunk := events.get()) is not None:
+        while True:
+            try:
+                chunk = events.get(timeout=SSE_HEARTBEAT_S)
+            except queue.Empty:
+                # A comment line: proxies drop idle streams (the Next.js dev rewrite after 30 s), and an
+                # agent turn or the corpus preload can send nothing for longer than that
+                yield ": keep-alive\n\n"
+                continue
+            if chunk is None:
+                return
             yield chunk
 
     return StreamingResponse(

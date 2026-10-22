@@ -186,7 +186,9 @@ class DiskStore:
             return np.array([r[0] for r in self.query("SELECT rowid FROM chunks WHERE kind = 'law'")], dtype=np.int64)
         if not kommuner:
             return None
-        sql = f"SELECT rowid FROM chunks WHERE kind != 'law' AND kommun_code IN ({','.join('?' * len(kommuner))})"
+        # kind IN, not kind != 'law': SQLite then uses the (kind, kommun_code) index
+        sql = (f"SELECT rowid FROM chunks WHERE kind IN ('page', 'pdf') "
+               f"AND kommun_code IN ({','.join('?' * len(kommuner))})")
         return np.array([r[0] for r in self.query(sql, tuple(kommuner))], dtype=np.int64)
 
     def _law_mask(self) -> np.ndarray:

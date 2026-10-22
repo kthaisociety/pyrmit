@@ -253,7 +253,10 @@ class KommunCrawler:
         if not self.is_internal(final_url) or final_url in self.stored_pages:
             return
         try:
-            document = lxml_html.fromstring(response.content, base_url=final_url)
+            # The charset httpx found (header / detection), as for the text: lxml alone falls back to latin-1
+            # when the HTML declares none, which garbled titles and link texts ("fÃ¶r")
+            parser = lxml_html.HTMLParser(encoding=response.encoding or "utf-8")
+            document = lxml_html.fromstring(response.content, base_url=final_url, parser=parser)
         except (etree.ParserError, ValueError):
             return
         title = " ".join((document.findtext(".//title") or "").split())

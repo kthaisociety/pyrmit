@@ -125,6 +125,14 @@ The link was created on October 10, 2026. It is active until October 25, 2026 an
 | `pyrmit-data-pdfs.tar` | 18.8 GB | PDFs pack (7,798 PDFs + OCR text) | You want PDF sources and the map tools |
 | `pyrmit-data-rebuild.tar.gz` | 0.9 GB (1.8 GB unpacked) | Rebuild pack | You will re-chunk, re-index or recrawl |
 
+**This snapshot and the current code.** The code reads the October 10 snapshot as is. The snapshot predates the corpus
+fixes of October 22: statute chapters filed under the previous chapter (miljöbalken 4 kap., jordabalken 7, 10 and 11 kap.,
+fastighetsbildningslagen 1 and 14 kap., miljöprövningsförordningen 4 kap., plan- och byggförordningen 7 kap.: 125 sections
+that `law_section` could not find) and about 285 garbled document titles ("fÃ¶r"). With the Rebuild pack, apply the
+chapter fix in about 5 minutes from `backend/`: `python -m corpus.chunk`, `python -m localrag.index --model st-arctic-l-v2`,
+`python -m localrag.store --model st-arctic-l-v2`. The titles also need `python -m corpus.extract` first, which needs the
+PDFs pack.
+
 Download the files one by one. "Download all" makes a single 19 GB zip that you would have to unzip first. Then unpack them **from `backend/`**: the archives contain `data/...` paths. `tar` is built into Windows 10+, macOS and Linux.
 
 ```bash
@@ -177,7 +185,7 @@ From `backend/`. Each step reads the previous step's output. Times and sizes com
 | 2 | `python -m corpus.laws` | 1 min | `corpus/raw/laws/` (2 MB) | 15 consolidated statutes (PBL, PBF, MB...) from Riksdagen open data, always current |
 | 3 | `python -m corpus.crawl` | **3–4 h** | `corpus/raw/web/` (18.6 GB) | Planning pages and PDFs (detaljplaner, taxor, översiktsplan) of each kommun. Slow on purpose: robots.txt, 1 request/s per site. Resumable |
 | 4 | `python -m corpus.ocr` (optional) | **~18 h** | `raw/web/*/ocr/` (8 MB) | 777 scanned PDFs (mostly old plankartor) have no text layer. EasyOCR on the GPU |
-| 5 | `python -m corpus.extract` | ~5 min | `corpus/documents.jsonl` (394 MB) | Text blocks from HTML and PDFs (PyMuPDF; OCR text when available) |
+| 5 | `python -m corpus.extract` | ~5 min | `corpus/documents.jsonl` (394 MB) | Text blocks from HTML and PDFs (PyMuPDF; OCR text when available). Stops if crawled PDFs are missing (`--allow-missing-pdfs` to drop them) |
 | 6 | `python -m corpus.chunk` | < 1 min | `corpus/chunks.jsonl` (496 MB) | 348k chunks: one per law §, about 1,500 characters for documents, with a context header |
 | 7 | `python -m localrag.index --model st-arctic-l-v2` | **1–1.5 h** | `index/dense/st-arctic-l-v2/` (690 MB) | Embeddings (93 chunks/s on the GPU; about 53 h on a CPU). Incremental: only new chunks are embedded |
 | 8 | `python -m localrag.store --model st-arctic-l-v2` | ~2 min | `index/store/st-arctic-l-v2/` (1.46 GB) | What the app serves: SQLite (chunks, FTS5 BM25, places) + float16 vectors |

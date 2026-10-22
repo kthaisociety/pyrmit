@@ -2,7 +2,9 @@
 Embed the corpus chunks with a local model and keep the vectors on disk.
 
 Vectors are stored per model in data/index/dense/<model>/ (float16 matrix + chunk ids) and
-grow incrementally: re-running after a new crawl only embeds the chunks not seen yet.
+grow incrementally: re-running after a new crawl only embeds the chunks not seen yet, and re-embeds in place a
+chunk whose embedded text changed (digests.json: a hash of the header + text; chunk ids only hash the text, so a
+re-chunk that fixes a header, e.g. a chapter label, keeps the id).
 
     cd backend
     python -m localrag.index --model st-bge-m3                  # all chunks
@@ -10,6 +12,7 @@ grow incrementally: re-running after a new crawl only embeds the chunks not seen
 """
 
 import argparse
+import hashlib
 import json
 import time
 import tomllib
@@ -27,6 +30,10 @@ MODELS_PATH = Path(__file__).resolve().parent / "models.toml"
 def chunk_text(chunk: dict) -> str:
     """What gets embedded and BM25-indexed: the context header, then the chunk."""
     return f"{chunk['header']}\n\n{chunk['text']}"
+
+
+def text_digest(chunk: dict) -> str:
+    return hashlib.sha1(chunk_text(chunk).encode()).hexdigest()[:16]
 
 
 def load_chunks(kommuner: list[str] | None = None, path: Path = CHUNKS_PATH) -> list[dict]:
@@ -55,21 +62,32 @@ class VectorStore:
             self.ids = json.loads((self.dir / "ids.json").read_text())
             self.matrix = np.load(self.dir / "vectors.npy")
         self.position = {chunk_id: i for i, chunk_id in enumerate(self.ids)}
+        # chunk_id -> digest of the embedded text; vectors from before digests.json have none (trusted as current)
+        path = self.dir / "digests.json"
+        self.digests: dict[str, str] = json.loads(path.read_text()) if path.exists() else {}
 
     def missing(self, chunks: list[dict]) -> list[dict]:
-        return [c for c in chunks if c["chunk_id"] not in self.position]
+        return [c for c in chunks if c["chunk_id"] not in self.position
+                or self.digests.get(c["chunk_id"], text_digest(c)) != text_digest(c)]
 
-    def add(self, chunk_ids: list[str], vectors: np.ndarray) -> None:
+    def add(self, chunks: list[dict], vectors: np.ndarray) -> None:
         vectors = vectors.astype(np.float16)
-        self.matrix = vectors if not self.ids else np.vstack([self.matrix, vectors])
-        for chunk_id in chunk_ids:
-            self.position[chunk_id] = len(self.ids)
-            self.ids.append(chunk_id)
+        new = [i for i, chunk in enumerate(chunks) if chunk["chunk_id"] not in self.position]
+        for i, chunk in enumerate(chunks):  # re-embedded: replaced in place
+            if chunk["chunk_id"] in self.position:
+                self.matrix[self.position[chunk["chunk_id"]]] = vectors[i]
+        if new:
+            self.matrix = vectors[new] if not self.ids else np.vstack([self.matrix, vectors[new]])
+            for i in new:
+                self.position[chunks[i]["chunk_id"]] = len(self.ids)
+                self.ids.append(chunks[i]["chunk_id"])
+        self.digests.update({chunk["chunk_id"]: text_digest(chunk) for chunk in chunks})
 
     def save(self) -> None:
         self.dir.mkdir(parents=True, exist_ok=True)
         np.save(self.dir / "vectors.npy", self.matrix)
         (self.dir / "ids.json").write_text(json.dumps(self.ids))
+        (self.dir / "digests.json").write_text(json.dumps(self.digests))
 
     def get(self, chunk_ids: list[str]) -> np.ndarray:
         return self.matrix[[self.position[chunk_id] for chunk_id in chunk_ids]]
@@ -85,7 +103,7 @@ def embed_chunks(model: str, chunks: list[dict], save_every: int = 5000) -> Vect
     for start in range(0, len(todo), save_every):
         batch = todo[start:start + save_every]
         vectors = np.asarray(embedder.embed_documents([chunk_text(c) for c in batch]), dtype=np.float32)
-        store.add([c["chunk_id"] for c in batch], vectors)
+        store.add(batch, vectors)
         store.save()
         done = start + len(batch)
         rate = done / (time.perf_counter() - started)

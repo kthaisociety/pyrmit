@@ -43,6 +43,7 @@ from pathlib import Path
 
 from agentic.agent import ANSWER_FORMAT, DEFAULT_MODEL, MODES_GUIDE, ROLE, AgentRun, _add_usage, run_agent
 from agentic.run import build_tools
+from agentic.tools import resolve_cited
 from corpus.common import read_jsonl
 from llm import get_openai_client, get_response_output_text, resolve_model_name
 from localrag.eval import matches
@@ -147,10 +148,11 @@ def run_rag(question: str, tools, model: str, effort: str, k: int = 10) -> Agent
     return run
 
 
-def cited_sources(answer: str, tools) -> str:
-    """The text of the chunks the answer cites ([c:<id>]), so the judge can tell sourced facts from invented ones."""
+def cited_sources(answer: str, tools, seen=()) -> str:
+    """The text of the chunks the answer cites ([c:<id>]), so the judge can tell sourced facts from invented ones;
+    `seen` (the chunks the system was shown) resolves miscopied ids as in the chat."""
     ids = list(dict.fromkeys(re.findall(r"c:([0-9a-f]{8,16})(?![0-9a-f])", answer)))[:MAX_JUDGE_SOURCES]
-    chunks = [(chunk_id, tools.get_chunk(chunk_id)) for chunk_id in ids]
+    chunks = [(chunk_id, resolve_cited(tools.get_chunk, chunk_id, seen)) for chunk_id in ids]
     return "\n\n".join(f"[c:{chunk_id}] {chunk_text(chunk)[:MAX_SOURCE_CHARS]}" for chunk_id, chunk in chunks if chunk)
 
 
@@ -194,9 +196,9 @@ def mode_ok(case: dict, mode: str | None) -> bool:
     return mode in (case.get("modes") or [case.get("task", "verdict")])
 
 
-def grade_answer(case: dict, answer: str, tools, judge_model: str) -> dict:
+def grade_answer(case: dict, answer: str, tools, judge_model: str, seen=()) -> dict:
     """The task-dependent scores of one answer (LLM judge + string matching), as stored in a result row."""
-    grade = judge(case, answer, judge_model, cited_sources(answer, tools))
+    grade = judge(case, answer, judge_model, cited_sources(answer, tools, seen))
     scores = grade.get("points") or []
     scores = (list(scores) + [0] * len(case["key_points"]))[:len(case["key_points"])]  # judge returned too few / many
     row = {
@@ -365,7 +367,7 @@ def main() -> None:
                                   disabled_tools=set(args.disable_tools or ())))
         except Exception as exc:  # keep the benchmark going; the failure is reported
             run = AgentRun(error=repr(exc))
-        grade = (grade_answer(case, run.answer, tools, judge_model) if run.answer
+        grade = (grade_answer(case, run.answer, tools, judge_model, run.seen_chunks) if run.answer
                  else {"task": case.get("task", "verdict"), "verdict": "none",
                        "verdict_ok": False if case.get("verdicts") else None, "points": 0.0, "unsupported": 0,
                        "comment": run.error, "judge_cost": 0, "judge_model": judge_model})
@@ -451,8 +453,10 @@ def main() -> None:
                 per_repeat = []
                 for repeat in range(args.repeats):
                     values = [r[key] for r in mine if r["repeat"] == repeat and r.get(key) is not None]
-                    per_repeat.append(sum(values) / len(values) if values else 0.0)
-                print(f"         {key:<11} per repeat: {', '.join(f'{v:.2f}' for v in per_repeat)}")
+                    per_repeat.append(sum(values) / len(values) if values else None)
+                if any(v is not None for v in per_repeat):  # e.g. no verdict_ok on explain / propose / develop cases
+                    print(f"         {key:<11} per repeat: "
+                          f"{', '.join('-' if v is None else f'{v:.2f}' for v in per_repeat)}")
 
     print(f"\nSaved {out}")
 

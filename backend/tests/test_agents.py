@@ -52,9 +52,9 @@ class TestExtractJson(unittest.TestCase):
         result = BaseRAGAgent._extract_json(text)
         self.assertEqual(result["status"], "ok")
 
-    def test_invalid_json_raises(self):
-        with self.assertRaises(json.JSONDecodeError):
-            BaseRAGAgent._extract_json("not json at all")
+    def test_invalid_json_returns_empty(self):
+        # The agents turn {} into their fallback result (test_fallback_on_bad_json)
+        self.assertEqual(BaseRAGAgent._extract_json("not json at all"), {})
 
 
 # ---------------------------------------------------------------------------

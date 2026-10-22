@@ -49,6 +49,33 @@ def write_jsonl(path: Path, rows: Iterable[dict]) -> int:
     return count
 
 
+# UTF-8 bytes read as latin-1 or cp1252: "fÃ¶r" for "för", "â" / "â€“" for "–", "ÃŒP" for "ÖP"
+_CP1252 = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ"
+_MOJIBAKE_RUN = re.compile(f"[\xc2-\xf4][\x80-\xbf{_CP1252}]+")
+
+
+def _byte(char: str) -> bytes:
+    return char.encode("cp1252") if char in _CP1252 else char.encode("latin-1")
+
+
+def repair_mojibake(text: str) -> str:
+    """Undo UTF-8 decoded as latin-1 / cp1252 (page titles, link texts and PDF metadata titles)."""
+    if not text:
+        return text
+    # "Å" is C3 85 and 0x85 (a control character in latin-1) became a space: "Ã rsta" for "Årsta"
+    text = re.sub(r"Ã (?=[a-zåäö])", "Å", text)
+    if not _MOJIBAKE_RUN.search(text):
+        return text
+
+    def decode(match: re.Match) -> str:
+        try:
+            return b"".join(_byte(char) for char in match.group()).decode("utf-8")
+        except UnicodeDecodeError:
+            return match.group()
+
+    return _MOJIBAKE_RUN.sub(decode, text)
+
+
 def clean_text(text: str) -> str:
     """Normalise whitespace while keeping paragraph breaks."""
     text = text.replace("\r", "").replace("­", "").replace("\xa0", " ")

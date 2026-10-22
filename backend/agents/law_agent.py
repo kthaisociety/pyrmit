@@ -83,6 +83,8 @@ class LawAgent(BaseRAGAgent):
 
         try:
             result = self._extract_json(response_text)
+            if not result:  # _extract_json returns {} on unparseable output: use the fallback below
+                raise ValueError("no JSON object in the LLM response")
             logger.info("Found %d applicable laws", len(result.get("applicable_laws", [])))
             result["sources"] = sources
             result["retrieval"] = retrieval

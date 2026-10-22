@@ -160,6 +160,7 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
     `flush` returns the pipeline events of the calls recorded so far: streamed (and so saved with the
     message) as the agent goes, so someone reopening the chat mid-run sees its progress."""
     from agentic.agent import run_agent
+    from agentic.tools import resolve_cited
 
     tools = get_tools()
     events: queue.Queue = queue.Queue()
@@ -180,7 +181,8 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
             events.put(None)
 
     threading.Thread(target=worker, daemon=True).start()
-    numberer = CitationNumberer(tools.get_chunk)
+    seen: list[str] = []  # chunks the tools showed: a miscopied cited id resolves against them
+    numberer = CitationNumberer(lambda chunk_id: resolve_cited(tools.get_chunk, chunk_id, seen))
     answer = ""
 
     def delta(text: str) -> Generator[str, None, None]:
@@ -195,13 +197,14 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
                 yield sse({"type": "thinking", "label": "Writing the answer"})
             yield from delta(numberer.feed(event["delta"]))
         elif event["type"] in ("tool_call", "tool_result"):
-            yield sse({key: event[key] for key in ("type", "name", "input", "result") if key in event})
+            yield sse({key: event[key] for key in ("type", "name", "input", "result", "chunks", "ms") if key in event})
         elif event["type"] == "llm_turn":
             record(kind="llm", name=f"Agent turn {event['turn']}", model=event.get("model"),
                    reasoning_effort=event.get("effort"), usage=event.get("usage"), duration_ms=event.get("ms"),
                    output=event.get("summary"))
             yield from flush()
         elif event["type"] == "tool_done":
+            seen.extend(event.get("chunk_ids") or [])
             # The image itself is not stored in the trace: the inspector re-renders it (/api/docs/tool-image)
             record(kind="tool", name=f"{event['name']}({event.get('input', '')[:80]})", input=event.get("input"),
                    output=event.get("output"), duration_ms=event.get("ms"), matches=event.get("chunks"),

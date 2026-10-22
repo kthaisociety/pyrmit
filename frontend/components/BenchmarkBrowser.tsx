@@ -65,9 +65,9 @@ function TaskBadge({ task, ok }: { task: string; ok?: boolean | null }) {
 // The scores beyond key points / evidence: anchors and proposals (propose), points per kind (develop)
 function taskScores(r: TaskScores): string {
   const parts: string[] = [];
-  if (r.anchors !== undefined) parts.push(`places ${fmt(r.anchors)}${r.anchors_hit?.length ? ` (${r.anchors_hit.join(', ')})` : ''}`);
-  if (r.proposals !== undefined) parts.push(`${r.proposals} options, ${fmt(r.proposals_sourced)} sourced`);
-  if (r.points_obstacle !== undefined) parts.push(`obstacles ${fmt(r.points_obstacle)} · levers ${fmt(r.points_lever)} · asks ${fmt(r.points_ask)}`);
+  if (r.anchors != null) parts.push(`places ${fmt(r.anchors)}${r.anchors_hit?.length ? ` (${r.anchors_hit.join(', ')})` : ''}`);
+  if (r.proposals != null) parts.push(`${r.proposals} options, ${fmt(r.proposals_sourced)} sourced`);
+  if (r.points_obstacle != null) parts.push(`obstacles ${fmt(r.points_obstacle)} · levers ${fmt(r.points_lever)} · asks ${fmt(r.points_ask)}`);
   return parts.map((part) => ` · ${part}`).join('');
 }
 
@@ -130,9 +130,11 @@ function RunPanel({ set, caseId }: { set: string; caseId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [openCitation, setOpenCitation] = useState<Citation | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  // The job shown: a poll answered after the user moved to another case must not show its result there
+  const jobId = useRef<string | null>(null);
 
+  // Remounted for each case (key): a new case starts with no job, and leaving one stops its polling
   useEffect(() => () => { if (timer.current) clearInterval(timer.current); }, []);
-  useEffect(() => { setJob(null); setError(null); if (timer.current) clearInterval(timer.current); }, [caseId]);
 
   const start = async () => {
     setError(null);
@@ -141,11 +143,14 @@ function RunPanel({ set, caseId }: { set: string; caseId: string }) {
     });
     if (!response.ok) { setError(`Could not start (${response.status})`); return; }
     const { job_id } = await response.json();
+    jobId.current = job_id;
     setJob({ status: 'running', progress: [], elapsed: 0 });
     timer.current = setInterval(async () => {
       const poll = await authFetch(`/api/benchmark/run/${job_id}`);
+      if (jobId.current !== job_id) return;
       if (!poll.ok) { setError(`Lost the run (${poll.status})`); if (timer.current) clearInterval(timer.current); return; }
       const next: Job = await poll.json();
+      if (jobId.current !== job_id) return;
       setJob(next);
       if (next.status !== 'running' && timer.current) clearInterval(timer.current);
     }, 2000);
@@ -200,7 +205,9 @@ export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState<CaseRow[]>([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  // The case whose detail is shown: a slower answer for a previously clicked case must not replace it
+  const selectedRef = useRef<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<{ case: CaseDetail; results: PastResult[] } | null>(null);
 
@@ -208,23 +215,28 @@ export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
     authFetch('/api/benchmark/sets').then((r) => (r.ok ? r.json() : [])).then(setSets);
   }, []);
 
-  const loadCases = (set: string, q: string) => {
-    setLoading(true);
+  const fetchCases = (set: string, q: string) => {
     const params = new URLSearchParams({ set, limit: '200', ...(q ? { q } : {}) });
     authFetch(`/api/benchmark/cases?${params}`)
       .then((r) => (r.ok ? r.json() : { items: [], total: 0 }))
       .then((page) => { setRows(page.items); setTotal(page.total); })
       .finally(() => setLoading(false));
   };
+  const loadCases = (set: string, q: string) => { setLoading(true); fetchCases(set, q); };
 
-  useEffect(() => { loadCases(current, ''); setQuery(''); setSelected(null); setDetail(null); }, [current]);
+  useEffect(() => { fetchCases('cases', ''); }, []);
 
-  useEffect(() => {
-    if (!selected) return;
-    setDetail(null);
-    authFetch(`/api/benchmark/case?set=${encodeURIComponent(current)}&id=${encodeURIComponent(selected)}`)
-      .then((r) => (r.ok ? r.json() : null)).then(setDetail);
-  }, [selected, current]);
+  const selectSet = (set: string) => {
+    setCurrent(set); setQuery(''); setSelected(null); setDetail(null); selectedRef.current = null;
+    loadCases(set, '');
+  };
+
+  const selectCase = (id: string) => {
+    setSelected(id); setDetail(null); selectedRef.current = id;
+    authFetch(`/api/benchmark/case?set=${encodeURIComponent(current)}&id=${encodeURIComponent(id)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((detail) => { if (selectedRef.current === id) setDetail(detail); });
+  };
 
   const onSearch = (event: FormEvent) => { event.preventDefault(); loadCases(current, query); };
   const currentSet = sets.find((s) => s.set === current);
@@ -240,7 +252,7 @@ export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
           {sets.map((s) => (
             <button
               key={s.set}
-              onClick={() => setCurrent(s.set)}
+              onClick={() => selectSet(s.set)}
               className={`rounded-lg px-3 py-1.5 text-sm ${current === s.set ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}
             >
               {s.title} <span className="opacity-60">({s.cases})</span>
@@ -265,7 +277,7 @@ export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
             {rows.map((row) => (
               <button
                 key={row.id}
-                onClick={() => setSelected(row.id)}
+                onClick={() => selectCase(row.id)}
                 className={`w-full rounded-lg border px-3 py-2 text-left text-xs ${selected === row.id ? 'border-blue-400 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/40' : 'border-zinc-200 hover:border-zinc-400 dark:border-zinc-700'}`}
               >
                 <div className="mb-1 flex items-center gap-1.5">
@@ -316,7 +328,7 @@ export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
               </section>
               <section className="space-y-2">
                 <h2 className="text-sm font-semibold">Test it now</h2>
-                <RunPanel set={current} caseId={detail.case.id} />
+                <RunPanel key={`${current}:${detail.case.id}`} set={current} caseId={detail.case.id} />
               </section>
               <section className="space-y-2">
                 <h2 className="text-sm font-semibold">Past benchmark results ({detail.results.length})</h2>

@@ -39,7 +39,7 @@ SETS = {
     "generated": ("cases_generated.jsonl", "Generated tasks", "Explain / propose / develop cases drafted from corpus documents by another model family, evidence checked verbatim"),
 }
 RESULT_FILE = re.compile(r"bench-(\d{8}-\d{6})-(?P<systems>[a-z-]+?)-(?P<answer>low|medium|high)"
-                         r"-explore-(?P<explore>low|medium|high|same)(?P<tag>-cases_[a-z]+)?(?:-no-(?P<off>[a-z_-]+?))?(?:-x-(?P<label>[\w.-]+))?\.json$")
+                         r"(?:-explore-(?P<explore>low|medium|high|same))?(?P<tag>-cases_[a-z]+)?(?:-no-(?P<off>[a-z_-]+?))?(?:-x-(?P<label>[\w.-]+))?\.json$")
 RESULT_KEYS = ("task", "verdict", "verdict_ok", "points", "point_scores", "points_obstacle", "points_lever", "points_ask",
                "anchors", "anchors_hit", "proposals", "proposals_sourced", "mode", "mode_ok", "evidence", "grounded",
                "tool_calls", "map_views", "seconds", "cost", "comment", "answer", "judge_model")
@@ -79,9 +79,13 @@ def _results(set_name: str, case_id: str) -> list[dict]:
         if not match or match.group("tag") != tag:
             continue
         for row in _result_rows(str(path), path.stat().st_mtime).get(case_id, []):
-            config = (f"{row['system']}" + (f", explore {match.group('explore')} / answer {match.group('answer')}"
+            # Files from before --explore-effort ran every turn at the answer effort
+            explore = match.group("explore") or match.group("answer")
+            config = (f"{row['system']}" + (f", explore {explore} / answer {match.group('answer')}"
                                             if row["system"] == "agent" else f", answer {match.group('answer')}")
+                      + (f", {row['model'].split('/')[-1]}" if row.get("model") and match.group("label") else "")
                       + (f", without {match.group('off').replace('-', ', ')}" if match.group("off") else "")
+                      + (f", run '{match.group('label')}'" if match.group("label") else "")
                       + (f", judge {row['judge_model']}" if row.get("judge_model") else ""))
             out.append({"run": match.group(1), "config": config, **{key: row.get(key) for key in RESULT_KEYS}})
     return out
@@ -148,7 +152,8 @@ def _run_job(job: dict, case: dict) -> None:
         job["progress"].append("grading the answer")
         numberer = CitationNumberer(tools.get_chunk)
         answer = numberer.feed(run.answer) + numberer.close()
-        grade = grade_answer(case, run.answer, tools, resolve_model_name(os.getenv("BENCH_JUDGE_MODEL", "").strip() or model))
+        grade = grade_answer(case, run.answer, tools, resolve_model_name(os.getenv("BENCH_JUDGE_MODEL", "").strip() or model),
+                             run.seen_chunks)
         job["result"] = {
             **grade, "answer": answer, "citations": numberer.citations(),
             "mode": run.mode, "mode_ok": mode_ok(case, run.mode),

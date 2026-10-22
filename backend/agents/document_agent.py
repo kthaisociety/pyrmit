@@ -91,6 +91,8 @@ class DocumentAgent(BaseRAGAgent):
 
         try:
             result = self._extract_json(response_text)
+            if not result:  # _extract_json returns {} on unparseable output: use the fallback below
+                raise ValueError("no JSON object in the LLM response")
             logger.info("Found %d similar cases", len(result.get("similar_cases", [])))
             result["sources"] = sources
             result["retrieval"] = retrieval

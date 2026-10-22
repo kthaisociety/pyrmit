@@ -3,14 +3,24 @@
 import { useState, useEffect, FormEvent, ReactNode, useRef } from 'react';
 import Image from 'next/image';
 import {
+  BookOpen,
   Check,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Copy,
   FileSearch,
+  FileText,
+  Image as ImageIcon,
+  Layers,
+  List,
   Loader2,
+  Map as MapIcon,
+  MapPin,
   Microscope,
+  Regex,
+  Scale,
+  Search,
+  Sparkles,
   Wrench,
 } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
@@ -37,6 +47,8 @@ interface Step {
   name?: string;    // tool_call / tool_result
   input?: string;   // tool_call
   result?: string;  // tool_result
+  chunks?: number;  // tool_result (agent): passages returned
+  ms?: number;      // tool_result (agent): duration
   done: boolean;
 }
 
@@ -49,10 +61,14 @@ interface StreamEvent {
   name?: string;
   input?: string;
   result?: string;
+  chunks?: number;
+  ms?: number;
   message?: string;
   stage?: string;
   data?: Record<string, unknown>;
 }
+
+const STREAM_STALL_MS = 45_000; // no bytes for this long (keep-alives every 10 s) = dead connection
 
 interface ChatProps {
   sessionId: string | null;
@@ -66,13 +82,6 @@ const EXAMPLE_PROMPTS = [
   "Explain detaljplan requirements for commercial buildings",
   "What are the setback rules for residential construction?",
 ];
-
-interface ToolTrace {
-  name: string;
-  input?: string;
-  result?: string;
-  done: boolean;
-}
 
 function extractSseEvents(rawBuffer: string): { events: StreamEvent[]; remainder: string } {
   const normalized = rawBuffer.replace(/\r\n/g, '\n');
@@ -125,114 +134,198 @@ function getCitations(pipeline: PipelineEvent[]): Citation[] {
   return ((event?.data.items as Citation[] | undefined) ?? []);
 }
 
-function getReasoningSteps(steps: Step[]): string[] {
-  return steps
-    .filter((step) => step.type === 'thinking')
-    .map((step) => step.label?.trim())
-    .filter((label): label is string => Boolean(label));
+// One row of the live process timeline: a status step ("Understanding your question") or a tool call
+interface ProcessItem {
+  kind: 'thinking' | 'tool';
+  name: string; // tool name, or the status label
+  input?: string;
+  result?: string;
+  chunks?: number;
+  ms?: number;
+  done: boolean;
 }
 
-function getToolTraces(steps: Step[]): ToolTrace[] {
-  const traces: ToolTrace[] = [];
+// Steps of an answer still generating in the background (the chat was reopened mid-run): the saved trace
+// holds the tool calls made so far
+function stepsFromTrace(pipeline: PipelineEvent[]): Step[] {
+  return pipeline
+    .filter((event) => event.stage === 'call' && event.data.kind === 'tool')
+    .flatMap((event) => {
+      const call = event.data as { name?: string; tool?: string; input?: string; output?: string; matches?: number; duration_ms?: number };
+      const name = call.tool ?? call.name?.split('(')[0] ?? 'tool';
+      return [
+        { type: 'tool_call', name, input: call.input, done: true },
+        { type: 'tool_result', name, result: call.output ?? '', chunks: call.matches, ms: call.duration_ms, done: true },
+      ] satisfies Step[];
+    });
+}
+
+function getProcessItems(steps: Step[]): ProcessItem[] {
+  const items: ProcessItem[] = [];
 
   for (const step of steps) {
-    if (step.type === 'tool_call') {
-      traces.push({
-        name: step.name || 'tool',
-        input: step.input,
-        done: step.done,
-      });
+    if (step.type === 'thinking') {
+      const label = step.label?.trim();
+      if (label) items.push({ kind: 'thinking', name: label, done: step.done });
       continue;
     }
 
-    if (step.type === 'tool_result') {
-      const existing = [...traces].reverse().find((trace) => trace.name === step.name && !trace.result);
-      if (existing) {
-        existing.result = step.result;
-        existing.done = true;
-      } else {
-        traces.push({
-          name: step.name || 'tool',
-          result: step.result,
-          done: true,
-        });
-      }
+    if (step.type === 'tool_call') {
+      items.push({ kind: 'tool', name: step.name || 'tool', input: step.input, done: step.done });
+      continue;
+    }
+
+    // Results of parallel calls arrive in call order: the oldest call of that tool without a result
+    const result = { result: step.result ?? '', chunks: step.chunks, ms: step.ms, done: true };
+    const call = items.find((item) => item.kind === 'tool' && item.name === step.name && item.result === undefined);
+    if (call) {
+      Object.assign(call, result);
+    } else {
+      items.push({ kind: 'tool', name: step.name || 'tool', ...result });
     }
   }
 
-  return traces;
+  return items;
 }
 
-function formatTraceValue(value?: string): string {
-  if (!value) {
-    return '';
-  }
+const TOOL_INFO: Record<string, { label: string; icon: typeof Search }> = {
+  find_kommun: { label: 'Kommun', icon: MapPin },
+  search: { label: 'Search', icon: Search },
+  grep: { label: 'Grep', icon: Regex },
+  list_documents: { label: 'Documents', icon: List },
+  read: { label: 'Read', icon: BookOpen },
+  law_section: { label: 'Law', icon: Scale },
+  plans: { label: 'Plans', icon: Layers },
+  plan_rules: { label: 'Plan rules', icon: FileText },
+  view_map_area: { label: 'Map', icon: MapIcon },
+  view_pdf_page: { label: 'PDF page', icon: ImageIcon },
+  embed_query: { label: 'Embed', icon: Sparkles },
+  retrieve_local_corpus: { label: 'Retrieve', icon: Search },
+  retrieve_law_chunks: { label: 'Laws', icon: Scale },
+  retrieve_document_chunks: { label: 'Documents', icon: FileText },
+  law_agent: { label: 'Law agent', icon: Scale },
+  document_agent: { label: 'Document agent', icon: FileText },
+};
 
+function toolInfo(name: string) {
+  return TOOL_INFO[name] ?? {
+    label: name.replace(/_/g, ' ').replace(/^\w/, (char) => char.toUpperCase()),
+    icon: Wrench,
+  };
+}
+
+// What the call asked for, in one line: the agent sends its arguments as JSON, the RAG pipeline as plain text
+function describeToolCall(name: string, input?: string): { text: string; tags: string[] } {
+  let args: Record<string, unknown> | null = null;
   try {
-    return JSON.stringify(JSON.parse(value), null, 2);
+    const parsed = JSON.parse(input ?? '');
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) args = parsed;
   } catch {
-    return value;
+    // plain text input
   }
-}
+  if (!args) {
+    return { text: input ?? '', tags: [] };
+  }
 
-function humanizeToolName(name?: string): string {
+  const values = args;
+  const arg = (key: string) => (values[key] === undefined || values[key] === null ? '' : String(values[key]).trim());
+  const quoted = (key: string) => (arg(key) ? `“${arg(key)}”` : '');
+  const tags = (...items: string[]) => items.filter(Boolean);
+  const scope = arg('scope') && arg('scope') !== 'all' ? arg('scope') : '';
+
   switch (name) {
-    case 'embed_query':
-      return 'Preparing your question';
-    case 'retrieve_law_chunks':
-      return 'Checking relevant law';
-    case 'retrieve_document_chunks':
-      return 'Checking planning documents';
-    case 'law_agent':
-      return 'Reviewing legal requirements';
-    case 'document_agent':
-      return 'Reviewing local plan material';
+    case 'find_kommun':
+      return { text: arg('place'), tags: [] };
+    case 'search':
+      return { text: quoted('query'), tags: tags(arg('kommun'), scope) };
+    case 'grep':
+      return { text: `/${arg('pattern')}/`, tags: tags(arg('kommun'), scope) };
+    case 'list_documents':
+      return { text: arg('kommun'), tags: tags(arg('doc_type'), quoted('title_contains')) };
+    case 'read':
+      return {
+        text: arg('chunk_id') || arg('doc_id'),
+        tags: tags(!arg('chunk_id') && Number(arg('start')) > 0 ? `from #${arg('start')}` : ''),
+      };
+    case 'law_section':
+      return { text: `${arg('law')} ${arg('section')}`, tags: [] };
+    case 'plans':
+      return { text: arg('kommun'), tags: tags(quoted('query'), arg('status')) };
+    case 'plan_rules':
+      return { text: arg('plan_id'), tags: tags(arg('topic')) };
+    case 'view_map_area':
+      return { text: `around ${quoted('around')}`, tags: tags(arg('doc_id'), arg('page') && `p. ${arg('page')}`) };
+    case 'view_pdf_page':
+      return { text: arg('doc_id'), tags: tags(`p. ${arg('page') || '1'}`) };
     default:
-      return (name || 'Working')
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, (char) => char.toUpperCase());
+      return { text: Object.values(values).map(String).join(' · '), tags: [] };
   }
 }
 
-function summarizeToolResult(tool: ToolTrace): string {
-  const result = formatTraceValue(tool.result);
-
-  switch (tool.name) {
-    case 'retrieve_law_chunks':
-    case 'retrieve_document_chunks':
-      return result ? `Found ${result.replace('chunks', 'relevant sections')}.` : 'Looking through relevant sections.';
-    case 'embed_query':
-      return 'Organizing the question so it can be matched against the right material.';
-    case 'law_agent':
-      return tool.done ? 'Legal review finished.' : 'Working through the legal side.';
-    case 'document_agent':
-      return tool.done ? 'Planning document review finished.' : 'Working through the planning material.';
-    default:
-      return tool.done ? 'Step completed.' : 'Working on this step.';
-  }
+// The document a read / plan_rules call opened, from the first line of its result ("<title> (<kommun>, ...")
+function resultTitle(item: ProcessItem): string | null {
+  const first = (item.result ?? '').split('\n')[0];
+  const pattern = item.name === 'read' ? / \([^()]*\d+ chunks.*$/ : item.name === 'plan_rules' ? / \([^()]*\), status .*$/ : null;
+  return pattern && pattern.test(first) ? first.replace(pattern, '') : null;
 }
 
-function TraceValue({ value }: { value?: string }) {
-  if (!value) {
-    return null;
+function formatDuration(ms: number): string {
+  return ms < 100 ? '<0.1 s' : `${(ms / 1000).toFixed(1)} s`;
+}
+
+const TOOL_ERROR =/^(Unknown|No kommun|No section|No plan registry|Invalid regex|Bad arguments|Only crawled|PDF file missing)|is not printed as text/;
+
+function plural(count: number, word: string, many = `${word}s`): string {
+  return `${count} ${count === 1 ? word : many}`;
+}
+
+// What the call returned, in a few words (the agent's result text is cut at 300 characters)
+function summarizeToolCall(item: ProcessItem): { text: string; error: boolean } {
+  const result = item.result ?? '';
+  const first = result.split('\n')[0].trim();
+  if (TOOL_ERROR.test(first)) {
+    return { text: first.length > 60 ? `${first.slice(0, 60)}…` : first, error: true };
   }
 
-  const formatted = formatTraceValue(value);
-  const isCompact = !formatted.includes('\n') && formatted.length < 90;
-
-  if (isCompact) {
-    return (
-      <div className="inline-flex max-w-full rounded-full border border-zinc-200/80 bg-white/80 px-2.5 py-1 text-[11px] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/70 dark:text-zinc-300">
-        <span className="truncate">{formatted}</span>
-      </div>
-    );
+  const count = (pattern: RegExp) => {
+    const match = result.match(pattern);
+    return match ? Number(match[1]) : null;
+  };
+  let n: number | null = null;
+  switch (item.name) {
+    case 'find_kommun': {
+      // One line per matching kommun ("Vallentuna (0115) – Stockholms län, ..."): the others are ambiguities
+      const others = result.split('\n').filter((line) => / \(\d{4}\) – /.test(line)).length - 1;
+      return { text: first.split(' – ')[0] + (others > 0 ? ` +${others}` : ''), error: false };
+    }
+    case 'grep':
+      n = count(/^(\d+) matching chunks/);
+      if (n !== null) return { text: plural(n, 'match', 'matches'), error: n === 0 };
+      break;
+    case 'list_documents':
+      n = count(/^(\d+) documents/);
+      if (n !== null) return { text: plural(n, 'document'), error: n === 0 };
+      break;
+    case 'plans':
+      n = count(/^(\d+) of \d+ plans/);
+      if (n !== null) return { text: plural(n, 'plan'), error: n === 0 };
+      break;
+    case 'plan_rules':
+      n = count(/(\d+) provisions:/);
+      if (n !== null) return { text: plural(n, 'rule'), error: false };
+      if (result.includes('No provisions extracted')) return { text: 'no rules extracted', error: true };
+      break;
+    case 'view_map_area':
+    case 'view_pdf_page':
+      return { text: 'image', error: false };
   }
 
-  return (
-    <pre className="overflow-x-auto rounded-2xl border border-zinc-200/80 bg-zinc-950 px-3 py-2 text-[11px] leading-relaxed text-zinc-100 dark:border-zinc-700">
-      <code>{formatted}</code>
-    </pre>
-  );
+  if (item.chunks !== undefined) {
+    return item.chunks === 0
+      ? { text: 'no results', error: true }
+      : { text: plural(item.chunks, 'passage'), error: false };
+  }
+  return { text: first.length > 40 ? `${first.slice(0, 40)}…` : first, error: false };
 }
 
 function CollapsibleMetaSection({
@@ -431,79 +524,115 @@ function AnswerDetails({ sources, pipeline, citations, onOpenCitation }: {
   );
 }
 
-// Live progress shown while the answer is being generated
-function LiveProgress({ steps }: { steps: Step[] }) {
-  const reasoning = getReasoningSteps(steps);
-  const tools = getToolTraces(steps);
+// Live progress shown while the answer is being generated: one compact line per step, the last few visible
+const VISIBLE_STEPS = 3;
 
-  if (reasoning.length === 0 && tools.length === 0) {
+function ProcessRow({ item, done }: { item: ProcessItem; done: boolean }) {
+  const [open, setOpen] = useState(false);
+
+  if (item.kind === 'thinking') {
+    return (
+      <li className="flex items-center gap-2 px-1.5 py-1 text-xs text-zinc-500 dark:text-zinc-400">
+        {done ? <Check size={12} className="shrink-0 text-emerald-500" /> : <Loader2 size={12} className="shrink-0 animate-spin text-blue-500" />}
+        <span className={done ? '' : 'text-zinc-700 dark:text-zinc-200'}>{item.name}</span>
+      </li>
+    );
+  }
+
+  const { label, icon: Icon } = toolInfo(item.name);
+  const call = describeToolCall(item.name, item.input);
+  const title = resultTitle(item);
+  const summary = item.done && item.result !== undefined ? summarizeToolCall(item) : null;
+
+  return (
+    <li>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        disabled={!item.result}
+        title={item.input}
+        className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-xs transition-colors enabled:hover:bg-white disabled:cursor-default dark:enabled:hover:bg-zinc-800/70"
+      >
+        {done ? <Check size={12} className="shrink-0 text-emerald-500" /> : <Loader2 size={12} className="shrink-0 animate-spin text-amber-500" />}
+        <Icon size={12} className="shrink-0 text-zinc-400" />
+        <span className="shrink-0 font-medium text-zinc-700 dark:text-zinc-200">{label}</span>
+        <span className="min-w-0 truncate text-zinc-500 dark:text-zinc-400">{title ?? call.text}</span>
+        {call.tags.map((tag) => (
+          <span
+            key={tag}
+            className="hidden max-w-[9rem] shrink-0 truncate rounded bg-zinc-200/70 px-1.5 text-[10px] text-zinc-500 sm:inline dark:bg-zinc-700/60 dark:text-zinc-300"
+          >
+            {tag}
+          </span>
+        ))}
+        <span className="ml-auto flex shrink-0 items-center gap-1.5 pl-2 text-[11px] tabular-nums text-zinc-400">
+          {summary && (
+            <span className={summary.error ? 'text-amber-600 dark:text-amber-400' : ''}>{summary.text}</span>
+          )}
+          {item.ms !== undefined && <span>· {formatDuration(item.ms)}</span>}
+        </span>
+      </button>
+      {open && item.result && (
+        <pre className="mb-1 ml-9 mr-1.5 max-h-40 overflow-auto whitespace-pre-wrap rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-[11px] leading-relaxed text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
+          {item.result}
+        </pre>
+      )}
+    </li>
+  );
+}
+
+// What happens before the answer arrives: the last VISIBLE_STEPS steps, all of them on demand
+// (the finished answer has "Inspect pipeline" instead)
+function LiveProgress({ steps }: { steps: Step[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const items = getProcessItems(steps);
+  const toolCount = items.filter((item) => item.kind === 'tool').length;
+
+  if (items.length === 0) {
     return null;
   }
 
-  return (
-    <div className="mb-4 space-y-3">
-      {reasoning.length > 0 && (
-        <CollapsibleMetaSection
-          badge="Thinking"
-          forceOpen
-          icon={<Loader2 size={14} className="animate-spin" />}
-          title="Reasoning"
-        >
-          <div className="space-y-2 pt-1">
-            {reasoning.map((item, index) => (
-              <div
-                key={`${item}-${index}`}
-                className="flex items-start gap-3 rounded-xl bg-white px-3 py-2.5 dark:bg-zinc-950/70"
-              >
-                <div className="mt-0.5 flex size-5 items-center justify-center rounded-full bg-blue-100 text-[10px] font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                  {index + 1}
-                </div>
-                <div className="min-w-0 text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
-                  {item}
-                </div>
-              </div>
-            ))}
-          </div>
-        </CollapsibleMetaSection>
-      )}
+  const hidden = expanded ? 0 : Math.max(0, items.length - VISIBLE_STEPS);
 
-      {tools.length > 0 && (
-        <CollapsibleMetaSection
-          badge="Working"
-          forceOpen
-          icon={<Wrench size={14} />}
-          title="Process"
-        >
-          <div className="space-y-2 pt-1">
-            {tools.map((tool, index) => (
-              <div
-                key={`${tool.name}-${index}`}
-                className="rounded-xl bg-white px-3 py-2.5 dark:bg-zinc-950/70"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 flex size-7 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                    {tool.done ? <CheckCircle2 size={13} /> : <Loader2 size={13} className="animate-spin" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-zinc-800 dark:text-zinc-100">{humanizeToolName(tool.name)}</div>
-                    <div className="mt-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
-                      {summarizeToolResult(tool)}
-                    </div>
-                  </div>
-                  <div className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                    tool.done
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
-                      : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
-                  }`}>
-                    {tool.done ? 'Done' : 'Working'}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CollapsibleMetaSection>
-      )}
-    </div>
+  return (
+    // Fixed width: the bubble would otherwise resize with every new line
+    <section className="mb-4 w-[40rem] max-w-full rounded-xl border border-zinc-200 bg-zinc-50/70 dark:border-zinc-700 dark:bg-zinc-900/40">
+      <div className="flex items-center gap-2 px-3 py-1.5">
+        <Loader2 size={12} className="animate-spin text-zinc-400" />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Process</span>
+        {toolCount > 0 && (
+          <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
+            {plural(toolCount, 'tool call')}
+          </span>
+        )}
+        {items.length > VISIBLE_STEPS && (
+          <button
+            onClick={() => setExpanded((e) => !e)}
+            className="ml-auto flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          >
+            {expanded ? 'Show less' : `Show all ${items.length}`}
+            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          </button>
+        )}
+      </div>
+      <ol className={`border-t border-zinc-200 px-1.5 py-1 dark:border-zinc-700 ${expanded ? 'max-h-80 overflow-y-auto' : ''}`}>
+        {hidden > 0 && (
+          <li>
+            <button
+              onClick={() => setExpanded(true)}
+              className="w-full px-1.5 py-0.5 text-left text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+            >
+              + {hidden} earlier step{hidden > 1 ? 's' : ''}
+            </button>
+          </li>
+        )}
+        {items.slice(hidden).map((item, offset) => {
+          const index = hidden + offset;
+          // A status step is over once anything follows it
+          const done = item.kind === 'thinking' ? item.done || index < items.length - 1 : item.done;
+          return <ProcessRow key={index} item={item} done={done} />;
+        })}
+      </ol>
+    </section>
   );
 }
 
@@ -522,13 +651,11 @@ function AssistantBubble({
   const hasBody = Boolean(body.trim());
   const citations = getCitations(message.pipeline ?? []);
   const [openCitation, setOpenCitation] = useState<Citation | null>(null);
-  const steps = message.steps ?? [];
   // Answer still being generated on the server (the user left and came back): refreshed by polling
   const inBackground = !isStreaming && message.status === 'streaming';
   // Agent answers saved mid-run: their trace already holds the tool calls made so far
-  const backgroundToolCalls = (message.pipeline ?? []).filter(
-    (event) => event.stage === 'call' && (event.data as { kind?: string }).kind === 'tool',
-  ).length;
+  const steps = inBackground ? stepsFromTrace(message.pipeline ?? []) : message.steps ?? [];
+  const showProgress = (isStreaming || inBackground) && !hasBody && steps.length > 0;
 
   return (
     <div className="relative max-w-[85%] rounded-2xl border border-zinc-200 bg-white px-5 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
@@ -545,7 +672,7 @@ function AssistantBubble({
         )}
       </div>
 
-      {isStreaming && <LiveProgress steps={steps} />}
+      {showProgress && <LiveProgress steps={steps} />}
       {inBackground && hasBody && (
         <div className="mb-2 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
           <Loader2 size={12} className="animate-spin" />
@@ -559,14 +686,11 @@ function AssistantBubble({
             <CitedMarkdown body={body} citations={citations} onOpen={setOpenCitation} />
           </div>
         </div>
-      ) : (
-        <div className="rounded-xl border border-dashed border-zinc-300 px-4 py-4 dark:border-zinc-700">
-          <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-            <Loader2 size={14} className="animate-spin" />
-            {inBackground && backgroundToolCalls > 0
-              ? `Exploring the documents (${backgroundToolCalls} tool calls so far)`
-              : 'Writing the answer'}
-          </div>
+      ) : (isStreaming || inBackground) && !showProgress && (
+        // Before the first step arrives (the progress panel shows the rest)
+        <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+          <Loader2 size={14} className="animate-spin" />
+          {inBackground ? 'Still generating, this updates automatically' : 'Starting'}
         </div>
       )}
 
@@ -638,7 +762,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     } else {
       setMessages([]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [sessionId]);
 
   // An answer generated in the background (the user left during streaming): refresh until it is finished
@@ -647,7 +771,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     if (streaming || !sessionId || !hasBackgroundAnswer) return;
     const timer = setTimeout(() => loadHistory(sessionId, false), 2000);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [messages, streaming, sessionId, hasBackgroundAnswer]);
 
   const handleCopy = async (content: string, index: number) => {
@@ -677,6 +801,9 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     abortRef.current = controller;
     streamSessionRef.current = sessionId;
     let announced = false;
+    let gotDone = false;
+    let stalled = false;
+    let watchdog: ReturnType<typeof setInterval> | undefined;
     // A new chat shows up in the sidebar as soon as the server created it, not only at the end
     const announceSession = (createdSessionId: string | null | undefined) => {
       if (sessionId || announced || !createdSessionId) return;
@@ -736,17 +863,21 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
             break;
 
           case 'tool_result':
-            updateLast((msg) => ({
-              ...msg,
-              steps: [
-                ...(msg.steps ?? []).map((s) =>
-                  s.type === 'tool_call' && s.name === event.name && !s.done
-                    ? { ...s, done: true }
-                    : s
-                ),
-                { type: 'tool_result', name: event.name, result: event.result, done: true },
-              ],
-            }));
+            updateLast((msg) => {
+              // Results of parallel calls arrive in call order: close the oldest open call of that tool
+              const steps = msg.steps ?? [];
+              const open = steps.findIndex((s) => s.type === 'tool_call' && s.name === event.name && !s.done);
+              return {
+                ...msg,
+                steps: [
+                  ...steps.map((s, i) => (i === open ? { ...s, done: true } : s)),
+                  {
+                    type: 'tool_result', name: event.name, result: event.result,
+                    chunks: event.chunks, ms: event.ms, done: true,
+                  },
+                ],
+              };
+            });
             break;
 
           case 'pipeline':
@@ -792,6 +923,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
             break;
 
           case 'done':
+            gotDone = true;
             announceSession(event.session_id ?? pendingSessionIdRef.current);
             pendingSessionIdRef.current = null;
             break;
@@ -806,9 +938,20 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
         }
       };
 
+      // The server sends a keep-alive every 10 s: silence means the connection died without closing (a proxy
+      // timeout), and the reader would wait forever
+      let lastData = Date.now();
+      watchdog = setInterval(() => {
+        if (Date.now() - lastData > STREAM_STALL_MS) {
+          stalled = true;
+          controller.abort();
+        }
+      }, 5000);
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        lastData = Date.now();
 
         buffer += decoder.decode(value, { stream: true });
         const parsed = extractSseEvents(buffer);
@@ -826,16 +969,23 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       }
     } catch (error) {
       // Aborted because the user opened another chat: the server finishes the answer in the history
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted && !stalled) return;
       console.error('Error sending message:', error);
-      setMessages((prev) => prev.slice(0, -1));
+      // The server keeps generating once it has the session: show the saved answer instead
+      if (!streamSessionRef.current) setMessages((prev) => prev.slice(0, -1));
     } finally {
+      clearInterval(watchdog);
       if (abortRef.current === controller) {
         abortRef.current = null;
         setLoading(false);
         setStreaming(false);
       }
       pendingSessionIdRef.current = null;
+      // Stream cut before "done": reload the session, its message is polled until the server finishes
+      const streamedSession = streamSessionRef.current;
+      if (!gotDone && streamedSession && sessionIdRef.current === streamedSession && (stalled || !controller.signal.aborted)) {
+        loadHistory(streamedSession, false);
+      }
     }
   };
   const lastIdx = messages.length - 1;

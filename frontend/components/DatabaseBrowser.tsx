@@ -16,7 +16,7 @@ const STORE_LABELS: Record<Store, { name: string; law: string; document: string;
     name: 'Local corpus',
     law: 'Laws (Riksdagen)',
     document: 'Kommun pages & PDFs',
-    note: 'data/corpus/chunks.jsonl, indexed chunks only',
+    note: 'disk store data/index/store/<model> (SQLite + vectors)',
   },
 };
 

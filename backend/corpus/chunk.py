@@ -23,7 +23,9 @@ import re
 
 from corpus.common import CHUNKS_PATH, DOCUMENTS_PATH, read_jsonl, stable_id, write_jsonl
 
-_CHAPTER = re.compile(r"^(\d+ ?[a-z]?) kap\. ([A-ZÅÄÖ].*)$")
+# "4 kap. Särskilda bestämmelser ...", also "10 Kap. Bostadsarrende" (jordabalken) and "14 kap." with its title
+# on the next line (fastighetsbildningslagen)
+_CHAPTER = re.compile(r"^(\d+ ?[a-z]?) [kK]ap\.(?: ([A-ZÅÄÖ].*))?$")
 # A paragraph opens with "21 §" followed by a capital ("21 § I detaljplanen..."), "/" for
 # version markers ("/Upphör att gälla .../") or a list; "21 § andra stycket" is a reference
 _SECTION = re.compile(r"^(\d+ ?[a-z]?) §(?!§) ?([A-ZÅÄÖ/\d(].*)$", re.S)
@@ -51,8 +53,11 @@ def rejoin(paragraphs: list[str]) -> list[str]:
                 paragraph[:1].islower()
                 or last_word in _CONTINUATION_ENDINGS
                 or previous.endswith(("-", ","))
+                # A long line without a full stop is wrapped, unless it is a chapter heading: the heading under
+                # it ("4 kap. ... vissa områden" + "Områden som i sin helhet ...") would make it too long to be
+                # recognised, and the whole chapter was filed under the previous one
                 or (not previous.endswith((".", ":", ";", "?", ")")) and not _SECTION.match(paragraph)
-                    and not _CHAPTER.match(paragraph) and len(previous) > 60)
+                    and not _CHAPTER.match(paragraph) and not _CHAPTER.match(previous) and len(previous) > 60)
             )
             if continues and not re.match(r"^\d+\. ", paragraph):
                 joined[-1] = f"{previous} {paragraph}"
@@ -115,7 +120,7 @@ def law_chunks(document: dict, max_chars: int) -> list[dict]:
         body = "\n\n".join(section_parts)
         label = f"{chapter} kap. {section} §" if chapter else f"{section} §"
         header = f"{document['title']}, {label}"
-        context = " – ".join(filter(None, [f"{chapter} kap. {chapter_title}" if chapter else None, heading]))
+        context = " – ".join(filter(None, [f"{chapter} kap. {chapter_title}".strip() if chapter else None, heading]))
         if context:
             header += f" ({context})"
         for part_index, part in enumerate(split_long(f"{section} § {body}", max_chars)):
@@ -129,11 +134,32 @@ def law_chunks(document: dict, max_chars: int) -> list[dict]:
                 "text": part,
             })
 
+    def number(label: str | None) -> int:
+        return int(re.match(r"\d+", label).group()) if label else 0
+
+    title_index = None  # paragraph used as the title of a bare "14 kap." line
     for index, paragraph in enumerate(paragraphs):
+        if index == title_index:
+            continue
+        following = paragraphs[index + 1] if index + 1 < len(paragraphs) else ""
         chapter_match = _CHAPTER.match(paragraph)
+        title = chapter_match.group(2) if chapter_match else None
+        if chapter_match and title is None:
+            # A bare "14 kap." opens a chapter only after a lower chapter and before its heading or its 1 §
+            # (fastighetsbildningslagen 1 kap. has no title): otherwise it is a wrapped reference ("... finns i" /
+            # "18 kap.")
+            first_section = _SECTION.match(following)
+            if number(chapter_match.group(1)) <= number(chapter):
+                chapter_match = None
+            elif is_heading(following):
+                title, title_index = following, index + 1
+            elif first_section and first_section.group(1) == "1":
+                title = ""
+            else:
+                chapter_match = None
         if chapter_match and len(paragraph) < 120:
             flush()
-            chapter, chapter_title = chapter_match.group(1), chapter_match.group(2).strip()
+            chapter, chapter_title = chapter_match.group(1), title.strip()
             section, section_parts, heading = None, [], None
             continue
         section_match = _SECTION.match(paragraph)
@@ -142,7 +168,6 @@ def law_chunks(document: dict, max_chars: int) -> list[dict]:
             section, section_parts = section_match.group(1), [section_match.group(2).strip()]
             continue
         # A heading is followed by a paragraph (§); otherwise it is a sentence introducing a list
-        following = paragraphs[index + 1] if index + 1 < len(paragraphs) else ""
         if is_heading(paragraph) and _SECTION.match(following):
             flush()
             heading, section, section_parts = paragraph.strip(), None, []

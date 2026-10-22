@@ -103,7 +103,8 @@ def main() -> None:
     def regrade(job: tuple[Path, dict, dict]) -> None:
         path, case, row = job
         try:
-            new = grade_answer(case, row["answer"], lookup, judge_model)
+            seen = [chunk_id for step in row.get("steps") or [] for chunk_id in step.get("chunks") or []]
+            new = grade_answer(case, row["answer"], lookup, judge_model, seen)
         except Exception as exc:  # e.g. a network error: left for the next run
             print(f"  {case['id']}: {exc!r}")
             return

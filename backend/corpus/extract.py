@@ -19,7 +19,8 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from urllib.parse import unquote
 
-from corpus.common import DOCUMENTS_PATH, LAWS_DIR, MUNICIPALITIES_PATH, WEB_DIR, clean_text, read_jsonl, write_jsonl
+from corpus.common import (DOCUMENTS_PATH, LAWS_DIR, MUNICIPALITIES_PATH, WEB_DIR, clean_text, read_jsonl,
+                           repair_mojibake, write_jsonl)
 from corpus.crawl import KEEP_SCORE, content_relevance, fold
 
 LEGACY_CORPUS = Path(__file__).resolve().parent.parent / "benchmark" / "data" / "corpus.jsonl"
@@ -75,6 +76,7 @@ def page_documents(names: dict[str, str]) -> list[dict]:
     for path in sorted(WEB_DIR.glob("*/pages/*.json")):
         code = path.parent.parent.name
         page = json.loads(path.read_text(encoding="utf-8"))
+        page["title"] = repair_mojibake(page["title"])  # crawled before the crawler decoded titles with the page charset
         if content_relevance(page["url"].split("/", 3)[-1], page["title"]) < KEEP_SCORE:
             continue  # kept by an older, looser crawl filter
         documents.append({
@@ -131,11 +133,11 @@ def _pdf_document(args: tuple[str, str, dict, str | None]) -> dict:
     pages = [page_blocks(page) for page in pdf]
     text = clean_text("\n\n".join(strip_boilerplate(pages)))
     chars_per_page = len(text) / max(len(pages), 1)
-    title = (pdf.metadata or {}).get("title") or ""
+    title = repair_mojibake((pdf.metadata or {}).get("title") or "")
     # Metadata titles are often file paths ("G:\SBF\...") or template names
     if (not title or len(title) < 4 or "\\" in title or re.fullmatch(r"[\w\-]+\.(docx?|indd|pdf)", title, re.I)
             or title.lower() in {"djvu-dokument", "untitled", "microsoft word"}):
-        title = entry.get("anchor") or unquote(Path(entry["url"].split("?")[0]).stem)
+        title = repair_mojibake(entry.get("anchor") or "") or unquote(Path(entry["url"].split("?")[0]).stem)
     needs_ocr = chars_per_page < 150
     ocr_path = Path(path).parent.parent / "ocr" / f"{entry['id']}.json"
     ocr = needs_ocr and ocr_path.exists()
@@ -158,8 +160,8 @@ def _pdf_document(args: tuple[str, str, dict, str | None]) -> dict:
     }
 
 
-def pdf_documents(names: dict[str, str], workers: int) -> list[dict]:
-    jobs = []
+def pdf_documents(names: dict[str, str], workers: int, allow_missing: bool = False) -> list[dict]:
+    jobs, missing = [], 0
     for manifest in sorted(WEB_DIR.glob("*/manifest.jsonl")):
         code = manifest.parent.name
         for entry in read_jsonl(manifest):
@@ -167,6 +169,12 @@ def pdf_documents(names: dict[str, str], workers: int) -> list[dict]:
                 path = manifest.parent / "pdf" / f"{entry['id']}.pdf"
                 if path.exists():
                     jobs.append((str(path), code, entry, names.get(code)))
+                else:
+                    missing += 1
+    # Without the PDFs pack every PDF document would silently leave the corpus (and the index built from it)
+    if missing and not allow_missing:
+        raise SystemExit(f"{missing} PDFs of the crawl manifests are missing (PDFs pack not unpacked?): extracting now "
+                         "would drop them from documents.jsonl. Unpack them, or pass --allow-missing-pdfs.")
     with ProcessPoolExecutor(max_workers=workers) as pool:
         documents = list(pool.map(_pdf_document, jobs, chunksize=4))
     errors = [d for d in documents if "error" in d]
@@ -210,10 +218,12 @@ def legacy_documents() -> list[dict]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Extract text documents from the raw corpus")
     parser.add_argument("--workers", type=int, default=6)
+    parser.add_argument("--allow-missing-pdfs", action="store_true", help="extract even if crawled PDFs are missing")
     args = parser.parse_args()
 
     names = {m["code"]: m["short_name"] for m in json.loads(MUNICIPALITIES_PATH.read_text(encoding="utf-8"))}
-    documents = law_documents() + legacy_documents() + page_documents(names) + pdf_documents(names, args.workers)
+    documents = (law_documents() + legacy_documents() + page_documents(names)
+                 + pdf_documents(names, args.workers, args.allow_missing_pdfs))
     count = write_jsonl(DOCUMENTS_PATH, documents)
     by_kind: dict[str, int] = {}
     for document in documents:

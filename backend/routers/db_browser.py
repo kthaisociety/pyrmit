@@ -97,7 +97,7 @@ def _row_from_chunk(chunk: dict) -> schemas.ChunkRow:
 def _local_page(table: str, source: str | None, q: str | None, offset: int, limit: int) -> schemas.ChunkPage:
     store = _local_store()
     if store is not None:
-        where = ["kind = 'law'" if table == "law" else "kind != 'law'"]
+        where = ["kind = 'law'" if table == "law" else "kind IN ('page', 'pdf')"]  # indexed, unlike kind != 'law'
         params: list = []
         if source:
             where.append("title = ?" if table == "law" else "kommun = ?")

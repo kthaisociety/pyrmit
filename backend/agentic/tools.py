@@ -7,6 +7,7 @@ measure which evidence the agent actually looked at.
 
 import base64
 import json
+import os
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -28,7 +29,38 @@ LAW_ALIASES = {
     "al": "anläggningslag", "anläggningslagen": "anläggningslag", "fmh": "miljöfarlig verksamhet och hälsoskydd",
     "lav": "allmänna vattentjänster", "expropriationslagen": "expropriationslag",
     "kml": "kulturmiljölag", "kulturmiljölagen": "kulturmiljölag",
+    "mpf": "miljöprövningsförordning", "mbf": "miljöbedömningsförordning", "lrl": "ledningsrättslag",
+    "ledningsrättslagen": "ledningsrättslag", "bostadsrättslagen": "bostadsrättslag",
 }
+
+
+def resolve_cited(get_chunk, chunk_id: str, seen) -> dict | None:
+    """A chunk an answer cites. The model sometimes miscopies an id after its first characters ('4463112e2b2b1435'
+    for '4463112e3a73206d', ~1 % of citations): it then resolves to the one chunk it was shown (`seen`) that
+    shares the longest prefix, of at least 8 characters."""
+    chunk = get_chunk(chunk_id)
+    if chunk is not None or not seen:
+        return chunk
+    scored = sorted(((len(os.path.commonprefix([chunk_id, shown])), shown) for shown in set(seen)), reverse=True)
+    if scored[0][0] >= 8 and (len(scored) == 1 or scored[1][0] < scored[0][0]):
+        return get_chunk(scored[0][1])
+    return None
+
+
+def _fold(text: str) -> str:
+    """Lower case without Swedish diacritics: the model writes 'miljoprovningsforordning'."""
+    return text.lower().translate(str.maketrans("åäöé", "aaoe"))
+
+
+def normalize_section(section: str) -> str:
+    """'9 kap. 4 §' from '9 kap 4§', '9:4', '4a §', '7 kap. 18 c § punkt 1'."""
+    text = re.sub(r"\s+", " ", section.replace("§§", "§")).strip()
+    if match := re.fullmatch(r"(\d+ ?[a-z]?):(\d+ ?[a-z]?)", text):
+        text = f"{match.group(1)} kap. {match.group(2)} §"
+    text = re.sub(r"\bkap\b\.?", "kap.", text)
+    text = re.sub(r"(\d)\s*([a-z])\s*(?=§|kap\.)", r"\1 \2 ", text)  # "4a §" -> "4 a §"
+    text = re.sub(r"(\d)\s*§", r"\1 §", text)
+    return text.split("§")[0].strip() + " §"  # drop "punkt 1", "första stycket"
 
 
 @dataclass
@@ -57,6 +89,9 @@ class _MemoryCorpus:
 
     def doc(self, doc_id: str) -> dict | None:
         return self.docs.get(doc_id)
+
+    def doc_ids_ending(self, suffix: str, limit: int = 2) -> list[str]:
+        return [doc_id for doc_id in self.docs if doc_id.endswith(":" + suffix)][:limit]
 
     def ids_with_prefix(self, prefix: str, limit: int = 2) -> list[str]:
         return [chunk_id for chunk_id in self.chunks if chunk_id.startswith(prefix)][:limit]
@@ -99,6 +134,11 @@ class _MemoryCorpus:
         return sorted({c["title"] for c in self.chunks.values() if c["kind"] == "law"})
 
 
+# Kinds of kommun chunks, spelled out so SQLite uses the (kind, kommun_code) index: `kind != 'law'` or no
+# kind filter scans the whole chunks table (~0.7 s per query, find_kommun and list_documents took seconds)
+LOCAL_KINDS = "('page', 'pdf')"  # corpus/extract.py: web pages and PDFs
+
+
 class _DiskCorpus:
     """Chunks in SQLite (DiskStore): nothing is loaded up front."""
 
@@ -120,13 +160,18 @@ class _DiskCorpus:
                                 "WHERE doc_id = ? LIMIT 1", (doc_id,))
         return dict(rows[0]) if rows else None
 
+    def doc_ids_ending(self, suffix: str, limit: int = 2) -> list[str]:
+        # No index on the suffix (~0.3 s): only a fallback for an id read() could not resolve
+        return [r[0] for r in self.store.query("SELECT DISTINCT doc_id FROM chunks WHERE doc_id GLOB ? LIMIT ?",
+                                               (f"*:{suffix}", limit))]
+
     def doc_chunk_ids(self, doc_id: str) -> list[str]:
         return [r[0] for r in self.store.query(
             "SELECT chunk_id FROM chunks WHERE doc_id = ? ORDER BY CAST(chunk_index AS INTEGER)", (doc_id,))]
 
     def documents(self, codes: set[str], doc_type: str | None, title_contains: str | None) -> list[dict]:
         sql = (f"SELECT doc_id, title, kind, doc_type, kommun, kommun_code, url, COUNT(*) AS chunks FROM chunks "
-               f"WHERE kind != 'law' AND kommun_code IN ({','.join('?' * len(codes))})")
+               f"WHERE kind IN {LOCAL_KINDS} AND kommun_code IN ({','.join('?' * len(codes))})")
         params: list = list(codes)
         if doc_type:
             sql += " AND doc_type = ?"
@@ -138,17 +183,17 @@ class _DiskCorpus:
 
     def doc_type_counts(self, code: str) -> dict[str, int]:
         return {r[0]: r[1] for r in self.store.query(
-            "SELECT doc_type, COUNT(DISTINCT doc_id) FROM chunks WHERE kommun_code = ? GROUP BY doc_type", (code,))}
+            f"SELECT doc_type, COUNT(DISTINCT doc_id) FROM chunks WHERE kind IN {LOCAL_KINDS} AND kommun_code = ? "
+            "GROUP BY doc_type", (code,))}
 
     def grep(self, regex: re.Pattern, scope: str, codes: set[str], limit: int) -> tuple[int, list[tuple[dict, re.Match]]]:
-        where, params = [], []
-        if scope == "law":
-            where.append("kind = 'law'")
-        elif scope == "kommun":
-            where.append("kind != 'law'")
+        # Each branch on the (kind, kommun_code) index: "kind != 'law'" or "kind = 'law' OR kommun_code IN" scanned
+        # the whole table with the regex (~5 s for a kommun-filtered grep instead of 0.25 s)
+        local = f"kind IN {LOCAL_KINDS}"
         if codes:
-            where.append(f"(kind = 'law' OR kommun_code IN ({','.join('?' * len(codes))}))")
-            params.extend(codes)
+            local += f" AND kommun_code IN ({','.join('?' * len(codes))})"
+        where = [{"law": "kind = 'law'", "kommun": local}.get(scope, f"(kind = 'law' OR ({local}))")]
+        params: list = list(codes) if codes and scope != "law" else []
         where.append("(header || ' ' || text) REGEXP ?")
         params.append(regex.pattern)
         # The count is capped: an unfiltered regex over the whole corpus scans every row once
@@ -201,6 +246,18 @@ class CorpusTools:
         source = chunk["title"] if chunk["kind"] == "law" else f"{chunk.get('kommun')} – {chunk['title']}"
         return f"[c:{chunk['chunk_id']}] {source}{f' | {where}' if where else ''} (doc {chunk['doc_id']})\n    {text}"
 
+    def _doc_id(self, doc_id: str | None) -> str | None:
+        """The doc_id as stored: the model sometimes drops the 'pdf:' / 'page:' prefix ('0115:be42...')."""
+        doc_id = (doc_id or "").strip()
+        if re.fullmatch(r"\d{4}:\w+", doc_id):
+            return next((f"{kind}:{doc_id}" for kind in ("pdf", "page") if self.corpus.doc(f"{kind}:{doc_id}")), doc_id)
+        # Only the hash of 'page:0115:7e86b453f43e469e', often written as a chunk id ('c:7e86b453f43e469e')
+        if re.fullmatch(r"[0-9a-f]{16}", doc_id) and self.corpus.doc(doc_id) is None:
+            matches = self.corpus.doc_ids_ending(doc_id)
+            if len(matches) == 1:
+                return matches[0]
+        return doc_id or None
+
     def _kommun_codes(self, kommun: str | None) -> list[str] | None:
         if not kommun:
             return None
@@ -215,6 +272,10 @@ class CorpusTools:
         codes = detect_kommuner(place) or detect_kommuner(place.title()) or self.retriever.places.detect(place)
         if not codes:
             return ToolResult(f"No kommun found for '{place}'. Try the kommun name or a nearby town.")
+        # "Kårsta, Vallentuna": the kommun named outright first, not the other kommun that has a Kårsta
+        names = {m["code"]: m["short_name"] for m in self.municipalities}
+        named = [c for c in codes if names.get(c) and re.search(rf"\b{re.escape(names[c])}\b", place, re.I)]
+        codes = named + [c for c in codes if c not in named]
         lines = []
         for code in codes:
             kommun = next((m for m in self.municipalities if m["code"] == code), None)
@@ -249,6 +310,12 @@ class CorpusTools:
         except re.error as exc:
             return ToolResult(f"Invalid regex: {exc}")
         codes = set(self._kommun_codes(kommun) or [])
+        if kommun and not codes:
+            return ToolResult(f"Unknown kommun '{kommun}': use find_kommun first.")
+        # A regex over the whole corpus scans 349k chunks (12-28 s): grep needs a kommun, or the laws only
+        if not codes and scope != "law":
+            return ToolResult("grep needs a kommun (name or 4-digit code), or scope='law' for the statutes only. "
+                              "To search every kommun, use search.")
         total, hits = self.corpus.grep(regex, scope, codes, max_results)
         lines, ids = [], []
         for chunk, match in hits:
@@ -272,18 +339,26 @@ class CorpusTools:
     def read(self, chunk_id: str | None = None, doc_id: str | None = None, start: int = 0, count: int = 4) -> ToolResult:
         """Read a chunk with its neighbours, or a document from chunk position `start`."""
         if chunk_id:
-            chunk = self.corpus.chunk(chunk_id)
-            if chunk is None:
+            # The model copies ids as the tools print them ("[c:<id>]"), or passes a doc_id here
+            chunk_id = chunk_id.strip().strip("[]").removeprefix("c:")
+            chunk = self.get_chunk(chunk_id)
+            if chunk is None and self.corpus.doc(self._doc_id(chunk_id)) is not None:
+                doc_id = chunk_id
+            elif chunk is None:
                 return ToolResult(f"Unknown chunk_id {chunk_id}.")
-            doc_id = chunk["doc_id"]
-            ids = self.corpus.doc_chunk_ids(doc_id)
-            start = max(0, ids.index(chunk_id) - 1)
-            count = max(int(count or 3), 3)
+            else:
+                doc_id = chunk["doc_id"]
+                ids = self.corpus.doc_chunk_ids(doc_id)
+                start = max(0, ids.index(chunk["chunk_id"]) - 1)
+                count = max(int(count or 3), 3)
+        doc_id = self._doc_id(doc_id)
         doc = self.corpus.doc(doc_id) if doc_id else None
         if doc is None:
             return ToolResult(f"Unknown doc_id {doc_id}.")
         ids = self.corpus.doc_chunk_ids(doc_id)
         start = max(0, int(start or 0))
+        if start >= len(ids):
+            return ToolResult(f"{doc_id} has {len(ids)} chunks (positions 0-{len(ids) - 1}); start {start} is past the end.")
         selected = ids[start:start + max(1, min(int(count or 4), 12))]
         parts, size = [], 0
         for chunk_id_ in selected:
@@ -298,14 +373,19 @@ class CorpusTools:
 
     def law_section(self, law: str, section: str) -> ToolResult:
         """Exact statute text, e.g. law='PBL', section='9 kap. 4 §'."""
-        wanted = LAW_ALIASES.get(law.strip().lower(), law.strip().lower())
-        normalized = re.sub(r"\s+", " ", section.replace("§§", "§")).strip()
-        if "§" not in normalized:
-            normalized += " §"
-        hits = self.corpus.law_hits(wanted, normalized)
+        wanted = _fold(LAW_ALIASES.get(law.strip().lower(), law.strip().lower()))
+        # Match on the title without diacritics, then query by that exact title
+        titles = [t for t in self.corpus.law_titles() if wanted in _fold(t)]
+        normalized = normalize_section(section)
+        hits = [hit for title in titles for hit in self.corpus.law_hits(title.lower(), normalized)]
         if not hits:
-            return ToolResult(f"No section '{normalized}' in '{law}'. Available laws: {self.corpus.law_titles()}. "
-                              "Sections look like '9 kap. 4 §' or '13 §' (laws without chapters).")
+            hint = ""
+            if titles and titles[0].startswith("Plan- och bygglag") and normalized.startswith("9 kap."):
+                hint = (" PBL 9 kap. was renumbered by SFS 2025:974 (bygglov 9 kap. 56-57 §, liten avvikelse 60-61 §, "
+                        "förhandsbesked 74 §): find the provision by its wording with search or grep.")
+            known = f"Laws: {self.corpus.law_titles()}." if not titles else f"'{law}' = {', '.join(titles)}."
+            return ToolResult(f"No section '{normalized}' in '{law}'. {known} Sections look like '9 kap. 4 §' or "
+                              f"'13 §' (laws without chapters).{hint}")
         return ToolResult("\n\n".join(f"[c:{c['chunk_id']}] {chunk_text(c)}" for c in hits), [c["chunk_id"] for c in hits])
 
     def _plans(self) -> dict[str, list[dict]]:
@@ -375,7 +455,7 @@ class CorpusTools:
     def view_map_area(self, doc_id: str, around: str, page: int = 1, size: str = "medium") -> ToolResult:
         """Zoom on a plankarta around a label (property designation such as '5:125', a street, a code), and list
         the codes printed in that area with their meaning: which zone rules apply to a given property."""
-        match = re.fullmatch(r"pdf:(\d{4}):(\w+)", doc_id or "")
+        match = re.fullmatch(r"pdf:(\d{4}):(\w+)", self._doc_id(doc_id) or "")
         if not match:
             return ToolResult("Only crawled PDFs (doc_id 'pdf:<code>:<id>') can be viewed.")
         path = WEB_DIR / match.group(1) / "pdf" / f"{match.group(2)}.pdf"
@@ -429,7 +509,7 @@ class CorpusTools:
 
     def view_pdf_page(self, doc_id: str, page: int = 1) -> ToolResult:
         """Render a PDF page as an image (plankarta maps, tables, scanned pages)."""
-        match = re.fullmatch(r"pdf:(\d{4}):(\w+)", doc_id or "")
+        match = re.fullmatch(r"pdf:(\d{4}):(\w+)", self._doc_id(doc_id) or "")
         if not match:
             return ToolResult("Only crawled PDFs (doc_id 'pdf:<code>:<id>') can be viewed.")
         path = WEB_DIR / match.group(1) / "pdf" / f"{match.group(2)}.pdf"
@@ -459,7 +539,7 @@ TOOL_SCHEMAS = [
          "kommun": {"type": "string", "description": "kommun name or 4-digit code"},
          "k": {"type": "integer", "description": "results per pool, max 15"}}, "required": ["query"]}},
     {"type": "function", "name": "grep",
-     "description": "Exact / regex search (case-insensitive) in chunk texts. Best for precise terms: plan numbers (B670323), property designations (Vallentuna-Mörby 1:357), place names, 'nockhöjd', 'byggnadsarea', amounts in kronor.",
+     "description": "Exact / regex search (case-insensitive) in chunk texts. Best for precise terms: plan numbers (B670323), property designations (Vallentuna-Mörby 1:357), place names, 'nockhöjd', 'byggnadsarea', amounts in kronor. Needs a kommun, or scope='law' (no search over every kommun).",
      "parameters": {"type": "object", "properties": {
          "pattern": {"type": "string"}, "kommun": {"type": "string"},
          "scope": {"type": "string", "enum": ["law", "kommun", "all"]}}, "required": ["pattern"]}},
@@ -487,14 +567,14 @@ TOOL_SCHEMAS = [
      "parameters": {"type": "object", "properties": {"plan_id": {"type": "string"}, "topic": {"type": "string"}},
                     "required": ["plan_id"]}},
     {"type": "function", "name": "view_map_area",
-     "description": "Zoom on a plankarta around a label printed on the map (property designation such as '5:125', a street or block name) and get the codes printed there with their meaning. Use it whenever the question is about a specific property or place inside a detaljplan: the plan's rules differ by zone and only the map tells which zone the property is in. size: near | medium | wide.",
+     "description": "Zoom on a plankarta around a label printed on the map (property designation such as '5:125', a street or block name) and get the codes printed there with their meaning. Use it whenever the question is about a specific property or place inside a detaljplan: the plan's rules differ by zone and only the map tells which zone the property is in. size: near | medium | wide. The image is shown for one step only: note what you read on it.",
      "parameters": {"type": "object", "properties": {
          "doc_id": {"type": "string", "description": "the plankarta doc_id (from plans / plan_rules)"},
          "around": {"type": "string", "description": "text printed on the map, e.g. '5:125'"},
          "page": {"type": "integer"}, "size": {"type": "string", "enum": ["near", "medium", "wide"]}},
          "required": ["doc_id", "around"]}},
     {"type": "function", "name": "view_pdf_page",
-     "description": "Look at a page of a crawled PDF as an image: plankarta maps (zones, heights, legend), tables, scanned documents. Expensive: use only when the text is missing or spatial.",
+     "description": "Look at a page of a crawled PDF as an image: plankarta maps (zones, heights, legend), tables, scanned documents. Expensive: use only when the text is missing or spatial. The image is shown for one step only: note what you read on it.",
      "parameters": {"type": "object", "properties": {"doc_id": {"type": "string"}, "page": {"type": "integer"}},
                     "required": ["doc_id"]}},
 ]
@@ -515,9 +595,13 @@ def run_tool(tools: CorpusTools, name: str, arguments: dict) -> ToolResult:
         return ToolResult(f"Bad arguments for {name}: {exc}")
 
 
+IMAGE_ONCE = ("\nThis image is attached for your next step only, then removed: write down now, in a line or two before "
+              "your next tool call, what you need from it (codes, zones, values, which zone the property is in).")
+
+
 def image_message(result: ToolResult) -> dict:
     data = base64.b64encode(result.image_png).decode()
     return {"role": "user", "content": [
-        {"type": "input_text", "text": result.text},
+        {"type": "input_text", "text": result.text + IMAGE_ONCE},
         {"type": "input_image", "image_url": f"data:image/png;base64,{data}"},
     ]}

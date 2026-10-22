@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, FileText, Loader2, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
 import ChunkCard from '@/components/ChunkCard';
@@ -40,10 +40,15 @@ export default function SourceViewer({ citation, onClose }: { citation: Citation
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // The latest click: a slower earlier request (or one for the previous citation) must not replace its result
+  const request = useRef(0);
+
   // A new citation closes the previous PDF; object URLs are released
   useEffect(() => {
+    request.current += 1;
     setPdf(null);
     setError(null);
+    setLoading(null);
   }, [citation]);
   useEffect(() => () => { if (pdf) URL.revokeObjectURL(pdf.blobUrl); }, [pdf]);
 
@@ -54,17 +59,21 @@ export default function SourceViewer({ citation, onClose }: { citation: Citation
   }, [onClose]);
 
   const open = async (chunk: CitedChunk) => {
+    const mine = ++request.current;
     setLoading(chunk.chunk_id);
     setError(null);
     try {
       const response = await authFetch(`/api/docs/locate?chunk_id=${encodeURIComponent(chunk.chunk_id)}`);
       if (!response.ok) throw new Error(`locate failed (${response.status})`);
       const location: Location = await response.json();
+      if (mine !== request.current) return;
       if (location.type === 'pdf' && location.pdf_url) {
         // Fetched with the auth header, shown from a blob URL: the browser's PDF viewer opens it at #page
         const file = await authFetch(location.pdf_url);
         if (!file.ok) throw new Error(`PDF failed (${file.status})`);
-        const blobUrl = URL.createObjectURL(await file.blob());
+        const blob = await file.blob();
+        if (mine !== request.current) return;
+        const blobUrl = URL.createObjectURL(blob);
         const page = location.page ?? 1;
         const zoom = location.view ? `&zoom=${location.view.zoom},${location.view.left},${location.view.top}` : '';
         setPdf({
@@ -83,9 +92,9 @@ export default function SourceViewer({ citation, onClose }: { citation: Citation
         setError('No original document is available for this source.');
       }
     } catch (exc) {
-      setError(exc instanceof Error ? exc.message : String(exc));
+      if (mine === request.current) setError(exc instanceof Error ? exc.message : String(exc));
     } finally {
-      setLoading(null);
+      if (mine === request.current) setLoading(null);
     }
   };
 
