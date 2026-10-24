@@ -7,6 +7,7 @@ measure which evidence the agent actually looked at.
 
 import base64
 import json
+import logging
 import os
 import re
 from collections import defaultdict
@@ -17,6 +18,7 @@ from corpus.plans import PLANS_PATH
 from localrag.gazetteer import detect_kommuner, kommun_label
 from localrag.index import chunk_text
 
+logger = logging.getLogger(__name__)
 SNIPPET = 350
 READ_LIMIT = 9000
 
@@ -68,6 +70,36 @@ class ToolResult:
     text: str
     chunk_ids: list[str] = field(default_factory=list)
     image_png: bytes | None = None
+    # Why the call returned nothing usable: unknown_id (an id the corpus does not have), bad_args, not_found (no such
+    # kommun / section / label), no_data (nothing to show). Recorded in the steps: the benchmark counts them per tool
+    error: str = ""
+
+
+def _failed(kind: str, text: str) -> ToolResult:
+    return ToolResult(text, error=kind)
+
+
+# corpus/extract.py document types: the filter of search, grep and list_documents
+DOC_TYPES = ("detaljplan", "oversiktsplan", "bygglov", "strandskydd", "avlopp", "taxa", "other")
+
+
+def parse_doc_types(value) -> list[str] | None:
+    """doc_types as the model writes them: a list, one string, "detaljplan, oversiktsplan", "översiktsplan".
+    ValueError on an unknown type."""
+    if not value:
+        return None
+    values = [value] if isinstance(value, str) else list(value)
+    types = [_fold(v).strip() for item in values for v in str(item).split(",") if v.strip()]
+    unknown = [t for t in types if t not in DOC_TYPES]
+    if unknown:
+        raise ValueError(f"Unknown doc_types {unknown}: use {', '.join(DOC_TYPES)}.")
+    return list(dict.fromkeys(types)) or None
+
+
+def _label_key(text: str) -> str:
+    """A printed label as OCR may read it: '5.125' / '5,125' / '5;125' for the property number '5:125'."""
+    text = text.strip(" .,;()[]").lower()
+    return re.sub(r"^(\d+)[.,;:](\d+)$", r"\1:\2", text)
 
 
 class _MemoryCorpus:
@@ -99,10 +131,11 @@ class _MemoryCorpus:
     def doc_chunk_ids(self, doc_id: str) -> list[str]:
         return self.doc_ids.get(doc_id, [])
 
-    def documents(self, codes: set[str], doc_type: str | None, title_contains: str | None) -> list[dict]:
-        return [dict(d, chunks=len(self.doc_ids[d["doc_id"]])) for d in self.docs.values()
-                if d["kommun_code"] in codes and (not doc_type or d["doc_type"] == doc_type)
+    def documents(self, codes: set[str], doc_types: list[str] | None, title_contains: str | None) -> list[dict]:
+        docs = [dict(d, chunks=len(self.doc_ids[d["doc_id"]])) for d in self.docs.values()
+                if d["kommun_code"] in codes and (not doc_types or d["doc_type"] in doc_types)
                 and (not title_contains or title_contains.lower() in d["title"].lower())]
+        return sorted(docs, key=lambda d: d["title"])
 
     def doc_type_counts(self, code: str) -> dict[str, int]:
         counts: dict[str, int] = defaultdict(int)
@@ -111,13 +144,18 @@ class _MemoryCorpus:
                 counts[doc["doc_type"]] += 1
         return dict(counts)
 
-    def grep(self, regex: re.Pattern, scope: str, codes: set[str], limit: int) -> tuple[int, list[tuple[dict, re.Match]]]:
+    def grep(self, regex: re.Pattern, scope: str, codes: set[str], limit: int, doc_types: list[str] | None = None,
+             title_contains: str | None = None) -> tuple[int, list[tuple[dict, re.Match]]]:
         total, hits = 0, []
         for chunk in self.chunks.values():
             is_law = chunk["kind"] == "law"
             if (scope == "law" and not is_law) or (scope == "kommun" and is_law):
                 continue
             if codes and not is_law and chunk.get("kommun_code") not in codes:
+                continue
+            if (doc_types or title_contains) and (  # a document filter leaves the statutes out
+                    is_law or (doc_types and chunk.get("doc_type") not in doc_types)
+                    or (title_contains and title_contains.lower() not in (chunk.get("title") or "").lower())):
                 continue
             match = regex.search(" ".join(chunk_text(chunk).split()))
             if match:
@@ -169,31 +207,41 @@ class _DiskCorpus:
         return [r[0] for r in self.store.query(
             "SELECT chunk_id FROM chunks WHERE doc_id = ? ORDER BY CAST(chunk_index AS INTEGER)", (doc_id,))]
 
-    def documents(self, codes: set[str], doc_type: str | None, title_contains: str | None) -> list[dict]:
-        sql = (f"SELECT doc_id, title, kind, doc_type, kommun, kommun_code, url, COUNT(*) AS chunks FROM chunks "
-               f"WHERE kind IN {LOCAL_KINDS} AND kommun_code IN ({','.join('?' * len(codes))})")
-        params: list = list(codes)
-        if doc_type:
-            sql += " AND doc_type = ?"
-            params.append(doc_type)
+    @staticmethod
+    def _filters(doc_types: list[str] | None, title_contains: str | None) -> tuple[str, list]:
+        sql, params = "", []
+        if doc_types:
+            sql += f" AND doc_type IN ({','.join('?' * len(doc_types))})"
+            params += doc_types
         if title_contains:
             sql += " AND title LIKE ?"
             params.append(f"%{title_contains}%")
-        return [dict(r) for r in self.store.query(sql + " GROUP BY doc_id ORDER BY title", tuple(params))]
+        return sql, params
+
+    def documents(self, codes: set[str], doc_types: list[str] | None, title_contains: str | None) -> list[dict]:
+        filters, params = self._filters(doc_types, title_contains)
+        sql = (f"SELECT doc_id, title, kind, doc_type, kommun, kommun_code, url, COUNT(*) AS chunks FROM chunks "
+               f"WHERE kind IN {LOCAL_KINDS} AND kommun_code IN ({','.join('?' * len(codes))}){filters}")
+        return [dict(r) for r in self.store.query(sql + " GROUP BY doc_id ORDER BY title", (*codes, *params))]
 
     def doc_type_counts(self, code: str) -> dict[str, int]:
         return {r[0]: r[1] for r in self.store.query(
             f"SELECT doc_type, COUNT(DISTINCT doc_id) FROM chunks WHERE kind IN {LOCAL_KINDS} AND kommun_code = ? "
             "GROUP BY doc_type", (code,))}
 
-    def grep(self, regex: re.Pattern, scope: str, codes: set[str], limit: int) -> tuple[int, list[tuple[dict, re.Match]]]:
+    def grep(self, regex: re.Pattern, scope: str, codes: set[str], limit: int, doc_types: list[str] | None = None,
+             title_contains: str | None = None) -> tuple[int, list[tuple[dict, re.Match]]]:
         # Each branch on the (kind, kommun_code) index: "kind != 'law'" or "kind = 'law' OR kommun_code IN" scanned
         # the whole table with the regex (~5 s for a kommun-filtered grep instead of 0.25 s)
         local = f"kind IN {LOCAL_KINDS}"
         if codes:
             local += f" AND kommun_code IN ({','.join('?' * len(codes))})"
+        filters, filter_params = self._filters(doc_types, title_contains)
+        local += filters
+        if filters and scope != "law":
+            scope = "kommun"  # a document filter leaves the statutes out
         where = [{"law": "kind = 'law'", "kommun": local}.get(scope, f"(kind = 'law' OR ({local}))")]
-        params: list = list(codes) if codes and scope != "law" else []
+        params: list = (list(codes) + filter_params) if scope != "law" else []
         where.append("(header || ' ' || text) REGEXP ?")
         params.append(regex.pattern)
         # The count is capped: an unfiltered regex over the whole corpus scans every row once
@@ -247,8 +295,9 @@ class CorpusTools:
         return f"[c:{chunk['chunk_id']}] {source}{f' | {where}' if where else ''} (doc {chunk['doc_id']})\n    {text}"
 
     def _doc_id(self, doc_id: str | None) -> str | None:
-        """The doc_id as stored: the model sometimes drops the 'pdf:' / 'page:' prefix ('0115:be42...')."""
-        doc_id = (doc_id or "").strip()
+        """The doc_id as stored: the model sometimes drops the 'pdf:' / 'page:' prefix ('0115:be42...') or copies the
+        "(doc pdf:...)" of the tool output with its "doc " (14 stored reads, found by agentic.replay)."""
+        doc_id = (doc_id or "").strip().strip("[]()").removeprefix("doc ").strip()
         if re.fullmatch(r"\d{4}:\w+", doc_id):
             return next((f"{kind}:{doc_id}" for kind in ("pdf", "page") if self.corpus.doc(f"{kind}:{doc_id}")), doc_id)
         # Only the hash of 'page:0115:7e86b453f43e469e', often written as a chunk id ('c:7e86b453f43e469e')
@@ -271,7 +320,7 @@ class CorpusTools:
     def find_kommun(self, place: str) -> ToolResult:
         codes = detect_kommuner(place) or detect_kommuner(place.title()) or self.retriever.places.detect(place)
         if not codes:
-            return ToolResult(f"No kommun found for '{place}'. Try the kommun name or a nearby town.")
+            return _failed("not_found", f"No kommun found for '{place}'. Try the kommun name or a nearby town.")
         # "Kårsta, Vallentuna": the kommun named outright first, not the other kommun that has a Kårsta
         names = {m["code"]: m["short_name"] for m in self.municipalities}
         named = [c for c in codes if names.get(c) and re.search(rf"\b{re.escape(names[c])}\b", place, re.I)]
@@ -284,68 +333,122 @@ class CorpusTools:
                          f"{kommun['website'] if kommun else '?'}; {sum(by_type.values())} documents in the corpus: {by_type}")
         return ToolResult("\n".join(lines))
 
-    def search(self, query: str, scope: str = "all", kommun: str | None = None, k: int = 8) -> ToolResult:
-        """Semantic search (Swedish query works best). scope: law | kommun | all."""
+    @staticmethod
+    def _filter_note(doc_types: list[str] | None, title_contains: str | None) -> str:
+        parts = ([f"doc_types {', '.join(doc_types)}"] if doc_types else []) + \
+                ([f"title contains '{title_contains}'"] if title_contains else [])
+        return f"; documents: {'; '.join(parts)}" if parts else ""
+
+    def search(self, query: str, scope: str = "all", kommun: str | None = None, k: int = 8, doc_types=None,
+               title_contains: str | None = None) -> ToolResult:
+        """Semantic search (Swedish query works best). scope: law | kommun | all. doc_types / title_contains narrow
+        the kommun documents searched (not the statutes)."""
         k = max(1, min(int(k or 8), 15))
+        try:
+            types = parse_doc_types(doc_types)
+        except ValueError as exc:
+            return _failed("bad_args", str(exc))
+        title_contains = (title_contains or "").strip() or None
         codes = self._kommun_codes(kommun)
         # Hybrid when a BM25 index is available: exact Swedish wording ("20 meter", plan names) that the
         # embedding model ranks low still comes up
         hybrid = "stem" in self.retriever.bm25
+        filters = {"doc_types": types, "title_contains": title_contains} if types or title_contains else {}
         result = self.retriever.search(query, query_sv=query, k=k, mode="hybrid" if hybrid else "dense",
                                        dense_lang="sv", bm25_mode="stem" if hybrid else None,
-                                       kommuner=codes if codes is not None else "auto")
+                                       kommuner=codes if codes is not None else "auto", **filters)
         lines, ids = [], []
         pools = {"law": ["law"], "kommun": ["local"], "all": ["law", "local"]}.get(scope, ["law", "local"])
         for pool in pools:
             for hit in result[pool]:
                 lines.append(self._line(hit.chunk))
                 ids.append(hit.chunk["chunk_id"])
-        header = f"kommun filter: {', '.join(kommun_label(c) for c in result['kommuner']) or 'none'}"
+        header = (f"kommun filter: {', '.join(kommun_label(c) for c in result['kommuner']) or 'none'}"
+                  + self._filter_note(types, title_contains))
         return ToolResult(header + "\n" + ("\n".join(lines) or "No results."), ids)
 
-    def grep(self, pattern: str, kommun: str | None = None, scope: str = "all", max_results: int = 15) -> ToolResult:
-        """Case-insensitive regex over chunk texts: exact terms, plan numbers, property designations."""
+    def grep(self, pattern: str, kommun: str | None = None, scope: str = "all", max_results: int = 15,
+             doc_types=None, title_contains: str | None = None, output: str = "chunks") -> ToolResult:
+        """Case-insensitive regex over chunk texts: exact terms, plan numbers, property designations.
+        output='documents': which documents match and how often (one line each) instead of the passages."""
         try:
             regex = re.compile(pattern, re.I)
-        except re.error as exc:
-            return ToolResult(f"Invalid regex: {exc}")
+            types = parse_doc_types(doc_types)
+        except (re.error, ValueError) as exc:
+            return _failed("bad_args", f"Invalid regex: {exc}" if isinstance(exc, re.error) else str(exc))
+        title_contains = (title_contains or "").strip() or None
         codes = set(self._kommun_codes(kommun) or [])
         if kommun and not codes:
-            return ToolResult(f"Unknown kommun '{kommun}': use find_kommun first.")
+            return _failed("not_found", f"Unknown kommun '{kommun}': use find_kommun first.")
         # A regex over the whole corpus scans 349k chunks (12-28 s): grep needs a kommun, or the laws only
         if not codes and scope != "law":
-            return ToolResult("grep needs a kommun (name or 4-digit code), or scope='law' for the statutes only. "
+            return _failed("bad_args", "grep needs a kommun (name or 4-digit code), or scope='law' for the statutes only. "
                               "To search every kommun, use search.")
-        total, hits = self.corpus.grep(regex, scope, codes, max_results)
+        max_results = max(1, min(int(max_results or 15), 40))
+        by_document = output == "documents"
+        total, hits = self.corpus.grep(regex, scope, codes, _DiskCorpus.GREP_SCAN_LIMIT if by_document else max_results,
+                                       types, title_contains)
+        note = self._filter_note(types, title_contains)
+        if by_document:
+            documents: dict[str, list] = {}
+            for chunk, match in hits:
+                documents.setdefault(chunk["doc_id"], []).append((chunk, match))
+            ranked = sorted(documents.values(), key=len, reverse=True)[:max_results]
+            lines, ids = [], []
+            for matches in ranked:
+                chunk, match = matches[0]
+                text = " ".join(chunk_text(chunk).split())
+                start = max(0, match.start() - 60)
+                source = chunk["title"] if chunk["kind"] == "law" else f"{chunk.get('kommun')} – {chunk['title']}"
+                lines.append(f"{chunk['doc_id']} | {chunk.get('doc_type') or 'law'} | {source} | {len(matches)} matching "
+                             f"chunk(s), first [c:{chunk['chunk_id']}] …{text[start:start + 160]}…")
+                ids.append(chunk["chunk_id"])
+            return ToolResult(f"{total} matching chunks in {len(documents)} documents{note} (showing {len(lines)}, most "
+                              f"matches first):\n" + ("\n".join(lines) or "No match."), ids)
         lines, ids = [], []
         for chunk, match in hits:
             text = " ".join(chunk_text(chunk).split())
             start = max(0, match.start() - 150)
             lines.append(self._line(chunk, "…" + text[start:start + SNIPPET] + "…"))
             ids.append(chunk["chunk_id"])
-        return ToolResult(f"{total} matching chunks (showing {len(lines)}):\n" + ("\n".join(lines) or "No match."), ids)
+        return ToolResult(f"{total} matching chunks{note} (showing {len(lines)}):\n" + ("\n".join(lines) or "No match."), ids)
 
-    def list_documents(self, kommun: str, doc_type: str | None = None, title_contains: str | None = None,
-                       limit: int = 40) -> ToolResult:
+    def list_documents(self, kommun: str, doc_type=None, title_contains: str | None = None, limit: int = 40,
+                       offset: int = 0, doc_types=None) -> ToolResult:
         codes = set(self._kommun_codes(kommun) or [])
         if not codes:
-            return ToolResult(f"Unknown kommun '{kommun}'.")
-        docs = self.corpus.documents(codes, doc_type, title_contains)
+            return _failed("not_found", f"Unknown kommun '{kommun}'.")
+        try:
+            types = parse_doc_types(doc_types or doc_type)
+        except ValueError as exc:
+            return _failed("bad_args", str(exc))
+        docs = self.corpus.documents(codes, types, (title_contains or "").strip() or None)
+        offset, limit = max(0, int(offset or 0)), max(1, min(int(limit or 40), 100))
         lines = [f"{d['doc_id']} | {d['doc_type']} | {d['kind']} | {d['title'][:110]} ({d['chunks']} chunks)"
-                 for d in docs[:limit]]
-        return ToolResult(f"{len(docs)} documents (showing {len(lines)}). doc_type values: detaljplan, oversiktsplan, "
-                          f"bygglov, avlopp, taxa, strandskydd, other\n" + "\n".join(lines))
+                 for d in docs[offset:offset + limit]]
+        more = f"; next page: offset={offset + limit}" if offset + limit < len(docs) else ""
+        shown = f"{offset + 1}-{offset + len(lines)}" if lines else "none"
+        return ToolResult(f"{len(docs)} documents (showing {shown}{more}). doc_types: {', '.join(DOC_TYPES)}\n"
+                          + "\n".join(lines))
 
     def read(self, chunk_id: str | None = None, doc_id: str | None = None, start: int = 0, count: int = 4) -> ToolResult:
         """Read a chunk with its neighbours, or a document from chunk position `start`."""
+        if not chunk_id and doc_id and self.corpus.doc(self._doc_id(doc_id)) is None:
+            chunk_id, doc_id = doc_id, None  # a chunk id passed as doc_id ("c:371d66b20e844cf5")
         if chunk_id:
-            # The model copies ids as the tools print them ("[c:<id>]"), or passes a doc_id here
-            chunk_id = chunk_id.strip().strip("[]").removeprefix("c:")
+            # The model copies ids as the tools print them ("[c:<id>]", "doc page:..."), passes a doc_id here, or
+            # glues a chunk id to a doc prefix ("page:0305:<chunk id>"); agentic.replay checks these forms
+            chunk_id = chunk_id.strip().strip("[]").removeprefix("doc ").removeprefix("c:").strip()
             chunk = self.get_chunk(chunk_id)
+            if chunk is None:
+                chunk = next((c for c in map(self.corpus.chunk, re.findall(r"(?<![0-9a-f])[0-9a-f]{16}(?![0-9a-f])",
+                                                                           chunk_id)) if c), None)
             if chunk is None and self.corpus.doc(self._doc_id(chunk_id)) is not None:
                 doc_id = chunk_id
+            elif chunk is None and doc_id:
+                pass  # a stale or invented chunk id next to a valid doc_id: read the document
             elif chunk is None:
-                return ToolResult(f"Unknown chunk_id {chunk_id}.")
+                return _failed("unknown_id", f"Unknown chunk_id {chunk_id}.")
             else:
                 doc_id = chunk["doc_id"]
                 ids = self.corpus.doc_chunk_ids(doc_id)
@@ -354,11 +457,11 @@ class CorpusTools:
         doc_id = self._doc_id(doc_id)
         doc = self.corpus.doc(doc_id) if doc_id else None
         if doc is None:
-            return ToolResult(f"Unknown doc_id {doc_id}.")
+            return _failed("unknown_id", f"Unknown doc_id {doc_id}.")
         ids = self.corpus.doc_chunk_ids(doc_id)
         start = max(0, int(start or 0))
         if start >= len(ids):
-            return ToolResult(f"{doc_id} has {len(ids)} chunks (positions 0-{len(ids) - 1}); start {start} is past the end.")
+            return _failed("bad_args", f"{doc_id} has {len(ids)} chunks (positions 0-{len(ids) - 1}); start {start} is past the end.")
         selected = ids[start:start + max(1, min(int(count or 4), 12))]
         parts, size = [], 0
         for chunk_id_ in selected:
@@ -384,7 +487,7 @@ class CorpusTools:
                 hint = (" PBL 9 kap. was renumbered by SFS 2025:974 (bygglov 9 kap. 56-57 §, liten avvikelse 60-61 §, "
                         "förhandsbesked 74 §): find the provision by its wording with search or grep.")
             known = f"Laws: {self.corpus.law_titles()}." if not titles else f"'{law}' = {', '.join(titles)}."
-            return ToolResult(f"No section '{normalized}' in '{law}'. {known} Sections look like '9 kap. 4 §' or "
+            return _failed("not_found", f"No section '{normalized}' in '{law}'. {known} Sections look like '9 kap. 4 §' or "
                               f"'13 §' (laws without chapters).{hint}")
         return ToolResult("\n\n".join(f"[c:{c['chunk_id']}] {chunk_text(c)}" for c in hits), [c["chunk_id"] for c in hits])
 
@@ -403,10 +506,10 @@ class CorpusTools:
         """The kommun's detaljplaner from the registry, filtered by words of the name / document titles."""
         codes = self._kommun_codes(kommun)
         if not codes:
-            return ToolResult(f"Unknown kommun '{kommun}'.")
+            return _failed("not_found", f"Unknown kommun '{kommun}'.")
         found = [plan for code in codes for plan in self._plans().get(code, [])]
         if not found:
-            return ToolResult("No plan registry for this kommun; use list_documents(doc_type='detaljplan').")
+            return _failed("no_data", "No plan registry for this kommun; use list_documents(doc_types=['detaljplan']).")
         words = [w for w in (query or "").lower().split() if len(w) > 1]
         def haystack(plan: dict) -> str:
             return " ".join([plan["name"], plan.get("plan_number") or ""] + [d.get("title") or "" for d in plan["documents"]]).lower()
@@ -426,14 +529,14 @@ class CorpusTools:
         """A plan's planbestämmelser as extracted from its plankarta (or planbeskrivning), citeable."""
         plan = next((p for plans in self._plans().values() for p in plans if p["plan_id"] == plan_id), None)
         if plan is None:
-            return ToolResult(f"Unknown plan_id {plan_id}; get ids from the plans tool.")
+            return _failed("unknown_id", f"Unknown plan_id {plan_id}; get ids from the plans tool.")
         rules = [r for r in plan["provisions"] if not topic or topic in r["topics"]]
         docs = "\n".join(f"  {d['role']}: {d['doc_id']} {d.get('title') or ''}{' (scanned, see view_pdf_page)' if d['scanned'] else ''}"
                          for d in plan["documents"])
         header = (f"{plan['name']} ({plan['kommun']}), status {plan['status']}"
                   f"{', laga kraft ' + plan['laga_kraft'] if plan.get('laga_kraft') else ''}\nDocuments:\n{docs}\n")
         if not rules:
-            return ToolResult(header + "No provisions extracted (scanned map or none in the text): read the plankarta "
+            return _failed("no_data", header + "No provisions extracted (scanned map or none in the text): read the plankarta "
                               "(read / view_pdf_page) or the planbeskrivning.")
         lines = [f"[c:{r['chunk_id']}] {r['code'] + ': ' if r['code'] else ''}{r['text']}"
                  f"{' (' + r['law_ref'] + ')' if r.get('law_ref') else ''}{'' if r.get('exact', True) else ' *'}"
@@ -452,34 +555,79 @@ class CorpusTools:
                     return {r["code"]: (r["text"], r.get("chunk_id")) for r in plan["provisions"] if r.get("code")}
         return {}
 
+    @staticmethod
+    def _ocr_words(code: str, pdf_id: str, page_index: int) -> list[tuple] | None:
+        """Words corpus.ocr read on a scanned page, as (Rect, text) in unrotated PDF points like get_text("words");
+        None when the PDF has no OCR output with word boxes."""
+        import pymupdf
+
+        path = WEB_DIR / code / "ocr" / f"{pdf_id}.json"
+        try:
+            words = json.loads(path.read_text(encoding="utf-8")).get("words")
+        except (OSError, ValueError):
+            return None
+        if not words:
+            return None
+        return [(pymupdf.Rect(x0, y0, x1, y1), text) for number, x0, y0, x1, y1, text, *_ in words if number == page_index]
+
+    @staticmethod
+    def _find_in_words(words: list[tuple], around: str) -> list:
+        """Rects of `around` among OCR words: one word ('5:125', also read '5.125'), or consecutive words."""
+        import pymupdf
+
+        wanted = [_label_key(t) for t in around.split()]
+        hits = []
+        for i in range(len(words) - len(wanted) + 1):
+            window = words[i:i + len(wanted)]
+            if [_label_key(text) for _, text in window] == wanted:
+                rect = pymupdf.Rect(window[0][0])
+                for word_rect, _ in window[1:]:
+                    rect |= word_rect
+                hits.append(rect)
+        return hits
+
     def view_map_area(self, doc_id: str, around: str, page: int = 1, size: str = "medium") -> ToolResult:
         """Zoom on a plankarta around a label (property designation such as '5:125', a street, a code), and list
-        the codes printed in that area with their meaning: which zone rules apply to a given property."""
+        the codes printed in that area with their meaning: which zone rules apply to a given property. Scanned
+        plankartor: the label is looked up in the words corpus.ocr read (with their positions)."""
         match = re.fullmatch(r"pdf:(\d{4}):(\w+)", self._doc_id(doc_id) or "")
         if not match:
-            return ToolResult("Only crawled PDFs (doc_id 'pdf:<code>:<id>') can be viewed.")
+            return _failed("bad_args", "Only crawled PDFs (doc_id 'pdf:<code>:<id>') can be viewed.")
         path = WEB_DIR / match.group(1) / "pdf" / f"{match.group(2)}.pdf"
         if not path.exists():
-            return ToolResult(f"PDF file missing for {doc_id}.")
+            return _failed("no_data", f"PDF file missing for {doc_id}.")
         import pymupdf
 
         pdf = pymupdf.open(path)
         page_index = max(1, int(page or 1)) - 1
         if page_index >= len(pdf):
-            return ToolResult(f"{doc_id} has {len(pdf)} pages.")
+            return _failed("bad_args", f"{doc_id} has {len(pdf)} pages.")
         target = pdf[page_index]
         hits = target.search_for(str(around).strip())
+        ocr = None
+        if not hits and not target.get_text("text").strip():  # a scan: no text layer
+            ocr = self._ocr_words(match.group(1), match.group(2), page_index)
+            if ocr is None:
+                return _failed("no_data", f"Page {page_index + 1} of {doc_id} is a scan not read by the OCR yet: look "
+                                          "at it with view_pdf_page.")
+            hits = self._find_in_words(ocr, str(around))
         if not hits:
-            return ToolResult(f"'{around}' is not printed as text on page {page_index + 1} of {doc_id} (scanned map, or "
-                              "another spelling: try the bare number like '5:125', or view_pdf_page).")
+            where = "read by the OCR on the scanned" if ocr is not None else "printed as text on"
+            return _failed("not_found", f"'{around}' is not {where} page {page_index + 1} of {doc_id} (another spelling: "
+                              "try the bare number like '5:125', or view_pdf_page).")
         margin = {"near": 150, "medium": 250, "wide": 450}.get(size, 250)
 
         def area(hit):  # search and word coordinates are unrotated; rendering uses the rotated page
             return pymupdf.Rect(hit.x0 - margin, hit.y0 - margin, hit.x1 + margin, hit.y1 + margin) & target.mediabox
 
+        def words_in(clip) -> list[str]:
+            if ocr is not None:
+                return [text for rect, text in ocr if rect.intersects(clip)]
+            return [w[4] for w in target.get_text("words", clip=clip)]
+
         def codes_in(clip) -> list[str]:
             codes = []
-            for word in (w[4] for w in target.get_text("words", clip=clip)):
+            for word in words_in(clip):
                 if re.fullmatch(r"(?:[a-zåäö]\d{1,2})+", word):        # "h3e3f1f3o3": several codes printed together
                     codes += re.findall(r"[a-zåäö]\d{1,2}", word)
                 elif re.fullmatch(r"[A-ZÅÄÖ]{1,4}\d?|\+\d{1,3}[.,]\d{1,2}", word):
@@ -501,8 +649,10 @@ class CorpusTools:
         legend_ids = [definitions[code][1] for code in codes if code in definitions and definitions[code][1]]
         chunk_ids = list(dict.fromkeys(self.corpus.doc_chunk_ids(doc_id)[:1] + legend_ids))
         cite = f"[c:{chunk_ids[0]}] " if chunk_ids else ""
+        scanned = (" The map is a scan: the label and codes were read by OCR, check them on the image."
+                   if ocr is not None else "")
         text = (f"{cite}Area of page {page_index + 1} of {doc_id} around '{around}' ({len(hits)} occurrence(s) on the "
-                f"page) attached as an image. Codes printed in this area:\n" + ("\n".join(lines) or "none") +
+                f"page) attached as an image.{scanned} Codes printed in this area:\n" + ("\n".join(lines) or "none") +
                 "\nA code applies to the zone (outlined area) it is printed in: check on the image which zone the "
                 "property is in before applying a rule.")
         return ToolResult(text, chunk_ids, image_png=png)
@@ -511,16 +661,16 @@ class CorpusTools:
         """Render a PDF page as an image (plankarta maps, tables, scanned pages)."""
         match = re.fullmatch(r"pdf:(\d{4}):(\w+)", self._doc_id(doc_id) or "")
         if not match:
-            return ToolResult("Only crawled PDFs (doc_id 'pdf:<code>:<id>') can be viewed.")
+            return _failed("bad_args", "Only crawled PDFs (doc_id 'pdf:<code>:<id>') can be viewed.")
         path = WEB_DIR / match.group(1) / "pdf" / f"{match.group(2)}.pdf"
         if not path.exists():
-            return ToolResult(f"PDF file missing for {doc_id}.")
+            return _failed("no_data", f"PDF file missing for {doc_id}.")
         import pymupdf
 
         pdf = pymupdf.open(path)
         page_index = max(1, int(page or 1)) - 1
         if page_index >= len(pdf):
-            return ToolResult(f"{doc_id} has {len(pdf)} pages.")
+            return _failed("bad_args", f"{doc_id} has {len(pdf)} pages.")
         target = pdf[page_index]
         # ~1600 px on the long side: legible for legends without blowing up the context
         zoom = 1600 / max(target.rect.width, target.rect.height)
@@ -533,20 +683,31 @@ TOOL_SCHEMAS = [
      "description": "Resolve a place name (kommun, town, village) to its kommun code and see which document types the corpus has for it.",
      "parameters": {"type": "object", "properties": {"place": {"type": "string"}}, "required": ["place"]}},
     {"type": "function", "name": "search",
-     "description": "Semantic search over Swedish laws and municipal documents. Write the query in Swedish with the legal/planning terms (bygglov, detaljplan, strandskydd, enskilt avlopp...). scope: 'law', 'kommun' or 'all'. Give the kommun to restrict municipal results.",
+     "description": "Semantic search over Swedish laws and municipal documents. Write the query in Swedish with the legal/planning terms (bygglov, detaljplan, strandskydd, enskilt avlopp...). scope: 'law', 'kommun' or 'all'. Give the kommun to restrict municipal results; doc_types / title_contains restrict them to some documents (e.g. doc_types=['oversiktsplan'] for the kommun's growth intentions).",
      "parameters": {"type": "object", "properties": {
          "query": {"type": "string"}, "scope": {"type": "string", "enum": ["law", "kommun", "all"]},
          "kommun": {"type": "string", "description": "kommun name or 4-digit code"},
-         "k": {"type": "integer", "description": "results per pool, max 15"}}, "required": ["query"]}},
+         "k": {"type": "integer", "description": "results per pool, max 15"},
+         "doc_types": {"type": "array", "items": {"type": "string", "enum": list(DOC_TYPES)},
+                       "description": "only kommun documents of these types"},
+         "title_contains": {"type": "string", "description": "only kommun documents whose title contains this"}},
+         "required": ["query"]}},
     {"type": "function", "name": "grep",
-     "description": "Exact / regex search (case-insensitive) in chunk texts. Best for precise terms: plan numbers (B670323), property designations (Vallentuna-Mörby 1:357), place names, 'nockhöjd', 'byggnadsarea', amounts in kronor. Needs a kommun, or scope='law' (no search over every kommun).",
+     "description": "Exact / regex search (case-insensitive) in chunk texts. Best for precise terms: plan numbers (B670323), property designations (Vallentuna-Mörby 1:357), place names, 'nockhöjd', 'byggnadsarea', amounts in kronor. Needs a kommun, or scope='law' (no search over every kommun). output='documents' lists which documents match and how often instead of the passages; doc_types / title_contains restrict the kommun documents.",
      "parameters": {"type": "object", "properties": {
          "pattern": {"type": "string"}, "kommun": {"type": "string"},
-         "scope": {"type": "string", "enum": ["law", "kommun", "all"]}}, "required": ["pattern"]}},
+         "scope": {"type": "string", "enum": ["law", "kommun", "all"]},
+         "doc_types": {"type": "array", "items": {"type": "string", "enum": list(DOC_TYPES)}},
+         "title_contains": {"type": "string"},
+         "output": {"type": "string", "enum": ["chunks", "documents"]},
+         "max_results": {"type": "integer", "description": "passages or documents shown, max 40"}},
+         "required": ["pattern"]}},
     {"type": "function", "name": "list_documents",
-     "description": "List the documents of a kommun (web pages and PDFs), optionally by doc_type (detaljplan, oversiktsplan, bygglov, avlopp, taxa, strandskydd, other) or title substring.",
+     "description": "List the documents of a kommun (web pages and PDFs) by title, optionally of some doc_types (detaljplan, oversiktsplan, bygglov, avlopp, taxa, strandskydd, other) or with a title substring. Pages of up to 100: offset for the next page.",
      "parameters": {"type": "object", "properties": {
-         "kommun": {"type": "string"}, "doc_type": {"type": "string"}, "title_contains": {"type": "string"}},
+         "kommun": {"type": "string"},
+         "doc_types": {"type": "array", "items": {"type": "string", "enum": list(DOC_TYPES)}},
+         "title_contains": {"type": "string"}, "offset": {"type": "integer"}, "limit": {"type": "integer"}},
          "required": ["kommun"]}},
     {"type": "function", "name": "read",
      "description": "Read the full text of a chunk with its neighbours (chunk_id), or of a document starting at a chunk position (doc_id, start, count).",
@@ -567,7 +728,7 @@ TOOL_SCHEMAS = [
      "parameters": {"type": "object", "properties": {"plan_id": {"type": "string"}, "topic": {"type": "string"}},
                     "required": ["plan_id"]}},
     {"type": "function", "name": "view_map_area",
-     "description": "Zoom on a plankarta around a label printed on the map (property designation such as '5:125', a street or block name) and get the codes printed there with their meaning. Use it whenever the question is about a specific property or place inside a detaljplan: the plan's rules differ by zone and only the map tells which zone the property is in. size: near | medium | wide. The image is shown for one step only: note what you read on it.",
+     "description": "Zoom on a plankarta around a label printed on the map (property designation such as '5:125', a street or block name) and get the codes printed there with their meaning. Use it whenever the question is about a specific property or place inside a detaljplan: the plan's rules differ by zone and only the map tells which zone the property is in. Works on scanned plankartor once they are OCRed (labels read by OCR: check them on the image). size: near | medium | wide. The image is shown for one step only: note what you read on it.",
      "parameters": {"type": "object", "properties": {
          "doc_id": {"type": "string", "description": "the plankarta doc_id (from plans / plan_rules)"},
          "around": {"type": "string", "description": "text printed on the map, e.g. '5:125'"},
@@ -588,11 +749,14 @@ def run_tool(tools: CorpusTools, name: str, arguments: dict) -> ToolResult:
         "view_map_area": tools.view_map_area,
     }
     if name not in handlers:
-        return ToolResult(f"Unknown tool {name}.")
+        return _failed("bad_args", f"Unknown tool {name}.")
     try:
         return handlers[name](**arguments)
     except TypeError as exc:
-        return ToolResult(f"Bad arguments for {name}: {exc}")
+        return _failed("bad_args", f"Bad arguments for {name}: {exc}")
+    except Exception as exc:  # a tool bug must not end the run; counted as "exception" by the benchmark and the replay
+        logger.exception("tool %s failed on %s", name, arguments)
+        return _failed("exception", f"{name} failed: {exc!r}")
 
 
 IMAGE_ONCE = ("\nThis image is attached for your next step only, then removed: write down now, in a line or two before "

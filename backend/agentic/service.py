@@ -197,7 +197,7 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
                 yield sse({"type": "thinking", "label": "Writing the answer"})
             yield from delta(numberer.feed(event["delta"]))
         elif event["type"] in ("tool_call", "tool_result"):
-            yield sse({key: event[key] for key in ("type", "name", "input", "result", "chunks", "ms") if key in event})
+            yield sse({key: event[key] for key in ("type", "name", "input", "result", "chunks", "ms", "error") if key in event})
         elif event["type"] == "llm_turn":
             record(kind="llm", name=f"Agent turn {event['turn']}", model=event.get("model"),
                    reasoning_effort=event.get("effort"), usage=event.get("usage"), duration_ms=event.get("ms"),
