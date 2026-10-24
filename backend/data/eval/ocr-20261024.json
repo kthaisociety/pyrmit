@@ -307,8 +307,8 @@
    "labels_found": 139,
    "labels_lenient": 145,
    "images": 15,
-   "seconds": 76.42999999999999,
-   "located": 7976,
+   "seconds": 99.29,
+   "located": 7978,
    "labels_located": 139
   },
   "synthetic/all": {
@@ -320,8 +320,8 @@
    "labels_found": 159,
    "labels_lenient": 165,
    "images": 30,
-   "seconds": 92.33,
-   "located": 11343,
+   "seconds": 120.08,
+   "located": 11345,
    "labels_located": 159
   },
   "synthetic/text": {
@@ -333,7 +333,7 @@
    "labels_found": 20,
    "labels_lenient": 20,
    "images": 15,
-   "seconds": 15.9,
+   "seconds": 20.790000000000003,
    "located": 3367,
    "labels_located": 20
   },
@@ -346,7 +346,7 @@
    "labels_found": 6,
    "labels_lenient": 6,
    "images": 12,
-   "seconds": 3.99
+   "seconds": 5.78
   },
   "real/all": {
    "ref_words": 581,
@@ -357,7 +357,7 @@
    "labels_found": 6,
    "labels_lenient": 6,
    "images": 13,
-   "seconds": 5.0600000000000005
+   "seconds": 7.1000000000000005
   },
   "real/text": {
    "ref_words": 161,
@@ -368,7 +368,7 @@
    "labels_found": 0,
    "labels_lenient": 0,
    "images": 1,
-   "seconds": 1.07
+   "seconds": 1.32
   }
  },
  "rapid-v6-medium-gpu-det960": {
