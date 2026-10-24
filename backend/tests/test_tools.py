@@ -173,6 +173,18 @@ def test_law_chapters():
     assert "Fastighetsbestämning" in chunks[4]["header"]
 
 
+def test_law_reference_wrapped_after_kap():
+    # "enligt 6 kap." ends a wrapped line: "35 § 4 miljöbalken" / "1 § 2 b." are not new sections (MBF 18 §, PBL 5:11 a)
+    text = ("Källa: test\n\n5 kap. Detaljplan\n\n10 § Programmet.\n\n"
+            "11 a § Kommunen ska undersöka enligt 6 kap.\n\n1 § 2 b. Kommunen ska avgöra frågan.\n\n"
+            "11 b § Om genomförandet. Bestämmelser finns i 9 kap.\n\n12 § Kommunen ska samråda.\n\n"
+            "13 § Andra stycket.\n\n1 § 1 och 3 gäller också.\n")
+    chunks = law_chunks({"title": "Testlag", "text": text}, 1500)
+    assert [c["section"] for c in chunks] == ["5 kap. 10 §", "5 kap. 11 a §", "5 kap. 11 b §", "5 kap. 12 §", "5 kap. 13 §"]
+    assert chunks[1]["text"].endswith("enligt 6 kap. 1 § 2 b. Kommunen ska avgöra frågan.")
+    assert chunks[4]["text"].endswith("1 § 1 och 3 gäller också.")
+
+
 def test_resolve_cited_miscopied_ids():
     known = {"4463112e3a73206d": {"chunk_id": "4463112e3a73206d"}, "4463112e3a99aaaa": {"chunk_id": "4463112e3a99aaaa"}}
     # the model kept the first characters of an id it was shown and invented the rest

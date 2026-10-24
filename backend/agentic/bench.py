@@ -43,12 +43,13 @@ from pathlib import Path
 
 from agentic.agent import ANSWER_FORMAT, DEFAULT_MODEL, MODES_GUIDE, ROLE, AgentRun, _add_usage, run_agent
 from agentic.run import build_tools
+from agentic.health import health_lines
 from agentic.tools import resolve_cited
 from corpus.common import read_jsonl
 from llm import get_openai_client, get_response_output_text, resolve_model_name
 from localrag.eval import matches
-from localrag.index import INDEX_DIR, chunk_text
 from corpus.common import RESULTS_ROOT
+from localrag.index import INDEX_DIR, chunk_text
 from localrag.service import SWEDISH_QUERY_SUFFIX, split_rewrite
 
 CASES_PATH = Path(__file__).resolve().parent / "cases.jsonl"
@@ -458,6 +459,11 @@ def main() -> None:
                 if any(v is not None for v in per_repeat):  # e.g. no verdict_ok on explain / propose / develop cases
                     print(f"         {key:<11} per repeat: "
                           f"{', '.join('-' if v is None else f'{v:.2f}' for v in per_repeat)}")
+
+    if any(row.get("steps") for row in rows):
+        # Failed tool calls do not show in the scores (the agent works around them): flag them here
+        print("\nTool health (calls that returned nothing usable):")
+        print("\n".join("  " + line for line in health_lines(rows)))
 
     print(f"\nSaved {out}")
 
