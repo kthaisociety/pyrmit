@@ -106,3 +106,14 @@ def test_repair_mojibake(garbled, fixed):
     from corpus.common import repair_mojibake
 
     assert repair_mojibake(garbled) == fixed
+
+
+@pytest.mark.parametrize("texts, expected", [
+    (("https://www.kalix.se/plan/25_P92_2_PB.pdf",), "detaljplan"),  # planbeskrivning in a plan archive's code
+    (("1468 - Byggnadsplan för Stora Skedvi Kyrkby",), "detaljplan"),  # pre-1987 plan, a detaljplan today
+    (("Stadsplanering och trafik",), "other"),
+])
+def test_doc_type(texts, expected):
+    from corpus.extract import doc_type
+
+    assert doc_type(*texts) == expected
