@@ -34,14 +34,11 @@ DET_SIDE = 1280
 WORKERS = 1
 OCR_PYTHON = BACKEND_DIR / ".venv-ocr" / "Scripts" / "python.exe"
 JOBS_PATH = DATA_DIR / "ocr_jobs.jsonl"
-# Tiers of the scans by what they bring, OCRed in this order; --max-tier stops after one. A tier's page cap keeps the
-# first pages of long documents (rules and summaries come first; a plankarta has 1-2 sheets)
+# Tiers of the scans by what they bring, OCRed in this order (every page; --max-tier stops after a tier)
 TIERS = {1: "plan maps and provisions", 2: "plan texts (descriptions, consultation reports)",
          3: "other planning types (översiktsplan, avlopp, bygglov, strandskydd, taxa)",
          4: "studies attached to plans (noise, soil, stormwater, traffic...)", 5: "other"}
-TIER_PAGES = {1: 40, 2: 20, 3: 20, 4: 20, 5: 20}
-# 2026-10-24, at 0.66 s per tile: tier 1 ~12 h (5.4k PDFs), 2 ~14 h, 3 ~3 h, 4 ~1 h, 5 ~6 h
-MAX_TIER = 2
+MAX_TIER = 5
 
 
 # Scans typed "other" that are plan documents (2026-10-24: 2.1k of 3.8k): the current doc_type rules (_PB / _PK
@@ -115,7 +112,7 @@ def main() -> None:
         for document in todo:
             handle.write(json.dumps({
                 "pdf": str(document["_pdf"]), "out": str(document["_pdf"].parent.parent / "ocr" / f"{document['_pdf'].stem}.json"),
-                "max_pages": TIER_PAGES[document["_tier"]], "tier": document["_tier"],
+                "max_pages": None, "tier": document["_tier"],
                 "label": f"{document['kommun']} – {document['title']}",
             }, ensure_ascii=False) + "\n")
     print("scans per tier: " + "; ".join(f"{t} {TIERS[t].split(' (')[0]}: {n}" for t, n in counts.items()), flush=True)

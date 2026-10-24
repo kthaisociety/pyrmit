@@ -188,7 +188,7 @@ def design_choices(s: dict) -> str:
     effect (the history of a choice belongs in the commit messages, not here)."""
     from agentic.tools import READ_LIMIT, SNIPPET
     from corpus.crawl import KEEP_SCORE
-    from corpus.ocr import MAX_TIER, TIER_PAGES, TIERS
+    from corpus.ocr import TIERS
 
     c = s["crawl"]
     empty = ", ".join(c["empty"] + c["missing"]) or "none"
@@ -248,9 +248,8 @@ def design_choices(s: dict) -> str:
         ("Extraction", "PDF text",
          "PyMuPDF text layer, repeated headers / footers removed; &lt; 150 characters per page = scanned, OCR by "
          f"PP-OCRv6 medium (recognition cut to the Latin characters, detection input 1280 px; text pages at 300 dpi and "
-         f"maps at 200, word boxes kept), by tier: {'; '.join(f'{k} {v.split(' (')[0]} ({TIER_PAGES[k]} pages)' for k, v in TIERS.items() if k <= MAX_TIER)}; "
-         f"{', '.join(v.split(' (')[0] for k, v in TIERS.items() if k > MAX_TIER)} on request; no topic filter here "
-         "(the relevance filter decides)",
+         f"maps at 200, word boxes kept), every page, in this order: {'; '.join(f'{k} {v.split(' (')[0]}' for k, v in TIERS.items())}; "
+         "no topic filter here (the relevance filter decides)",
          "Free on the local GPU; best of the engines measured on old plan scans (OCR benchmark: 87 % of the words and "
          "8 of 13 property labels read on map crops, 69 % and 0 for EasyOCR); word boxes let the agent find a "
          "property label on a scanned map",

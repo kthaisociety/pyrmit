@@ -149,9 +149,10 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   with ~15.6k provisions. Which map area carries which code is not extracted (needs the vision model).
 - `corpus.ocr` writes the job list (`data/corpus/ocr_jobs.jsonl`) by tier (`TIERS`, `ocr_tier`; a first page larger
   than A3 = a map; plan documents typed "other" count as plans: `PLAN_WORDS` / the current `doc_type` rules, e.g.
-  Huddinge's "Bestämmelse0126k-7018", Kalix's "_PK" files): 1 plan maps and provisions (~12 h, 5.4k PDFs, 40 pages),
-  2 plan texts (~14 h, 20 pages), 3 other planning types (~3 h), 4 studies attached to plans (~1 h), 5 other (~6 h);
-  `MAX_TIER = 2` (`--max-tier`); short documents first within a tier; outputs of any PP-OCRv6 setting are kept,
+  Huddinge's "Bestämmelse0126k-7018", Kalix's "_PK" files), every page: 1 plan maps and provisions (~12.5 h, 5.4k
+  PDFs), 2 plan texts (~16 h), 3 other planning types (~4 h), 4 studies attached to plans (~1 h), 5 other (~12 h), ~46 h
+  in all (2026-10-24, 0.66 s per tile); `MAX_TIER = 5` (`--max-tier` stops earlier); short documents first within a
+  tier; outputs of any PP-OCRv6 setting are kept,
   EasyOCR's are redone. Speed (2026-10-24, same 24 first-night PDFs: 249 -> 152 s, -39 %, 4 % fewer words):
   detection input capped at 1280 px (`DET_SIDE`, `--det-side 0` = whole 2000 px tile: same words and labels on the
   benchmark, 139 vs 140 of 305); recognition cut to its 550 Latin characters (`latin_rec_model`, of 18,710: the
