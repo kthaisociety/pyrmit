@@ -42,8 +42,10 @@ def main() -> None:
     todo = [d for d in read_jsonl(DOCUMENTS_PATH) if d["kind"] == "pdf" and (d.get("needs_ocr") or d.get("ocr"))]
     if args.kommuner:
         todo = [d for d in todo if d["kommun_code"] in set(args.kommuner)]
-    # Hours of work: detaljplaner first (plankartor are the point), short documents first within a type
-    todo.sort(key=lambda d: (d.get("doc_type") != "detaljplan", d.get("pages") or 0))
+    # Hours of work: detaljplaner first (plankartor are the point, ~31 h), then the other planning types (~6 h), the
+    # "other" scans last (~30 h, decisions and studies of unknown value: the run can stop before them); short documents
+    # first within a group
+    todo.sort(key=lambda d: (d.get("doc_type") != "detaljplan", d.get("doc_type") == "other", d.get("pages") or 0))
     if args.max_docs:
         todo = todo[:args.max_docs]
     with JOBS_PATH.open("w", encoding="utf-8") as handle:
