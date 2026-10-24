@@ -36,12 +36,12 @@ from pathlib import Path
 from agentic.cases_from_caselaw import longest_phrase
 from corpus.common import read_jsonl, stable_id, write_jsonl
 from localrag.eval import normalize
-from localrag.index import INDEX_DIR
+from corpus.common import RESULTS_ROOT
 from localrag.store import store_dir
 from llm import get_openai_client, get_response_output_text, resolve_model_name
 
 OUTPUT_PATH = Path(__file__).resolve().parent / "cases_generated.jsonl"
-DRAFTS_PATH = INDEX_DIR.parent / "agentic" / "task_drafts.jsonl"
+DRAFTS_PATH = RESULTS_ROOT / "agentic" / "task_drafts.jsonl"
 DEFAULT_MODEL = "xiaomi/mimo-v2.6-flash"
 SEED_KOMMUNER = {"0115", "0188", "0380", "0980"}  # cases_tasks.jsonl
 MAX_SOURCE_CHARS = 1800

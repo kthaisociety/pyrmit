@@ -29,11 +29,12 @@ import numpy as np
 
 from corpus.common import read_jsonl
 from localrag.gazetteer import detect_kommuner
+from corpus.common import RESULTS_ROOT
 from localrag.index import INDEX_DIR, load_chunks
 from localrag.retriever import LocalRetriever
 
 QUESTIONS_PATH = Path(__file__).resolve().parent / "questions.jsonl"
-RESULTS_DIR = INDEX_DIR.parent / "eval"
+RESULTS_DIR = RESULTS_ROOT / "eval"
 RERANKER = "BAAI/bge-reranker-v2-m3"
 
 # name -> (mode, dense_lang, bm25 analyzer, query used for BM25)

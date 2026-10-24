@@ -48,10 +48,11 @@ from corpus.common import read_jsonl
 from llm import get_openai_client, get_response_output_text, resolve_model_name
 from localrag.eval import matches
 from localrag.index import INDEX_DIR, chunk_text
+from corpus.common import RESULTS_ROOT
 from localrag.service import SWEDISH_QUERY_SUFFIX, split_rewrite
 
 CASES_PATH = Path(__file__).resolve().parent / "cases.jsonl"
-RESULTS_DIR = INDEX_DIR.parent / "agentic"
+RESULTS_DIR = RESULTS_ROOT / "agentic"
 
 RAG_INSTRUCTIONS = f"""{ROLE}
 

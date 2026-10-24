@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -10,7 +11,14 @@ from typing import Iterable, Iterator
 from dotenv import load_dotenv
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BACKEND_DIR / "data" / "corpus"
+load_dotenv(BACKEND_DIR / ".env")
+# Benchmark results and evals (data/agentic, data/eval, versioned) stay here whatever corpus is selected
+RESULTS_ROOT = BACKEND_DIR / "data"
+# Corpus snapshot: corpus/ + index/ under CORPUS_DATA_DIR (relative to backend/), default backend/data. The small
+# corpus of 2026-10-22 (7.8k PDFs, kept for demos) is data/small; its corpus/raw is a junction to data/corpus/raw
+DATA_ROOT = BACKEND_DIR / os.getenv("CORPUS_DATA_DIR", "data")
+DATA_DIR = DATA_ROOT / "corpus"
+INDEX_DIR = DATA_ROOT / "index"
 RAW_DIR = DATA_DIR / "raw"
 LAWS_DIR = RAW_DIR / "laws"
 WEB_DIR = RAW_DIR / "web"
@@ -21,7 +29,6 @@ CHUNKS_PATH = DATA_DIR / "chunks.jsonl"
 USER_AGENT = "PyrmitCorpusBuilder/0.1 (research prototype on Swedish planning documents)"
 
 sys.path.insert(0, str(BACKEND_DIR))
-load_dotenv(BACKEND_DIR / ".env")
 
 for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, "reconfigure"):
