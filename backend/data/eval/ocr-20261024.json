@@ -73,6 +73,47 @@
    "seconds": 5.14
   }
  },
+ "rapid-v6-medium-fp16-cuda-det1280": {
+  "synthetic/map": {
+   "ref_words": 15814,
+   "pred_words": 612,
+   "exact": 573,
+   "near": 581,
+   "labels": 305,
+   "labels_found": 14,
+   "labels_lenient": 14,
+   "images": 15,
+   "seconds": 446.34,
+   "located": 566,
+   "labels_located": 14
+  },
+  "synthetic/all": {
+   "ref_words": 17677,
+   "pred_words": 1116,
+   "exact": 1072,
+   "near": 1080,
+   "labels": 319,
+   "labels_found": 16,
+   "labels_lenient": 16,
+   "images": 22,
+   "seconds": 586.72,
+   "located": 1061,
+   "labels_located": 16
+  },
+  "synthetic/text": {
+   "ref_words": 1863,
+   "pred_words": 504,
+   "exact": 499,
+   "near": 499,
+   "labels": 14,
+   "labels_found": 2,
+   "labels_lenient": 2,
+   "images": 7,
+   "seconds": 140.38,
+   "located": 495,
+   "labels_located": 2
+  }
+ },
  "rapid-v6-medium-fp16-gpu": {
   "synthetic/map": {
    "ref_words": 15814,
@@ -182,7 +223,7 @@
    "seconds": 3.21
   }
  },
- "rapid-v6-medium-gpu-det1280": {
+ "rapid-v6-medium-gpu-det1280-fullvocab": {
   "synthetic/map": {
    "ref_words": 15814,
    "pred_words": 11558,
@@ -254,6 +295,80 @@
    "labels_lenient": 0,
    "images": 1,
    "seconds": 1.38
+  }
+ },
+ "rapid-v6-medium-gpu-det1280": {
+  "synthetic/map": {
+   "ref_words": 15814,
+   "pred_words": 11508,
+   "exact": 8227,
+   "near": 8546,
+   "labels": 305,
+   "labels_found": 139,
+   "labels_lenient": 145,
+   "images": 15,
+   "seconds": 76.42999999999999,
+   "located": 7976,
+   "labels_located": 139
+  },
+  "synthetic/all": {
+   "ref_words": 19393,
+   "pred_words": 14983,
+   "exact": 11597,
+   "near": 11933,
+   "labels": 329,
+   "labels_found": 159,
+   "labels_lenient": 165,
+   "images": 30,
+   "seconds": 92.33,
+   "located": 11343,
+   "labels_located": 159
+  },
+  "synthetic/text": {
+   "ref_words": 3579,
+   "pred_words": 3475,
+   "exact": 3370,
+   "near": 3387,
+   "labels": 24,
+   "labels_found": 20,
+   "labels_lenient": 20,
+   "images": 15,
+   "seconds": 15.9,
+   "located": 3367,
+   "labels_located": 20
+  },
+  "real/map": {
+   "ref_words": 420,
+   "pred_words": 416,
+   "exact": 362,
+   "near": 381,
+   "labels": 13,
+   "labels_found": 6,
+   "labels_lenient": 6,
+   "images": 12,
+   "seconds": 3.99
+  },
+  "real/all": {
+   "ref_words": 581,
+   "pred_words": 578,
+   "exact": 484,
+   "near": 510,
+   "labels": 13,
+   "labels_found": 6,
+   "labels_lenient": 6,
+   "images": 13,
+   "seconds": 5.0600000000000005
+  },
+  "real/text": {
+   "ref_words": 161,
+   "pred_words": 162,
+   "exact": 122,
+   "near": 129,
+   "labels": 0,
+   "labels_found": 0,
+   "labels_lenient": 0,
+   "images": 1,
+   "seconds": 1.07
   }
  },
  "rapid-v6-medium-gpu-det960": {
@@ -330,57 +445,7 @@
    "seconds": 1.15
   }
  },
- "rapid-v6-medium-gpu-x1.5": {
-  "synthetic/map": {
-   "ref_words": 15814,
-   "pred_words": 11789,
-   "exact": 8105,
-   "near": 8453,
-   "labels": 305,
-   "labels_found": 140,
-   "labels_lenient": 144,
-   "images": 15,
-   "seconds": 400.84999999999997,
-   "located": 7848,
-   "labels_located": 138
-  },
-  "synthetic/all": {
-   "ref_words": 15814,
-   "pred_words": 11789,
-   "exact": 8105,
-   "near": 8453,
-   "labels": 305,
-   "labels_found": 140,
-   "labels_lenient": 144,
-   "images": 15,
-   "seconds": 400.84999999999997,
-   "located": 7848,
-   "labels_located": 138
-  },
-  "real/map": {
-   "ref_words": 420,
-   "pred_words": 423,
-   "exact": 359,
-   "near": 374,
-   "labels": 13,
-   "labels_found": 8,
-   "labels_lenient": 8,
-   "images": 12,
-   "seconds": 10.48
-  },
-  "real/all": {
-   "ref_words": 420,
-   "pred_words": 423,
-   "exact": 359,
-   "near": 374,
-   "labels": 13,
-   "labels_found": 8,
-   "labels_lenient": 8,
-   "images": 12,
-   "seconds": 10.48
-  }
- },
- "rapid-v6-medium-gpu": {
+ "rapid-v6-medium-gpu-fullvocab": {
   "synthetic/map": {
    "ref_words": 15814,
    "pred_words": 11686,
@@ -452,6 +517,130 @@
    "labels_lenient": 0,
    "images": 1,
    "seconds": 1.75
+  }
+ },
+ "rapid-v6-medium-gpu-x1.5": {
+  "synthetic/map": {
+   "ref_words": 15814,
+   "pred_words": 11789,
+   "exact": 8105,
+   "near": 8453,
+   "labels": 305,
+   "labels_found": 140,
+   "labels_lenient": 144,
+   "images": 15,
+   "seconds": 400.84999999999997,
+   "located": 7848,
+   "labels_located": 138
+  },
+  "synthetic/all": {
+   "ref_words": 15814,
+   "pred_words": 11789,
+   "exact": 8105,
+   "near": 8453,
+   "labels": 305,
+   "labels_found": 140,
+   "labels_lenient": 144,
+   "images": 15,
+   "seconds": 400.84999999999997,
+   "located": 7848,
+   "labels_located": 138
+  },
+  "real/map": {
+   "ref_words": 420,
+   "pred_words": 423,
+   "exact": 359,
+   "near": 374,
+   "labels": 13,
+   "labels_found": 8,
+   "labels_lenient": 8,
+   "images": 12,
+   "seconds": 10.48
+  },
+  "real/all": {
+   "ref_words": 420,
+   "pred_words": 423,
+   "exact": 359,
+   "near": 374,
+   "labels": 13,
+   "labels_found": 8,
+   "labels_lenient": 8,
+   "images": 12,
+   "seconds": 10.48
+  }
+ },
+ "rapid-v6-medium-gpu": {
+  "synthetic/map": {
+   "ref_words": 15814,
+   "pred_words": 11671,
+   "exact": 8285,
+   "near": 8602,
+   "labels": 305,
+   "labels_found": 141,
+   "labels_lenient": 146,
+   "images": 15,
+   "seconds": 108.04999999999998,
+   "located": 8045,
+   "labels_located": 141
+  },
+  "synthetic/all": {
+   "ref_words": 19393,
+   "pred_words": 15138,
+   "exact": 11619,
+   "near": 11954,
+   "labels": 329,
+   "labels_found": 161,
+   "labels_lenient": 166,
+   "images": 30,
+   "seconds": 131.03999999999994,
+   "located": 11368,
+   "labels_located": 161
+  },
+  "synthetic/text": {
+   "ref_words": 3579,
+   "pred_words": 3467,
+   "exact": 3334,
+   "near": 3352,
+   "labels": 24,
+   "labels_found": 20,
+   "labels_lenient": 20,
+   "images": 15,
+   "seconds": 22.99,
+   "located": 3323,
+   "labels_located": 20
+  },
+  "real/map": {
+   "ref_words": 420,
+   "pred_words": 419,
+   "exact": 367,
+   "near": 382,
+   "labels": 13,
+   "labels_found": 8,
+   "labels_lenient": 8,
+   "images": 12,
+   "seconds": 4.51
+  },
+  "real/all": {
+   "ref_words": 581,
+   "pred_words": 561,
+   "exact": 485,
+   "near": 505,
+   "labels": 13,
+   "labels_found": 8,
+   "labels_lenient": 8,
+   "images": 13,
+   "seconds": 6.08
+  },
+  "real/text": {
+   "ref_words": 161,
+   "pred_words": 142,
+   "exact": 118,
+   "near": 123,
+   "labels": 0,
+   "labels_found": 0,
+   "labels_lenient": 0,
+   "images": 1,
+   "seconds": 1.57
   }
  },
  "rapid-v6-small-fp16-gpu": {
@@ -528,7 +717,7 @@
    "seconds": 1.26
   }
  },
- "rapid-v6-small-gpu-det1280": {
+ "rapid-v6-small-gpu-det1280-fullvocab": {
   "synthetic/map": {
    "ref_words": 15814,
    "pred_words": 11099,
@@ -600,6 +789,80 @@
    "labels_lenient": 0,
    "images": 1,
    "seconds": 0.9
+  }
+ },
+ "rapid-v6-small-gpu-det1280": {
+  "synthetic/map": {
+   "ref_words": 15814,
+   "pred_words": 11093,
+   "exact": 7639,
+   "near": 8020,
+   "labels": 305,
+   "labels_found": 121,
+   "labels_lenient": 121,
+   "images": 15,
+   "seconds": 48.69999999999999,
+   "located": 7384,
+   "labels_located": 121
+  },
+  "synthetic/all": {
+   "ref_words": 19393,
+   "pred_words": 14459,
+   "exact": 10781,
+   "near": 11185,
+   "labels": 329,
+   "labels_found": 143,
+   "labels_lenient": 143,
+   "images": 30,
+   "seconds": 57.32999999999999,
+   "located": 10518,
+   "labels_located": 143
+  },
+  "synthetic/text": {
+   "ref_words": 3579,
+   "pred_words": 3366,
+   "exact": 3142,
+   "near": 3165,
+   "labels": 24,
+   "labels_found": 22,
+   "labels_lenient": 22,
+   "images": 15,
+   "seconds": 8.63,
+   "located": 3134,
+   "labels_located": 22
+  },
+  "real/map": {
+   "ref_words": 420,
+   "pred_words": 405,
+   "exact": 350,
+   "near": 366,
+   "labels": 13,
+   "labels_found": 6,
+   "labels_lenient": 6,
+   "images": 12,
+   "seconds": 2.43
+  },
+  "real/all": {
+   "ref_words": 581,
+   "pred_words": 576,
+   "exact": 475,
+   "near": 495,
+   "labels": 13,
+   "labels_found": 6,
+   "labels_lenient": 6,
+   "images": 13,
+   "seconds": 3.0500000000000003
+  },
+  "real/text": {
+   "ref_words": 161,
+   "pred_words": 171,
+   "exact": 125,
+   "near": 129,
+   "labels": 0,
+   "labels_found": 0,
+   "labels_lenient": 0,
+   "images": 1,
+   "seconds": 0.62
   }
  },
  "rapid-v6-small-gpu": {
