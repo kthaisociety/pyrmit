@@ -12,7 +12,8 @@ Benchmark: writes data/ocr_bench/pred-<engine>.jsonl, one line per image:
     .venv/Scripts/python corpus/ocr_engines.py --engine easyocr --gpu             # the engine used before (sv + en)
 
 Corpus (`--jobs <file>`, written by corpus.ocr): one JSON per scanned PDF with the text of each page in reading order
-and every word with its box in PDF coordinates (unrotated, like PyMuPDF's get_text("words"): view_map_area can find
+(`"text_from": "words"`: lines cut by a tile edge rebuilt from their words; older outputs kept them from both tiles
+and are redone after their tier) and every word with its box in PDF coordinates (unrotated, like PyMuPDF's get_text("words"): view_map_area can find
 a property label on a scan); outputs already made by this engine are skipped (resumable).
 
 --gpu: EasyOCR on CUDA (torch of .venv); PP-OCRv6 on DirectML (onnxruntime-directml, Windows' GPU API: 0.75 s per
@@ -257,14 +258,16 @@ def rapid_engine(model_type: str, gpu: bool, threads: int, fp16: bool = False, d
         words, lines = [], []
         if result.txts is None:
             return words, lines, "native"
-        for line, line_text, line_score, line_box in zip(result.word_results, result.txts, result.scores, result.boxes):
+        for number, (line, line_text, line_score, line_box) in enumerate(
+                zip(result.word_results, result.txts, result.scores, result.boxes)):
             lines.append([*box(line_box), line_text])
-            # Word boxes come from the recogniser's character positions; a line without them is split evenly
+            # Word boxes come from the recogniser's character positions; a line without them is split evenly.
+            # Each word carries the number of its line (ocr_image rebuilds the lines cut by a tile edge)
             if line and all(item[2] is not None for item in line):
                 for text, score, points in line:
-                    words.append([*box(points), text, float(score)])
+                    words.append([*box(points), text, float(score), number])
             else:
-                words.extend(split_line(line_box, line_text, float(line_score)))
+                words.extend([*word, number] for word in split_line(line_box, line_text, float(line_score)))
         return words, lines, "native"
 
     return run
@@ -281,9 +284,9 @@ def easyocr_engine(gpu: bool, threads: int):
 
     def run(image: np.ndarray) -> tuple[list[list], list[list], str]:
         words, lines = [], []
-        for points, text, score in reader.readtext(image, paragraph=False):
+        for number, (points, text, score) in enumerate(reader.readtext(image, paragraph=False)):
             lines.append([*box(points), text])
-            words.extend(split_line(points, text, float(score)))
+            words.extend([*word, number] for word in split_line(points, text, float(score)))
         return words, lines, "split"
 
     return run
@@ -301,17 +304,21 @@ ENGINES = {
 
 
 def ocr_image(run, image: np.ndarray, tile: int, overlap: int) -> tuple[list[list], list[list], str]:
-    """Words [x0, y0, x1, y1, text, score] and lines [x0, y0, x1, y1, text] of a whole image, tile by tile."""
+    """Words [x0, y0, x1, y1, text, score] and lines [x0, y0, x1, y1, text] of a whole image, tile by tile. A line
+    crossing a tile edge is cut in both tiles: each tile gives the line's words of its core (until 2026-10-24 the
+    whole line was kept from both: "gäller bestämm iller bestämmelsen"), see join_cut_lines."""
     words, lines, kind = [], [], "native"
     for top, left, core in tiles(*image.shape[:2], tile, overlap):
-        found, found_lines, kind = run(np.ascontiguousarray(image[top:top + tile, left:left + tile]))
-        inside = lambda x0, y0, x1, y1: core[0] <= (x0 + x1) / 2 < core[2] and core[1] <= (y0 + y1) / 2 < core[3]
-        for x0, y0, x1, y1, text, score in found:
-            if inside(x0 + left, y0 + top, x1 + left, y1 + top):
-                words.append([x0 + left, y0 + top, x1 + left, y1 + top, text, score])
-        for x0, y0, x1, y1, text in found_lines:
-            if inside(x0 + left, y0 + top, x1 + left, y1 + top):
-                lines.append([x0 + left, y0 + top, x1 + left, y1 + top, text])
+        found, _, kind = run(np.ascontiguousarray(image[top:top + tile, left:left + tile]))
+        kept = {}
+        for x0, y0, x1, y1, text, score, number in found:
+            word = [x0 + left, y0 + top, x1 + left, y1 + top, text, score]
+            if core[0] <= (word[0] + word[2]) / 2 < core[2] and core[1] <= (word[1] + word[3]) / 2 < core[3]:
+                words.append(word)
+                kept.setdefault(number, []).append(word)
+        lines.extend(kept.values())
+    lines = [[min(w[0] for w in line), min(w[1] for w in line), max(w[2] for w in line), max(w[3] for w in line),
+              " ".join(w[4] for w in line)] for line in join_cut_lines(lines)]
     return words, lines, kind
 
 
@@ -327,6 +334,49 @@ def reading_order(lines: list[list]) -> str:
     if current:
         rows.append(current)
     return "\n".join(" ".join(l[4] for l in sorted(row, key=lambda l: l[0])) for row in rows)
+
+
+def _glue(left: str, right: str) -> str | None:
+    """One word read from two tiles, each side cut by the tile edge: "Användningsgrä" + "vändningsgräns", or one
+    side whole: "byggnads" + "byggnadsarea"."""
+    if right in left or left in right:
+        return max(left, right, key=len)
+    for size in range(min(len(left), len(right)) - 1, 2, -1):
+        if left.endswith(right[:size]):
+            return left + right[size:]
+    return None
+
+
+def _overlap(a: list, b: list) -> bool:
+    """The boxes of two words cover the same spot (over a third of the smaller one, both ways)."""
+    return (min(a[2], b[2]) - max(a[0], b[0]) > min(a[2] - a[0], b[2] - b[0]) / 3
+            and min(a[3], b[3]) - max(a[1], b[1]) > min(a[3] - a[1], b[3] - b[1]) / 3)
+
+
+def join_cut_lines(lines: list[list[list]]) -> list[list[list]]:
+    """Lines as lists of words [x0, y0, x1, y1, text, ...]. A word cut by a tile edge can be kept from both tiles
+    ("byggnads" + "byggnadsarea", centres on either side of the middle of the overlap): a line whose first word
+    covers the last word of another line is its continuation, glued on that word. Other pieces of a cut line stay
+    separate lines on the same row (reading_order puts them side by side)."""
+    lines = [list(line) for line in lines]
+    ends = {}
+    for index, line in enumerate(lines):
+        ends.setdefault(round(line[-1][1] / 20), []).append(index)
+    for index, line in enumerate(lines):
+        if not line:
+            continue
+        first = line[0]
+        key = round(first[1] / 20)
+        other = next((i for k in (key - 1, key, key + 1) for i in ends.get(k, [])
+                      if i != index and lines[i] and _overlap(lines[i][-1], first) and _glue(lines[i][-1][4], first[4])),
+                     None)
+        if other is not None:
+            last = lines[other][-1]
+            lines[other][-1] = [min(last[0], first[0]), min(last[1], first[1]), max(last[2], first[2]),
+                                max(last[3], first[3]), _glue(last[4], first[4])]
+            lines[other].extend(line[1:])
+            lines[index] = []
+    return [line for line in lines if line]
 
 
 def ocr_pdf(run, path: str, max_pages: int, dpi: int, map_dpi: int, tile: int, overlap: int) -> dict:
@@ -362,9 +412,11 @@ def run_jobs(run, engine: str, args) -> None:
             continue
         out = Path(job["out"])
         if out.exists():
-            # Any PP-OCRv6 output is kept (model size or detection setting changed between runs); EasyOCR's are redone
+            # Any PP-OCRv6 output is kept (model size or detection setting changed between runs) once its cut lines
+            # are joined (text_from); EasyOCR's are redone
             try:
-                if (json.loads(out.read_text(encoding="utf-8")).get("engine") or "").startswith(engine.split("-")[0] + "-v6"):
+                previous = json.loads(out.read_text(encoding="utf-8"))
+                if (previous.get("engine") or "").startswith(engine.split("-")[0] + "-v6") and previous.get("text_from"):
                     continue
             except ValueError:
                 pass
@@ -377,7 +429,8 @@ def run_jobs(run, engine: str, args) -> None:
         out.parent.mkdir(parents=True, exist_ok=True)
         temporary = out.with_suffix(".part")
         temporary.write_text(json.dumps({"engine": engine, "dpi": args.dpi, "map_dpi": args.map_dpi,
-                                         "word_coordinates": "pdf points, unrotated page", **result},
+                                         "word_coordinates": "pdf points, unrotated page", "text_from": "words",
+                                         **result},
                                         ensure_ascii=False), encoding="utf-8")
         temporary.replace(out)
         done += 1

@@ -99,13 +99,17 @@ def main() -> None:
     todo = [d for d in read_jsonl(DOCUMENTS_PATH) if d["kind"] == "pdf" and (d.get("needs_ocr") or d.get("ocr"))]
     if args.kommuner:
         todo = [d for d in todo if d["kommun_code"] in set(args.kommuner)]
-    # By tier (TIERS), short documents first within one
+    # By tier (TIERS), short documents first within one; outputs to redo (lines cut by a tile edge kept from both
+    # tiles until 2026-10-24, no "text_from") after the PDFs of their tier not read yet
     for document in todo:
         _, code, pdf_id = document["doc_id"].split(":")
         document["_pdf"] = WEB_DIR / code / "pdf" / f"{pdf_id}.pdf"
         document["_tier"] = ocr_tier(document, large_first_page(document["_pdf"]))
+        out = WEB_DIR / code / "ocr" / f"{pdf_id}.json"
+        document["_redo"] = out.exists() and b'"text_from"' not in out.open("rb").read(300)
     counts = {tier: sum(1 for d in todo if d["_tier"] == tier) for tier in TIERS}
-    todo = sorted((d for d in todo if d["_tier"] <= args.max_tier), key=lambda d: (d["_tier"], d.get("pages") or 0))
+    todo = sorted((d for d in todo if d["_tier"] <= args.max_tier),
+                  key=lambda d: (d["_tier"], d["_redo"], d.get("pages") or 0))
     if args.max_docs:
         todo = todo[:args.max_docs]
     with JOBS_PATH.open("w", encoding="utf-8") as handle:
