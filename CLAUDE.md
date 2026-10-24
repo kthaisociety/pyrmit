@@ -147,9 +147,12 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   Each is tied to its chunk for citation; `corpus.chunk` drops paragraphs repeated across the corpus (standard plan
   wording), so ~2 % fall back to a chunk of the same plankarta (`exact: false`). ~8.2k plans / 260 kommuner, ~1.4k
   with ~15.6k provisions. Which map area carries which code is not extracted (needs the vision model).
-- `corpus.ocr` writes the job list (`data/corpus/ocr_jobs.jsonl`: scanned PDFs, detaljplaner first (~31 h), then the
-  other planning types (~6 h), the "other" scans last (~30 h of decisions / studies of unknown value: a run can stop
-  before them), short documents first within a group; PDFs OCRed by another engine are redone) and starts `corpus/ocr_engines.py --jobs` in `backend/.venv-ocr`
+- `corpus.ocr` writes the job list (`data/corpus/ocr_jobs.jsonl`: scanned PDFs in `ocr_group` order: detaljplaner and
+  the plan documents typed "other" (`PLAN_WORDS` / the current `doc_type` rules: 2.1k of the 3.8k "other" scans, e.g.
+  Huddinge's "Bestämmelse0126k-7018", Kalix's "_PK" files) ~35 h, the other planning types ~4 h, the rest of "other"
+  (studies, guidelines, permit drawings) ~10 h last: a run can stop before them; short documents first within a group;
+  outputs of any PP-OCRv6 setting are kept, EasyOCR's are redone). Detection input capped at 1280 px (`DET_SIDE`,
+  `--det-side 0` = whole 2000 px tile): 25 % faster, same words and labels on the benchmark (139 vs 140 of 305) and starts `corpus/ocr_engines.py --jobs` in `backend/.venv-ocr`
   (PP-OCRv6 medium on DirectML; text pages at 300 dpi, pages larger than A3 at 200, 40 pages max). Each
   `ocr/<pdf id>.json` holds `pages` (text in reading order, what `corpus.extract` uses) and `words` ([page, x0, y0, x1,
   y1, text, score] in PDF points of the unrotated page, like `get_text("words")`: `view_map_area` finds labels there on
@@ -229,7 +232,11 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   84 / 49 / 89 %, 6 labels; **medium 87 / 52 / 93 %, 8 labels** (chosen). The synthetic maps' reference is noisy (CAD
   hatch glyphs, split words); words under 12 px are read 16 % of the time, and neither enlarging the image nor
   rendering the scans at 300 dpi helped on maps (300 dpi did help the typewritten page: 84 vs 73 %).
-  `tests/test_ocr_bench.py`.
+  Speed (2026-10-24, `ocr_engines.py --det-side N`, `-fp16` engines): float16 copies of the models (`fp16_models`,
+  onnxconverter-common installed with --no-deps) are no faster on DirectML; detection ~40 % / recognition ~50 % of a
+  tile's time; capping the detection input at 1280 px -25 % with no loss on synthetic maps, 960 px -36 % (-9 % of the
+  labels), small -32 % (-14 % labels, -5 points on text pages), small + 1280 -50 %. A rented RTX 4090 (~$0.34/h) would
+  do the whole backlog for a few dollars (not tried). `tests/test_ocr_bench.py`.
 - Corpus snapshots: `CORPUS_DATA_DIR` (relative to `backend/`, default `data`) selects the directory holding
   `corpus/` + `index/`; benchmark results and evals stay in `data/agentic` / `data/eval` (`common.RESULTS_ROOT`).
   `data/small` = the 2026-10-22 corpus (7.8k PDFs, 349k chunks; for demos / the PoC): `CORPUS_DATA_DIR=data/small`

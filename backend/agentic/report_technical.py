@@ -94,11 +94,11 @@ def corpus_stats() -> dict:
             json.loads(m.read_text(encoding="utf-8").strip().splitlines()[-1]) for m in manifests])
             if d.get("done") and d.get("pages", 0) + d.get("pdfs", 0) == 0),
         missing=sorted(name for code, name in names.items() if not (WEB_DIR / code / "manifest.jsonl").exists()))
-    from corpus.ocr import ENGINE, JOBS_PATH
-    stats["ocr"] = 0  # outputs of the current engine (EasyOCR outputs of earlier runs are redone)
+    from corpus.ocr import ENGINE_FAMILY, JOBS_PATH
+    stats["ocr"] = 0  # outputs of PP-OCRv6 (EasyOCR outputs of earlier runs are redone)
     for path in WEB_DIR.glob("*/ocr/*.json"):
         with path.open("rb") as handle:
-            stats["ocr"] += ENGINE.encode() in handle.read(200)
+            stats["ocr"] += ENGINE_FAMILY.encode() in handle.read(200)
     stats["ocr_jobs"] = sum(1 for _ in JOBS_PATH.open(encoding="utf-8")) if JOBS_PATH.exists() else 0
     documents = DATA_DIR / "documents.jsonl"
     stats["needs_ocr"] = sum(1 for line in documents.open(encoding="utf-8") if '"needs_ocr": true' in line)         if documents.exists() else 0

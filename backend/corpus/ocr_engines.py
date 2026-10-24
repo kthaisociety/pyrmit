@@ -25,6 +25,7 @@ onnxruntime-directml pymupdf` (kept apart from .venv, whose torch is the CUDA bu
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -66,15 +67,41 @@ def box(points) -> list[float]:
     return [min(xs), min(ys), max(xs), max(ys)]
 
 
-def rapid_engine(model_type: str, gpu: bool, threads: int):
+def fp16_models(model_type: str) -> dict[str, str]:
+    """float16 copies of the PP-OCRv6 det / rec models (the released ONNX files are float32), made once next to the
+    environment: `uv pip install --python .venv-ocr/Scripts/python.exe onnx` and `--no-deps onnxconverter-common`
+    (its dependencies would replace onnxruntime-directml)."""
+    import onnx
+    import rapidocr
+    from onnxconverter_common import float16
+
+    source, target = Path(rapidocr.__file__).parent / "models", Path(sys.prefix) / "fp16"
+    paths = {}
+    for task in ("det", "rec"):
+        out = target / f"PP-OCRv6_{task}_{model_type}_fp16.onnx"
+        if not out.exists():
+            target.mkdir(exist_ok=True)
+            model = float16.convert_float_to_float16(onnx.load(source / f"PP-OCRv6_{task}_{model_type}.onnx"),
+                                                     keep_io_types=True)
+            onnx.save(model, out)
+        paths[task] = str(out)
+    return paths
+
+
+def rapid_engine(model_type: str, gpu: bool, threads: int, fp16: bool = False, det_side: int = 0):
+    """det_side: longest side of the detection input (0 = the whole tile, 2000 px). Detection takes ~40 % of a tile's
+    time; recognition still reads the text crops at full resolution."""
     from rapidocr import ModelType, OCRVersion, RapidOCR
 
+    models = fp16_models(model_type) if fp16 else {}
     engine = RapidOCR(params={
+        **({"Det.limit_type": "max", "Det.limit_side_len": det_side} if det_side else {}),
         "Global.return_word_box": True, "Global.max_side_len": 4000, "Global.log_level": "warning",
         "Det.ocr_version": OCRVersion.PPOCRV6, "Det.model_type": ModelType(model_type),
         "Rec.ocr_version": OCRVersion.PPOCRV6, "Rec.model_type": ModelType(model_type),
         "Rec.rec_batch_num": 32,  # 6 by default: 25 % slower on map tiles (~100 lines each)
         "EngineConfig.onnxruntime.use_dml": gpu, "EngineConfig.onnxruntime.intra_op_num_threads": threads,
+        **({"Det.model_path": models["det"], "Rec.model_path": models["rec"]} if fp16 else {}),
     })
 
     def run(image: np.ndarray) -> tuple[list[list], list[list], str]:
@@ -115,9 +142,12 @@ def easyocr_engine(gpu: bool, threads: int):
 
 
 ENGINES = {
-    "rapid-v6-tiny": lambda gpu, threads: rapid_engine("tiny", gpu, threads),
-    "rapid-v6-small": lambda gpu, threads: rapid_engine("small", gpu, threads),
-    "rapid-v6-medium": lambda gpu, threads: rapid_engine("medium", gpu, threads),
+    "rapid-v6-tiny": lambda gpu, threads, **kw: rapid_engine("tiny", gpu, threads, **kw),
+    "rapid-v6-small": lambda gpu, threads, **kw: rapid_engine("small", gpu, threads, **kw),
+    "rapid-v6-medium": lambda gpu, threads, **kw: rapid_engine("medium", gpu, threads, **kw),
+    # float16 copies: no faster on DirectML (2026-10-24 benchmark), same accuracy
+    "rapid-v6-small-fp16": lambda gpu, threads, **kw: rapid_engine("small", gpu, threads, fp16=True, **kw),
+    "rapid-v6-medium-fp16": lambda gpu, threads, **kw: rapid_engine("medium", gpu, threads, fp16=True, **kw),
     "easyocr": easyocr_engine,
 }
 
@@ -181,8 +211,9 @@ def run_jobs(run, engine: str, args) -> None:
     for index, job in enumerate(jobs, 1):
         out = Path(job["out"])
         if out.exists():
+            # Any PP-OCRv6 output is kept (model size or detection setting changed between runs); EasyOCR's are redone
             try:
-                if json.loads(out.read_text(encoding="utf-8")).get("engine") == engine:
+                if (json.loads(out.read_text(encoding="utf-8")).get("engine") or "").startswith(engine.split("-")[0] + "-v6"):
                     continue
             except ValueError:
                 pass
@@ -209,7 +240,8 @@ def run_bench(run, args) -> None:
     references = [json.loads(line) for line in (BENCH_DIR / "reference.jsonl").open(encoding="utf-8")]
     if args.ids:
         references = [r for r in references if r["id"] in set(args.ids)]
-    suffix = ("-gpu" if args.gpu else "") + (f"-x{args.scale:g}" if args.scale != 1 else "")
+    suffix = (("-gpu" if args.gpu else "") + (f"-x{args.scale:g}" if args.scale != 1 else "")
+              + (f"-det{args.det_side}" if args.det_side else ""))
     out = BENCH_DIR / f"pred-{args.engine}{suffix}.jsonl"
     with out.open("w", encoding="utf-8") as handle:
         for index, reference in enumerate(references, 1):
@@ -242,11 +274,16 @@ def main() -> None:
     parser.add_argument("--jobs", help="corpus: JSONL of {pdf, out, max_pages, label} (written by corpus.ocr)")
     parser.add_argument("--dpi", type=int, default=300, help="corpus: rendering of text pages")
     parser.add_argument("--map-dpi", type=int, default=200, help="corpus: rendering of pages larger than A3")
+    parser.add_argument("--det-side", type=int, default=0,
+                        help="PP-OCRv6: longest side of the detection input (0 = whole tile; 1280 is ~28 %% faster)")
     args = parser.parse_args()
 
-    run = ENGINES[args.engine](args.gpu, args.threads)
+    options = {"det_side": args.det_side} if args.det_side else {}
+    run = ENGINES[args.engine](args.gpu, args.threads, **options)
     if args.jobs:
-        run_jobs(run, f"{args.engine}{' (DirectML)' if args.gpu and args.engine.startswith('rapid') else ''}", args)
+        label = (f"{args.engine}{f' det {args.det_side}' if args.det_side else ''}"
+                 f"{' (DirectML)' if args.gpu and args.engine.startswith('rapid') else ''}")
+        run_jobs(run, label, args)
     else:
         run_bench(run, args)
 

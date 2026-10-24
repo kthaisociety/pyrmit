@@ -23,7 +23,7 @@ from statistics import median
 from fastapi import APIRouter, Depends
 
 from corpus.common import DATA_DIR, MUNICIPALITIES_PATH, RESULTS_ROOT, WEB_DIR, read_jsonl
-from corpus.ocr import ENGINE as OCR_ENGINE
+from corpus.ocr import ENGINE_FAMILY as OCR_ENGINE
 from dependencies import get_current_user
 import models
 
