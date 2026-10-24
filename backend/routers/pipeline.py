@@ -442,11 +442,18 @@ def tools_step() -> dict:
         history.append([path.stem.removeprefix("replay-"), *[f"{_s(lat.get(t, {}).get('p50'))} / {_s(lat.get(t, {}).get('p95'))}"
                                                              for t in ("search", "grep", "read")]])
     search, grep = latency.get("search", {}), latency.get("grep", {})
-    eval_runs = sorted(EVAL_DIR.glob("2*.json"))
+    # Latest localrag.eval run per corpus ("data" = the corpus served, "small" = 2026-10-22; older runs have no tag)
+    by_corpus = {}
+    for path in sorted(EVAL_DIR.glob("2*.json")):
+        data = _load(path) or {}
+        by_corpus[data.get("corpus", "older")] = (path, data)
     eval_rows = []
-    if eval_runs:
-        for setup, s in list(((_load(eval_runs[-1]) or {}).get("summary") or {}).items())[:8]:
-            eval_rows.append([setup, _pct(s.get("recall@1")), _pct(s.get("recall@5")), _pct(s.get("recall@10"))])
+    for corpus, name in (("data", "national"), ("small", "2026-10-22"), ("older", "October runs")):
+        if corpus in by_corpus:
+            for setup, s in list((by_corpus[corpus][1].get("summary") or {}).items())[:6]:
+                eval_rows.append([setup, name, _pct(s.get("recall@1")), _pct(s.get("recall@5")), _pct(s.get("recall@10"))])
+    national = (by_corpus.get("data", (None, {}))[1].get("summary") or {}).get("st-arctic-l-v2 | dense-sv", {})
+    earlier = (by_corpus.get("small", (None, {}))[1].get("summary") or {}).get("st-arctic-l-v2 | dense-sv", {})
     return {
         "id": "tools", "step": 6, "title": "Search: the agent's tools on the corpus",
         "what": "The agent answers by exploring the corpus with tools: search by meaning, grep for exact words, read a "
@@ -471,11 +478,15 @@ def tools_step() -> dict:
                      table={"columns": ["Run", "search", "grep", "read"], "rows": history,
                             "highlight": len(history) - 1}),
             _section("Search quality (retrieval evaluation)",
-                     f"last run {eval_runs[-1].stem if eval_runs else 'never'}: on the corpus of that date, rerun needed",
-                     text="Questions written for real use cases, each labelled with the passages that answer it: "
-                          "recall@5 = share of questions whose answering passage is in the first 5 results. This "
-                          "run predates the large crawl (349k passages, 1.9 M now).",
-                     table={"columns": ["Model | setup", "Recall@1", "Recall@5", "Recall@10"], "rows": eval_rows}),
+                     f"recall@5 {_pct(national.get('recall@5'))} on the national corpus, "
+                     f"{_pct(earlier.get('recall@5'))} on the 2026-10-22 one" if national else "not run on this corpus",
+                     text="45 questions written for real use cases (4 kommuner), each labelled with the passages that "
+                          "answer it: recall@5 = share of the expected passages in the first 5 results. The national "
+                          "corpus has three times more passages for these kommuner: no expected passage is missing, "
+                          "but some fall to ranks 7-12 behind other documents of the same kommun (the statutes are "
+                          "unchanged). hybrid-sv-stem is the agent's search.",
+                     table={"columns": ["Model | setup", "Corpus", "Recall@1", "Recall@5", "Recall@10"],
+                            "rows": eval_rows}),
         ],
     }
 

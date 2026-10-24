@@ -133,10 +133,13 @@ RETRIEVAL_ROWS = [  # (model | setup) rows of localrag.eval worth showing, in th
 
 
 def retrieval_table() -> str:
+    """The model / setup comparison (October runs on the corpus of their time): runs on the national corpus
+    ("corpus": "data") are left to corpus_table, they would mix corpora in one table."""
     latest: dict[str, dict] = {}
-    for path in sorted(EVAL_DIR.glob("*.json")):
-        summary = json.loads(path.read_text(encoding="utf-8")).get("summary", {})
-        latest.update(summary)
+    for path in sorted(EVAL_DIR.glob("2*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("corpus") != "data":
+            latest.update(data.get("summary", {}))
     rows = []
     for key in RETRIEVAL_ROWS:
         if key not in latest:
@@ -148,6 +151,35 @@ def retrieval_table() -> str:
                     + "</tr>")
     head = tr("<tr><th>Modèle</th><th>Réglage</th><th>R@1</th><th>R@5</th><th>R@10</th><th>Complet@5</th><th>MRR</th></tr>",
               "<tr><th>Model</th><th>Setup</th><th>R@1</th><th>R@5</th><th>R@10</th><th>Complete@5</th><th>MRR</th></tr>")
+    return f"<table>{head}{''.join(rows)}</table>"
+
+
+def corpus_table() -> str:
+    """The same questions on the 2026-10-22 corpus (data/small) and on the national one (data): latest run of each,
+    with the recall@5 of the municipal passages apart (the statutes are the same in both)."""
+    from localrag.eval import QUESTIONS_PATH, is_law_matcher
+
+    runs = {}
+    for path in sorted(EVAL_DIR.glob("2*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("corpus") in ("small", "data"):
+            runs[data["corpus"]] = data
+    if len(runs) < 2:
+        return ""
+    questions = {q["id"]: q for q in read_jsonl(QUESTIONS_PATH)}
+    rows = []
+    for setup in runs["data"]["summary"]:
+        for corpus, name in (("small", tr("22 octobre", "2026-10-22")), ("data", tr("national", "national"))):
+            m, details = runs[corpus]["summary"].get(setup), runs[corpus]["details"].get(setup, [])
+            if not m:
+                continue
+            local = [rank is not None and rank <= 5 for row in details
+                     for matcher, rank in zip(questions[row["id"]]["relevant"], row["ranks"]) if not is_law_matcher(matcher)]
+            rows.append(f"<tr><td>{esc(setup.split(' | ')[1])}</td><td>{name}</td>"
+                        + "".join(f"<td>{report.fmt(m[k])}</td>" for k in ("recall@1", "recall@5", "complete@5"))
+                        + f"<td>{report.fmt(sum(local) / max(len(local), 1))}</td></tr>")
+    head = tr("<tr><th>Réglage</th><th>Corpus</th><th>R@1</th><th>R@5</th><th>Complet@5</th><th>R@5 documents communaux</th></tr>",
+              "<tr><th>Setup</th><th>Corpus</th><th>R@1</th><th>R@5</th><th>Complete@5</th><th>R@5 municipal passages</th></tr>")
     return f"<table>{head}{''.join(rows)}</table>"
 
 
@@ -356,6 +388,7 @@ def build_html() -> str:
     judge_prompt, grounding_prompt = prompt_block(JUDGE_INSTRUCTIONS), prompt_block(GROUNDING_INSTRUCTIONS)
     case_prompt = prompt_block(CASE_INSTRUCTIONS)
     retrieval = retrieval_table()
+    corpus_retrieval = corpus_table()
     by_key = {(r["cases"], r["system"], r["explore"], r["answer"], r["ablation"]): r for r in runs}
     overview = report.overview_table([
         (name, [by_key.get((key, "rag", "–", "medium", "")), by_key.get((key, "agent", "medium", "medium", ""))])
@@ -621,6 +654,12 @@ bge-reranker-v2-m3.</p>
 API models (arctic-embed-l-v2: 0.92 recall@5); BM25 on English queries is useless on a Swedish corpus; neither BM25
 fusion nor the reranker beat dense retrieval on the Swedish query. The agent still uses hybrid search because exact
 wording (plan names, “20 meter”) matters inside its tool calls.</p>
+{f'''<p><b>National corpus</b>: the same questions on the corpus of 2026-10-22 and on the national one (arctic-embed-l-v2;
+<i>hybrid-sv-stem</i> = the agent's search, BM25 on Swedish stems). The four municipalities of the questions have three
+times more passages (18.8k → 59.7k with the statutes); no expected passage left the corpus, but some fall below the top
+5 (ranks 7 to 12), outranked by other documents of the same municipality. The statute misses are the same in both
+corpora: the loss is in the municipal documents.</p>
+{corpus_retrieval}''' if corpus_retrieval else ''}
 
 <h2>7. Evaluation: how the benchmarks are built and scored</h2>
 <p>Four benchmark sets, each built to answer a different question. All cases share one format (one JSON line per case):
@@ -1096,6 +1135,12 @@ modèles ouverts locaux égalent les modèles d'API (arctic-embed-l-v2 : 0,92 de
 ne sert à rien sur un corpus suédois ; ni la fusion BM25 ni le reranker ne battent la recherche dense sur la question
 suédoise. L'agent garde la recherche hybride, car la formulation exacte (noms de plans, « 20 meter ») compte dans ses
 appels d'outils.</p>
+{f'''<p><b>Corpus national</b> : les mêmes questions sur le corpus du 22 octobre et sur le corpus national (arctic-embed-l-v2 ;
+<i>hybrid-sv-stem</i> = la recherche de l'agent, BM25 sur les racines suédoises). Les quatre communes des questions ont trois
+fois plus de passages (18,8 k → 59,7 k avec les lois) ; aucun passage attendu n'a quitté le corpus, mais certains sortent
+des 5 premiers (rangs 7 à 12), dépassés par d'autres documents de la même commune. Les ratés sur les lois sont les mêmes
+dans les deux corpus : la perte porte sur les documents communaux.</p>
+{corpus_retrieval}''' if corpus_retrieval else ''}
 
 <h2>7. Évaluation de l'agent : méthodologie détaillée</h2>
 <h3>7.1 Jeux de cas</h3>

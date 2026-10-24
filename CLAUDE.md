@@ -133,7 +133,7 @@ python -m corpus.pdf_filter features|classify|llm|apply   # relevance filter of 
 python -m corpus.chunk            # -> data/corpus/chunks.jsonl (one chunk per law §, ~1500-char doc chunks)
 python -m localrag.index --model st-arctic-l-v2  # embeddings -> data/index/dense/<model>/ (incremental)
 python -m localrag.store --model st-arctic-l-v2  # disk store served by the app: SQLite (chunks, FTS5 BM25, places) + vectors.npy
-python -m localrag.eval --models st-bge-m3 ... # retrieval eval on localrag/questions.jsonl -> data/eval/
+python -m localrag.eval --models st-bge-m3 ... # retrieval eval on localrag/questions.jsonl -> data/eval/ (tagged with the corpus)
 python -m corpus.plans            # detaljplan registry + planbestämmelser -> data/corpus/plans.jsonl (needs the store)
 python -m corpus.check            # data checks after a rebuild (exit 1 on an error); then agentic.replay, agentic.coverage score
 ```
@@ -246,7 +246,11 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   kommuner named in the question (`gazetteer.detect_kommuner`, fallback `CorpusPlaces` for places missing from
   Wikidata, e.g. "Veda"). Modes (`LOCAL_RAG_MODE`): dense (default), bm25 (Swedish stems + compound 5-grams),
   hybrid (RRF); optional cross-encoder reranker. Defaults (`localrag/service.py`) follow the eval: arctic-l-v2 on
-  the Swedish query, no BM25 fusion, no reranker (neither beat dense-sv). The app serves from the **disk store**
+  the Swedish query, no BM25 fusion, no reranker (neither beat dense-sv). On the national corpus (2026-10-24, same 45
+  questions, `--allow-missing` counts passages a corpus lacks as misses; `hybrid-sv-stem` = the agent's search) recall@5
+  drops 0.94 -> 0.88 (dense-sv) and 0.89 -> 0.83 (hybrid-sv-stem): the 4 kommuner of the questions have 3x more
+  passages, no expected passage is missing, municipal recall@5 1.00 -> 0.92 (outranked, ranks 7-12), statutes
+  unchanged (0.80). Technical report section 6 (`corpus_table`), Pipeline view. The app serves from the **disk store**
   (`localrag/store.py`, `LOCAL_RAG_STORE=disk` default): chunks + metadata in SQLite, BM25 = FTS5 over pre-stemmed
   text with filter tokens (`zzpoollaw`, `zzk<code>`) so pool/kommun filters are posting-list intersections, vectors
   float16 in a memmap copied block-wise to the GPU (dense search = GPU matmul, ~0.1 s). Rebuild it after
