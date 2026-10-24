@@ -156,7 +156,11 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   are redone. Cut lines: a printed line crossing a tile edge is read cut in both tiles; until 2026-10-24 21:00 both
   were kept whole ("gäller bestämm iller bestämmelsen inom", 2x the repeated word pairs); now each tile gives the
   line's words of its core (each engine word carries its line number) and `join_cut_lines` glues a word cut by the
-  edge ("byggnads" + "byggnadsarea"); the ~1.4k outputs from before are redone after the unread PDFs of their tier. Speed (2026-10-24, same 24 first-night PDFs: 249 -> 152 s, -39 %, 4 % fewer words):
+  edge ("byggnads" + "byggnadsarea"); the ~1.4k outputs from before are redone after the unread PDFs of their tier.
+  GPU memory: DirectML keeps the buffers of every input shape it has run (recognition batch widths vary), so one
+  process grew from ~3 to 7 GB of the 8 GB in 2 h, spilled into shared memory and read ~35 % fewer words per second;
+  the worker exits after `RECYCLE_PAGES` (250) pages with `RECYCLE_EXIT` and `corpus.ocr` starts a fresh one (its
+  skip test reads only the first bytes of each output). Speed (2026-10-24, same 24 first-night PDFs: 249 -> 152 s, -39 %, 4 % fewer words):
   detection input capped at 1280 px (`DET_SIDE`, `--det-side 0` = whole 2000 px tile: same words and labels on the
   benchmark, 139 vs 140 of 305); recognition cut to its 550 Latin characters (`latin_rec_model`, of 18,710: the
   multilingual model also reads Chinese...; output layer and metadata character list sliced, made once in

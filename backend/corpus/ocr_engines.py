@@ -36,6 +36,10 @@ from PIL import Image
 BENCH_DIR = Path(__file__).resolve().parent.parent / "data" / "ocr_bench"
 Image.MAX_IMAGE_PIXELS = None  # plankartor rendered at 200 dpi reach 40-60 Mpx
 MAX_SIDE = 12000  # pixels: an A0 plankarta at 300 dpi is 14000 px
+# DirectML keeps the GPU buffers of every input shape it has run (recognition batches vary in width): one process
+# grew from ~3 to 7 GB of the RTX 4060's 8 GB in 2 h (2026-10-24 night), then spilled into shared memory and read
+# ~35 % fewer words per second. --recycle-pages exits with this code; corpus.ocr starts a fresh process
+RECYCLE_EXIT = 3
 
 
 def tiles(height: int, width: int, size: int, overlap: int):
@@ -406,20 +410,19 @@ def ocr_pdf(run, path: str, max_pages: int, dpi: int, map_dpi: int, tile: int, o
 def run_jobs(run, engine: str, args) -> None:
     jobs = [json.loads(line) for line in Path(args.jobs).open(encoding="utf-8")]
     shard, shards = map(int, args.shard.split("/"))
-    done = 0
+    done = pages = 0
+    family = f'"engine": "{engine.split("-")[0]}-v6'.encode()
     for index, job in enumerate(jobs, 1):
         if (index - 1) % shards != shard:  # another worker's job (corpus.ocr --workers)
             continue
         out = Path(job["out"])
+        # Any PP-OCRv6 output is kept (model size or detection setting changed between runs) once its cut lines are
+        # joined (text_from); EasyOCR's are redone. Both keys are in the first bytes of the file
         if out.exists():
-            # Any PP-OCRv6 output is kept (model size or detection setting changed between runs) once its cut lines
-            # are joined (text_from); EasyOCR's are redone
-            try:
-                previous = json.loads(out.read_text(encoding="utf-8"))
-                if (previous.get("engine") or "").startswith(engine.split("-")[0] + "-v6") and previous.get("text_from"):
-                    continue
-            except ValueError:
-                pass
+            with out.open("rb") as handle:
+                head = handle.read(400)
+            if head.startswith(b"{" + family) and b'"text_from"' in head:
+                continue
         started = time.perf_counter()
         try:
             result = ocr_pdf(run, job["pdf"], job.get("max_pages", 40), args.dpi, args.map_dpi, args.tile, args.overlap)
@@ -434,9 +437,13 @@ def run_jobs(run, engine: str, args) -> None:
                                         ensure_ascii=False), encoding="utf-8")
         temporary.replace(out)
         done += 1
+        pages += len(result["pages"])
         print(f"[{index}/{len(jobs)}] {job.get('label', '')[:70]}: {len(result['pages'])} pages, "
               f"{sum(len(p) for p in result['pages'])} chars, {len(result['words'])} words, "
               f"{time.perf_counter() - started:.0f}s", flush=True)
+        if args.recycle_pages and pages >= args.recycle_pages:
+            print(f"{done} PDFs OCRed, {pages} pages: new process (GPU memory)", flush=True)
+            sys.exit(RECYCLE_EXIT)
     print(f"{done} PDFs OCRed")
 
 
@@ -483,6 +490,8 @@ def main() -> None:
     parser.add_argument("--cuda", action="store_true",
                         help="PP-OCRv6 on onnxruntime-gpu (run from backend/.venv-ocr-cuda) instead of DirectML")
     parser.add_argument("--shard", default="0/1", help="corpus: worker i of n takes every n-th job")
+    parser.add_argument("--recycle-pages", type=int, default=0,
+                        help=f"corpus: exit with code {RECYCLE_EXIT} after this many pages (corpus.ocr starts a new process)")
     args = parser.parse_args()
 
     options = ({"det_side": args.det_side} if args.det_side else {}) | ({"cuda": True} if args.cuda else {})

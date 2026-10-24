@@ -19,6 +19,7 @@ import os
 import re
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 from corpus.common import BACKEND_DIR, DATA_DIR, DOCUMENTS_PATH, WEB_DIR, read_jsonl
 from corpus.extract import doc_type
@@ -32,6 +33,10 @@ DET_SIDE = 1280
 # One process: on real plan pages two were 34 % slower in total and three 50 % (8 GB of GPU memory; small benchmark
 # crops had shown +28 %, so measure on real pages)
 WORKERS = 1
+# A new OCR process every 250 pages (~25 min of plankartor, a few seconds to load the models): DirectML keeps the
+# GPU memory of every input shape it has seen (ocr_engines.RECYCLE_EXIT)
+RECYCLE_PAGES = 250
+RECYCLE_EXIT = 3  # = corpus/ocr_engines.py RECYCLE_EXIT (that module runs in .venv-ocr)
 OCR_PYTHON = BACKEND_DIR / ".venv-ocr" / "Scripts" / "python.exe"
 JOBS_PATH = DATA_DIR / "ocr_jobs.jsonl"
 # Tiers of the scans by what they bring, OCRed in this order (every page; --max-tier stops after a tier)
@@ -126,9 +131,17 @@ def main() -> None:
     # The .venv interpreter sets PYTHONHOME to its own base Python (3.13): inherited, it made .venv-ocr's 3.12 load
     # the 3.13 standard library ("SRE module mismatch")
     env = {k: v for k, v in os.environ.items() if k not in ("PYTHONHOME", "PYTHONPATH", "__PYVENV_LAUNCHER__")}
-    workers = [subprocess.Popen(command + ["--shard", f"{i}/{args.workers}"], cwd=BACKEND_DIR, env=env)
-               for i in range(args.workers)]
-    sys.exit(max(worker.wait() for worker in workers))
+    command += ["--recycle-pages", str(RECYCLE_PAGES)]
+
+    def work(shard: int) -> int:
+        """One worker, started again each time it stops to give back its GPU memory."""
+        while True:
+            code = subprocess.run(command + ["--shard", f"{shard}/{args.workers}"], cwd=BACKEND_DIR, env=env).returncode
+            if code != RECYCLE_EXIT:
+                return code
+
+    with ThreadPoolExecutor(args.workers) as pool:
+        sys.exit(max(pool.map(work, range(args.workers))))
 
 
 if __name__ == "__main__":
