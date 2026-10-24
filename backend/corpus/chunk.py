@@ -222,32 +222,40 @@ def main() -> None:
     args = parser.parse_args()
 
     seen_hashes: set[str] = set()
-    rows, duplicates = [], 0
-    for document in read_jsonl(DOCUMENTS_PATH):
-        if not document.get("text"):
-            continue
-        splitter = law_chunks if document["kind"] == "law" else document_chunks
-        for index, chunk in enumerate(splitter(document, args.max_chars)):
-            # The same PDF is often linked from several pages or kommuner: keep one copy
-            digest = hashlib.sha1(" ".join(chunk["text"].split()).lower().encode()).hexdigest()
-            if digest in seen_hashes:
-                duplicates += 1
+    duplicates = laws = 0
+
+    def rows():  # written as they come: the 2026-10-23 corpus (~2M chunks) did not fit in RAM as a list
+        nonlocal duplicates, laws
+        for document in read_jsonl(DOCUMENTS_PATH):
+            if not document.get("text"):
                 continue
-            seen_hashes.add(digest)
-            rows.append({
-                "chunk_id": stable_id(document["doc_id"], str(index), digest),
-                "doc_id": document["doc_id"],
-                "chunk_index": index,
-                "kind": document["kind"],
-                "doc_type": document["doc_type"],
-                "kommun_code": document.get("kommun_code"),
-                "kommun": document.get("kommun"),
-                "title": document["title"],
-                "url": document.get("url"),
-                **chunk,
-            })
-    count = write_jsonl(CHUNKS_PATH, rows)
-    laws = sum(1 for row in rows if row["kind"] == "law")
+            splitter = law_chunks if document["kind"] == "law" else document_chunks
+            for index, chunk in enumerate(splitter(document, args.max_chars)):
+                # The same PDF is often linked from several pages or kommuner: keep one copy
+                digest = hashlib.sha1(" ".join(chunk["text"].split()).lower().encode()).hexdigest()
+                # A statute section is never a duplicate of another one: the same wording in two places (JB 9 and
+                # 10 kap. 3 a §, "Har upphävts" sections) left the second unreachable by law_section until 2026-10-22.
+                # The id keeps the text hash only, so existing ids do not change
+                key = f"{document['doc_id']}|{chunk['section']}|{digest}" if document["kind"] == "law" else digest
+                if key in seen_hashes:
+                    duplicates += 1
+                    continue
+                seen_hashes.add(key)
+                laws += document["kind"] == "law"
+                yield {
+                    "chunk_id": stable_id(document["doc_id"], str(index), digest),
+                    "doc_id": document["doc_id"],
+                    "chunk_index": index,
+                    "kind": document["kind"],
+                    "doc_type": document["doc_type"],
+                    "kommun_code": document.get("kommun_code"),
+                    "kommun": document.get("kommun"),
+                    "title": document["title"],
+                    "url": document.get("url"),
+                    **chunk,
+                }
+
+    count = write_jsonl(CHUNKS_PATH, rows())
     print(f"{count} chunks ({laws} law, {count - laws} other), {duplicates} duplicates dropped -> {CHUNKS_PATH}")
 
 
