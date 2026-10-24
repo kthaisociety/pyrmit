@@ -152,7 +152,16 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   Huddinge's "Bestämmelse0126k-7018", Kalix's "_PK" files) ~35 h, the other planning types ~4 h, the rest of "other"
   (studies, guidelines, permit drawings) ~10 h last: a run can stop before them; short documents first within a group;
   outputs of any PP-OCRv6 setting are kept, EasyOCR's are redone). Detection input capped at 1280 px (`DET_SIDE`,
-  `--det-side 0` = whole 2000 px tile): 25 % faster, same words and labels on the benchmark (139 vs 140 of 305) and starts `corpus/ocr_engines.py --jobs` in `backend/.venv-ocr`
+  `--det-side 0` = whole 2000 px tile): 25 % faster, same words and labels on the benchmark (139 vs 140 of 305).
+  Recognition model cut to its 550 Latin characters (`latin_rec_model`, of 18,710: the multilingual model also reads
+  Chinese...; output layer and metadata character list sliced, made once in `<venv>/fast/`): the probabilities copied
+  to the CPU per batch shrink ~35x, a tile 0.95 -> 0.51 s, same or better accuracy (fewer stray non-Latin
+  characters). `WORKERS = 2` processes share the GPU (`--shard i/n`): +28 % throughput. Together a plan map page
+  8.4 -> 5.1 s; the backlog ~67 h -> ~32 h (plans ~23 h, other planning types ~3 h, the rest of "other" ~6 h).
+  CUDA (`--cuda`, `backend/.venv-ocr-cuda` with onnxruntime-gpu 1.23 and torch's CUDA 12 / cuDNN 9 DLLs,
+  `use_cuda_dlls`): cuDNN re-plans every convolution (~3 s) whenever an input shape changes, so `FixedShapes` pads
+  inputs to a few fixed shapes, one session each; then no faster than DirectML (0.55 vs 0.51 s per tile) and its
+  float16 models read nothing (overflow): DirectML stays the default and starts `corpus/ocr_engines.py --jobs` in `backend/.venv-ocr`
   (PP-OCRv6 medium on DirectML; text pages at 300 dpi, pages larger than A3 at 200, 40 pages max). Each
   `ocr/<pdf id>.json` holds `pages` (text in reading order, what `corpus.extract` uses) and `words` ([page, x0, y0, x1,
   y1, text, score] in PDF points of the unrotated page, like `get_text("words")`: `view_map_area` finds labels there on

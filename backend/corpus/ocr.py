@@ -29,6 +29,8 @@ ENGINE_FAMILY = "rapid-v6"  # an output of any PP-OCRv6 setting counts as done (
 # the same words and property labels on the benchmark's synthetic maps (139 vs 140 of 305); 0 = whole tile.
 # small (-32 %) loses 14 % of the labels and 5 points on text pages; float16 models are no faster on DirectML
 DET_SIDE = 1280
+# Two processes share the GPU: +28 % tiles per second (one leaves it idle while it renders pages and decodes on the CPU)
+WORKERS = 2
 OCR_PYTHON = BACKEND_DIR / ".venv-ocr" / "Scripts" / "python.exe"
 JOBS_PATH = DATA_DIR / "ocr_jobs.jsonl"
 MAX_PAGES = 40   # long scanned reports: OCR the first pages only
@@ -59,6 +61,7 @@ def main() -> None:
     parser.add_argument("--cpu", action="store_true", help="no GPU (about 6x slower)")
     parser.add_argument("--det-side", type=int, default=DET_SIDE,
                         help="longest side of the detection input (0 = whole 2000 px tile)")
+    parser.add_argument("--workers", type=int, default=WORKERS, help="OCR processes sharing the GPU")
     args = parser.parse_args()
 
     if not OCR_PYTHON.exists():
@@ -86,7 +89,9 @@ def main() -> None:
     # The .venv interpreter sets PYTHONHOME to its own base Python (3.13): inherited, it made .venv-ocr's 3.12 load
     # the 3.13 standard library ("SRE module mismatch")
     env = {k: v for k, v in os.environ.items() if k not in ("PYTHONHOME", "PYTHONPATH", "__PYVENV_LAUNCHER__")}
-    sys.exit(subprocess.run(command, cwd=BACKEND_DIR, env=env).returncode)
+    workers = [subprocess.Popen(command + ["--shard", f"{i}/{args.workers}"], cwd=BACKEND_DIR, env=env)
+               for i in range(args.workers)]
+    sys.exit(max(worker.wait() for worker in workers))
 
 
 if __name__ == "__main__":

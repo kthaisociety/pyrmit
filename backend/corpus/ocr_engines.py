@@ -88,21 +88,117 @@ def fp16_models(model_type: str) -> dict[str, str]:
     return paths
 
 
-def rapid_engine(model_type: str, gpu: bool, threads: int, fp16: bool = False, det_side: int = 0):
+def use_cuda_dlls() -> None:
+    """onnxruntime-gpu (CUDA 12 build) on Windows needs the CUDA 12 / cuDNN 9 DLLs: those torch ships in backend/.venv
+    (OCR_CUDA_DLLS overrides the directory)."""
+    import os
+
+    directory = os.getenv("OCR_CUDA_DLLS") or str(Path(__file__).resolve().parent.parent / ".venv" / "Lib" /
+                                                   "site-packages" / "torch" / "lib")
+    os.add_dll_directory(directory)
+    os.environ["PATH"] = directory + os.pathsep + os.environ["PATH"]
+
+
+def _latin(text: str) -> bool:
+    """Characters Swedish planning documents print: ASCII, Latin-1 / Extended (å ä ö é ü...), dashes, quotes, symbols."""
+    return all(0x20 <= ord(c) < 0x7F or 0xA0 <= ord(c) <= 0x24F or 0x2010 <= ord(c) <= 0x205E
+               or c in "€≤≥≈±×÷°²³½¼¾µ§№™®©√∞" for c in text)
+
+
+def latin_rec_model(path: str) -> str:
+    """The recognition model with its output layer cut to the Latin characters (~840 of 18,710: the multilingual model
+    also reads Chinese, Japanese...). The (lines x steps x 18,710) probabilities, up to ~290 MB per batch, were copied
+    to the CPU and scanned there, and on CUDA they filled the GPU. The character list in the model metadata is cut
+    the same way, so RapidOCR decodes it as it is (class 0 = CTC blank, the last = space)."""
+    import onnx
+    from onnx import numpy_helper
+
+    out = Path(sys.prefix) / "fast" / f"{Path(path).stem}_latin.onnx"
+    if not out.exists():
+        model = onnx.load(path)
+        meta = {p.key: p for p in model.metadata_props}
+        characters = meta["character"].value.splitlines()
+        keep = [0] + [i + 1 for i, c in enumerate(characters) if _latin(c)] + [len(characters) + 1]
+        weights = {i.name: i for i in model.graph.initializer}
+        matmul, add = [n for n in model.graph.node if n.op_type in ("MatMul", "Add")][-2:]
+        for name, axis in ((matmul.input[1], 1), (add.input[1], 0)):
+            array = numpy_helper.to_array(weights[name])
+            weights[name].CopyFrom(numpy_helper.from_array(np.take(array, keep, axis=axis), name))
+        meta["character"].value = "\n".join(characters[i - 1] for i in keep[1:-1])
+        model.graph.output[0].type.tensor_type.shape.dim[2].dim_value = len(keep)
+        out.parent.mkdir(exist_ok=True)
+        onnx.save(model, out)
+    return str(out)
+
+
+class FixedShapes:
+    """onnxruntime-gpu on Windows (cuDNN 9) re-plans every convolution, ~3 s, whenever an input shape differs from the
+    previous call (an earlier shape too): with text lines of every width, CUDA was 5-10x slower than DirectML. Each
+    input is zero-padded to one of a few fixed shapes, each served by its own session (so each sees one shape), and the
+    output is cropped back. RapidOCR pads the lines of a batch with zeros already."""
+
+    REC_WIDTHS = (320, 480, 640, 960, 1280, 1920, 2560, 3840)
+
+    def __init__(self, inner, kind: str, batch: int, side: int = 0):
+        self.kind, self.batch, self.side = kind, batch, side
+        self.path = inner.session._model_path
+        options = inner.session.get_provider_options()
+        self.providers = [(p, options.get(p, {})) for p in inner.session.get_providers()]
+        self.sessions: dict = {}
+
+    def _run(self, x: np.ndarray) -> np.ndarray:
+        if x.shape not in self.sessions:
+            import onnxruntime as ort
+
+            self.sessions[x.shape] = ort.InferenceSession(self.path, providers=self.providers)
+        session = self.sessions[x.shape]
+        return session.run(None, {session.get_inputs()[0].name: x})[0]
+
+    def __call__(self, x: np.ndarray) -> np.ndarray:
+        rows, channels, height, width = x.shape
+        if self.kind == "det":  # (1, 3, H, W) -> (1, 1, H, W) probability map
+            size = max(self.side, -(-height // 32) * 32, -(-width // 32) * 32)
+            padded = np.zeros((rows, channels, size, size), np.float32)
+            padded[:, :, :height, :width] = x
+            return self._run(padded)[:, :, :height, :width]
+        # cls: (B, 3, 48, 192) -> (B, 2); rec: (B, 3, 48, W) -> (B, W / 8, characters)
+        size = width if self.kind == "cls" else next((w for w in self.REC_WIDTHS if w >= width), -(-width // 640) * 640)
+        padded = np.zeros((max(self.batch, rows), channels, height, size), np.float32)
+        padded[:rows, :, :, :width] = x
+        out = self._run(padded)[:rows]
+        return out if self.kind == "cls" else out[:, :round(out.shape[1] * width / size)]
+
+
+def rapid_engine(model_type: str, gpu: bool, threads: int, fp16: bool = False, det_side: int = 0, cuda: bool = False):
     """det_side: longest side of the detection input (0 = the whole tile, 2000 px). Detection takes ~40 % of a tile's
-    time; recognition still reads the text crops at full resolution."""
+    time; recognition still reads the text crops at full resolution. cuda: onnxruntime-gpu (backend/.venv-ocr-cuda)
+    instead of DirectML; float16 models run ~2x faster there (tensor cores), not on DirectML."""
+    if cuda:
+        use_cuda_dlls()
     from rapidocr import ModelType, OCRVersion, RapidOCR
 
     models = fp16_models(model_type) if fp16 else {}
+    import rapidocr
+
+    rec_model = models.get("rec") or str(Path(rapidocr.__file__).parent / "models" / f"PP-OCRv6_rec_{model_type}.onnx")
     engine = RapidOCR(params={
         **({"Det.limit_type": "max", "Det.limit_side_len": det_side} if det_side else {}),
+        **({"EngineConfig.onnxruntime.use_cuda": True,
+            # EXHAUSTIVE (RapidOCR's default) falls back on Windows and was 4x slower on detection
+            "EngineConfig.onnxruntime.cuda_ep_cfg.cudnn_conv_algo_search": "HEURISTIC"} if cuda else {}),
         "Global.return_word_box": True, "Global.max_side_len": 4000, "Global.log_level": "warning",
         "Det.ocr_version": OCRVersion.PPOCRV6, "Det.model_type": ModelType(model_type),
         "Rec.ocr_version": OCRVersion.PPOCRV6, "Rec.model_type": ModelType(model_type),
         "Rec.rec_batch_num": 32,  # 6 by default: 25 % slower on map tiles (~100 lines each)
-        "EngineConfig.onnxruntime.use_dml": gpu, "EngineConfig.onnxruntime.intra_op_num_threads": threads,
-        **({"Det.model_path": models["det"], "Rec.model_path": models["rec"]} if fp16 else {}),
+        "EngineConfig.onnxruntime.use_dml": gpu and not cuda, "EngineConfig.onnxruntime.intra_op_num_threads": threads,
+        **({"Det.model_path": models["det"]} if fp16 else {}),
+        "Rec.model_path": latin_rec_model(rec_model),
     })
+    if cuda:  # one input shape per session (FixedShapes); the models load lazily otherwise
+        engine._load_det_model(), engine._load_cls_model(), engine._load_rec_model()
+        engine.text_det.session = FixedShapes(engine.text_det.session, "det", 1, det_side or 2016)
+        engine.text_cls.session = FixedShapes(engine.text_cls.session, "cls", engine.text_cls.cls_batch_num)
+        engine.text_rec.session = FixedShapes(engine.text_rec.session, "rec", engine.text_rec.rec_batch_num)
 
     def run(image: np.ndarray) -> tuple[list[list], list[list], str]:
         result = engine(image)
@@ -207,8 +303,11 @@ def ocr_pdf(run, path: str, max_pages: int, dpi: int, map_dpi: int, tile: int, o
 
 def run_jobs(run, engine: str, args) -> None:
     jobs = [json.loads(line) for line in Path(args.jobs).open(encoding="utf-8")]
+    shard, shards = map(int, args.shard.split("/"))
     done = 0
     for index, job in enumerate(jobs, 1):
+        if (index - 1) % shards != shard:  # another worker's job (corpus.ocr --workers)
+            continue
         out = Path(job["out"])
         if out.exists():
             # Any PP-OCRv6 output is kept (model size or detection setting changed between runs); EasyOCR's are redone
@@ -240,7 +339,7 @@ def run_bench(run, args) -> None:
     references = [json.loads(line) for line in (BENCH_DIR / "reference.jsonl").open(encoding="utf-8")]
     if args.ids:
         references = [r for r in references if r["id"] in set(args.ids)]
-    suffix = (("-gpu" if args.gpu else "") + (f"-x{args.scale:g}" if args.scale != 1 else "")
+    suffix = (("-cuda" if args.cuda else "-gpu" if args.gpu else "") + (f"-x{args.scale:g}" if args.scale != 1 else "")
               + (f"-det{args.det_side}" if args.det_side else ""))
     out = BENCH_DIR / f"pred-{args.engine}{suffix}.jsonl"
     with out.open("w", encoding="utf-8") as handle:
@@ -276,13 +375,16 @@ def main() -> None:
     parser.add_argument("--map-dpi", type=int, default=200, help="corpus: rendering of pages larger than A3")
     parser.add_argument("--det-side", type=int, default=0,
                         help="PP-OCRv6: longest side of the detection input (0 = whole tile; 1280 is ~28 %% faster)")
+    parser.add_argument("--cuda", action="store_true",
+                        help="PP-OCRv6 on onnxruntime-gpu (run from backend/.venv-ocr-cuda) instead of DirectML")
+    parser.add_argument("--shard", default="0/1", help="corpus: worker i of n takes every n-th job")
     args = parser.parse_args()
 
-    options = {"det_side": args.det_side} if args.det_side else {}
+    options = ({"det_side": args.det_side} if args.det_side else {}) | ({"cuda": True} if args.cuda else {})
     run = ENGINES[args.engine](args.gpu, args.threads, **options)
     if args.jobs:
-        label = (f"{args.engine}{f' det {args.det_side}' if args.det_side else ''}"
-                 f"{' (DirectML)' if args.gpu and args.engine.startswith('rapid') else ''}")
+        device = " (CUDA)" if args.cuda else " (DirectML)" if args.gpu else ""
+        label = f"{args.engine}{f' det {args.det_side}' if args.det_side else ''}{device if args.engine.startswith('rapid') else ''}"
         run_jobs(run, label, args)
     else:
         run_bench(run, args)
