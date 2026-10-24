@@ -169,7 +169,58 @@ class FixedShapes:
         return out if self.kind == "cls" else out[:, :round(out.shape[1] * width / size)]
 
 
-def rapid_engine(model_type: str, gpu: bool, threads: int, fp16: bool = False, det_side: int = 0, cuda: bool = False):
+def speed_up_rapidocr(engine) -> None:
+    """Two CPU steps of RapidOCR done in one vectorised pass each (same results): ~10 % of a page's time.
+    - detection pre-processing: (x / 255 - 0.5) / 0.5 per pixel in numpy, in float64 (float64 mean / std) plus two
+      copies -> cv2.dnn.blobFromImage (x * 2/255 - 1, NCHW float32, C++);
+    - word boxes: each corner of each character mapped back to the page one by one (np.dot per point), then the
+      4 corners ordered -> one matrix product per line; unordered corners (only their min / max are used here)."""
+    import math
+    import types
+
+    import cv2
+    from rapidocr.cal_rec_boxes.main import Direction
+    from rapidocr.ch_ppocr_det.utils import DetPreProcess
+
+    original_preprocess = DetPreProcess.__call__
+
+    def preprocess(self, img: np.ndarray):  # TextDetector makes a new DetPreProcess per image: patched on the class
+        if not (np.allclose(self.mean, 0.5) and np.allclose(self.std, 0.5)):
+            return original_preprocess(self, img)
+        resized = self.resize(img)
+        if resized is None:
+            return None
+        return cv2.dnn.blobFromImage(resized, scalefactor=2 / 255, mean=(127.5, 127.5, 127.5), swapRB=False)
+
+    DetPreProcess.__call__ = preprocess
+
+    def reverse_rotate_crop_image(self, bbox_points, word_points_list, direction):
+        if not word_points_list or len({len(points) for points in word_points_list}) != 1:
+            return original(self, bbox_points, word_points_list, direction)
+        left, top = int(np.min(bbox_points[:, 0])), int(np.min(bbox_points[:, 1]))
+        bbox_points[:, 0] -= left
+        bbox_points[:, 1] -= top
+        width = int(np.linalg.norm(bbox_points[0] - bbox_points[1]))
+        height = int(np.linalg.norm(bbox_points[0] - bbox_points[3]))
+        target = np.array([[0, 0], [width, 0], [width, height], [0, height]], np.float32)
+        _, inverse = cv2.invert(cv2.getPerspectiveTransform(bbox_points, target))
+        points = np.asarray(word_points_list, np.float64).reshape(-1, 2)
+        if direction == Direction.VERTICAL:  # s_rotate by -90 degrees around the origin, then shifted by the width
+            angle = math.radians(-90)
+            x, y = points[:, 0].copy(), points[:, 1].copy()
+            points = np.stack([x * math.cos(angle) + y * math.sin(angle) + width,
+                               y * math.cos(angle) - x * math.sin(angle)], axis=1)
+        mapped = np.c_[points, np.ones(len(points))] @ inverse.T
+        xy = (mapped[:, :2] / mapped[:, 2:3]).astype(int) + [left, top]  # int() truncates like the original
+        return xy.reshape(len(word_points_list), -1, 2).tolist()
+
+    calculator = engine.cal_rec_boxes
+    original = type(calculator).reverse_rotate_crop_image
+    calculator.reverse_rotate_crop_image = types.MethodType(reverse_rotate_crop_image, calculator)
+
+
+def rapid_engine(model_type: str, gpu: bool, threads: int, fp16: bool = False, det_side: int = 0, cuda: bool = False,
+                 latin: bool = True):
     """det_side: longest side of the detection input (0 = the whole tile, 2000 px). Detection takes ~40 % of a tile's
     time; recognition still reads the text crops at full resolution. cuda: onnxruntime-gpu (backend/.venv-ocr-cuda)
     instead of DirectML; float16 models run ~2x faster there (tensor cores), not on DirectML."""
@@ -192,10 +243,11 @@ def rapid_engine(model_type: str, gpu: bool, threads: int, fp16: bool = False, d
         "Rec.rec_batch_num": 32,  # 6 by default: 25 % slower on map tiles (~100 lines each)
         "EngineConfig.onnxruntime.use_dml": gpu and not cuda, "EngineConfig.onnxruntime.intra_op_num_threads": threads,
         **({"Det.model_path": models["det"]} if fp16 else {}),
-        "Rec.model_path": latin_rec_model(rec_model),
+        "Rec.model_path": latin_rec_model(rec_model) if latin else rec_model,
     })
-    if cuda:  # one input shape per session (FixedShapes); the models load lazily otherwise
-        engine._load_det_model(), engine._load_cls_model(), engine._load_rec_model()
+    engine._load_det_model(), engine._load_cls_model(), engine._load_rec_model()  # lazy otherwise
+    speed_up_rapidocr(engine)
+    if cuda:  # one input shape per session (FixedShapes)
         engine.text_det.session = FixedShapes(engine.text_det.session, "det", 1, det_side or 2016)
         engine.text_cls.session = FixedShapes(engine.text_cls.session, "cls", engine.text_cls.cls_batch_num)
         engine.text_rec.session = FixedShapes(engine.text_rec.session, "rec", engine.text_rec.rec_batch_num)

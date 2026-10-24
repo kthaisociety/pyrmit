@@ -29,11 +29,19 @@ ENGINE_FAMILY = "rapid-v6"  # an output of any PP-OCRv6 setting counts as done (
 # the same words and property labels on the benchmark's synthetic maps (139 vs 140 of 305); 0 = whole tile.
 # small (-32 %) loses 14 % of the labels and 5 points on text pages; float16 models are no faster on DirectML
 DET_SIDE = 1280
-# Two processes share the GPU: +28 % tiles per second (one leaves it idle while it renders pages and decodes on the CPU)
-WORKERS = 2
+# One process: on real plan pages two were 34 % slower in total and three 50 % (8 GB of GPU memory; small benchmark
+# crops had shown +28 %, so measure on real pages)
+WORKERS = 1
 OCR_PYTHON = BACKEND_DIR / ".venv-ocr" / "Scripts" / "python.exe"
 JOBS_PATH = DATA_DIR / "ocr_jobs.jsonl"
-MAX_PAGES = 40   # long scanned reports: OCR the first pages only
+# Tiers of the scans by what they bring, OCRed in this order; --max-tier stops after one. A tier's page cap keeps the
+# first pages of long documents (rules and summaries come first; a plankarta has 1-2 sheets)
+TIERS = {1: "plan maps and provisions", 2: "plan texts (descriptions, consultation reports)",
+         3: "other planning types (översiktsplan, avlopp, bygglov, strandskydd, taxa)",
+         4: "studies attached to plans (noise, soil, stormwater, traffic...)", 5: "other"}
+TIER_PAGES = {1: 40, 2: 20, 3: 20, 4: 20, 5: 20}
+# 2026-10-24, at 0.66 s per tile: tier 1 ~12 h (5.4k PDFs), 2 ~14 h, 3 ~3 h, 4 ~1 h, 5 ~6 h
+MAX_TIER = 2
 
 
 # Scans typed "other" that are plan documents (2026-10-24: 2.1k of 3.8k): the current doc_type rules (_PB / _PK
@@ -44,13 +52,34 @@ PLAN_WORDS = re.compile(r"beskrivning|bestämmelse|planhandling|plankarta|illust
                         r"granskningsutlåtande|planuppdrag|planprogram|teckenförklaring|genomförande", re.I)
 
 
-def ocr_group(document: dict) -> int:
-    """0 = detaljplan (also plan documents typed "other"), 1 = other planning types, 2 = other."""
+MAP_WORDS = re.compile(r"plankarta|karta|bestämmelse|_pk\b|_pk[._ -]|illustration", re.I)
+STUDY_WORDS = re.compile(r"utredning|\bpm\b|rapport|buller|geotek|dagvatten|skyfall|översvämning|trafik|inventering|"
+                         r"\bmkb\b|miljökonsekvens|dagsljus|solstudie|vindstudie|\brisk|markmiljö|naturvärde|arkeolog|"
+                         r"kulturmiljö|parkering|lokalklimat", re.I)
+
+
+def large_first_page(path) -> bool:
+    """A sheet larger than A3 (a map), the way ocr_engines renders it at the map resolution."""
+    import pymupdf
+
+    try:
+        with pymupdf.open(path) as pdf:
+            return len(pdf) > 0 and max(pdf[0].rect.width, pdf[0].rect.height) > 1200
+    except Exception:
+        return False
+
+
+def ocr_tier(document: dict, large: bool) -> int:
+    """TIERS key of a scan: plan documents (also those typed "other") are maps / provisions, studies or texts."""
     kind = document.get("doc_type")
     text = f"{document.get('title') or ''} {document.get('url') or ''}"
     if kind == "other" and (doc_type(text) == "detaljplan" or PLAN_WORDS.search(text)):
         kind = "detaljplan"
-    return 0 if kind == "detaljplan" else 2 if kind == "other" else 1
+    if kind == "detaljplan":
+        if STUDY_WORDS.search(text) and not MAP_WORDS.search(text):
+            return 4
+        return 1 if large or MAP_WORDS.search(text) else 2
+    return 5 if kind == "other" else 3
 
 
 def main() -> None:
@@ -62,6 +91,8 @@ def main() -> None:
     parser.add_argument("--det-side", type=int, default=DET_SIDE,
                         help="longest side of the detection input (0 = whole 2000 px tile)")
     parser.add_argument("--workers", type=int, default=WORKERS, help="OCR processes sharing the GPU")
+    parser.add_argument("--max-tier", type=int, default=MAX_TIER,
+                        help="last tier to OCR: " + "; ".join(f"{k} {v}" for k, v in TIERS.items()))
     args = parser.parse_args()
 
     if not OCR_PYTHON.exists():
@@ -71,19 +102,24 @@ def main() -> None:
     todo = [d for d in read_jsonl(DOCUMENTS_PATH) if d["kind"] == "pdf" and (d.get("needs_ocr") or d.get("ocr"))]
     if args.kommuner:
         todo = [d for d in todo if d["kommun_code"] in set(args.kommuner)]
-    # Hours of work: detaljplaner first (plankartor are the point), then the other planning types, the "other" scans last
-    # (studies, guidelines, permit drawings: the run can stop before them); short documents first within a group
-    todo.sort(key=lambda d: (ocr_group(d), d.get("pages") or 0))
+    # By tier (TIERS), short documents first within one
+    for document in todo:
+        _, code, pdf_id = document["doc_id"].split(":")
+        document["_pdf"] = WEB_DIR / code / "pdf" / f"{pdf_id}.pdf"
+        document["_tier"] = ocr_tier(document, large_first_page(document["_pdf"]))
+    counts = {tier: sum(1 for d in todo if d["_tier"] == tier) for tier in TIERS}
+    todo = sorted((d for d in todo if d["_tier"] <= args.max_tier), key=lambda d: (d["_tier"], d.get("pages") or 0))
     if args.max_docs:
         todo = todo[:args.max_docs]
     with JOBS_PATH.open("w", encoding="utf-8") as handle:
         for document in todo:
-            _, code, pdf_id = document["doc_id"].split(":")
             handle.write(json.dumps({
-                "pdf": str(WEB_DIR / code / "pdf" / f"{pdf_id}.pdf"), "out": str(WEB_DIR / code / "ocr" / f"{pdf_id}.json"),
-                "max_pages": MAX_PAGES, "label": f"{document['kommun']} – {document['title']}",
+                "pdf": str(document["_pdf"]), "out": str(document["_pdf"].parent.parent / "ocr" / f"{document['_pdf'].stem}.json"),
+                "max_pages": TIER_PAGES[document["_tier"]], "tier": document["_tier"],
+                "label": f"{document['kommun']} – {document['title']}",
             }, ensure_ascii=False) + "\n")
-    print(f"{len(todo)} scanned PDFs -> {JOBS_PATH}", flush=True)
+    print("scans per tier: " + "; ".join(f"{t} {TIERS[t].split(' (')[0]}: {n}" for t, n in counts.items()), flush=True)
+    print(f"{len(todo)} scanned PDFs (tiers 1-{args.max_tier}) -> {JOBS_PATH}", flush=True)
     command = [str(OCR_PYTHON), str(BACKEND_DIR / "corpus" / "ocr_engines.py"), "--engine", args.engine,
                "--jobs", str(JOBS_PATH), "--det-side", str(args.det_side)] + ([] if args.cpu else ["--gpu"])
     # The .venv interpreter sets PYTHONHOME to its own base Python (3.13): inherited, it made .venv-ocr's 3.12 load

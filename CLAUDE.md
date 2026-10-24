@@ -147,17 +147,19 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   Each is tied to its chunk for citation; `corpus.chunk` drops paragraphs repeated across the corpus (standard plan
   wording), so ~2 % fall back to a chunk of the same plankarta (`exact: false`). ~8.2k plans / 260 kommuner, ~1.4k
   with ~15.6k provisions. Which map area carries which code is not extracted (needs the vision model).
-- `corpus.ocr` writes the job list (`data/corpus/ocr_jobs.jsonl`: scanned PDFs in `ocr_group` order: detaljplaner and
-  the plan documents typed "other" (`PLAN_WORDS` / the current `doc_type` rules: 2.1k of the 3.8k "other" scans, e.g.
-  Huddinge's "Bestämmelse0126k-7018", Kalix's "_PK" files) ~35 h, the other planning types ~4 h, the rest of "other"
-  (studies, guidelines, permit drawings) ~10 h last: a run can stop before them; short documents first within a group;
-  outputs of any PP-OCRv6 setting are kept, EasyOCR's are redone). Detection input capped at 1280 px (`DET_SIDE`,
-  `--det-side 0` = whole 2000 px tile): 25 % faster, same words and labels on the benchmark (139 vs 140 of 305).
-  Recognition model cut to its 550 Latin characters (`latin_rec_model`, of 18,710: the multilingual model also reads
-  Chinese...; output layer and metadata character list sliced, made once in `<venv>/fast/`): the probabilities copied
-  to the CPU per batch shrink ~35x, a tile 0.95 -> 0.51 s, same or better accuracy (fewer stray non-Latin
-  characters). `WORKERS = 2` processes share the GPU (`--shard i/n`): +28 % throughput. Together a plan map page
-  8.4 -> 5.1 s; the backlog ~67 h -> ~32 h (plans ~23 h, other planning types ~3 h, the rest of "other" ~6 h).
+- `corpus.ocr` writes the job list (`data/corpus/ocr_jobs.jsonl`) by tier (`TIERS`, `ocr_tier`; a first page larger
+  than A3 = a map; plan documents typed "other" count as plans: `PLAN_WORDS` / the current `doc_type` rules, e.g.
+  Huddinge's "Bestämmelse0126k-7018", Kalix's "_PK" files): 1 plan maps and provisions (~12 h, 5.4k PDFs, 40 pages),
+  2 plan texts (~14 h, 20 pages), 3 other planning types (~3 h), 4 studies attached to plans (~1 h), 5 other (~6 h);
+  `MAX_TIER = 2` (`--max-tier`); short documents first within a tier; outputs of any PP-OCRv6 setting are kept,
+  EasyOCR's are redone. Speed (2026-10-24, same 24 first-night PDFs: 249 -> 152 s, -39 %, 4 % fewer words):
+  detection input capped at 1280 px (`DET_SIDE`, `--det-side 0` = whole 2000 px tile: same words and labels on the
+  benchmark, 139 vs 140 of 305); recognition cut to its 550 Latin characters (`latin_rec_model`, of 18,710: the
+  multilingual model also reads Chinese...; output layer and metadata character list sliced, made once in
+  `<venv>/fast/`: ~35x less copied to the CPU per batch, same or better accuracy); `speed_up_rapidocr` (detection
+  pre-processing with `cv2.dnn.blobFromImage` instead of float64 numpy, word boxes one matrix product per line:
+  -12.5 % on real plans, identical words). One process (`WORKERS = 1`, `--shard i/n` exists): on real plan pages two
+  were 34 % slower in total (small benchmark crops had shown +28 %: measure on real pages).
   CUDA (`--cuda`, `backend/.venv-ocr-cuda` with onnxruntime-gpu 1.23 and torch's CUDA 12 / cuDNN 9 DLLs,
   `use_cuda_dlls`): cuDNN re-plans every convolution (~3 s) whenever an input shape changes, so `FixedShapes` pads
   inputs to a few fixed shapes, one session each; then no faster than DirectML (0.55 vs 0.51 s per tile) and its
