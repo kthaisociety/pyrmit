@@ -96,7 +96,30 @@ def build(model: str) -> None:
         memmap[start:start + len(block)] = block.astype(np.float16)
     memmap.flush()
     (out / "meta.json").write_text(json.dumps({"model": model, "chunks": len(kept)}))
+    summary(out)
     print(f"Store: {len(kept)} chunks -> {out} ({time.perf_counter() - started:.0f}s)")
+
+
+def summary(directory: Path) -> list[dict]:
+    """Documents and chunks per kommun and document type, for the Database and Pipeline views. Cached in
+    summary.json next to the store: the GROUP BY reads all 1.9M rows (~30 s)."""
+    path, database = directory / "summary.json", directory / "corpus.sqlite"
+    stamp = database.stat().st_mtime
+    try:
+        cached = json.loads(path.read_text(encoding="utf-8"))
+        if cached.get("sqlite_mtime") == stamp:
+            return cached["rows"]
+    except (OSError, ValueError):
+        pass
+    connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    rows = [{"kommun_code": code, "kommun": kommun, "kind": kind, "doc_type": doc_type, "documents": documents,
+             "chunks": chunks}
+            for code, kommun, kind, doc_type, documents, chunks in connection.execute(
+                "SELECT kommun_code, kommun, kind, doc_type, COUNT(DISTINCT doc_id), COUNT(*) FROM chunks "
+                "WHERE kind != 'law' GROUP BY kommun_code, kind, doc_type")]
+    connection.close()
+    path.write_text(json.dumps({"sqlite_mtime": stamp, "rows": rows}, ensure_ascii=False), encoding="utf-8")
+    return rows
 
 
 def _regexp(pattern: str, value: str | None) -> bool:
@@ -135,6 +158,7 @@ class DiskStore:
             raise FileNotFoundError(f"No store for {model}: run `python -m localrag.store --model {model}`")
         self.vectors = np.load(self.dir / "vectors.npy", mmap_mode="r")
         self._local = threading.local()
+        self._masks: dict[tuple, np.ndarray] = {}  # local_mask cache
         self.gpu = self._to_gpu()
 
     def _to_gpu(self):
@@ -158,11 +182,13 @@ class DiskStore:
             connection.row_factory = sqlite3.Row
             connection.create_function("REGEXP", 2, _regexp, deterministic=True)
             self._local.connection = connection
-        self._masks: dict[tuple, np.ndarray] = {}  # local_mask cache
         return self._local.connection
 
     def query(self, sql: str, params: tuple = ()) -> list:
         return self.connection.execute(sql, params).fetchall()
+
+    def summary(self) -> list[dict]:
+        return summary(self.dir)
 
     def chunks_by_rowid(self, rowids: list[int]) -> dict[int, dict]:
         if not rowids:
@@ -271,6 +297,12 @@ class DiskStore:
             match = f"({terms}) AND ({' OR '.join(f'zzk{code}' for code in kommuner)})"
         else:
             return []  # whole local corpus: common terms match ~100k chunks, too slow to score; dense covers it
+        if pool != "law" and (doc_types or title_contains):
+            sql = ("SELECT f.rowid FROM chunks_fts f JOIN chunks c ON c.rowid = f.rowid WHERE chunks_fts MATCH ?"
+                   + self._filter_sql(doc_types, title_contains).replace(" doc_type", " c.doc_type")
+                   .replace(" title", " c.title") + " ORDER BY bm25(chunks_fts) LIMIT ?")
+            params = (match, *(doc_types or []), *([f"%{title_contains}%"] if title_contains else []), n)
+            return [r[0] for r in self.query(sql, params)]
         sql = "SELECT rowid FROM chunks_fts WHERE chunks_fts MATCH ? ORDER BY bm25(chunks_fts) LIMIT ?"
         return [r[0] for r in self.query(sql, (match, n))]
 
@@ -298,12 +330,6 @@ class DiskRetriever:
             if mode in ("dense", "hybrid") else []
         vectors = [v / max(np.linalg.norm(v), 1e-12) for v in vectors]
         results: dict = {}
-        if pool != "law" and (doc_types or title_contains):
-            sql = ("SELECT f.rowid FROM chunks_fts f JOIN chunks c ON c.rowid = f.rowid WHERE chunks_fts MATCH ?"
-                   + self._filter_sql(doc_types, title_contains).replace(" doc_type", " c.doc_type")
-                   .replace(" title", " c.title") + " ORDER BY bm25(chunks_fts) LIMIT ?")
-            params = (match, *(doc_types or []), *([f"%{title_contains}%"] if title_contains else []), n)
-            return [r[0] for r in self.query(sql, params)]
         for pool in ("law", "local"):
             filters = (doc_types, title_contains) if pool == "local" else (None, None)
             rowids = self.store.pool_rowids(pool, kommuner or None, *filters)

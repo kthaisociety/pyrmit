@@ -4,7 +4,7 @@ with store=local, the offline corpus used by RETRIEVAL_BACKEND=local (loaded by 
 User/auth tables are intentionally not exposed.
 """
 
-from collections import Counter
+from collections import Counter, defaultdict
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
@@ -55,8 +55,14 @@ def _local_chunks() -> list[dict]:
     return get_retriever().chunks
 
 
+# Document types of corpus.extract, in the order the Database view lists them within a kommun
+DOC_TYPE_ORDER = ("detaljplan", "oversiktsplan", "bygglov", "strandskydd", "avlopp", "taxa", "other")
+_TYPE_RANK = "CASE doc_type " + " ".join(f"WHEN '{t}' THEN {i}" for i, t in enumerate(DOC_TYPE_ORDER)) + " ELSE 99 END"
+
+
 def _local_source(chunk: dict) -> str:
-    return chunk["title"] if chunk["kind"] == "law" else (chunk.get("kommun") or "unknown")
+    """Law chunks: the statute; kommun chunks: the kommun code (the filter key; the name is shown)."""
+    return chunk["title"] if chunk["kind"] == "law" else (chunk.get("kommun_code") or "unknown")
 
 
 def _overview_table(counts: dict[str, int]) -> schemas.ChunkTableOverview:
@@ -68,58 +74,145 @@ def _overview_table(counts: dict[str, int]) -> schemas.ChunkTableOverview:
     )
 
 
+def _kommun_overview(rows: list[dict]) -> schemas.ChunkTableOverview:
+    """rows: documents / chunks per (kommun, kind, doc_type) -> one source per kommun with its document types."""
+    kommuner: dict[str, dict] = {}
+    for row in rows:
+        kommun = kommuner.setdefault(row["kommun_code"] or "unknown",
+                                     {"name": row["kommun"] or "unknown", "types": defaultdict(Counter)})
+        counts = kommun["types"][row["doc_type"] or "other"]
+        counts.update(documents=row["documents"], chunks=row["chunks"],
+                      **{"pdfs" if row["kind"] == "pdf" else "pages": row["documents"]})
+    sources = []
+    for code, kommun in kommuner.items():
+        types = [schemas.TypeCount(doc_type=t, **c) for t, c in kommun["types"].items()]
+        types.sort(key=lambda t: DOC_TYPE_ORDER.index(t.doc_type) if t.doc_type in DOC_TYPE_ORDER else 99)
+        sources.append(schemas.SourceCount(name=kommun["name"], key=code, count=sum(t.chunks for t in types),
+                                           documents=sum(t.documents for t in types), types=types))
+    sources.sort(key=lambda s: s.name)
+    total = sum(s.count for s in sources)
+    return schemas.ChunkTableOverview(total=total, with_embedding=total, sources=sources)
+
+
 def _local_overview() -> schemas.DbOverview:
     store = _local_store()
     if store is not None:
         law = {r[0]: r[1] for r in store.query("SELECT title, COUNT(*) FROM chunks WHERE kind = 'law' GROUP BY title")}
-        local = {r[0] or "unknown": r[1] for r in store.query(
-            "SELECT kommun, COUNT(*) FROM chunks WHERE kind != 'law' GROUP BY kommun")}
-        return schemas.DbOverview(law=_overview_table(law), document=_overview_table(local))
-    tables = {"law": Counter(), "document": Counter()}
+        return schemas.DbOverview(law=_overview_table(law), document=_kommun_overview(store.summary()))
+    law, local = Counter(), defaultdict(lambda: {"documents": set(), "chunks": 0})
     for chunk in _local_chunks():
-        tables["law" if chunk["kind"] == "law" else "document"][_local_source(chunk)] += 1
-    return schemas.DbOverview(law=_overview_table(tables["law"]), document=_overview_table(tables["document"]))
+        if chunk["kind"] == "law":
+            law[chunk["title"]] += 1
+            continue
+        group = local[(chunk.get("kommun_code"), chunk.get("kommun"), chunk["kind"], chunk.get("doc_type"))]
+        group["documents"].add(chunk["doc_id"])
+        group["chunks"] += 1
+    rows = [{"kommun_code": code, "kommun": name, "kind": kind, "doc_type": doc_type,
+             "documents": len(g["documents"]), "chunks": g["chunks"]} for (code, name, kind, doc_type), g in local.items()]
+    return schemas.DbOverview(law=_overview_table(law), document=_kommun_overview(rows))
 
 
 def _row_from_chunk(chunk: dict) -> schemas.ChunkRow:
+    law = chunk["kind"] == "law"
     return schemas.ChunkRow(
         id=chunk["chunk_id"],
-        source=_local_source(chunk),
+        source=chunk["title"] if law else (chunk.get("title") or chunk["doc_id"]),
         chunk_index=chunk.get("chunk_index"),
         chapter=chunk.get("chapter"),
         chapter_title=None,
         section=chunk.get("section"),
         content=f"{chunk['header']}\n\n{chunk['text']}",
         has_embedding=True,
+        doc_id=chunk["doc_id"],
+        kind=chunk["kind"],
+        doc_type=None if law else chunk.get("doc_type"),
+        kommun=None if law else chunk.get("kommun"),
     )
 
 
-def _local_page(table: str, source: str | None, q: str | None, offset: int, limit: int) -> schemas.ChunkPage:
+def _local_page(table: str, source: str | None, doc_type: str | None, q: str | None, offset: int,
+                limit: int, doc_id: str | None = None) -> schemas.ChunkPage:
     store = _local_store()
     if store is not None:
-        where = ["kind = 'law'" if table == "law" else "kind IN ('page', 'pdf')"]  # indexed, unlike kind != 'law'
-        params: list = []
-        if source:
-            where.append("title = ?" if table == "law" else "kommun = ?")
-            params.append(source)
-        if q:
-            where.append("(text LIKE ? OR header LIKE ?)")
-            params += [f"%{q}%", f"%{q}%"]
-        condition = " AND ".join(where)
-        total = store.query(f"SELECT COUNT(*) FROM chunks WHERE {condition}", tuple(params))[0][0]
-        rows = store.query(f"SELECT * FROM chunks WHERE {condition} ORDER BY title, CAST(chunk_index AS INTEGER) "
-                           f"LIMIT ? OFFSET ?", (*params, limit, offset))
-        items = [_row_from_chunk(store._chunk(row)) for row in rows]
-        return schemas.ChunkPage(total=total, offset=offset, limit=limit, items=items)
+        return _store_page(store, table, source, doc_type, q, offset, limit, doc_id)
     needle = q.lower() if q else None
     rows = [
         chunk for chunk in _local_chunks()
         if (chunk["kind"] == "law") == (table == "law")
+        and (not doc_id or chunk["doc_id"] == doc_id)
         and (not source or _local_source(chunk) == source)
+        and (not doc_type or chunk.get("doc_type") == doc_type)
         and (not needle or needle in chunk["text"].lower() or needle in chunk["header"].lower())
     ]
+    if table == "document":
+        rows.sort(key=lambda c: (DOC_TYPE_ORDER.index(c.get("doc_type")) if c.get("doc_type") in DOC_TYPE_ORDER else 99,
+                                 c.get("title") or "", c["doc_id"], c.get("chunk_index") or 0))
     items = [_row_from_chunk(chunk) for chunk in rows[offset:offset + limit]]
     return schemas.ChunkPage(total=len(rows), offset=offset, limit=limit, items=items)
+
+
+def _store_documents(store, source: str, doc_type: str | None, q: str | None, offset: int,
+                     limit: int) -> schemas.DocumentPage:
+    """A kommun's documents (from its chunks: the store has no document table), by type then title."""
+    where, params = ["kind IN ('page', 'pdf')", "kommun_code = ?"], [source]
+    if doc_type:
+        where.append("doc_type = ?")
+        params.append(doc_type)
+    if q:
+        where.append("title LIKE ?")
+        params.append(f"%{q}%")
+    condition = " AND ".join(where)
+    total = store.query(f"SELECT COUNT(DISTINCT doc_id) FROM chunks WHERE {condition}", tuple(params))[0][0]
+    rows = store.query(f"SELECT doc_id, MIN(title), MIN(kind), MIN(doc_type), MIN(url), COUNT(*) FROM chunks "
+                       f"WHERE {condition} GROUP BY doc_id ORDER BY MIN({_TYPE_RANK}), MIN(title), doc_id "
+                       f"LIMIT ? OFFSET ?", (*params, limit, offset))
+    items = [schemas.DocumentRow(doc_id=doc_id, title=title or doc_id, kind=kind, doc_type=dtype, url=url, chunks=n)
+             for doc_id, title, kind, dtype, url, n in rows]
+    return schemas.DocumentPage(total=total, offset=offset, limit=limit, items=items)
+
+
+def _store_page(store, table: str, source: str | None, doc_type: str | None, q: str | None, offset: int,
+                limit: int, doc_id: str | None = None) -> schemas.ChunkPage:
+    """Kommun chunks of the disk store (1.9M rows): filtered on the (kind, kommun_code) index. Sorting or counting
+    the whole table takes ~20 s, so without a kommun the rows come in store order and the total from the cached
+    summary; a text filter over every kommun is not counted."""
+    # kind IN uses the (kind, kommun_code) index (with a kommun); kind != 'law' reads the table in rowid order and
+    # stops at the page's last row (without one: through the index, every row was sorted first, 17-26 s)
+    where = ["kind = 'law'" if table == "law" else "kind IN ('page', 'pdf')" if source else "kind != 'law'"]
+    params: list = []
+    if doc_id:  # one document's chunks (chunks_doc index)
+        rows = store.query("SELECT * FROM chunks WHERE doc_id = ? ORDER BY CAST(chunk_index AS INTEGER) LIMIT ? OFFSET ?",
+                           (doc_id, limit + 1, offset))
+        total = store.query("SELECT COUNT(*) FROM chunks WHERE doc_id = ?", (doc_id,))[0][0]
+        return schemas.ChunkPage(total=total, has_more=len(rows) > limit, offset=offset, limit=limit,
+                                 items=[_row_from_chunk(store._chunk(row)) for row in rows[:limit]])
+    if source:
+        where.append("title = ?" if table == "law" else "kommun_code = ?")
+        params.append(source)
+    if doc_type and table == "document":
+        where.append("doc_type = ?")
+        params.append(doc_type)
+    if q:
+        where.append("(text LIKE ? OR header LIKE ?)")
+        params += [f"%{q}%", f"%{q}%"]
+    condition = " AND ".join(where)
+    if table == "law":
+        order = "title, CAST(chunk_index AS INTEGER)"
+    elif source:
+        order = f"{_TYPE_RANK}, title, doc_id, CAST(chunk_index AS INTEGER)"
+    else:
+        order = "rowid"
+    rows = store.query(f"SELECT * FROM chunks WHERE {condition} ORDER BY {order} LIMIT ? OFFSET ?",
+                       (*params, limit + 1, offset))
+    items = [_row_from_chunk(store._chunk(row)) for row in rows[:limit]]
+    if table == "document" and not q:
+        total = sum(r["chunks"] for r in store.summary()
+                    if (not source or r["kommun_code"] == source) and (not doc_type or r["doc_type"] == doc_type))
+    elif table == "document" and not source:
+        total = None
+    else:
+        total = store.query(f"SELECT COUNT(*) FROM chunks WHERE {condition}", tuple(params))[0][0]
+    return schemas.ChunkPage(total=total, has_more=len(rows) > limit, offset=offset, limit=limit, items=items)
 
 
 @router.get("/db/overview", response_model=schemas.DbOverview)
@@ -140,6 +233,8 @@ def overview(
 def list_chunks(
     table: schemas.ChunkTableName,
     source: str | None = None,
+    doc_type: str | None = None,
+    doc_id: str | None = None,
     q: str | None = None,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=25, ge=1, le=100),
@@ -148,7 +243,7 @@ def list_chunks(
     _user: models.User = Depends(get_current_user),
 ):
     if store == "local":
-        return _local_page(table, source, q, offset, limit)
+        return _local_page(table, source, doc_type, q, offset, limit, doc_id)
     model, source_col = _TABLES[table]
     # Select explicit columns so the 3072-dim embeddings are never loaded
     columns = [
@@ -186,6 +281,22 @@ def list_chunks(
         for row in rows
     ]
     return schemas.ChunkPage(total=total, offset=offset, limit=limit, items=items)
+
+
+@router.get("/db/documents", response_model=schemas.DocumentPage)
+def list_documents(
+    source: str,
+    doc_type: str | None = None,
+    q: str | None = None,
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
+    _user: models.User = Depends(get_current_user),
+):
+    """Local disk store only: a kommun's documents by type, then title (q filters the title)."""
+    store = _local_store()
+    if store is None:
+        return schemas.DocumentPage(total=0, offset=offset, limit=limit, items=[])
+    return _store_documents(store, source, doc_type, q, offset, limit)
 
 
 @router.post("/db/search", response_model=schemas.ChunkSearchResponse)

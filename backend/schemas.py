@@ -197,9 +197,20 @@ ChunkTableName = Literal["law", "document"]
 ChunkStore = Literal["neon", "local"]
 
 
+class TypeCount(BaseModel):
+    doc_type: str
+    documents: int
+    chunks: int
+    pdfs: int = 0
+    pages: int = 0
+
+
 class SourceCount(BaseModel):
     name: str
     count: int
+    key: str | None = None            # value to filter on when it differs from the name (local corpus: kommun code)
+    documents: int | None = None
+    types: list[TypeCount] | None = None  # local corpus: documents per type within the kommun
 
 
 class ChunkTableOverview(BaseModel):
@@ -223,10 +234,32 @@ class ChunkRow(BaseModel):
     content: str
     has_embedding: bool
     created_at: datetime | None = None
+    # Local corpus documents
+    doc_id: str | None = None
+    kind: str | None = None
+    doc_type: str | None = None
+    kommun: str | None = None
+
+
+class DocumentRow(BaseModel):
+    doc_id: str
+    title: str
+    kind: str
+    doc_type: str | None = None
+    url: str | None = None
+    chunks: int
+
+
+class DocumentPage(BaseModel):
+    total: int
+    offset: int
+    limit: int
+    items: list[DocumentRow]
 
 
 class ChunkPage(BaseModel):
-    total: int
+    total: int | None  # None: not counted (text filter over the whole local corpus)
+    has_more: bool | None = None
     offset: int
     limit: int
     items: list[ChunkRow]

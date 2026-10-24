@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Settings, MessageSquare, Trash2, Check, X, Pencil, Database, FlaskConical } from 'lucide-react';
+import { Plus, Settings, MessageSquare, Trash2, Check, X, Pencil, Database, FlaskConical, Gauge } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
 
 interface ChatSession {
@@ -25,9 +25,10 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onOpenDatabase: () => void;
   onOpenBenchmark: () => void;
+  onOpenPipeline: () => void;
 }
 
-export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, refreshTrigger, user, onOpenSettings, onOpenDatabase, onOpenBenchmark }: SidebarProps) {
+export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, refreshTrigger, user, onOpenSettings, onOpenDatabase, onOpenBenchmark, onOpenPipeline }: SidebarProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -212,6 +213,13 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
         >
           <FlaskConical size={16} />
           <span>Benchmark</span>
+        </button>
+        <button
+          onClick={onOpenPipeline}
+          className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-900 rounded-lg transition-colors text-zinc-700 dark:text-zinc-300"
+        >
+          <Gauge size={16} />
+          <span>Pipeline</span>
         </button>
         <button
           onClick={onOpenDatabase}
