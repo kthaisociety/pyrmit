@@ -1,73 +1,65 @@
 """
-Local OCR (EasyOCR, Swedish + English, GPU) for scanned PDFs that have no text layer,
-mostly old plankartor: extract.py flags them `needs_ocr`, this step writes their text to
-raw/web/<code>/ocr/<pdf id>.json, and the next `corpus.extract` uses it.
+OCR of the scanned PDFs (no text layer, flagged `needs_ocr` by corpus.extract): mostly old plans, whose rules are
+printed on the plankarta itself, and old planbeskrivningar. Writes raw/web/<code>/ocr/<pdf id>.json (the text of
+each page + every word with its box in PDF coordinates); the next `corpus.extract` uses the text.
 
-OCR only recovers the words (legend, zone codes, heights, property names). What a plan
-says spatially (which zone has which height) needs a vision model looking at the page.
+Engine: PP-OCRv6 medium (RapidOCR, ONNX, on DirectML) chosen on corpus.ocr_bench (real map crops: 87 % of the words
+and 8 of 13 property labels read, EasyOCR 69 % and 0). It runs in backend/.venv-ocr (see corpus/ocr_engines.py):
+this module picks the PDFs and starts it. PDFs OCRed by another engine (EasyOCR until 2026-10-23, no word boxes)
+are redone. Resumable: stop it any time, the next run skips what this engine already did.
 
     cd backend && python -m corpus.ocr --max-docs 20
+    then corpus.extract, corpus.pdf_filter features/classify/llm/classify/apply, corpus.chunk, localrag.index,
+    localrag.store, corpus.plans
 """
 
 import argparse
 import json
-import time
+import os
+import subprocess
+import sys
 
-from corpus.common import DOCUMENTS_PATH, WEB_DIR, read_jsonl
+from corpus.common import BACKEND_DIR, DATA_DIR, DOCUMENTS_PATH, WEB_DIR, read_jsonl
 
-TILE = 2000      # pixels; large-format plans are cut into overlapping tiles
-OVERLAP = 150
+ENGINE = "rapid-v6-medium"
+OCR_PYTHON = BACKEND_DIR / ".venv-ocr" / "Scripts" / "python.exe"
+JOBS_PATH = DATA_DIR / "ocr_jobs.jsonl"
 MAX_PAGES = 40   # long scanned reports: OCR the first pages only
-
-
-def ocr_page(reader, page, dpi: int) -> str:
-    import numpy as np
-
-    pixmap = page.get_pixmap(dpi=dpi)
-    image = np.frombuffer(pixmap.samples, dtype=np.uint8).reshape(pixmap.height, pixmap.width, pixmap.n)[:, :, :3]
-    lines = []
-    for top in range(0, max(image.shape[0] - OVERLAP, 1), TILE - OVERLAP):
-        for left in range(0, max(image.shape[1] - OVERLAP, 1), TILE - OVERLAP):
-            tile = image[top:top + TILE, left:left + TILE]
-            for _, text, confidence in reader.readtext(tile, paragraph=False):
-                if confidence >= 0.3 and len(text.strip()) > 1:
-                    lines.append(text.strip())
-    # Tiles overlap: drop exact repeats while keeping reading order
-    return "\n".join(dict.fromkeys(lines))
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="OCR scanned PDFs flagged by corpus.extract")
     parser.add_argument("--max-docs", type=int, default=0, help="0 = all")
-    parser.add_argument("--dpi", type=int, default=200)
     parser.add_argument("--kommuner", nargs="*")
+    parser.add_argument("--engine", default=ENGINE)
+    parser.add_argument("--cpu", action="store_true", help="no GPU (about 6x slower)")
     args = parser.parse_args()
 
-    import easyocr
-    import pymupdf
-
-    reader = easyocr.Reader(["sv", "en"], gpu=True)
-    todo = [d for d in read_jsonl(DOCUMENTS_PATH) if d.get("needs_ocr")]
+    if not OCR_PYTHON.exists():
+        sys.exit(f"{OCR_PYTHON} is missing: see the install line in corpus/ocr_engines.py")
+    # Scans without text, and scans OCRed earlier (their text is in documents.jsonl; the engine is checked by the
+    # worker, which skips its own outputs)
+    todo = [d for d in read_jsonl(DOCUMENTS_PATH) if d["kind"] == "pdf" and (d.get("needs_ocr") or d.get("ocr"))]
     if args.kommuner:
         todo = [d for d in todo if d["kommun_code"] in set(args.kommuner)]
     # Hours of work: detaljplaner first (plankartor are the point), short documents first within a type
     todo.sort(key=lambda d: (d.get("doc_type") != "detaljplan", d.get("pages") or 0))
     if args.max_docs:
         todo = todo[:args.max_docs]
-
-    for index, document in enumerate(todo, start=1):
-        _, code, pdf_id = document["doc_id"].split(":")
-        out = WEB_DIR / code / "ocr" / f"{pdf_id}.json"
-        if out.exists():
-            continue
-        started = time.perf_counter()
-        pdf = pymupdf.open(WEB_DIR / code / "pdf" / f"{pdf_id}.pdf")
-        pages = [ocr_page(reader, page, args.dpi) for page in list(pdf)[:MAX_PAGES]]
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps({"pages": pages, "dpi": args.dpi, "engine": "easyocr sv+en"}, ensure_ascii=False),
-                       encoding="utf-8")
-        print(f"[{index}/{len(todo)}] {document['kommun']} – {document['title'][:60]}: "
-              f"{sum(len(p) for p in pages)} chars, {time.perf_counter() - started:.0f}s", flush=True)
+    with JOBS_PATH.open("w", encoding="utf-8") as handle:
+        for document in todo:
+            _, code, pdf_id = document["doc_id"].split(":")
+            handle.write(json.dumps({
+                "pdf": str(WEB_DIR / code / "pdf" / f"{pdf_id}.pdf"), "out": str(WEB_DIR / code / "ocr" / f"{pdf_id}.json"),
+                "max_pages": MAX_PAGES, "label": f"{document['kommun']} – {document['title']}",
+            }, ensure_ascii=False) + "\n")
+    print(f"{len(todo)} scanned PDFs -> {JOBS_PATH}", flush=True)
+    command = [str(OCR_PYTHON), str(BACKEND_DIR / "corpus" / "ocr_engines.py"), "--engine", args.engine,
+               "--jobs", str(JOBS_PATH)] + ([] if args.cpu else ["--gpu"])
+    # The .venv interpreter sets PYTHONHOME to its own base Python (3.13): inherited, it made .venv-ocr's 3.12 load
+    # the 3.13 standard library ("SRE module mismatch")
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONHOME", "PYTHONPATH", "__PYVENV_LAUNCHER__")}
+    sys.exit(subprocess.run(command, cwd=BACKEND_DIR, env=env).returncode)
 
 
 if __name__ == "__main__":

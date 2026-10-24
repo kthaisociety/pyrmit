@@ -3,6 +3,8 @@ __pycache__/
 *$py.class
 .env
 .venv
+.venv-ocr/
+*.pid
 env/
 venv/
 
