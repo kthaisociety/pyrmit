@@ -383,6 +383,29 @@ def join_cut_lines(lines: list[list[list]]) -> list[list[list]]:
     return [line for line in lines if line]
 
 
+def render(page, scale: float) -> np.ndarray:
+    """The page as an RGB array. MuPDF refuses to decode a whole image over its size limit ("Overly large image"):
+    the page came out blank (a 20674 x 19691 px scan of a 2.6 m Strömstad plankarta, 1 page of the 11k scans,
+    2026-10-25). It still renders such a page in strips."""
+    import pymupdf
+
+    matrix = pymupdf.Matrix(scale, scale)
+    pymupdf.TOOLS.reset_mupdf_warnings()
+    pixmap = page.get_pixmap(matrix=matrix, colorspace=pymupdf.csRGB, alpha=False)
+    if "Overly large image" not in pymupdf.TOOLS.mupdf_warnings():
+        return np.frombuffer(pixmap.samples, dtype=np.uint8).reshape(pixmap.height, pixmap.width, 3)
+    image = np.full((pixmap.height, pixmap.width, 3), 255, dtype=np.uint8)
+    top, step = page.rect.y0, 2000 / scale
+    while top < page.rect.y1:
+        clip = pymupdf.Rect(page.rect.x0, top, page.rect.x1, min(top + step, page.rect.y1))
+        strip = page.get_pixmap(matrix=matrix, colorspace=pymupdf.csRGB, alpha=False, clip=clip)
+        rows = np.frombuffer(strip.samples, dtype=np.uint8).reshape(strip.height, strip.width, 3)
+        y, x = strip.y - pixmap.y, strip.x - pixmap.x
+        image[y:y + strip.height, x:x + strip.width] = rows[:image.shape[0] - y, :image.shape[1] - x]
+        top += step
+    return image
+
+
 def ocr_pdf(run, path: str, max_pages: int, dpi: int, map_dpi: int, tile: int, overlap: int) -> dict:
     """Text per page and words in PDF coordinates. Pages larger than A3 (plankartor) are rendered at map_dpi.
     On the benchmark's real scans (2026-10-23), 300 instead of 200 dpi: map crops 83 vs 87 % of the words, the
@@ -394,9 +417,7 @@ def ocr_pdf(run, path: str, max_pages: int, dpi: int, map_dpi: int, tile: int, o
         for number, page in enumerate(list(pdf)[:max_pages]):
             wanted = map_dpi if max(page.rect.width, page.rect.height) > 1200 else dpi
             scale = min(wanted / 72, MAX_SIDE / max(page.rect.width, page.rect.height))
-            pixmap = page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), colorspace=pymupdf.csRGB, alpha=False)
-            image = np.frombuffer(pixmap.samples, dtype=np.uint8).reshape(pixmap.height, pixmap.width, 3)
-            found, lines, _ = ocr_image(run, image, tile, overlap)
+            found, lines, _ = ocr_image(run, render(page, scale), tile, overlap)
             pages.append(reading_order(lines))
             # Pixels of the rendered (rotated) page -> PDF coordinates of the unrotated page
             back = pymupdf.Matrix(1 / scale, 1 / scale) * page.derotation_matrix
