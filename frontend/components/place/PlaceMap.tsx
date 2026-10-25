@@ -17,6 +17,7 @@ export interface PlaceMapProps {
   outlines: PlaceOutline[]; // drawn over the base map: the property, its plans and zones
   bounds?: [number, number, number, number] | null; // west, south, east, north: first view
   bottomInset?: number; // share of the map's height covered from below (the place card): the view centres above it
+  proposal?: Pin | null; // a proposed pin (from the search), shown apart from the pin until the user confirms it
   onMapClick: (pin: Pin) => void;
 }
 

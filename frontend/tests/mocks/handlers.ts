@@ -9,6 +9,7 @@ export const handlers = [
     const lat = Number(new URL(request.url).searchParams.get('lat'));
     return HttpResponse.json(lat > 59.87 ? kaboOutside : kungsangen);
   }),
+  http.get('*/api/place/search', () => HttpResponse.json([])),
   http.get('*/api/place/coverage', () =>
     HttpResponse.json([{ code: '0380', name: 'Uppsala', bbox: [17.5, 59.7, 17.9, 60.0], fetched: '2026-10-25' }]),
   ),

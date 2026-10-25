@@ -3,6 +3,7 @@ The map's place lookups (no LLM, see place/):
 
 - GET /api/place/profile?lat=..&lon=..  -> the place profile of a pinned point (place.profile.build_profile)
 - GET /api/place/coverage               -> the pilot kommuner with a snapshot, for the map's first view
+- GET /api/place/search?q=..            -> Swedish addresses and place names for the map's search (Nominatim)
 """
 
 from collections.abc import Callable
@@ -33,6 +34,11 @@ def get_ancient_remains_lookup() -> Callable[[dict], list[dict]]:
     return live.ancient_remains_at
 
 
+def get_place_search() -> Callable[[str], list[dict]]:
+    """The address search (overridden in tests)."""
+    raise NotImplementedError
+
+
 def get_plan_registry() -> Callable[[str], list[dict]]:
     """The corpus plan registry by kommun code (overridden in tests)."""
     return profile.corpus_plans
@@ -58,3 +64,12 @@ def place_coverage(store: Annotated[PlaceStore, Depends(get_place_store)],
                    user: Annotated[models.User, Depends(get_current_user)]) -> list[dict]:
     """The pilot kommuner with a snapshot: [{"code", "name", "bbox", "fetched"}]."""
     return store.kommuner()
+
+
+@router.get("/place/search")
+def place_search(q: Annotated[str, Query(min_length=2, max_length=200)],
+                 search: Annotated[Callable, Depends(get_place_search)],
+                 user: Annotated[models.User, Depends(get_current_user)]) -> list[dict]:
+    """Matches for the query (see place.geocode.search_places). 422 for a query under 2 characters, 503 with a
+    message when the address service does not answer."""
+    raise NotImplementedError

@@ -124,3 +124,19 @@ export function placeFromHistory(traces: ({ stage: string; data: Record<string, 
   }
   return latest;
 }
+
+// A match of the map's address search (Nominatim, Sweden only, pilot kommuner first)
+export interface PlaceSearchResult {
+  label: string; // e.g. "Kungsgatan 47A, Uppsala"
+  lat: number;
+  lon: number;
+  kind: string | null;
+  kommun: string | null;
+  in_pilot: boolean;
+}
+
+/** Swedish addresses and place names matching the query. Throws an Error with the backend's message on failure. */
+export async function searchPlaces(query: string): Promise<PlaceSearchResult[]> {
+  void query;
+  throw new Error('not implemented');
+}
