@@ -11,6 +11,7 @@ export interface PlacePanelProps {
   pin: Pin | null;
   onPinChange: (pin: Pin) => void;
   onClose: () => void;
+  onProfile?: (profile: PlaceProfile) => void; // the profile of the pin, once it is looked up
 }
 
 type Lookup = { pin: Pin; profile: PlaceProfile | null; error: string | null };

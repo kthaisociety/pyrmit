@@ -42,6 +42,14 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+
+def get_place_profile():
+    """The place-profile builder of a pinned question: lat, lon -> place.profile.build_profile (overridden in
+    tests)."""
+    from place.profile import build_profile
+
+    return build_profile
+
 # Chunks per pool (laws / documents) given to the answer model; the local eval reaches ~0.93 recall at 10
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "10"))
 SSE_HEARTBEAT_S = 10  # idle stream -> keep-alive comment, well under proxy idle timeouts
@@ -319,9 +327,14 @@ Latest User Message: {original_content}"""
 @router.post("/chat/stream")
 def chat_stream(
         request: schemas.ChatRequest,
+        place_profile=Depends(get_place_profile),
         db: Session = Depends(get_db),
         user: models.User = Depends(get_current_user),
 ):
+    """The chat's streamed answer (SSE). In the agent mode a pinned place (request.place) is the place the question
+    is about: its place profile goes before the question (place.context.place_context) and is saved as the "place"
+    pipeline event of the answer's trace, {"pin": {"lat", "lon", "label"}, "profile": compact_profile}, which is how
+    the chat session keeps its place (ADR-0004). Without a pin the question gets place.context.NO_PIN_HINT."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 

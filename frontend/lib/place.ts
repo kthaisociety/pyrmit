@@ -98,3 +98,23 @@ export async function fetchPlaceProfile(pin: Pin): Promise<PlaceProfile> {
 export async function fetchPlaceCoverage(): Promise<PlaceCoverage[]> {
   return getJson<PlaceCoverage[]>('/api/place/coverage');
 }
+
+// The place a chat is about: the pin and the label its chip shows (sent with each question, ADR-0004)
+export interface PinnedPlace extends Pin {
+  label: string | null;
+}
+
+/** The chip's label for a place profile: the property and kommun ("Uppsala Kungsängen 7:8"), else the point. */
+export function placeLabel(profile: PlaceProfile): string {
+  void profile;
+  throw new Error('not implemented');
+}
+
+/**
+ * The place a chat's history was last asked about: the pin of the latest "place" pipeline event of its answers'
+ * traces (oldest message first), or null when no answer had one.
+ */
+export function placeFromHistory(traces: ({ stage: string; data: Record<string, unknown> }[] | null | undefined)[]): PinnedPlace | null {
+  void traces;
+  throw new Error('not implemented');
+}

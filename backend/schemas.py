@@ -110,9 +110,17 @@ class ChatSession(BaseModel):
         from_attributes = True
 
 
+class PlacePin(BaseModel):
+    """The place pinned on the chat's map: the question is about it (place/, ADR-0004)."""
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    label: str | None = None  # e.g. "Uppsala Kungsängen 7:8", as the chip shows it
+
+
 class ChatRequest(BaseModel):
     session_id: str | None = None
     messages: list[ChatMessage] = Field(default_factory=list)
+    place: PlacePin | None = None
 
 
 class MessageResponse(ChatMessage):
