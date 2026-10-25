@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 import models
 from dependencies import get_current_user
-from place import live, profile
+from place import geocode, live, profile
 from place.store import PlaceStore
 
 router = APIRouter()
@@ -36,7 +36,7 @@ def get_ancient_remains_lookup() -> Callable[[dict], list[dict]]:
 
 def get_place_search() -> Callable[[str], list[dict]]:
     """The address search (overridden in tests)."""
-    raise NotImplementedError
+    return geocode.search_places
 
 
 def get_plan_registry() -> Callable[[str], list[dict]]:
@@ -72,4 +72,7 @@ def place_search(q: Annotated[str, Query(min_length=2, max_length=200)],
                  user: Annotated[models.User, Depends(get_current_user)]) -> list[dict]:
     """Matches for the query (see place.geocode.search_places). 422 for a query under 2 characters, 503 with a
     message when the address service does not answer."""
-    raise NotImplementedError
+    try:
+        return search(q)
+    except live.PlaceSourceUnavailable as exc:
+        raise HTTPException(status_code=503, detail="The address search is unavailable right now.") from exc

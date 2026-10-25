@@ -69,10 +69,11 @@ function padding(map: MapLibreMap, bottomInset: number) {
   return { top: TOP_PX, left: EDGE_PX, right: EDGE_PX, bottom: map.getContainer().clientHeight * bottomInset + EDGE_PX };
 }
 
-export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, onMapClick }: PlaceMapProps) {
+export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, proposal = null, onMapClick }: PlaceMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
+  const proposalRef = useRef<Marker | null>(null);
   const onClickRef = useRef(onMapClick);
   const [ready, setReady] = useState(false);
 
@@ -100,6 +101,7 @@ export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, onMap
         setReady(true);
       });
       markerRef.current = new maplibregl.Marker({ color: '#ff375f' });
+      proposalRef.current = new maplibregl.Marker({ color: '#8e8e93' }); // grey until the user pins it
       mapRef.current = map;
     });
     return () => {
@@ -140,6 +142,18 @@ export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, onMap
     marker.setLngLat([pin.lon, pin.lat]).addTo(map);
     if (map.getZoom() < PIN_ZOOM) map.easeTo({ center: [pin.lon, pin.lat], zoom: PIN_ZOOM, duration: 400 });
   }, [ready, pin]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const marker = proposalRef.current;
+    if (!ready || !map || !marker) return;
+    if (!proposal) {
+      marker.remove();
+      return;
+    }
+    marker.setLngLat([proposal.lon, proposal.lat]).addTo(map);
+    map.easeTo({ center: [proposal.lon, proposal.lat], zoom: Math.max(map.getZoom(), PIN_ZOOM), duration: 500 });
+  }, [ready, proposal]);
 
   useEffect(() => {
     if (!ready) return;

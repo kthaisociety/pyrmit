@@ -34,6 +34,7 @@ body {
 
 /* Map panel controls as floating glass, like Apple Maps (components/place/PlacePanel.tsx) */
 .place-map .maplibregl-ctrl-top-right { top: 3rem; }
+.place-map .maplibregl-ctrl-top-left { top: 3.25rem; } /* the attribution, under the search field */
 .place-map .maplibregl-ctrl-group {
   overflow: hidden;
   border: 0;
