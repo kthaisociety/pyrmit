@@ -190,4 +190,16 @@ describe('address search', () => {
     await screen.findByRole('list', { name: 'Search results' });
     expect(screen.getByText(/Nominatim/)).toHaveTextContent(/OpenStreetMap/);
   });
+
+  it("credits the kommun's address register when the matches come from it", async () => {
+    /** A street address found in Uppsala's own register is credited to the kommun, not to OpenStreetMap. */
+    searchReturns([{ ...KABO, kind: 'address' }]);
+    render(createElement(Harness));
+
+    await search('kåbovägen 1');
+
+    await screen.findByRole('list', { name: 'Search results' });
+    expect(screen.getByText(/address register/i)).toHaveTextContent(/Uppsala kommun/);
+    expect(screen.queryByText(/Nominatim/)).not.toBeInTheDocument();
+  });
 });

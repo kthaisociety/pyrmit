@@ -17,11 +17,19 @@ type SearchState =
   | { status: 'failed'; message: string };
 
 
+/** Who the matches come from: the kommun's address register for its street addresses, else Nominatim / OSM. */
+function credit(results: PlaceSearchResult[]): string {
+  const register = results.find((result) => result.kind === 'address');
+  return register
+    ? `Address register of ${register.kommun ?? 'the kommun'} (open data)`
+    : 'Search by Nominatim · © OpenStreetMap contributors';
+}
+
 /**
  * The floating search field of the map panel (labelled "Search for a place"): pressing Enter searches Swedish
  * addresses and place names and lists the matches, pilot kommuner first; nothing is searched while typing. A search
  * with no match says so and suggests a street address or pinning by hand; a failed search says the service is
- * unavailable. The list credits OpenStreetMap / Nominatim.
+ * unavailable. The list credits its source: the kommun's address register, or OpenStreetMap / Nominatim.
  */
 export default function PlaceSearch({ onPropose }: PlaceSearchProps) {
   const [query, setQuery] = useState('');
@@ -97,7 +105,7 @@ export default function PlaceSearch({ onPropose }: PlaceSearchProps) {
             </ul>
           )}
           <p className="border-t border-zinc-200/70 px-3 py-1 text-[10px] text-zinc-400 dark:border-white/10">
-            Search by Nominatim · © OpenStreetMap contributors
+            {credit(state.results)}
           </p>
         </div>
       )}
