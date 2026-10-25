@@ -230,6 +230,12 @@ answers' traces (ADR-0004: no new columns on the shared tables); `Chat.tsx` rest
 Gotcha: **PBL 9 kap. was renumbered by SFS 2025:974** (bygglov in/outside a detaljplan now 9 kap. 56/57 §, liten
 avvikelse 60-61 §, förhandsbesked 74 §; some sections have a second version in force 2027-01-01). Rulings and the
 model's memory use the old numbers (9:30, 9:31 b, 9:17), so the prompt tells the agent to find provisions by wording.
+The reform also changed the exemptions (corpus text, checked 2026-10-25): komplementbyggnad / komplementbostadshus up to
+30 m² inside a detaljplan (9 kap. 4 §) and 50 m² outside (5 §) need no bygglov and no anmälan any more (PBF 6 kap. 1 §
+lists none), tillbyggnad up to 30 m² below the ridge needs no bygglov (10 §), fasadändring needs bygglov in a plan only
+on buildings other than one- / two-dwelling houses facing a public place (15 § 3), and 34-37 § bring the bygglov back
+(4.5 m from the boundary without the neighbours' consent, totalförsvar areas, protected values). References written
+from memory get this wrong: check them against the law chunks.
 Benchmark: `python -m agentic.bench` (14 feasibility cases in `agentic/cases.jsonl`: evidence recall, LLM-judge
 key points, cost, latency, first-token time; RAG vs agent; `--cases-file cases_caselaw.jsonl --store disk` for cases
 from any kommun on the full disk store) and `python -m agentic.grounding <results.json>` (claims supported by the
@@ -347,11 +353,35 @@ rerunning `agentic.rejudge` continues. A run that sits a long time before its fi
    section_status ok / unavailable / not_covered so "none" never hides "not checked"; place.permits.likely_permits by
    fixed rules (bygglov by detaljplan status, dispens per protected area with the register's dispens authority,
    Natura 2000 tillstånd, KML tillstånd per Fornlämning, riksintressen as considerations). No model calls (ADR-0003)
+3. The map's search (GET /api/place/search -> place.geocode.search_places): a street and number goes first to the pilot
+   kommun's own address register (Uppsala's layer 11, 56k belägenhetsadresser; "Kungsgatan 47" also finds 47A-E, the
+   typed post town picks among equal names), anything else or no register hit to Nominatim (1 request/s)
 ```
 
+Evaluation (2026-10-25, report `reports/place_eval_report.md`, built by `python -m place.report` from the result files
+plus the hand-written `place/report_findings.md`):
+- `python -m place.check_sources --n 300` (free): each snapshot layer against the provider's own point query (ArcGIS
+  identify with tolerance 0, WFS Intersects filter) at seeded points + the draft facit places, and the profile time
+  -> `data/agentic/place-sources-*.json`. Not a facit: it checks the copy, not the data.
+- `python -m place.check_search --n 150 [--form typed|lower|no_letter]` (free, Nominatim at 1 req/s): register addresses
+  searched as typed, scored on distance and same property -> `place-search-*.json`. Since the search uses the same
+  register, the typed form alone grades the register against itself: the lower / no_letter forms test typing variants.
+- `python -m place.bench_answers run --repeats 3 --workers 4` (paid, ~$0.008 per answer incl. the MiMo judge): the chat
+  agent on `place/cases_answers.jsonl` (15 Uppsala places, references locked before the run) under the conditions pin /
+  address / vague / conflict, the question built by `place.context.question_with_place` as in the chat; `rejudge
+  <file> --judge-model openai/gpt-6-luna` adds the second judge -> `place-answers-*.json`. The address condition counts
+  "asks to pin it" without scoring it (the no-pin hint tells the agent to)
+
 Gotchas: Uppsala's streets are properties too (Dragarbrunn 1:2, Kronåsen 1:2), so a pin on a street gets that property and
-every plan it crosses. Länsstyrelsernas strandskydd services answer 403 here; RAÄ has no bulk download (ancient remains
-must be live). MapLibre 6 loads its worker from a file next to its own module, which bundlers move:
+every plan it crosses; ~5 % of Uppsala's register address points inside plans lie on such a street property.
+Naturvårdsverket sends some polygons with a ring outside its shell (15 of 93 protected areas in Uppsala): `PlaceStore`
+repairs invalid geometries with `make_valid` on load, else "contains the pin" is wrong (Gula stigen was missed).
+Länsstyrelsernas strandskydd services answered 403 during a planned outage (22-27 Oct 2026); the durable source is NGP
+Strandskydd (#32). RAÄ has no bulk download (ancient remains must be live). The corpus registry holds no Uppsala plan
+provisions (61 plans, none with provisions), so a pinned Uppsala plan always says "provisions not indexed". The
+totalförsvar "stoppområde för höga objekt" covers ~86 % of Uppsala's points and is listed on almost every card. OSM
+lacks most Swedish house numbers: Nominatim found the house for 28 % of Uppsala's addresses (the rest: the street or
+nothing), hence the register first. MapLibre 6 loads its worker from a file next to its own module, which bundlers move:
 `PlaceMap.pointAtBundledWorker` emits it with `new URL(..., import.meta.url)`. A `.next` folder from before the repo
 moved (KTHAIS -> Projekt) made Turbopack panic ("Next.js package not found"): delete `.next` after moving the repo.
 
@@ -453,7 +483,7 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | GET    | `/api/benchmark/run/{job_id}`     | Yes  | Progress (tool calls) and result of that job (polled: a run outlasts the frontend proxy timeout) |
 | GET    | `/api/place/profile?lat=&lon=`    | Yes  | Place profile of a pinned point: property (live), plans, zones, plans in progress, inside/outside detaljplan (no LLM) |
 | GET    | `/api/place/coverage`             | Yes  | Pilot kommuner with a snapshot (code, name, bbox, fetch date), for the map's first view |
-| GET    | `/api/place/search?q=`            | Yes  | Address / place search for the map (Nominatim, Sweden only, 1 request/s, cached, pilot kommuner first); 503 when down |
+| GET    | `/api/place/search?q=`            | Yes  | Address / place search for the map (street addresses from the pilot kommun's address register, else Nominatim: Sweden only, 1 request/s, pilot kommuner first; cached); 503 when Nominatim is down |
 
 All routes are additionally behind the access gate when it is enabled.
 
@@ -584,8 +614,11 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/place/` -- place lookups for the map pin: `sources.py` (layers, attribute mapping, pilot kommuner),
   `fetch.py` (snapshot CLI), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property and
   ancient remains at a point), `profile.py` (`build_profile`), `permits.py` (`likely_permits`), `context.py` (the
-  place as text for the agent, `compact_profile`), `geocode.py` (`search_places`, `Throttle`: Nominatim's policy of one
-  request a second and no search-as-you-type), `bench.py` (the lookup benchmark: facit in `place/cases.jsonl`, locked
+  place as text for the agent, `compact_profile`, `question_with_place`: what the agent is sent, used by the chat and
+  the answer benchmark), `geocode.py` (`search_places`: the kommun's address register first, then Nominatim;
+  `register_addresses`; `Throttle`: Nominatim's policy of one request a second and no search-as-you-type),
+  `check_sources.py` / `check_search.py` / `bench_answers.py` / `report.py` (the evaluation, see "Place Lookup"),
+  `bench.py` (the lookup benchmark: facit in `place/cases.jsonl`, locked
   entries only, dev / test (Norrtälje held out), per-layer precision / recall, `data/agentic/place-bench-*.json`, which
   the Benchmark view's `bench-*` glob does not pick up; `candidates` proposes places, a person writes the facit);
   `backend/routers/place.py` -- `/api/place/*`. Tests: `backend/tests/unit/` mirrors `backend/` (fake snapshot in

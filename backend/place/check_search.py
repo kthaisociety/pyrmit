@@ -5,13 +5,19 @@ Uppsala") through place.geocode.search_places (Nominatim). Scored on the distanc
 register's point and on whether the first match lands on the same property, which is what the pin needs. No model
 calls; Nominatim at one request a second, as in the app.
 
-    cd backend && python -m place.check_search --kommun 0380 --n 150   # -> data/agentic/place-search-<time>.json
+The search now looks street addresses up in the same register first, so the typed form alone would grade the register
+against itself: --form lower (lower case, no comma) and --form no_letter ("Kungsgatan 47" for "Kungsgatan 47A") test
+how it copes with the ways people type.
+
+    cd backend && python -m place.check_search --kommun 0380 --n 150 [--form typed|lower|no_letter]
+    # -> data/agentic/place-search-<time>[-<form>].json
 """
 
 import argparse
 import json
 import math
 import random
+import re
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -26,6 +32,7 @@ from place.sources import METRES_PER_DEGREE_LAT, SWEDEN_TZ, UPPSALA_MAP
 ADDRESS_LAYERS = {"0380": f"{UPPSALA_MAP}/11"}  # Adresser: Name ("Kungsgatan 47A"), PostCode, PostCity
 IDS_PER_REQUEST = 100
 NEAR_M = (30, 100, 500)
+FORMS = ("typed", "lower", "no_letter")
 
 
 def distance_m(a: tuple[float, float], b: tuple[float, float]) -> float:
@@ -50,6 +57,14 @@ def sample_addresses(code: str, n: int, *, seed: int = 25, client: httpx.Client 
                       "city": f["attributes"].get("PostCity"), "lat": f["geometry"]["y"], "lon": f["geometry"]["x"]}
                      for f in data.get("features") or [] if f.get("geometry") and f["attributes"].get("Name")]
     return rows
+
+
+def query_for(row: dict, form: str = "typed") -> str:
+    """The address as a user might type it: "Kungsgatan 47A, Uppsala" (typed), "kungsgatan 47a uppsala" (lower) or
+    "Kungsgatan 47, Uppsala" (no_letter: without the entrance letter)."""
+    address = re.sub(r"(\d+)\s*[A-Za-zÅÄÖåäö]$", r"\1", row["address"]) if form == "no_letter" else row["address"]
+    typed = f"{address}, {row['city']}" if row.get("city") else address
+    return typed.replace(",", "").lower() if form == "lower" else typed
 
 
 def _designation(property_at, code: str, lat: float, lon: float) -> str | None:
@@ -97,20 +112,20 @@ def summarise(rows: list[dict]) -> dict:
             "median_top_m": distances[len(distances) // 2] if distances else None}
 
 
-def run_check(code: str = "0380", n: int = 150, *, seed: int = 25,
+def run_check(code: str = "0380", n: int = 150, *, seed: int = 25, form: str = "typed",
               search: Callable[[str], list[dict]] | None = None, property_at=None,
               addresses: list[dict] | None = None, out_dir: Path = RESULTS_DIR) -> dict:
-    """Search `n` sampled register addresses as "<address>, <post town>", score each (score_address) and save the
-    result as `out_dir`/place-search-<YYYYmmdd-HHMMSS>.json: {"date", "kommun", "seed", "rows", "summary", "path"}.
-    `search`, `property_at` and `addresses` default to place.geocode.search_places, place.live.property_at and
-    sample_addresses."""
+    """Search `n` sampled register addresses as typed in `form` (query_for), score each (score_address) and save the
+    result as `out_dir`/place-search-<YYYYmmdd-HHMMSS>[-<form>].json: {"date", "kommun", "seed", "form", "rows",
+    "summary", "path"}. `search`, `property_at` and `addresses` default to place.geocode.search_places,
+    place.live.property_at and sample_addresses."""
     from place.geocode import search_places
     from place.live import property_at as live_property
 
     search, property_at = search or search_places, property_at or live_property
     rows = []
     for row in addresses if addresses is not None else sample_addresses(code, n, seed=seed):
-        row = {**row, "query": f"{row['address']}, {row['city']}" if row.get("city") else row["address"]}
+        row = {**row, "query": query_for(row, form)}
         try:
             matches = search(row["query"])
         except PlaceSourceUnavailable as exc:
@@ -120,9 +135,10 @@ def run_check(code: str = "0380", n: int = 150, *, seed: int = 25,
         rows.append({**row, **score_address(row, matches, code, property_at), "error": None})
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"place-search-{datetime.now(SWEDEN_TZ).strftime('%Y%m%d-%H%M%S')}.json"
+    suffix = "" if form == "typed" else f"-{form}"
+    path = out_dir / f"place-search-{datetime.now(SWEDEN_TZ).strftime('%Y%m%d-%H%M%S')}{suffix}.json"
     result = {"date": datetime.now(SWEDEN_TZ).isoformat(timespec="seconds"), "kommun": code, "seed": seed,
-              "rows": rows, "summary": summarise(rows), "path": str(path)}
+              "form": form, "rows": rows, "summary": summarise(rows), "path": str(path)}
     path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     return result
 
@@ -132,8 +148,9 @@ def main() -> None:
     parser.add_argument("--kommun", default="0380", choices=sorted(ADDRESS_LAYERS))
     parser.add_argument("--n", type=int, default=150)
     parser.add_argument("--seed", type=int, default=25)
+    parser.add_argument("--form", default="typed", choices=FORMS)
     args = parser.parse_args()
-    result = run_check(args.kommun, args.n, seed=args.seed)
+    result = run_check(args.kommun, args.n, seed=args.seed, form=args.form)
     print(json.dumps(result["summary"], indent=2), "->", result["path"])
     for row in result["rows"]:
         if not row["found"] or (row["top_m"] or 0) > 100 or row["same_property"] is False:
