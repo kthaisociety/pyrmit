@@ -112,6 +112,22 @@ sauna by the lake, cellar.
 
 The v2 and v3 numbers are on the same 15 cases the fixes were made for: they are optimistic.
 
+**Fewer turns (v4, same day).** v4 tells the agent outright not to call find_kommun for a pinned place, then varies the
+exploration effort and the step cap. All runs are pinned answers, 15 cases × 3 repeats, two judges:
+
+| Pinned answers | v4 (medium, 10 steps) | v4-low (low, 10 steps) | v4-low-6 (low, 6 steps) |
+|---|---|---|---|
+| Key points (MiMo / Luna) | 0.84 / 0.84 | 0.82 / 0.79 | 0.74 / 0.72 |
+| Place facts named | 56 % | 59 % | 49 % |
+| Seconds (first token) | 43 (34) | 24 (18) | 23 (16) |
+| Model calls / tool calls | 7.2 / 23 | 6.2 / 7 | 5.7 / 8 |
+| Cost per answer | $0.009 | $0.003 | $0.003 |
+
+- The find_kommun instruction alone took the pinned answer from 54 s to 43 s at the same quality (v3 → v4).
+- Low exploration halves the time and costs a third, for 0.02-0.04 less on key points. That is a product choice:
+  a fast mode for pinned questions, or the default.
+- The 6-step cap loses 0.10 and saves almost nothing on top of low: rejected.
+
 ### Data gaps that limit the answers
 
 - **No Uppsala plan provisions in the corpus.** The registry holds 61 Uppsala plans and none with provisions, so a
@@ -131,8 +147,8 @@ The v2 and v3 numbers are on the same 15 cases the fixes were made for: they are
 
 1. **Index Uppsala's plan provisions** (the plan documents linked from the kommun's layer, or NGP Detaljplan's 262
    Uppsala plans). This is the largest gap in answer quality: the agent names the plan but cannot read what it allows.
-2. **Cut model turns for pinned questions.** Fewer lookups did not help. Measure exploration effort low and a
-   lower step cap for pinned questions, and tell the agent outright not to call find_kommun when the kommun is given.
+2. **Choose the exploration effort for pinned questions.** Low is twice as fast for 0.02-0.04 less (v4-low). A lower
+   step cap is not worth it.
 3. **Show the totalförsvar stop area only for tall projects.**
 4. **Decide on the street-property rule** (a property mostly zoned GATA / allmän plats counts as street).
 5. **A person reviews the references**: the #39 facit (30 drafted places) and a sample of the 56 answer key points.
