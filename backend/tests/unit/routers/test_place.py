@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from dependencies import get_current_user
+from place.live import PlaceSourceUnavailable
 from routers import place as place_router
 from tests.unit.place.snapshot import (
     FETCHED,
@@ -74,3 +75,36 @@ def test_profile_endpoint_carries_the_new_sections(tmp_path):
     body = TestClient(app).get("/api/place/profile", params={"lat": PIN[0], "lon": PIN[1]}).json()
     assert body["protected_areas"][0]["name"] == "Kungsängsängen"
     assert any("Bygglov" in p["title"] for p in body["permits"])
+
+
+# --- the address search (#38) ---------------------------------------------------------------------------------------------------
+
+def client_with(search):
+    app = FastAPI()
+    app.include_router(place_router.router, prefix="/api")
+    app.dependency_overrides[place_router.get_place_search] = lambda: search
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id="u1")
+    return TestClient(app)
+
+
+def test_search_endpoint_returns_the_matches():
+    """GET /api/place/search returns the matches of the query."""
+    match = {"label": "Kungsgatan 47A, Uppsala", "lat": 59.8599, "lon": 17.641, "kind": "house",
+             "kommun": "Uppsala kommun", "in_pilot": True}
+    response = client_with(lambda q: [match]).get("/api/place/search", params={"q": "kungsgatan 47a"})
+    assert response.status_code == 200
+    assert response.json() == [match]
+
+
+def test_search_endpoint_rejects_a_too_short_query():
+    """A query under two characters is a 422."""
+    assert client_with(lambda q: []).get("/api/place/search", params={"q": "k"}).status_code == 422
+
+
+def test_search_endpoint_says_when_the_service_is_down():
+    """Nominatim down is a 503 with a message."""
+    def down(q):
+        raise PlaceSourceUnavailable("Nominatim: 503")
+    response = client_with(down).get("/api/place/search", params={"q": "kungsgatan"})
+    assert response.status_code == 503
+    assert "address search" in response.json()["detail"].lower()

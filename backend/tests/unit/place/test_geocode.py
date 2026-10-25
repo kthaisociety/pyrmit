@@ -1,18 +1,10 @@
-"""Acceptance tests for #38: find a place by address on the map. Temporary, folded into tests/unit/ by
-refactor-issue. A fake Nominatim (httpx MockTransport) and a fake clock: no network (PCR-0011)."""
-
-from types import SimpleNamespace
+"""place.geocode: the map's address search against a fake Nominatim, and the throttle on a fake clock."""
 
 import httpx
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
 
-from dependencies import get_current_user
 from place.geocode import MAX_RESULTS, Throttle, search_places
 from place.live import PlaceSourceUnavailable
-from routers import place as place_router
-from tests.unit.place.snapshot import write_snapshot
 
 
 def nominatim_hit(lat, lon, road, number=None, city="Uppsala", kommun="Uppsala kommun", kind="house"):
@@ -48,12 +40,6 @@ class FakeClock:
     def sleep(self, seconds):
         self.sleeps.append(seconds)
         self.now += seconds
-
-
-@pytest.fixture
-def store(tmp_path):
-    """The fake Uppsala snapshot: its kommun boundary decides which matches are in a pilot kommun."""
-    return write_snapshot(tmp_path)
 
 
 @pytest.fixture
@@ -147,36 +133,3 @@ def test_every_search_waits_for_the_throttle(store):
     search_places("vaksalagatan 10", client=nominatim.client(), store=store, throttle=throttle)
     search_places("vaksalagatan 12", client=nominatim.client(), store=store, throttle=throttle)
     assert clock.sleeps == [pytest.approx(1.0)]
-
-
-# --- the API ---------------------------------------------------------------------------------------------------
-
-def client_with(search):
-    app = FastAPI()
-    app.include_router(place_router.router, prefix="/api")
-    app.dependency_overrides[place_router.get_place_search] = lambda: search
-    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id="u1")
-    return TestClient(app)
-
-
-def test_search_endpoint_returns_the_matches():
-    """GET /api/place/search returns the matches of the query."""
-    match = {"label": "Kungsgatan 47A, Uppsala", "lat": 59.8599, "lon": 17.641, "kind": "house",
-             "kommun": "Uppsala kommun", "in_pilot": True}
-    response = client_with(lambda q: [match]).get("/api/place/search", params={"q": "kungsgatan 47a"})
-    assert response.status_code == 200
-    assert response.json() == [match]
-
-
-def test_search_endpoint_rejects_a_too_short_query():
-    """A query under two characters is a 422."""
-    assert client_with(lambda q: []).get("/api/place/search", params={"q": "k"}).status_code == 422
-
-
-def test_search_endpoint_says_when_the_service_is_down():
-    """Nominatim down is a 503 with a message."""
-    def down(q):
-        raise PlaceSourceUnavailable("Nominatim: 503")
-    response = client_with(down).get("/api/place/search", params={"q": "kungsgatan"})
-    assert response.status_code == 503
-    assert "address search" in response.json()["detail"].lower()
