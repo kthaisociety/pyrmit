@@ -1065,7 +1065,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
             <button
               type="button"
               onClick={() => setMapOpen((open) => !open)}
-              aria-label={mapOpen ? 'Close map' : 'Open map'}
+              aria-label={mapOpen ? 'Hide map' : 'Open map'}
               aria-pressed={mapOpen}
               className={`absolute left-2 top-2 bottom-2 px-2.5 rounded-lg transition-transform duration-100 active:scale-95 flex items-center justify-center ${mapOpen ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
             >

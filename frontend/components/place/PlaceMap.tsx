@@ -16,6 +16,7 @@ export interface PlaceMapProps {
   pin: Pin | null;
   outlines: PlaceOutline[]; // drawn over the base map: the property, its plans and zones
   bounds?: [number, number, number, number] | null; // west, south, east, north: first view
+  bottomInset?: number; // share of the map's height covered from below (the place card): the view centres above it
   onMapClick: (pin: Pin) => void;
 }
 
@@ -24,6 +25,8 @@ const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 const SWEDEN: [number, number, number, number] = [10.5, 55.0, 24.5, 69.5];
 const OUTLINES = 'place-outlines';
 const PIN_ZOOM = 16;
+const EDGE_PX = 24;
+const TOP_PX = 56; // the floating close button
 // Apple system colours: blue for the property, orange (dashed) for plans, green for land-use zones; one layer per
 // kind, drawn zones first so the property's outline stays on top
 const KIND_STYLE: { kind: PlaceOutline['kind']; color: string; fill: number; width: number; dash?: number[] }[] = [
@@ -61,7 +64,11 @@ function pointAtBundledWorker(maplibregl: typeof import('maplibre-gl')) {
 }
 
 /** The base map (MapLibre, OpenFreeMap tiles) with the pin and the outlines; a click reports the point. */
-export default function PlaceMap({ pin, outlines, bounds, onMapClick }: PlaceMapProps) {
+function padding(map: MapLibreMap, bottomInset: number) {
+  return { top: TOP_PX, left: EDGE_PX, right: EDGE_PX, bottom: map.getContainer().clientHeight * bottomInset + EDGE_PX };
+}
+
+export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, onMapClick }: PlaceMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -80,9 +87,11 @@ export default function PlaceMap({ pin, outlines, bounds, onMapClick }: PlaceMap
       pointAtBundledWorker(maplibregl);
       const map = new maplibregl.Map({
         container: container.current, style: STYLE_URL, bounds: SWEDEN, fitBoundsOptions: { padding: 24 },
-        attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false,
+        attributionControl: false, dragRotate: false, pitchWithRotate: false,
       });
+      // Zoom under the panel's close button, attribution top left: the place card covers the bottom
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+      map.addControl(new maplibregl.AttributionControl({ compact: true }), 'top-left');
       map.on('click', (event: MapMouseEvent) => onClickRef.current({ lat: event.lngLat.lat, lon: event.lngLat.lng }));
       map.on('load', () => {
         addOutlineLayers(map);
@@ -98,8 +107,16 @@ export default function PlaceMap({ pin, outlines, bounds, onMapClick }: PlaceMap
     };
   }, []);
 
+  // The visible part of the map is above the place card: keep the view centred there as the card moves
   useEffect(() => {
-    if (ready && bounds && !pin) mapRef.current?.fitBounds(bounds, { padding: 24, duration: 0 });
+    const map = mapRef.current;
+    if (ready && map) map.easeTo({ padding: padding(map, bottomInset), duration: 300 });
+  }, [ready, bottomInset]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (ready && map && bounds && !pin) map.fitBounds(bounds, { padding: padding(map, bottomInset), duration: 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the card moving must not refit the kommun
   }, [ready, bounds, pin]);
 
   useEffect(() => {

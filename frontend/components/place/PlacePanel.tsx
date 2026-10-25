@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, MapPin, X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 
 import PlaceCard from '@/components/place/PlaceCard';
 import PlaceMap, { type PlaceOutline } from '@/components/place/PlaceMap';
@@ -15,6 +15,11 @@ export interface PlacePanelProps {
 
 type Lookup = { pin: Pin; profile: PlaceProfile | null; error: string | null };
 
+// The system font (SF Pro on Apple devices), as in Apple Maps
+const SYSTEM_FONT = '[font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif]';
+// Floating glass: translucent, blurred, with a light top edge
+const GLASS = 'bg-white/80 backdrop-blur-2xl backdrop-saturate-150 ring-1 ring-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:bg-zinc-900/75 dark:ring-white/10';
+
 function outlinesOf(profile: PlaceProfile | null): PlaceOutline[] {
   if (!profile) return [];
   return [
@@ -22,6 +27,12 @@ function outlinesOf(profile: PlaceProfile | null): PlaceOutline[] {
     ...profile.plans.map((plan, i) => ({ id: `plan-${i}`, kind: 'plan' as const, geometry: plan.geometry })),
     ...profile.zones.map((zone, i) => ({ id: `zone-${i}`, kind: 'zone' as const, geometry: zone.geometry })),
   ];
+}
+
+// The share of the panel the card covers: expanded from 38 % of the height, collapsed or empty a strip
+function sheetCover(hasCard: boolean, expanded: boolean): number {
+  if (!hasCard) return 0.1;
+  return expanded ? 0.6 : 0.16;
 }
 
 function union(boxes: [number, number, number, number][]): [number, number, number, number] | null {
@@ -34,11 +45,12 @@ function union(boxes: [number, number, number, number][]): [number, number, numb
 
 /**
  * The map panel beside the conversation (labelled "Map"): a click on the map moves the pin, and the place card of
- * the pin is fetched and shown under the map, with the property, plans and zones outlined on it.
+ * the pin is fetched and shown in a sheet over the map, with the property, plans and zones outlined on it.
  */
 export default function PlacePanel({ pin, onPinChange, onClose }: PlacePanelProps) {
   const [lookup, setLookup] = useState<Lookup | null>(null);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
+  const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
     fetchPlaceCoverage()
@@ -61,42 +73,60 @@ export default function PlacePanel({ pin, onPinChange, onClose }: PlacePanelProp
   const settled = lookup !== null && pin !== null && lookup.pin === pin;
   const shown = pin ? lookup : null; // keep the previous card, dimmed, while the next one loads
   const outlines = useMemo(() => outlinesOf(shown?.profile ?? null), [shown]);
+  const hasCard = Boolean(pin);
 
   return (
     <aside
       aria-label="Map"
-      className="flex h-full w-[420px] shrink-0 flex-col border-l border-zinc-200 bg-zinc-50 motion-safe:animate-[slide-in-right_240ms_cubic-bezier(0.2,0.8,0.2,1)] dark:border-zinc-800 dark:bg-zinc-950"
+      className={`place-map relative h-full w-[440px] shrink-0 overflow-hidden border-l border-zinc-200 bg-zinc-100 ${SYSTEM_FONT} motion-safe:animate-[slide-in-right_280ms_cubic-bezier(0.32,0.72,0,1)] dark:border-zinc-800 dark:bg-zinc-900`}
     >
-      <header className="flex items-center gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-        <MapPin size={16} className="text-zinc-500" aria-hidden />
-        <h2 className="flex-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Place</h2>
+      <div className="absolute inset-0">
+        <PlaceMap pin={pin} outlines={outlines} bounds={bounds} bottomInset={sheetCover(hasCard, expanded)}
+                  onMapClick={onPinChange} />
+      </div>
+
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close map"
+        className={`absolute right-3 top-3 z-10 grid size-8 place-items-center rounded-full text-zinc-600 transition-transform duration-100 active:scale-90 dark:text-zinc-300 ${GLASS}`}
+      >
+        <X size={16} strokeWidth={2.5} />
+      </button>
+
+      <div
+        className={`absolute inset-x-2 bottom-2 z-10 flex flex-col overflow-hidden rounded-[22px] transition-[top] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${GLASS} ${
+          hasCard ? (expanded ? 'top-[38%]' : 'top-[calc(100%-7.5rem)]') : 'top-[calc(100%-4.25rem)]'
+        }`}
+      >
         <button
           type="button"
-          onClick={onClose}
-          aria-label="Close map"
-          className="rounded-lg p-1.5 text-zinc-500 transition-transform duration-100 hover:bg-zinc-200 active:scale-95 dark:hover:bg-zinc-800"
+          onClick={() => setExpanded((open) => !open)}
+          disabled={!hasCard}
+          aria-label={expanded ? 'Collapse place card' : 'Expand place card'}
+          aria-expanded={expanded}
+          className="flex shrink-0 justify-center pb-1 pt-2 disabled:cursor-default"
         >
-          <X size={16} />
+          <span className="h-[5px] w-9 rounded-full bg-zinc-400/60 dark:bg-zinc-500/60" />
         </button>
-      </header>
-      <div className="h-72 shrink-0 border-b border-zinc-200 dark:border-zinc-800">
-        <PlaceMap pin={pin} outlines={outlines} bounds={bounds} onMapClick={onPinChange} />
-      </div>
-      <div className="flex-1 overflow-y-auto p-4">
-        {!pin && <p className="text-sm text-zinc-500 dark:text-zinc-400">Click the map to pin a place in Uppsala.</p>}
-        {pin && !settled && (
-          <p role="status" className="mb-3 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-            <Loader2 size={12} className="animate-spin" aria-hidden /> Looking up the place…
-          </p>
-        )}
-        {shown?.error && settled && (
-          <p role="alert" className="text-sm text-red-600 dark:text-red-400">{`Could not look up this place: ${shown.error}`}</p>
-        )}
-        {shown?.profile && (
-          <div className={settled ? '' : 'opacity-50 transition-opacity'}>
-            <PlaceCard profile={shown.profile} />
-          </div>
-        )}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
+          {!pin && (
+            <p className="py-1 text-[13px] text-zinc-500 dark:text-zinc-400">Click the map to pin a place in Uppsala.</p>
+          )}
+          {pin && !settled && (
+            <p role="status" className="mb-3 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+              <Loader2 size={12} className="animate-spin" aria-hidden /> Looking up the place…
+            </p>
+          )}
+          {shown?.error && settled && (
+            <p role="alert" className="text-[13px] text-red-600 dark:text-red-400">{`Could not look up this place: ${shown.error}`}</p>
+          )}
+          {shown?.profile && (
+            <div className={settled ? '' : 'opacity-50 transition-opacity'}>
+              <PlaceCard profile={shown.profile} />
+            </div>
+          )}
+        </div>
       </div>
     </aside>
   );

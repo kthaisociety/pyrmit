@@ -1,23 +1,42 @@
 """The place profile of a point: what the place card shows and what the chat answers from."""
 
 import json
+import math
 import re
 import threading
 from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 
+from shapely.affinity import scale
 from shapely.errors import GEOSException
 from shapely.geometry import Point, mapping, shape
 from shapely.validation import make_valid
 
 from place import live
-from place.sources import PILOTS, Layer
+from place.permits import likely_permits
+from place.sources import (
+    ANCIENT_REMAINS,
+    METRES_PER_DEGREE_LAT,
+    NATIONAL_LAYERS,
+    PILOTS,
+    SECTION_KINDS,
+    Layer,
+    today,
+)
 from place.sources import feature as layer_feature
 from place.store import PlaceStore
 
 NOT_A_DECISION = ("Registry data, not a decision: the adopted plan documents and the authorities' decisions are "
                   "binding.")
+STRANDSKYDD = {
+    "status": "not_checked",
+    "reason": "Not checked: the länsstyrelser's strandskydd services could not be reached, and the general 100 m "
+              "strandskydd is not published as data.",
+    "note": "A strandskyddsdispens (MB 7 kap. 18 b §) may be needed within 100 m of a shoreline, unless the "
+            "detaljplan lifts the strandskydd.",
+}
+SECTIONS = (*SECTION_KINDS, "ancient_remains")
 
 ANCIENT_REMAINS_RADIUS_M = 30         # without a property: remains this close to the pin
 MIN_SHARE = 0.02                     # a feature covering less of the property only touches its boundary
@@ -79,9 +98,9 @@ def _covers_enough(geometry, point, area) -> tuple[bool, float]:
     return geometry.intersects(point) or share >= MIN_SHARE, share
 
 
-def _detaljplan(rows: dict[str, list[dict]], plan_layer: dict) -> str:
+def _detaljplan(plans_in_force: list[dict], plan_layer: dict) -> str:
     """Inside when a plan in force covers the property; outside only when the plan layer is complete."""
-    if rows["plan"]:
+    if plans_in_force:
         return "inside"
     return "outside" if plan_layer.get("complete") and plan_layer.get("status") == "ok" else "unknown"
 
@@ -89,7 +108,29 @@ def _detaljplan(rows: dict[str, list[dict]], plan_layer: dict) -> str:
 def _not_covered(lat: float, lon: float) -> dict:
     return {"point": {"lat": lat, "lon": lon}, "kommun": None, "covered": False, "property": None,
             "property_status": "not_covered", "detaljplan": "unknown", "plans": [], "zones": [],
-            "pending_plans": [], "layers": [], "notes": [NOT_A_DECISION]}
+            "pending_plans": [], **{section: [] for section in SECTIONS},
+            "strandskydd": STRANDSKYDD | {"reason": "This place is not covered yet."}, "permits": [],
+            "section_status": dict.fromkeys(SECTIONS, "not_covered"), "layers": [], "notes": [NOT_A_DECISION]}
+
+
+def _around_pin(point, lat: float):
+    """A circle of ANCIENT_REMAINS_RADIUS_M around the pin (an ellipse in degrees)."""
+    radius = ANCIENT_REMAINS_RADIUS_M / METRES_PER_DEGREE_LAT
+    return scale(point.buffer(radius), xfact=1 / math.cos(math.radians(lat)), yfact=1, origin=point)
+
+
+def _ancient_remains(lookup, area) -> tuple[list[dict], dict]:
+    """The remains on `area` as profile rows, and the register's entry in the layers list."""
+    entry = {"id": ANCIENT_REMAINS.id, "title": ANCIENT_REMAINS.title, "provider": ANCIENT_REMAINS.provider,
+             "licence": ANCIENT_REMAINS.licence, "fetched": today()}
+    try:
+        found = lookup(mapping(area))
+    except live.PlaceSourceUnavailable:
+        return [], entry | {"status": "unavailable"}
+    rows = [layer_feature(ANCIENT_REMAINS, remain["properties"])
+            | {"source": ANCIENT_REMAINS.provider, "fetched": entry["fetched"], "geometry": remain["geometry"]}
+            for remain in found]
+    return rows, entry | {"status": "ok"}
 
 
 def _property(code: str, lon: float, lat: float, property_at) -> tuple[dict | None, str]:
@@ -183,25 +224,37 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
     area = shape(found["geometry"]) if found else point
     meta = {layer["id"]: layer for layer in store.layers(code)}
 
-    rows = {kind: [] for kind in (*PLAN_KINDS, "zone", "plan_pending")}
+    rows: dict[str, list[dict]] = {}
     consulted = []
-    for layer in PILOTS[code]["layers"]:
+    for layer in PILOTS[code]["layers"] + NATIONAL_LAYERS:
         layer_meta = meta.get(layer.id, {})
         consulted.append({"id": layer.id, "title": layer.title, "provider": layer.provider,
                           "licence": layer.licence, "fetched": layer_meta.get("fetched"),
                           "status": layer_meta.get("status", "unavailable")})
-        rows[layer.kind] += _layer_rows(store, code, layer, layer_meta, point, area)
+        rows.setdefault(layer.kind, []).extend(_layer_rows(store, code, layer, layer_meta, point, area))
+    status_of = {entry["id"]: entry["status"] for entry in consulted}
 
     plans_by_key = {}
     for plan in (plan_registry or corpus_plans)(code):
         plans_by_key.setdefault(_plan_key(plan.get("name"), kommun), plan)
     plans = [_without_share(row) | _corpus_match(_plan_key(row["name"], kommun), plans_by_key)
-             for kind in PLAN_KINDS for row in rows[kind]]
+             for kind in PLAN_KINDS for row in rows.get(kind, [])]
     plans.sort(key=lambda row: row["date"] or "", reverse=True)
 
-    zones = sorted(rows["zone"], key=lambda row: row["share"], reverse=True)
-    return {"point": {"lat": lat, "lon": lon}, "kommun": {"code": code, "name": kommun}, "covered": True,
-            "property": found, "property_status": property_status, "detaljplan": _detaljplan(rows, meta.get("plans", {})), "plans": plans,
-            "zones": zones, "pending_plans": [_without_share(row) for row in rows["plan_pending"]
-                                              if (row["status"] or "").lower() not in FINISHED_STAGES],
-            "layers": consulted, "notes": [NOT_A_DECISION]}
+    remains, remains_entry = _ancient_remains(ancient_remains_at or live.ancient_remains_at,
+                                              area if found else _around_pin(point, lat))
+    consulted.append(remains_entry)
+    sections = {section: [_without_share(row) for row in rows.get(kind, [])] for section, kind in SECTION_KINDS.items()}
+    section_status = {section: "ok" if all(status_of[layer.id] == "ok" for layer in NATIONAL_LAYERS
+                                           if layer.kind == kind) else "unavailable"
+                      for section, kind in SECTION_KINDS.items()} | {"ancient_remains": remains_entry["status"]}
+
+    profile = {"point": {"lat": lat, "lon": lon}, "kommun": {"code": code, "name": kommun}, "covered": True,
+               "property": found, "property_status": property_status,
+               "detaljplan": _detaljplan(rows.get("plan", []), meta.get("plans", {})), "plans": plans,
+               "zones": sorted(rows.get("zone", []), key=lambda row: row["share"], reverse=True),
+               "pending_plans": [_without_share(row) for row in rows.get("plan_pending", [])
+                                 if (row["status"] or "").lower() not in FINISHED_STAGES],
+               **sections, "ancient_remains": remains, "strandskydd": dict(STRANDSKYDD),
+               "section_status": section_status, "layers": consulted, "notes": [NOT_A_DECISION]}
+    return profile | {"permits": likely_permits(profile)}

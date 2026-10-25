@@ -25,6 +25,7 @@ RIKSINTRESSEN = "https://gis2.boverket.se/arcgis/rest/services/Riksintressen___F
 RAA_WMS = "https://pub.raa.se/visning/lamningar_v1/wms"
 NOMINATIM = "https://nominatim.openstreetmap.org"
 SWEDEN_TZ = ZoneInfo("Europe/Stockholm")
+METRES_PER_DEGREE_LAT = 110_540  # enough for distances around a property
 
 
 def today() -> str:
@@ -36,7 +37,7 @@ def today() -> str:
 class Layer:
     id: str                 # snapshot file name and key in the manifest
     kind: str               # plan | plan_addition | area_regulations | plan_pending | zone | protected |
-                            # natura2000 | national_interest
+                            # natura2000 | national_interest | ancient_remain
     title: str
     provider: str
     licence: str
@@ -102,6 +103,13 @@ NATIONAL_LAYERS = [
     _riks(172, "mb4_nationalstadspark", "Nationalstadspark", "MB 4 kap. 7 §"),
 ]
 
+# Looked up live at the point (no working bulk download), see place.live.ancient_remains_at
+ANCIENT_REMAINS = Layer(id="raa_lamningar", kind="ancient_remain", title="Lämningar (Kulturmiljöregistret)",
+                        provider="Riksantikvarieämbetet", licence="CC0", service="wms", url=RAA_WMS)
+
+# The national layers each section of the place card is built from
+SECTION_KINDS = {"protected_areas": "protected", "natura2000": "natura2000", "national_interests": "national_interest"}
+
 # Pilot kommuner: own layers + who answers "which property is this" (until Lantmäteriet's services are approved)
 PILOTS = {
     "0380": {"name": "Uppsala", "layers": UPPSALA_LAYERS, "property_service": "uppsala"},
@@ -160,17 +168,22 @@ def feature(layer: Layer, props: dict) -> dict:
         out.update(name=_first(props, "NAMN"), ref=nvrid, type=_first(props, "SKYDDSTYP"),
                    status=_first(props, "BESLUTSSTATUS"), authority=_first(props, "BESLUTSMYNDIGHET"),
                    date=_date(_first(props, "URSPR_BESLUTSDATUM")),
-                   url=f"https://skyddadnatur.naturvardsverket.se/sknat/?nvrid={nvrid}" if nvrid else None)
+                   url=f"https://skyddadnatur.naturvardsverket.se/sknat/?nvrid={nvrid}" if nvrid else None,
+                   permit_authority=_first(props, "PROVNINGSMYNDIGHET_DISPENS", "BESLUTSMYNDIGHET"))
     elif layer.kind == "natura2000":
         code = _first(props, "OMRADESKOD")
         out.update(name=_first(props, "OMRADESNAMN"), ref=code, type=_first(props, "OMRADESTYP"),
                    authority=_first(props, "UPPGIFTSLAMNARE"),
                    url=f"https://natura2000.eea.europa.eu/Natura2000/SDF.aspx?site={code}" if code else None)
     elif layer.kind == "national_interest":
-        description = _first(props, "BESKRIVNIN", "BESKRIVNING", "URL", "LANK")
-        out.update(name=_first(props, "NAMN", "Namn", "OMRADESNAMN", "BENAMNING", "NAME") or layer.title,
-                   ref=_first(props, "RIKSID", "ORGINALID", "OBJEKTID"),
-                   type=_first(props, "AMNESOMRAD") or layer.title,
-                   law=_first(props, "LAGRUM") or layer.law, date=_date(_first(props, "BESLUTSDAT")),
-                   url=description if str(description or "").startswith("http") else None)
+        links = [_first(props, key) for key in ("BESKRIVNIN", "OBJEKTLANK", "LANK_VARDE", "LANK_BESLU", "URL")]
+        out.update(name=_first(props, "NAMN", "OBJNAMN", "OMRADESNAMN", "BENAMNING", "NAME") or layer.title,
+                   ref=_first(props, "RIKSID", "ORGINALID", "ORIGINALID", "OBJID", "OMRADESNR"),
+                   type=layer.title, law=_first(props, "LAGRUM") or layer.law,
+                   date=_date(_first(props, "BESLUTSDAT", "BESLDATUM")),
+                   url=next((link for link in links if str(link or "").startswith("http")), None))
+    elif layer.kind == "ancient_remain":
+        out.update(name=_first(props, "lamningstyp"), ref=_first(props, "raa_nummer", "lamningsnummer"),
+                   type=_first(props, "lamningstyp"), status=_first(props, "antikvarisk_bedomning"),
+                   url=_first(props, "url"))
     return out
