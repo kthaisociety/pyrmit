@@ -1,6 +1,8 @@
 """place.profile.build_profile on a fake snapshot: the property, its plans and zones, and what the card says
 when there is no property, no coverage or no answer."""
 
+import json
+
 import pytest
 
 from place.live import PlaceSourceUnavailable
@@ -67,6 +69,17 @@ def test_points_to_corpus_provisions_when_indexed(store):
     atle = next(p for p in profile(store)["plans"] if p["ref"] == "0380-P2002/5")
     assert atle["corpus_plan_id"] == "f41489"
     assert atle["provisions_indexed"] is True
+
+
+def test_matches_a_plan_to_the_corpus_through_its_plan_page(store, tmp_path):
+    """The plan's document link leads to its page; the corpus plan of that page is the match, whatever its name."""
+    page = "https://www.uppsala.se/detaljplan/kungsangen-stadsplan/"
+    (tmp_path / "0380" / "plan_pages.json").write_text(json.dumps({"0380-P1990/3": page}))
+    def registry_with_page(code):
+        return [{"plan_id": "b70001", "kommun_code": "0380", "name": "Stadsplan Kungsängen (Kv Atle m.fl.)",
+                 "page": {"doc_id": "page:0380:x", "url": page}, "provisions": [{"code": "e1", "text": "..."}]}]
+    old = next(p for p in profile(store, plan_registry=registry_with_page)["plans"] if p["ref"] == "0380-P1990/3")
+    assert old["corpus_plan_id"] == "b70001" and old["provisions_indexed"] is True
 
 
 def test_says_provisions_not_indexed_otherwise(store):

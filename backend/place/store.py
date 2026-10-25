@@ -41,6 +41,7 @@ class PlaceStore:
       `place.sources`; "complete" (plans only) means the layer holds every plan in force.
     - `kommun.geojson`: one Feature, the kommun boundary.
     - `<layer id>.geojson`: a FeatureCollection in WGS84 with the provider's raw attributes.
+    - `plan_pages.json` (optional, place.plan_documents): {aktbeteckning: the plan's page url}.
 
     A layer listed in the manifest without its file is reported as unavailable, never as empty."""
 
@@ -97,6 +98,11 @@ class PlaceStore:
                     return None
                 self._layers[key] = _Layer(path)
             return self._layers[key]
+
+    def plan_pages(self, code: str) -> dict[str, str]:
+        """{aktbeteckning: the plan's page url} written by place.plan_documents, or {} before it has run."""
+        path = self.root / code / "plan_pages.json"
+        return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
     def features(self, code: str, layer_id: str, geometry) -> list[tuple[dict, object]]:
         """(raw properties, shapely geometry) of the layer's features that intersect `geometry` (a shapely

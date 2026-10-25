@@ -152,8 +152,12 @@ def _without_share(row: dict) -> dict:
     return {key: value for key, value in row.items() if key != "share"}
 
 
-def _corpus_match(key: str, plans_by_key: dict[str, dict]) -> dict:
-    match = plans_by_key.get(key)
+def _corpus_match(key: str, plans_by_key: dict[str, dict], page: str | None = None,
+                  plans_by_page: dict[str, dict] | None = None) -> dict:
+    """The corpus plan of a snapshot plan: the one built from the plan's own page (place.plan_documents), else the
+    one with the same name."""
+    match = (plans_by_page or {}).get(page) if page else None
+    match = match or plans_by_key.get(key)
     return {"corpus_plan_id": match["plan_id"] if match else None,
             "provisions_indexed": bool(match and match.get("provisions"))}
 
@@ -240,10 +244,14 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
         rows.setdefault(layer.kind, []).extend(_layer_rows(store, code, layer, layer_meta, point, area))
     status_of = {entry["id"]: entry["status"] for entry in consulted}
 
-    plans_by_key = {}
+    plans_by_key, plans_by_page = {}, {}
     for plan in (plan_registry or corpus_plans)(code):
         plans_by_key.setdefault(_plan_key(plan.get("name"), kommun), plan)
-    plans = [_without_share(row) | _corpus_match(_plan_key(row["name"], kommun), plans_by_key)
+        if plan.get("page"):
+            plans_by_page.setdefault(plan["page"]["url"], plan)
+    pages = store.plan_pages(code)
+    plans = [_without_share(row) | _corpus_match(_plan_key(row["name"], kommun), plans_by_key, pages.get(row["ref"]),
+                                                 plans_by_page)
              for kind in PLAN_KINDS for row in rows.get(kind, [])]
     plans.sort(key=lambda row: row["date"] or "", reverse=True)
 
