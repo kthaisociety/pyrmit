@@ -1,9 +1,15 @@
 # CLAUDE.md
 
-## Hard Constraints
+## Project Knowledge
 
-- **Do not make any git-related actions** (no commits, no pushes, no branch operations)
-- **Do not create documentation files** unless explicitly requested
+The team's agent workflow (from `dev`). Load these only when the task needs them:
+
+- `.claude/skills` -- the project skills (`/map-epic`, `/architect-issue`, `/implement-issue`, `/refactor-issue`, ...), use these first hand. Kept local (`.git/info/exclude`), copied from the Custom-skills repo.
+- `CONTEXT.md` -- domain language: what a detaljplan, chunk, verdict etc. mean and how they connect
+- `docs/pcr/` -- project-wide conventions. Binding. Read before changing code. Never edit one outside a `/challenge-pcr` session.
+- `docs/adr/` -- decisions scoped to one part of the codebase. Binding inside their scope.
+
+On this line (`v1`, not yet merged with `dev`'s `backend/src/` restructure) the code map below is the accurate one; `CONTEXT.md` owns the domain terms.
 
 ---
 
