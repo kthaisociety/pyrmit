@@ -52,3 +52,16 @@ def test_ask_user_can_offer_to_pin_the_place(monkeypatch):
 
 def test_the_prompt_forbids_options_that_ask_for_more_input():
     assert "Never an option that asks the user to provide" in agent.SYSTEM_PROMPT
+
+
+def test_a_run_answering_a_question_cannot_ask_again(monkeypatch):
+    """When the message answers the agent's own question, ask_user is not offered: the agent must act on it."""
+    offered = []
+
+    class Client:
+        responses = SimpleNamespace(create=lambda **kwargs: (offered.append([t["name"] for t in kwargs.get("tools") or []]),
+                                                             SimpleNamespace(output=[], output_text="Answer.",
+                                                                             usage=None))[1])
+    monkeypatch.setattr(agent, "get_openai_client", lambda: Client())
+    run = agent.run_agent("Use Södermalm instead", tools=None, model="test/model", allow_ask=False)
+    assert run.answer == "Answer." and "ask_user" not in offered[0]

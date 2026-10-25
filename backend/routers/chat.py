@@ -423,15 +423,16 @@ def chat_stream(
                     def record(**call):
                         recorder.record(**call)
 
-                    question = question_with_place(original_content, None)
+                    answered = request.answer_to_question
+                    question = question_with_place(original_content, None, answered=answered)
                     if pinned:
                         yield _sse({"type": "thinking", "label": "Looking up the pinned place"})
                         profile = place_profile(pinned.lat, pinned.lon)
                         yield emit("place", pin=pinned.model_dump(), profile=compact_profile(profile))
-                        question = question_with_place(original_content, profile, law_text)
+                        question = question_with_place(original_content, profile, law_text, answered=answered)
 
                     outcome = yield from stream_agent(question, history, record, _sse,
-                                                      flush=lambda: list(emit_calls()))
+                                                      flush=lambda: list(emit_calls()), allow_ask=not answered)
                     yield from emit_calls()
                     yield emit("retrieval", agent="law", query=original_content, embedding_ok=True,
                                matches=outcome["law_rows"])

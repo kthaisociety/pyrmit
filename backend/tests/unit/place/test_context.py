@@ -1,6 +1,7 @@
 """place.context: the pinned place written out for the agent, and the compact profile kept in the trace."""
 
 from place.context import (
+    ANSWERED,
     CLOSING,
     compact_profile,
     permit_sections,
@@ -99,3 +100,16 @@ def test_without_a_law_lookup_the_context_has_no_statute_text(profile_of):
 def test_the_place_context_gives_the_kommun_code(profile_of):
     """The kommun code is given, so the agent need not call find_kommun."""
     assert "kommun code 0380" in place_context(profile_of(*PIN))
+
+
+def test_the_rule_follows_a_choice_already_made_in_the_conversation():
+    """After the user has picked a place, the next pinned question must not ask the same thing again."""
+    assert "already settled" in CLOSING and "do not ask again" in CLOSING
+
+
+def test_an_answer_to_the_agents_question_says_so_right_before_it(profile_of):
+    """The user's clicked choice is marked as their answer, last before the message, with or without a pin."""
+    for profile in (profile_of(*PIN), None):
+        sent = question_with_place("Use Södermalm instead", profile, answered=True)
+        assert sent.endswith(ANSWERED + "\n\nUse Södermalm instead")
+    assert "pinned place" in ANSWERED and "do not ask" in ANSWERED.lower()

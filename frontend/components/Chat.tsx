@@ -144,11 +144,12 @@ function getChoices(pipeline: PipelineEvent[]): { options: string[]; offerPin: b
 
 /** The options under the agent's question: clicking one sends it as the user's reply; "Pin it on the map" opens the
  *  map. The user can always type something else instead. */
-function Choices({ options, offerPin, onChoose, onPin }: {
+function Choices({ options, offerPin, onChoose, onPin, awaitingPin }: {
   options: string[];
   offerPin: boolean;
   onChoose: (option: string) => void;
   onPin?: () => void;
+  awaitingPin?: boolean; // the user clicked "Pin it on the map": the next pin answers the question
 }) {
   return (
     <div className="mt-3 space-y-2">
@@ -174,7 +175,9 @@ function Choices({ options, offerPin, onChoose, onPin }: {
         </button>
       ))}
     </div>
-    <p className="text-xs text-zinc-500 dark:text-zinc-400">Or type your own answer below.</p>
+    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+      {awaitingPin ? 'Click the map to pin the place: it is sent as your answer.' : 'Or type your own answer below.'}
+    </p>
     </div>
   );
 }
@@ -693,6 +696,7 @@ function AssistantBubble({
   copied,
   onChoose,
   onPin,
+  awaitingPin,
 }: {
   message: Message;
   isStreaming: boolean;
@@ -700,6 +704,7 @@ function AssistantBubble({
   copied: boolean;
   onChoose?: (option: string) => void; // set on the last answer only: older questions have been answered
   onPin?: () => void;
+  awaitingPin?: boolean;
 }) {
   const { body, sources } = parseAssistantContent(message.content);
   const hasBody = Boolean(body.trim());
@@ -750,7 +755,8 @@ function AssistantBubble({
       )}
 
       {onChoose && !isStreaming && !inBackground && (choices.options.length > 0 || choices.offerPin) && (
-        <Choices options={choices.options} offerPin={choices.offerPin} onChoose={onChoose} onPin={onPin} />
+        <Choices options={choices.options} offerPin={choices.offerPin} onChoose={onChoose} onPin={onPin}
+                 awaitingPin={awaitingPin} />
       )}
 
       {!isStreaming && !inBackground && (
@@ -776,6 +782,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   // The chat's pinned place: the pin and, once looked up, its label (kept apart so a label never moves the pin)
   const [pin, setPin] = useState<Pin | null>(null);
   const [pinLabel, setPinLabel] = useState<string | null>(null);
+  // "Pin it on the map" was clicked: the pin set after it (not the one already there) answers the agent's question
+  const [awaitingPin, setAwaitingPin] = useState<{ from: Pin | null } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pendingSessionIdRef = useRef<string | null>(null);
   // Session we just created ourselves: its messages are already in state (with
@@ -870,7 +878,18 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     await send(input);
   };
 
-  const send = async (text: string) => {
+  // The pin set after "Pin it on the map" goes back to the agent as the answer, with the place (once it is named)
+  useEffect(() => {
+    if (!awaitingPin || !pin || !pinLabel) return;
+    const from = awaitingPin.from;
+    if (from && from.lat === pin.lat && from.lon === pin.lon) return;
+    setAwaitingPin(null);
+    void send(`I pinned the place on the map: ${pinLabel}. Assess that place.`, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingPin, pin, pinLabel]);
+
+  // `answer`: the message answers the agent's own question (a clicked option, or a pin from its button)
+  const send = async (text: string, answer = false) => {
     const trimmedInput = text.trim();
     if (!trimmedInput || loading) return;
 
@@ -903,7 +922,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: newHistory, session_id: sessionId,
-                               place: pin ? { ...pin, label: pinLabel } : null }),
+                               place: pin ? { ...pin, label: pinLabel } : null,
+                               ...(answer ? { answer_to_question: true } : {}) }),
         signal: controller.signal,
       });
 
@@ -1125,8 +1145,9 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
                   isStreaming={streaming && i === lastIdx}
                   message={msg}
                   onCopy={() => handleCopy(msg.content, i)}
-                  onChoose={i === lastIdx && !loading ? (option) => void send(option) : undefined}
-                  onPin={() => setMapOpen(true)}
+                  onChoose={i === lastIdx && !loading ? (option) => void send(option, true) : undefined}
+                  onPin={() => { setMapOpen(true); setAwaitingPin({ from: pin }); }}
+                  awaitingPin={awaitingPin !== null && i === lastIdx}
                 />
               )}
 

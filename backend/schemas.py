@@ -121,6 +121,7 @@ class ChatRequest(BaseModel):
     session_id: str | None = None
     messages: list[ChatMessage] = Field(default_factory=list)
     place: PlacePin | None = None
+    answer_to_question: bool = False  # the message is the user's answer to the agent's question (a clicked option)
 
 
 class MessageResponse(ChatMessage):

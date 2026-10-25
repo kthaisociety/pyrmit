@@ -46,10 +46,11 @@ def harness(monkeypatch, profile_of):
     with Session() as db:
         db.add(models.User(id="u1", name="Test", email="test@example.com"))
         db.commit()
-    asked, choices = [], []
+    asked, choices, allowed = [], [], []
 
-    def fake_stream_agent(question, history, record, sse, flush=list):
+    def fake_stream_agent(question, history, record, sse, flush=list, allow_ask=True):
         asked.append(question)
+        allowed.append(allow_ask)
         yield sse({"type": "response.output_text.delta", "delta": "An answer."})
         return {"answer": "An answer.", "law_rows": [], "local_rows": [], "sources": [], "citations": [],
                 "choices": list(choices), "run": None}
@@ -73,11 +74,11 @@ def harness(monkeypatch, profile_of):
     app.dependency_overrides[chat.get_place_profile] = lambda: profile_of
     app.dependency_overrides[chat.get_law_text] = lambda: (
         lambda law, section: "[c:aa11bb22cc33dd44] Miljöbalk 7 kap. 7 §" if (law, section) == ("MB", "7 kap. 7 §") else None)
-    return types.SimpleNamespace(client=TestClient(app), Session=Session, asked=asked, choices=choices)
+    return types.SimpleNamespace(client=TestClient(app), Session=Session, asked=asked, choices=choices, allowed=allowed)
 
 
-def ask(harness, place=None):
-    body = {"messages": [{"role": "user", "content": QUESTION}]}
+def ask(harness, place=None, **extra):
+    body = {"messages": [{"role": "user", "content": QUESTION}], **extra}
     if place:
         body["place"] = place
     response = harness.client.post("/api/chat/stream", json=body)
@@ -175,3 +176,13 @@ def test_a_question_with_options_records_them_for_the_buttons(harness):
 def test_an_ordinary_answer_records_no_options(harness):
     ask(harness, PINNED)
     assert not [e for e in saved_answer(harness).trace if e["stage"] == "choices"]
+
+
+def test_an_answer_to_the_agents_question_is_marked_and_cannot_ask_again(harness):
+    ask(harness, PINNED, answer_to_question=True)
+    assert "answer to your question" in harness.asked[0] and harness.allowed == [False]
+
+
+def test_an_ordinary_question_may_be_answered_with_a_question(harness):
+    ask(harness, PINNED)
+    assert harness.allowed == [True]

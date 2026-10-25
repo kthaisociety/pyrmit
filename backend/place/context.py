@@ -15,8 +15,14 @@ OPENING = ("[Place pinned by the user on the map. This is the place the question
            "answering.]")
 CLOSING = ("[End of the pinned place. The user's question follows. If it names an address, property or place that is "
            "not this pinned one (compare with the property and its addresses above), ask which place the user means "
-           "with ask_user, the pinned place and the named one as options, before answering.]")
+           "with ask_user, the pinned place and the named one as options, before answering, unless the "
+           "conversation has already settled it: then follow the user's choice (for a place other than the pin, "
+           "answer without the pin's data) and do not ask again.]")
 MAX_ADDRESSES = 8
+# The user clicked one of the agent's options (or pinned from its button): asked again, the pinned-place rule made
+# the agent repeat its question in 13 of 15 follow-ups (2026-10-25)
+ANSWERED = ("[The user's message below is their answer to your question: act on it now and do not ask again. If they "
+            "chose a place other than the pinned place, answer for that place and leave the pinned place's data aside.]")
 STATUTES = ("[Statute text of the sections the likely permits cite, from the corpus: cite these ids; no need to look "
             "them up again.]")
 # "MB 7 kap. 7 §", "MB 7 kap. 21-22 §", "MB 7 kap. 28 a §", "3 kap. 6 § MB": a law, a chapter and its sections
@@ -141,11 +147,13 @@ def place_context(profile: dict, law_text: Callable[[str, str], str | None] | No
 
 
 def question_with_place(question: str, profile: dict | None,
-                        law_text: Callable[[str, str], str | None] | None = None) -> str:
+                        law_text: Callable[[str, str], str | None] | None = None, answered: bool = False) -> str:
     """The question as the agent gets it: after the pinned place's profile (place_context, with the permits' statute
-    text when `law_text` is given), or after NO_PIN_HINT when nothing is pinned. The chat and the answer benchmark
+    text when `law_text` is given), or after NO_PIN_HINT when nothing is pinned; with `answered` (the message answers
+    the agent's own question) ANSWERED comes last before it. The chat and the answer benchmark
     (place.bench_answers) both send this."""
-    return (place_context(profile, law_text) if profile else NO_PIN_HINT) + "\n\n" + question
+    parts = [place_context(profile, law_text) if profile else NO_PIN_HINT, *([ANSWERED] if answered else []), question]
+    return "\n\n".join(parts)
 
 
 def _without_geometry(row: dict | None) -> dict | None:

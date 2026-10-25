@@ -195,6 +195,7 @@ describe('questions with options', () => {
 
     await waitFor(() => expect(sent).not.toBeNull());
     expect(sent!.messages.at(-1)).toEqual({ role: 'user', content: 'A site in Södermalm' });
+    expect((sent as unknown as { answer_to_question?: boolean }).answer_to_question).toBe(true);
   });
 
   it('offers to pin the place on the map, which opens the map', async () => {
@@ -209,6 +210,32 @@ describe('questions with options', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Pin it on the map' }));
 
     expect(await screen.findByTestId('map')).toBeInTheDocument();
+  });
+
+  it('answers with the place once the user has pinned it from the button', async () => {
+    /** "Pin it on the map" opens the map; the pin then goes back to the agent, with the place, on its own. */
+    let sent: { messages: { role: string; content: string }[]; place?: unknown } | null = null;
+    server.use(
+      http.get('*/api/sessions/s3', () => HttpResponse.json([
+        ASKED[0],
+        { ...ASKED[1], session_id: 's3',
+          trace: [{ type: 'pipeline', stage: 'choices', data: { options: ['Answer generally'], offer_pin: true } }] },
+      ])),
+      http.post('*/api/chat/stream', async ({ request }) => {
+        sent = (await request.json()) as typeof sent;
+        return sse({ type: 'session_id', session_id: 's3' }, { type: 'done', session_id: 's3' });
+      }),
+    );
+    chat('s3');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Pin it on the map' }));
+    expect(screen.getByText(/click the map to pin the place/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Click Kungsängen' }));
+
+    await waitFor(() => expect(sent).not.toBeNull());
+    expect(sent!.messages.at(-1)!.content).toMatch(/Uppsala Kungsängen 7:8/);
+    expect(sent!.place).toEqual({ lat: 59.8505, lon: 17.641, label: 'Uppsala Kungsängen 7:8' });
+    expect((sent as unknown as { answer_to_question?: boolean }).answer_to_question).toBe(true);
   });
 
   it('says the user can also type their own answer', async () => {

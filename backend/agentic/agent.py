@@ -189,9 +189,11 @@ def _run_call(tools: CorpusTools, call) -> tuple:
 
 def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = None, model: str | None = None,
               effort: str = "medium", explore_effort: str | None = "low", max_steps: int = 10,
-              on_event: Callable[[dict], None] | None = None, disabled_tools: set[str] | None = None) -> AgentRun:
+              on_event: Callable[[dict], None] | None = None, disabled_tools: set[str] | None = None,
+              allow_ask: bool = True) -> AgentRun:
     """`effort` for the final answer, `explore_effort` for the tool-calling turns (None: same as `effort`).
-    `disabled_tools` removes tools for a run (benchmark ablations, e.g. no map reading)."""
+    `disabled_tools` removes tools for a run (benchmark ablations, e.g. no map reading); `allow_ask=False` leaves
+    ask_user out (the message answers the agent's own question)."""
     client = get_openai_client()
     model = resolve_model_name(model or os.getenv("AGENT_MODEL", DEFAULT_MODEL))
     explore_effort = explore_effort or effort
@@ -202,8 +204,8 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
     pool = ThreadPoolExecutor(max_workers=6)
     asked_for_answer = False
     disabled = set(disabled_tools or ())
-    schemas = [schema for schema in TOOL_SCHEMAS if schema["name"] not in disabled] + [ANSWER_READY_TOOL,
-                                                                                         ASK_USER_TOOL]
+    schemas = ([schema for schema in TOOL_SCHEMAS if schema["name"] not in disabled] + [ANSWER_READY_TOOL]
+               + ([ASK_USER_TOOL] if allow_ask else []))
     note = f"\n\nNot available in this session: {', '.join(sorted(disabled))}." if disabled else ""
     instructions = SYSTEM_PROMPT + note
     # An image goes with the next model call only (re-sending every image each turn multiplied the input tokens):
