@@ -83,15 +83,19 @@ _PDF_OFF_TOPIC = re.compile(
 # Words that keep a PDF whatever else it mentions ("Detaljplan för återvinningscentral (avfall)")
 _PLAN_WORDS = re.compile(r"detaljplan|planbeskrivning|plankarta|planbestammelse|oversiktsplan|planprogram"
                          r"|omradesbestammelse|fordjupad oversikt")
+# A page about plans (path or title): a plan, a list of plans. Every PDF it links that is not off topic is taken, and
+# the plan pages it links are followed one level past --max-depth (crawl.take_pdf_link, process_page)
+_PLAN_PAGE = re.compile(r"detaljplan|byggnadsplan|stadsplan|planprogram|oversiktsplan|omradesbestammelse")
 
 
 def fold(text: str) -> str:
     return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()
 
 
-# Recorded in the done line. 2 = the short off-topic list above, skipped links recorded (2026-10-23); a manifest
-# below it lacks the PDF links the older list refused: `--revisit` adds them without a full crawl
-PDF_LINKS_VERSION = 2
+# Recorded in the done line. 2 = the short off-topic list above, skipped links recorded (2026-10-23); 3 = every PDF
+# of a plan page (2026-10-25). A manifest below it lacks the PDF links the older rules refused: `--revisit` adds them
+# without a full crawl
+PDF_LINKS_VERSION = 3
 
 # Default caps per kommun (CLI flags; the technical report quotes them). 3000 PDFs / 15000 requests since 2026-10-23:
 # at 1000 / 6000, 9 kommuner (Malmö, Västerås, Huddinge...) left plans out; a PDF already on disk costs a request but
@@ -379,17 +383,23 @@ class KommunCrawler:
         self.skipped["off_topic"] += 1
         self.record({"type": "skipped_pdf", "url": url, "anchor": anchor, "source": source})
 
-    def take_pdf_link(self, url: str, anchor: str, page_score: int, source: str, depth: int) -> None:
-        # PDFs may live on another host (plan archive, GIS portal); keep those linked from relevant pages
+    def take_pdf_link(self, url: str, anchor: str, page_score: int, source: str, depth: int,
+                      plan_page: bool = False) -> None:
+        # PDFs may live on another host (plan archive, GIS portal); keep those linked from relevant pages. A plan
+        # page's attachments are named after the place or the step ("Lagakraftbevis", "Protokollsutdrag",
+        # "1507-280-torsberg-139-mfl.pdf"), with no plan word or a negative one: until 2026-10-25 they were left out
+        # (164 of the PDFs the coverage benchmark's municipalities list). A plan word outweighs a negative one
+        # ("Planbeskrivning - Förskolan på norr")
         score = relevance(urlparse(url).path, anchor)
-        if score < 0 or (score == 0 and page_score <= 0):
-            return
-        if score == 0 and not any(hint in fold(anchor + url) for hint in _PDF_HINTS):
-            return
+        if not plan_page and not _PLAN_WORDS.search(fold(unquote(urlparse(url).path) + " " + anchor)):
+            if score < 0 or (score == 0 and page_score <= 0):
+                return
+            if score == 0 and not any(hint in fold(anchor + url) for hint in _PDF_HINTS):
+                return
         if off_topic_pdf(url, anchor):
             self.skip_pdf(url, anchor, source)
             return
-        self.push(url, "pdf", score + page_score // 2, anchor, source, depth)
+        self.push(url, "pdf", max(score, 1) + page_score // 2, anchor, source, depth)
 
     async def process_page(self, task: Task) -> None:
         response = await self.get(task.url)
@@ -437,8 +447,10 @@ class KommunCrawler:
                 self.section_pages[section] = self.section_pages.get(section, 0) + 1
 
         # At the last depth only PDF links are taken: a plan list reached through a site index (Härryda, Surahammar)
-        # sits at depth 4, and its PDFs were left out
+        # sits at depth 4, and its PDFs were left out. A plan page at the last depth still gives its plan pages: a
+        # list of plans in force there kept its plans out (Haparanda: 103 of the coverage benchmark's PDFs, 2026-10-25)
         follow_pages = task.depth < self.args.max_depth
+        plan_page = bool(_PLAN_PAGE.search(fold(urlparse(final_url).path + " " + title)))
         for element in document.iter("a"):
             href = element.get("href")
             if not href:
@@ -448,8 +460,9 @@ class KommunCrawler:
                 continue
             anchor = " ".join(element.text_content().split())[:200]
             if is_pdf_link(url):
-                self.take_pdf_link(url, anchor, page_score, final_url, task.depth + 1)
-            elif follow_pages and self.is_internal(url):
+                self.take_pdf_link(url, anchor, page_score, final_url, task.depth + 1, plan_page)
+            elif self.is_internal(url) and (follow_pages or (
+                    plan_page and task.depth == self.args.max_depth and _PLAN_PAGE.search(fold(urlparse(url).path)))):
                 score = link_relevance(urlparse(url).path, anchor)
                 if task.depth == 0 and _SITE_INDEX.match(fold(anchor)):
                     score = max(score, 5)
@@ -612,13 +625,15 @@ class KommunCrawler:
             return
         title = " ".join((document.findtext(".//title") or "").split())
         page_score = relevance(urlparse(final_url).path, title)
+        plan_page = bool(_PLAN_PAGE.search(fold(urlparse(final_url).path + " " + title)))
         for element in document.iter("a"):
             href = element.get("href")
             if not href:
                 continue
             link = urljoin(final_url, href.strip())
             if is_pdf_link(link) and not _SKIP_EXTENSIONS.search(link):
-                self.take_pdf_link(link, " ".join(element.text_content().split())[:200], page_score, final_url, 1)
+                self.take_pdf_link(link, " ".join(element.text_content().split())[:200], page_score, final_url, 1,
+                                   plan_page)
 
 
 async def crawl(municipalities: list[dict], args) -> None:

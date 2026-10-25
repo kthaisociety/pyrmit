@@ -59,3 +59,26 @@ def test_link_text_with_a_negative_word():
 def test_site_index_links():
     assert all(_SITE_INDEX.match(fold(text)) for text in ("Webbkarta", "A-Ö", "Sitemap", "Innehåll A-Ö"))
     assert not _SITE_INDEX.match(fold("Bygga, bo och miljö"))
+
+
+def test_plan_page_attachments_are_taken():
+    """A plan page's PDFs are named after the place or the step: all taken unless off topic; elsewhere a neutral
+    name needs a plan hint, and a plan word outweighs a negative one."""
+    from corpus.crawl import KommunCrawler
+
+    crawler = KommunCrawler.__new__(KommunCrawler)
+    taken, skipped = [], []
+    crawler.push = lambda url, *rest: taken.append(url.rsplit("/", 1)[-1])
+    crawler.skip_pdf = lambda url, *rest: skipped.append(url.rsplit("/", 1)[-1])
+    links = [("https://k.se/download/1/Lagakraftbevis.pdf", "Lagakraftbevis"),
+             ("https://k.se/download/2/Protokollsutdrag.pdf", "Protokollsutdrag med antagandebeslutet"),
+             ("https://k.se/media/x/1507-280-torsberg-139-mfl.pdf", "Torsberg 1:39 m.fl."),
+             ("https://k.se/download/3/Arsredovisning-2024.pdf", "Årsredovisning 2024")]
+    for url, anchor in links:
+        crawler.take_pdf_link(url, anchor, 5, "https://k.se/detaljplaner/torget", 2, plan_page=True)
+    assert taken == ["Lagakraftbevis.pdf", "Protokollsutdrag.pdf", "1507-280-torsberg-139-mfl.pdf"]
+    assert skipped == ["Arsredovisning-2024.pdf"]
+    taken.clear()
+    for url, anchor in links[:3] + [("https://k.se/download/4/Planbeskrivning-Forskolan.pdf", "Planbeskrivning - Förskolan på norr")]:
+        crawler.take_pdf_link(url, anchor, 5, "https://k.se/bygga/bygglov", 2)
+    assert taken == ["Planbeskrivning-Forskolan.pdf"]  # not a plan page: no hint, or a negative word ("protokoll")

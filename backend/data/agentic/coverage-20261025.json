@@ -1,30 +1,30 @@
 {
  "total": {
   "plans": 202,
-  "plans_with_a_pdf": 0.7623762376237624,
-  "plans_complete": 0.5148514851485149,
-  "pdfs_found": 0.5664160401002506,
+  "plans_with_a_pdf": 0.7772277227722773,
+  "plans_complete": 0.5346534653465347,
+  "pdfs_found": 0.575187969924812,
   "municipalities": 13,
   "unmeasured": 16,
   "reference_fetched": "2026-10-22",
+  "found_as_copies": 7,
   "missing": {
    "page_not_crawled": 171,
    "link_not_taken": 164,
-   "copy": 10,
+   "not_extracted": 3,
    "filtered": 1
   }
  },
  "by_kommun": {
   "Arvika": {
    "plans": 5,
-   "plans_with_a_pdf": 2,
-   "plans_complete": 2,
+   "plans_with_a_pdf": 4,
+   "plans_complete": 4,
    "pdfs": 5,
-   "pdfs_found": 2,
+   "pdfs_found": 4,
    "plan_pages_found": 0,
    "missing": {
-    "link_not_taken": 1,
-    "copy": 2
+    "link_not_taken": 1
    }
   },
   "Färgelanda": {
@@ -46,7 +46,7 @@
    "pdfs_found": 18,
    "plan_pages_found": 0,
    "missing": {
-    "copy": 1,
+    "not_extracted": 1,
     "link_not_taken": 1
    }
   },
@@ -106,12 +106,12 @@
    "plans_with_a_pdf": 8,
    "plans_complete": 7,
    "pdfs": 95,
-   "pdfs_found": 31,
+   "pdfs_found": 33,
    "plan_pages_found": 18,
    "missing": {
     "page_not_crawled": 59,
-    "copy": 3,
     "link_not_taken": 1,
+    "not_extracted": 1,
     "filtered": 1
    }
   },
@@ -128,14 +128,13 @@
   },
   "Vimmerby": {
    "plans": 20,
-   "plans_with_a_pdf": 19,
-   "plans_complete": 18,
+   "plans_with_a_pdf": 20,
+   "plans_complete": 19,
    "pdfs": 49,
-   "pdfs_found": 44,
+   "pdfs_found": 46,
    "plan_pages_found": 20,
    "missing": {
-    "link_not_taken": 3,
-    "copy": 2
+    "link_not_taken": 3
    }
   },
   "Örebro": {
@@ -147,19 +146,18 @@
    "plan_pages_found": 20,
    "missing": {
     "link_not_taken": 20,
-    "copy": 1
+    "not_extracted": 1
    }
   },
   "Östhammar": {
    "plans": 20,
    "plans_with_a_pdf": 17,
-   "plans_complete": 14,
+   "plans_complete": 15,
    "pdfs": 75,
-   "pdfs_found": 64,
+   "pdfs_found": 65,
    "plan_pages_found": 17,
    "missing": {
     "link_not_taken": 3,
-    "copy": 1,
     "page_not_crawled": 7
    }
   }

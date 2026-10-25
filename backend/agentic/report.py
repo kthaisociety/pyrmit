@@ -518,9 +518,10 @@ def coverage_gaps(coverage: dict) -> str:
     sampled = coverage["total"]["municipalities"] + coverage["total"].get("unmeasured", 0)
     return f"""<p>Why the {sum(missing.values())} missing PDFs are missing, read from each municipality's crawl record:</p>
 <ul>{causes}</ul>
-<p>Leads, by expected gain: (1) follow the plan pages of a plan list past the depth limit (the pages under the
-list's path); (2) on a plan page or a plan list, take every PDF link that is not off topic, whatever its name;
-(3) count a copy of a kept document as found (match the file, not only the URL). The {map_only} of {sampled} sampled
+<p>The crawler handles the first two causes since October 2026: a plan page at the last depth still gives the plan
+pages it links, and every PDF of a plan page that is not off topic is taken, whatever its name; a copy of a kept
+document counts as found. The
+{map_only} of {sampled} sampled
 municipalities that publish their plans only in a map or search application need another source: Lantmäteriet's
 national access to digital detailed plans or the municipality's plan layers (WMS / WFS), which also give the plan
 boundaries (address → plan); otherwise, a browser agent driving the map application, used as a crawler: once per

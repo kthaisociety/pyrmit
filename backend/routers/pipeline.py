@@ -205,9 +205,10 @@ def crawl_step(check: dict) -> dict:
                      table={"columns": ["Kommun", "Plans checked", "At least one PDF", "PDFs found"], "rows": by_kommun},
                      examples=unmeasured),
             *([_section("Why listed plan PDFs are missing", f"{sum(missing.values()):,} PDFs, by cause",
-                        text="Read from each kommun's crawl record. Next: follow the plan pages of a plan list one link "
-                             "deeper, take every on-topic PDF linked from a plan page whatever its name, count copies "
-                             "as found. Kommuner that publish their plans only in a map need another source (their map "
+                        text="Read from each kommun's crawl record. The crawler now handles the first two causes (it "
+                             "goes one link deeper from a plan page and takes every on-topic PDF of a plan page, "
+                             "whatever its name): a re-crawl and rebuild bring these PDFs in. Kommuner that publish "
+                             "their plans only in a map need another source (their map "
                              "service or Lantmäteriet's digital plans), or a browser agent that goes through their "
                              "map once and lists the plans for the crawler.",
                         table={"columns": ["Cause", "PDFs", "Kommuner"], "rows": missing_rows})] if missing else []),

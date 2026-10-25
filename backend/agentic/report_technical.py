@@ -203,7 +203,9 @@ def design_choices(s: dict) -> str:
     crawl_gaps = (f"Of the plan PDFs the sampled municipalities list, {missing.get('page_not_crawled', 0)} sit on plan "
                   "pages never crawled (most likely one link past the depth limit) and "
                   f"{missing.get('link_not_taken', 0)} are linked under a name "
-                  "without a plan word (\"Lagakraftbevis\", a place name) and not taken (benchmark report 2.11). "
+                  "without a plan word (\"Lagakraftbevis\", a place name) and not taken (benchmark report 2.11); "
+                  "the crawler now follows a plan page's plan pages one level past the limit and takes every PDF "
+                  "of a plan page that is not off topic. "
                   if missing else "")
     rows = [
         ("Crawl", "Page selection",
@@ -250,8 +252,7 @@ def design_choices(s: dict) -> str:
          "Sites whose navigation is built in JavaScript (Jönköping, Lidingö's plan documents) and municipalities that "
          f"publish their plans only in a map or search application ({map_only} sampled for the coverage benchmark, "
          "benchmark report 2.11) are covered only through the pages that link documents directly. "
-         f"{esc(crawl_gaps)}Next: follow a plan list's plan pages past the depth limit and take every on-topic PDF of "
-         "a plan page; the national plan register or the municipal map services (section 3.3); otherwise a "
+         f"{esc(crawl_gaps)}Next: the national plan register or the municipal map services (section 3.3); otherwise a "
          "browser agent that lists, once per municipality, the plans of its map application for the crawler"),
         ("Extraction", "PDF text",
          "PyMuPDF text layer, repeated headers / footers removed; &lt; 150 characters per page = scanned, OCR by "

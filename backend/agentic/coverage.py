@@ -5,7 +5,8 @@ The other benchmarks are built from documents of the corpus (their evidence, the
 crawl never fetched cannot appear in them: a missing plan costs nothing in their scores. This one starts from
 outside the corpus: each sampled municipality's own list of plans in force, fetched live, and for each listed plan
 the PDFs its page links to. The score is the share of those PDFs (and of plans with at least one PDF) found in the
-corpus (documents.jsonl, matched by URL).
+corpus (documents.jsonl, matched by URL, or the downloaded file identical to a PDF of the corpus), and why each missing
+PDF is missing (CAUSES).
 
     cd backend
     python -m agentic.coverage sample      # pick municipalities and their list page -> agentic/coverage_sources.jsonl
@@ -53,9 +54,8 @@ CAUSES = {
                       "(\"Lagakraftbevis\", \"Undersökning om betydande miljöpåverkan\") has no plan word "
                       "(crawl.take_pdf_link)",
     "skipped": "skipped as off topic (crawl.off_topic_pdf)",
-    "copy": "a copy of a document kept under another URL (corpus.extract keeps one per content; the score matches "
-            "URLs)",
     "filtered": "dropped by the PDF filter",
+    "not_extracted": "downloaded, but neither in the corpus nor a copy of a document in it",
 }
 
 
@@ -245,19 +245,36 @@ async def fetch_all(seed: int) -> None:
     print(f"{sum(len(r) for r in results)} plans -> {PLANS_PATH}")
 
 
-def _crawl(code: str) -> dict:
-    """What a kommun's crawl recorded: kept pages, downloaded PDFs (url key -> id), skipped PDF links."""
+def _crawl(code: str, kept_ids: set[str]) -> dict:
+    """What a kommun's crawl recorded: kept pages, downloaded PDFs (url key -> file), skipped PDF links; and the
+    files of its PDFs in the corpus by size (kept_ids: their pdf ids)."""
     entries = list(read_jsonl(WEB_DIR / code / "manifest.jsonl"))
+    kept = defaultdict(list)
+    for pdf_id in kept_ids:
+        path = WEB_DIR / code / "pdf" / f"{pdf_id}.pdf"
+        if path.exists():
+            kept[path.stat().st_size].append(path)
     return {"pages": {url_key(e["url"]) for e in entries if e.get("type") == "page"},
-            "pdfs": {url_key(e["url"]): e["id"] for e in entries if e.get("type") == "pdf"},
-            "skipped": {url_key(e["url"]) for e in entries if e.get("type") == "skipped_pdf"}}
+            "pdfs": {url_key(e["url"]): WEB_DIR / code / "pdf" / f"{e['id']}.pdf" for e in entries if e.get("type") == "pdf"},
+            "skipped": {url_key(e["url"]) for e in entries if e.get("type") == "skipped_pdf"},
+            "kept": kept}
+
+
+def kept_copy(keys: list[str], crawl: dict) -> bool:
+    """The file the crawl downloaded for this URL is byte-identical to a PDF of the corpus: corpus.extract keeps one
+    document per content, under the URL it met first (the same plankarta linked from the plan page and the list)."""
+    path = next((crawl["pdfs"][key] for key in keys if key in crawl["pdfs"]), None)
+    if path is None or not path.exists():
+        return False
+    data = path.read_bytes()
+    return any(other != path and other.read_bytes() == data for other in crawl["kept"].get(len(data), []))
 
 
 def missing_cause(keys: list[str], plan_url: str | None, code: str, crawl: dict, dropped: set[str]) -> str:
     """CAUSES key of a listed PDF absent from the corpus (keys: url_key of each URL of its redirect chain)."""
-    pdf_id = next((crawl["pdfs"][key] for key in keys if key in crawl["pdfs"]), None)
-    if pdf_id:
-        return "filtered" if f"pdf:{code}:{pdf_id}" in dropped else "copy"
+    path = next((crawl["pdfs"][key] for key in keys if key in crawl["pdfs"]), None)
+    if path is not None:
+        return "filtered" if f"pdf:{code}:{path.stem}" in dropped else "not_extracted"
     if any(key in crawl["skipped"] for key in keys):
         return "skipped"
     if not plan_url or url_key(plan_url) in crawl["pages"]:  # no plan page: the PDF is linked from the list page
@@ -266,10 +283,11 @@ def missing_cause(keys: list[str], plan_url: str | None, code: str, crawl: dict,
 
 
 def score() -> dict:
-    corpus_pdfs, corpus_pages = {}, set()
+    corpus_pdfs, corpus_pages, kept_ids = {}, set(), defaultdict(set)
     for doc in read_jsonl(DOCUMENTS_PATH):
         if doc["kind"] == "pdf" and doc.get("url"):
             corpus_pdfs[url_key(doc["url"])] = doc["doc_id"]
+            kept_ids[doc.get("kommun_code")].add(doc["doc_id"].rsplit(":", 1)[-1])
         elif doc["kind"] == "page":
             corpus_pages.add(url_key(doc["url"]))
     rows = list(read_jsonl(PLANS_PATH))
@@ -289,14 +307,20 @@ def score() -> dict:
     for row in rows:
         if row["plan"] is None:
             continue
-        found = [url for url in row["pdfs"] if any(url_key(u) in corpus_pdfs for u in url.split(" -> "))]
         code = codes[row["kommun"]]
         if code not in crawls:
-            crawls[code] = _crawl(code)
-        missing = Counter(missing_cause([url_key(u) for u in url.split(" -> ")], row["plan_url"], code, crawls[code],
-                                        dropped) for url in row["pdfs"] if url not in found)
+            crawls[code] = _crawl(code, kept_ids[code])
+        found, copies, missing = 0, 0, Counter()
+        for url in row["pdfs"]:
+            keys = [url_key(u) for u in url.split(" -> ")]
+            if any(key in corpus_pdfs for key in keys):
+                found += 1
+            elif kept_copy(keys, crawls[code]):  # in the corpus under another URL
+                found, copies = found + 1, copies + 1
+            else:
+                missing[missing_cause(keys, row["plan_url"], code, crawls[code], dropped)] += 1
         by_kommun[row["kommun"]].append({
-            "plan": row["plan"], "pdfs": len(row["pdfs"]), "found": len(found), "missing": missing,
+            "plan": row["plan"], "pdfs": len(row["pdfs"]), "found": found, "copies": copies, "missing": missing,
             "page_found": bool(row["plan_url"]) and url_key(row["plan_url"]) in corpus_pages})
     table = {}
     print(f"{'municipality':<16} {'plans':>5} {'with a PDF':>11} {'all PDFs':>9} {'PDFs found':>11} {'plan page':>10}")
@@ -316,10 +340,12 @@ def score() -> dict:
              "pdfs_found": sum(p["found"] for p in plans) / max(sum(p["pdfs"] for p in plans), 1),
              "municipalities": len(by_kommun), "unmeasured": len(unmeasured),
              "reference_fetched": rows[0]["fetched_at"] if rows else None,
+             "found_as_copies": sum(p["copies"] for p in plans),
              "missing": dict(sum((p["missing"] for p in plans), Counter()).most_common())}
     print(f"\nall: {total['plans']} plans in {total['municipalities']} municipalities; at least one PDF in the corpus "
           f"{total['plans_with_a_pdf']:.0%}, all PDFs {total['plans_complete']:.0%}; PDFs found {total['pdfs_found']:.0%}")
-    print("missing PDFs:", "; ".join(f"{n} {cause}" for cause, n in total["missing"].items()))
+    print(f"found as a copy under another URL: {total['found_as_copies']}; missing PDFs:",
+          "; ".join(f"{n} {cause}" for cause, n in total["missing"].items()))
     for kommun, note in sorted(unmeasured.items()):
         print(f"not measurable: {kommun}: {note}")
     out = RESULTS_DIR / f"coverage-{date.today():%Y%m%d}.json"

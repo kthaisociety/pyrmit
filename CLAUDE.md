@@ -193,7 +193,11 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   long link text, e.g. "... livsmedel" in Surahammar's home card, no longer hides an on-topic section) and from the home
   page also the site index (`_SITE_INDEX`: Webbkarta, A-Ö; Härryda builds its menus in JavaScript); pages at the last
   depth (4) still give their PDF links (all three fixed 2026-10-23, after a first full crawl that day: Härryda and
-  Surahammar had 0 pages). PDFs when linked from relevant pages, minus the obvious noise only
+  Surahammar had 0 pages). A page about plans (`_PLAN_PAGE` in its path or title: a plan, a list of plans) at the last
+  depth still gives the plan pages it links (`_PLAN_PAGE` in their path), one level further, and every PDF it links
+  is taken unless `off_topic_pdf` ("Lagakraftbevis", "Protokollsutdrag", "1507-280-torsberg-139-mfl.pdf" have no plan
+  word, some a negative one); elsewhere a plan word in the PDF's name or link text outweighs a negative word (both
+  2026-10-25, from the coverage benchmark's causes; `PDF_LINKS_VERSION` 3). PDFs when linked from relevant pages, minus the obvious noise only
   (`off_topic_pdf` on file name + link text: annual reports, alcohol licences, estate notices... unless a plan word;
   each skipped link is recorded in the manifest as `{"type": "skipped_pdf", ...}`, which readers ignore). Everything
   else is judged by `corpus.pdf_filter` after extraction; `corpus.extract` has no topic test any more (until 2026-10-23
@@ -437,21 +441,24 @@ a chunk id glued to a doc prefix, a valid doc_id next to a stale chunk_id, a chu
 (4) `python -m agentic.coverage sample|fetch|score`: the other benchmarks are built from the corpus and cannot see a
 missing plan; this one fetches live the plans-in-force list of 29 sampled kommuner (`agentic/coverage_sources.jsonl`,
 curated) and up to 20 plans each with their PDF links (`agentic/coverage_plans.jsonl`, versioned with its date), and
-scores the share found in documents.jsonl by URL (reference fetched 2026-10-22: 202 plans in 13 measurable kommuner).
-Before the national crawl 24 % of the plans with a PDF, 8 % of their PDFs; since (2026-10-23, unchanged by the OCR,
-which makes PDFs readable but adds none) 76 % / 57 % (all PDFs of a plan: 51 %). `score` also records why each missing
-PDF is missing (`CAUSES`, `missing_cause`, from the kommun's manifest; benchmark report 2.11, Pipeline view): of 346,
-171 sit on plan pages never crawled while their list page was, most likely one link past `--max-depth` 4 (Haparanda
-103 = 0 %, Norrtälje 59); 164 are linked from a crawled page but not taken, because `take_pdf_link` drops a
-neutral-scored link without a `_PDF_HINTS` word and plan attachments are named after the place or the step
-(Färgelanda's "1507-280-torsberg-139-mfl.pdf" on the list page, "Lagakraftbevis", "Undersökning om betydande
-miljöpåverkan", "Protokollsutdrag": Kinda 100, Örebro 20, Härjedalen 17); 10 are copies of a kept document under
-another URL (`corpus.extract` keeps one per content); 1 a filter drop. A manifest records a page only when kept, so
-"never crawled" also covers a plan page fetched but not kept. 16 kommuner unmeasurable: 11 of the 29 publish their
+scores the share found in documents.jsonl by URL, or as a byte copy of a corpus PDF (`kept_copy`: `corpus.extract`
+keeps one document per content, under the URL it met first). Reference fetched 2026-10-22: 202 plans in 13 measurable
+kommuner. Before the national crawl 24 % of the plans with a PDF, 8 % of their PDFs; after it (2026-10-23; the OCR
+makes PDFs readable but adds none) 78 % / 58 % (all PDFs of a plan: 53 %; 76 / 57 / 51 % by URL only). `score` also
+records why each missing PDF is missing (`CAUSES`, `missing_cause`, from the kommun's manifest; benchmark report 2.11,
+Pipeline view). On that corpus, of 339: 171 on plan pages never crawled while their list page was, one link past
+`--max-depth` 4 (Haparanda 103 = 0 %, Norrtälje 59); 164 linked from a crawled page but not taken, because
+`take_pdf_link` dropped a neutral-scored link without a `_PDF_HINTS` word and plan attachments are named after the
+place or the step (Färgelanda's "1507-280-torsberg-139-mfl.pdf" on the list page, "Lagakraftbevis", "Undersökning om
+betydande miljöpåverkan", "Protokollsutdrag": Kinda 100, Örebro 20, Härjedalen 17); 3 downloaded but neither kept nor
+a copy; 1 a filter drop. A manifest records a page only when kept, so "never crawled" also covers a plan page fetched
+but not kept. Both crawl causes are fixed (crawler rules above, 2026-10-25); re-crawling 10 of the 13 kommuner with
+them downloaded 546 of their 560 listed PDFs (301 in the corpus before; Haparanda 0 -> 103 of 103, Färgelanda 2 -> 20,
+Kinda 79 -> 178), to be scored after a rebuild. 16 kommuner unmeasurable: 11 of the 29 publish their
 plans in force only in a map or search application (the corpus still has 2-157 plans each from their other pages,
 not checked whether in force), 4 reach only 1-2 plans, Göteborg's list page was unreachable.
-Leads (not done): follow a plan list's plan pages past the depth limit; on a plan page / plan list take every PDF link
-that is not off topic; count copies as found (match files, not only URLs); for map-only kommuner, the kommun's plan
+Leads (not done): a national `--force` crawl (the depth fix needs a full crawl; `--revisit` brings the plan-page PDFs
+of `PDF_LINKS_VERSION` 3 with ~35k requests); for map-only kommuner, the kommun's plan
 layers (WMS / WFS) or Lantmäteriet's digital plans (access and terms not checked), which also give address → plan;
 a browser agent driving the map application, used as a crawler: once per map-only kommun (11 of the 29 sampled),
 it lists the plans and their document links, which the crawler then downloads (a one-off cost per kommun, not per
