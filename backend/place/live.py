@@ -38,7 +38,7 @@ def _designation(kommun: str, fastighet: str) -> str:
 
 
 @lru_cache(maxsize=2048)
-def _uppsala_property(lon: float, lat: float) -> dict | None:
+def _uppsala_property(kommun: str, lon: float, lat: float) -> dict | None:
     hits = _query({"geometry": f"{lon},{lat}", "geometryType": "esriGeometryPoint", "inSR": 4326,
                    "spatialRel": "esriSpatialRelIntersects"})
     if not hits:
@@ -47,7 +47,7 @@ def _uppsala_property(lon: float, lat: float) -> dict | None:
     escaped = fastighet.replace("'", "''")
     parts = _query({"where": f"fastighet = '{escaped}'"}) or hits
     geometry = unary_union([shape(part["geometry"]) for part in parts])
-    return {"designation": _designation(PILOTS["0380"]["name"], fastighet), "geometry": mapping(geometry),
+    return {"designation": _designation(kommun, fastighet), "geometry": mapping(geometry),
             "source": "Uppsala kommun", "fetched": today()}
 
 
@@ -59,4 +59,4 @@ def property_at(code: str, lon: float, lat: float) -> dict | None:
     Raises PlaceSourceUnavailable when the service fails."""
     if PILOTS.get(code, {}).get("property_service") != "uppsala":
         return None
-    return _uppsala_property(round(lon, COORDINATE_DECIMALS), round(lat, COORDINATE_DECIMALS))
+    return _uppsala_property(PILOTS[code]["name"], round(lon, COORDINATE_DECIMALS), round(lat, COORDINATE_DECIMALS))

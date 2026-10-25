@@ -79,6 +79,8 @@ bun run dev
 
 Tests: `cd frontend && bun run test` (Vitest with a fake backend, no server needed) and `cd backend && pytest tests/`.
 
+Map (the place card beside the chat): `cd backend && python -m place.fetch --kommun 0380` copies Uppsala's plans, land-use zones, protected areas and national interests into `backend/data/geo/` (about 10 s, open data); restart the backend afterwards. Without it the map says every place is "not covered yet".
+
 Open <http://localhost:3000>, enter the access-gate password, then sign up. The first start downloads the embedding model from Hugging Face (2.3 GB on a GPU, 570 MB on a CPU), then preloads the store in about 30–60 s.
 
 > `docker-compose.yml` predates the local corpus (no data mount, no GPU): use the manual setup above.

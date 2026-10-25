@@ -72,6 +72,34 @@ The credentials row for a user, holding the provider and password hash.
 A shared unlock code that guards the deployed app before sign-in. Passing it sets a cookie, and the frontend sends users back to it on 401 or 403.
 _Avoid_: dev access, login
 
+**Pin**:
+The point a user puts on the map in the chat: the place the chat is about. Only the user moves it.
+_Avoid_: marker, location (when the pinned point is meant)
+
+**Property**:
+The fastighet at the pin, named by its fastighetsbeteckning (e.g. Uppsala Kungsängen 7:8). The unit the place card describes.
+_Avoid_: lot, parcel, plot
+
+**Place profile**:
+What the registers say about the pinned property: the plans in force, tillägg and områdesbestämmelser, the land-use zones, the plans in progress, inside or outside a detaljplan. Built from data alone, without a model.
+
+**Place card**:
+The place profile as the user sees it beside the map, with the source and date of every row. Registry data, not a decision.
+_Avoid_: site report, place summary
+
+**Land-use zone**:
+An area of a detaljplan with one användning (e.g. BCK, GATA, PARK), as the kommun's map draws it. Old plans have interpreted boundaries.
+_Avoid_: zoning, delområde (when only the användning is known)
+
+**Plan in progress**:
+A detaljplan at samråd or granskning: shown on the place card but not binding.
+
+**Pilot kommun**:
+A kommun the map covers, because its layers have a snapshot (Uppsala for now). Anywhere else the place is "not covered yet".
+
+**Snapshot**:
+A dated local copy of a pilot kommun's area layers, fetched with `python -m place.fetch`. The property is looked up live instead.
+
 ## Relationships
 
 - A **Detaljplan** goes through **Ingestion**: PDF to **OCR Markdown**, then **Document chunks**, each with an **Embedding**.
@@ -81,3 +109,4 @@ _Avoid_: dev access, login
 - Otherwise the **Law agent** searches **Law chunks** and the **Document agent** searches **Document chunks**, both by **Embedding** similarity.
 - The **Orchestrator** combines both agents' results into a **Verdict**, which becomes the **Feasibility analysis** saved as an assistant **Chat message**.
 - The **Access gate** sits in front of everything, including sign-in.
+- A **Pin** in a **Pilot kommun** gives a **Property** (looked up live) and a **Place profile** (from the **Snapshot**): its **Detaljplaner**, **Land-use zones** and **Plans in progress**. The **Place card** shows that profile.

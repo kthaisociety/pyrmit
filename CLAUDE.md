@@ -326,6 +326,25 @@ run one benchmark process at a time (threads via `--workers` are fine); results 
 rerunning `agentic.rejudge` continues. A run that sits a long time before its first case may be stuck at startup
 (Hugging Face model check): the result file name is stamped when the cases start.
 
+### Place Lookup (map pin, epic #31)
+
+```
+1. python -m place.fetch --kommun 0380  -> data/geo/0380/ (gitignored): kommun.geojson (OSM boundary), one GeoJSON per
+   layer (Uppsala's plans / tillägg / områdesbestämmelser / pågående / användning from its ArcGIS service, Naturvårdsverket
+   skyddade områden + Natura 2000 WFS, Boverket riksintressen) and manifest.json (fetch date, licence, count,
+   "complete" = the plan layer holds every plan in force). ~10 s, 10k features (ADR-0002: snapshots, not per-pin calls)
+2. The chat's map panel (components/place/) -> GET /api/place/profile -> place.profile.build_profile:
+   kommun from the snapshot boundaries, the property live from Uppsala's layer 51 (place.live, cached per point),
+   features that contain the pin or cover >= 2 % of the property, plans newest first matched to the corpus registry by
+   name, "outside" detaljplan only with a complete plan layer (else "unknown"). No model calls (ADR-0003)
+```
+
+Gotchas: Uppsala's streets are properties too (Dragarbrunn 1:2, Kronåsen 1:2), so a pin on a street gets that property and
+every plan it crosses. Länsstyrelsernas strandskydd services answer 403 here; RAÄ has no bulk download (ancient remains
+must be live). MapLibre 6 loads its worker from a file next to its own module, which bundlers move:
+`PlaceMap.pointAtBundledWorker` emits it with `new URL(..., import.meta.url)`. A `.next` folder from before the repo
+moved (KTHAIS -> Projekt) made Turbopack panic ("Next.js package not found"): delete `.next` after moving the repo.
+
 ### Chat Request
 
 The frontend uses `POST /api/chat/stream` (SSE). `POST /api/chat` runs the same logic non-streamed.
@@ -422,6 +441,8 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | GET    | `/api/benchmark/sets`, `/cases`, `/case`, `/image/{id}` | Yes | Benchmark case sets, cases, one case + its past results (from `data/agentic/bench-*.json`), plankarta crop |
 | POST   | `/api/benchmark/run`              | Yes  | Run the agent on a case now (chat settings) and grade it; background job (spends credits) |
 | GET    | `/api/benchmark/run/{job_id}`     | Yes  | Progress (tool calls) and result of that job (polled: a run outlasts the frontend proxy timeout) |
+| GET    | `/api/place/profile?lat=&lon=`    | Yes  | Place profile of a pinned point: property (live), plans, zones, plans in progress, inside/outside detaljplan (no LLM) |
+| GET    | `/api/place/coverage`             | Yes  | Pilot kommuner with a snapshot (code, name, bbox, fetch date), for the map's first view |
 
 All routes are additionally behind the access gate when it is enabled.
 
@@ -549,6 +570,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/routers/agents.py` -- `/api/analyze`
 - `backend/routers/db_browser.py` -- Read-only chunk browser + semantic search (never exposes user/auth tables or embeddings)
 - `backend/routers/docs.py` -- Open a cited chunk in its original document (PDF page + highlight, or URL text fragment)
+- `backend/place/` -- place lookups for the map pin: `sources.py` (layers, attribute mapping, pilot kommuner),
+  `fetch.py` (snapshot CLI), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property at a
+  point), `profile.py` (`build_profile`); `backend/routers/place.py` -- `/api/place/*`
 - `backend/routers/benchmark.py` -- Benchmark view API: case sets (`SETS`: cases / caselaw / plans / tasks / generated), past results per case
   parsed from the result file names (`RESULT_FILE`; files from before `-explore-` count as explore = answer effort; `-x-<label>`
   runs show the label and model), and in-memory run jobs (`JOBS`, lost on restart)
@@ -615,6 +639,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)
 - `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage
 - `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
+- `frontend/components/place/` -- `PlacePanel` (map panel beside the chat, opened by the pin button in the message
+  bar), `PlaceMap` (MapLibre 6 + OpenFreeMap Positron, outlines per kind), `PlaceCard`; `frontend/lib/place.ts` -- types
+  and `fetchPlaceProfile` / `fetchPlaceCoverage`
 - `frontend/components/BenchmarkBrowser.tsx` -- Benchmark view (sidebar, above Database): browse the case sets, a case's
   reference (verdicts, key points, evidence, source, map crop) and past results, and "Test with the agent" (run + judge)
 - `frontend/components/Sidebar.tsx` -- Session list, new chat, Database / Settings buttons, user info

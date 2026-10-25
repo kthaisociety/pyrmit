@@ -55,6 +55,11 @@ function addOutlineLayers(map: MapLibreMap) {
   }
 }
 
+/** MapLibre looks for its worker next to its own file, which the bundler moved: emit the worker and point there. */
+function pointAtBundledWorker(maplibregl: typeof import('maplibre-gl')) {
+  maplibregl.setWorkerUrl(new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).toString());
+}
+
 /** The base map (MapLibre, OpenFreeMap tiles) with the pin and the outlines; a click reports the point. */
 export default function PlaceMap({ pin, outlines, bounds, onMapClick }: PlaceMapProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -72,8 +77,7 @@ export default function PlaceMap({ pin, outlines, bounds, onMapClick }: PlaceMap
     let cancelled = false;
     import('maplibre-gl').then((maplibregl) => {
       if (cancelled || !container.current) return;
-      // MapLibre finds its worker next to its own file, which the bundler moved: emit it and point there
-      maplibregl.setWorkerUrl(new URL('maplibre-gl/dist/maplibre-gl-worker.mjs', import.meta.url).toString());
+      pointAtBundledWorker(maplibregl);
       const map = new maplibregl.Map({
         container: container.current, style: STYLE_URL, bounds: SWEDEN, fitBoundsOptions: { padding: 24 },
         attributionControl: { compact: true }, dragRotate: false, pitchWithRotate: false,

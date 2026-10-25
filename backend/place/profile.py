@@ -1,7 +1,6 @@
 """The place profile of a point: what the place card shows and what the chat answers from."""
 
 import json
-import math
 import re
 import threading
 from collections.abc import Callable
@@ -10,7 +9,6 @@ from pathlib import Path
 
 from shapely.errors import GEOSException
 from shapely.geometry import Point, mapping, shape
-from shapely.ops import transform
 from shapely.validation import make_valid
 
 from place import live
@@ -25,8 +23,6 @@ MIN_SHARE = 0.02                     # a feature covering less of the property o
 FINISHED_STAGES = {"avslutat", "avbrutet", "avbruten"}  # still in the kommun's "pågående" layer, no longer in progress
 PLAN_KINDS = ("plan", "plan_addition", "area_regulations")
 CORPUS_PLANS = Path(__file__).resolve().parent.parent / "data" / "corpus" / "plans.jsonl"
-METRES_PER_DEGREE_LAT = 110_540
-METRES_PER_DEGREE_LON_AT_EQUATOR = 111_320
 
 _store: PlaceStore | None = None
 _store_lock = threading.Lock()
@@ -66,12 +62,6 @@ def _plan_key(name: str | None, kommun: str) -> str:
     return " ".join(re.findall(r"[0-9a-zåäöé:]+", text))
 
 
-def _in_metres(geometry, lat0: float):
-    """The geometry scaled to metres around latitude lat0 (equirectangular, enough for areas of a property)."""
-    kx = METRES_PER_DEGREE_LON_AT_EQUATOR * math.cos(math.radians(lat0))
-    return transform(lambda x, y, z=None: (x * kx, y * METRES_PER_DEGREE_LAT), geometry)
-
-
 def _overlap_area(a, b) -> float:
     try:
         return a.intersection(b).area
@@ -79,12 +69,20 @@ def _overlap_area(a, b) -> float:
         return make_valid(a).intersection(make_valid(b)).area
 
 
-def _covers_enough(geometry, point, area, area_size: float) -> tuple[bool, float]:
-    """Whether a feature counts for the property (contains the pin or covers MIN_SHARE of it), and the share."""
-    if area_size == 0:
+def _covers_enough(geometry, point, area) -> tuple[bool, float]:
+    """Whether a feature counts for the property `area` (contains the pin or covers MIN_SHARE of it), and the
+    share of the property it covers. Shares are ratios of areas in degrees: the scale cancels out."""
+    if area.area == 0:
         return geometry.intersects(point), 1.0
-    share = _overlap_area(geometry, area) / area_size
+    share = _overlap_area(geometry, area) / area.area
     return geometry.intersects(point) or share >= MIN_SHARE, share
+
+
+def _detaljplan(rows: dict[str, list[dict]], plan_layer: dict) -> str:
+    """Inside when a plan in force covers the property; outside only when the plan layer is complete."""
+    if rows["plan"]:
+        return "inside"
+    return "outside" if plan_layer.get("complete") and plan_layer.get("status") == "ok" else "unknown"
 
 
 def _not_covered(lat: float, lon: float) -> dict:
@@ -106,16 +104,16 @@ def _without_share(row: dict) -> dict:
     return {key: value for key, value in row.items() if key != "share"}
 
 
-def _corpus_match(row: dict, plans_by_key: dict[str, dict]) -> dict:
-    match = plans_by_key.get(row["key"])
+def _corpus_match(key: str, plans_by_key: dict[str, dict]) -> dict:
+    match = plans_by_key.get(key)
     return {"corpus_plan_id": match["plan_id"] if match else None,
             "provisions_indexed": bool(match and match.get("provisions"))}
 
 
-def _layer_rows(store: PlaceStore, code: str, layer: Layer, meta: dict, point, area, area_size: float) -> list[dict]:
+def _layer_rows(store: PlaceStore, code: str, layer: Layer, meta: dict, point, area) -> list[dict]:
     rows = []
     for props, geometry in store.features(code, layer.id, area):
-        counts, share = _covers_enough(geometry, point, area, area_size)
+        counts, share = _covers_enough(geometry, point, area)
         if counts:
             rows.append(layer_feature(layer, props) | {"source": meta.get("provider") or layer.provider,
                                                        "fetched": meta.get("fetched"),
@@ -165,7 +163,6 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
     found, property_status = _property(code, lon, lat, property_at or live.property_at)
     point = Point(lon, lat)
     area = shape(found["geometry"]) if found else point
-    area_size = area.area
     meta = {layer["id"]: layer for layer in store.layers(code)}
 
     rows = {kind: [] for kind in (*PLAN_KINDS, "zone", "plan_pending")}
@@ -175,25 +172,18 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
         consulted.append({"id": layer.id, "title": layer.title, "provider": layer.provider,
                           "licence": layer.licence, "fetched": layer_meta.get("fetched"),
                           "status": layer_meta.get("status", "unavailable")})
-        rows[layer.kind] += _layer_rows(store, code, layer, layer_meta, point, area, area_size)
+        rows[layer.kind] += _layer_rows(store, code, layer, layer_meta, point, area)
 
     plans_by_key = {}
     for plan in (plan_registry or corpus_plans)(code):
         plans_by_key.setdefault(_plan_key(plan.get("name"), kommun), plan)
-    plans = [_without_share(row) | _corpus_match(row | {"key": _plan_key(row["name"], kommun)}, plans_by_key)
+    plans = [_without_share(row) | _corpus_match(_plan_key(row["name"], kommun), plans_by_key)
              for kind in PLAN_KINDS for row in rows[kind]]
     plans.sort(key=lambda row: row["date"] or "", reverse=True)
 
-    plan_layer = meta.get("plans", {})
-    if rows["plan"]:
-        detaljplan = "inside"
-    elif plan_layer.get("complete") and plan_layer.get("status") == "ok":
-        detaljplan = "outside"
-    else:
-        detaljplan = "unknown"
     zones = sorted(rows["zone"], key=lambda row: row["share"], reverse=True)
     return {"point": {"lat": lat, "lon": lon}, "kommun": {"code": code, "name": kommun}, "covered": True,
-            "property": found, "property_status": property_status, "detaljplan": detaljplan, "plans": plans,
+            "property": found, "property_status": property_status, "detaljplan": _detaljplan(rows, meta.get("plans", {})), "plans": plans,
             "zones": zones, "pending_plans": [_without_share(row) for row in rows["plan_pending"]
                                               if (row["status"] or "").lower() not in FINISHED_STAGES],
             "layers": consulted, "notes": [NOT_A_DECISION]}
