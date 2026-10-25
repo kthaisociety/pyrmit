@@ -12,6 +12,7 @@ from tests.unit.place.snapshot import (
     PIN,
     STREET,
     fake_property,
+    no_remains,
     registry,
     write_snapshot,
 )
@@ -19,7 +20,8 @@ from tests.unit.place.snapshot import (
 
 def profile(store, at=PIN, **kwargs):
     return build_profile(*at, store=store, property_at=kwargs.pop("property_at", fake_property),
-                         plan_registry=kwargs.pop("plan_registry", registry), **kwargs)
+                         plan_registry=kwargs.pop("plan_registry", registry),
+                         ancient_remains_at=kwargs.pop("ancient_remains_at", no_remains), **kwargs)
 
 
 # --- the property and its plans ---------------------------------------------------------------------------------

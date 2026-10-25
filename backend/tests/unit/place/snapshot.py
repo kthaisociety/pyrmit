@@ -93,3 +93,8 @@ def registry(code):
              "plan_number": None, "provisions": [{"code": "e1", "text": "Största byggnadsarea 300 m²"}]},
             {"plan_id": "a00001", "kommun_code": "0380", "name": "Stadsplan för Kungsängen - Uppsala kommun",
              "plan_number": None, "provisions": []}]
+
+
+def no_remains(geometry):
+    """A fake ancient-remains register with nothing in it."""
+    return []

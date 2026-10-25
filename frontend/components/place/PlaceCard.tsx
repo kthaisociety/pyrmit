@@ -79,6 +79,10 @@ function Meta({ children }: { children: ReactNode }) {
   );
 }
 
+function SectionTitle({ children }: { children: ReactNode }) {
+  return <h4 className="px-1 text-[13px] font-semibold text-zinc-500 dark:text-zinc-400">{children}</h4>;
+}
+
 // A grouped list in the iOS style: a small header over a rounded group of rows
 function Section({ title, status = 'ok', count, children }: {
   title: string; status?: SectionStatus; count: number; children: ReactNode;
@@ -97,7 +101,7 @@ function Section({ title, status = 'ok', count, children }: {
   }
   return (
     <section aria-label={title} className="space-y-1.5">
-      <h4 className="px-1 text-[13px] font-semibold text-zinc-500 dark:text-zinc-400">{title}</h4>
+      <SectionTitle>{title}</SectionTitle>
       <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-zinc-800/70 dark:ring-white/10">
         {body}
       </div>
@@ -235,7 +239,7 @@ function PermitRow({ permit }: { permit: PlacePermit }) {
 function Strandskydd({ strandskydd }: { strandskydd: PlaceProfile['strandskydd'] }) {
   return (
     <section aria-label="Strandskydd" className="space-y-1.5">
-      <h4 className="px-1 text-[13px] font-semibold text-zinc-500 dark:text-zinc-400">Strandskydd</h4>
+      <SectionTitle>Strandskydd</SectionTitle>
       <div className="flex gap-3 rounded-xl bg-white px-3 py-2.5 text-[13px] shadow-sm ring-1 ring-black/5 dark:bg-zinc-800/70 dark:ring-white/10">
         <Tile kind="strandskydd" />
         <div>

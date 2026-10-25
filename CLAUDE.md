@@ -336,7 +336,12 @@ rerunning `agentic.rejudge` continues. A run that sits a long time before its fi
 2. The chat's map panel (components/place/) -> GET /api/place/profile -> place.profile.build_profile:
    kommun from the snapshot boundaries, the property live from Uppsala's layer 51 (place.live, cached per point),
    features that contain the pin or cover >= 2 % of the property, plans newest first matched to the corpus registry by
-   name, "outside" detaljplan only with a complete plan layer (else "unknown"). No model calls (ADR-0003)
+   name, "outside" detaljplan only with a complete plan layer (else "unknown"); the national layers by the same rule;
+   ancient remains live from RAÄ (WMS GetFeatureInfo, buffer = half the image over a square whose inscribed circle
+   covers the property, then filtered to it; 30 m around the pin without a property); strandskydd "not checked";
+   section_status ok / unavailable / not_covered so "none" never hides "not checked"; place.permits.likely_permits by
+   fixed rules (bygglov by detaljplan status, dispens per protected area with the register's dispens authority,
+   Natura 2000 tillstånd, KML tillstånd per Fornlämning, riksintressen as considerations). No model calls (ADR-0003)
 ```
 
 Gotchas: Uppsala's streets are properties too (Dragarbrunn 1:2, Kronåsen 1:2), so a pin on a street gets that property and
@@ -571,8 +576,10 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/routers/db_browser.py` -- Read-only chunk browser + semantic search (never exposes user/auth tables or embeddings)
 - `backend/routers/docs.py` -- Open a cited chunk in its original document (PDF page + highlight, or URL text fragment)
 - `backend/place/` -- place lookups for the map pin: `sources.py` (layers, attribute mapping, pilot kommuner),
-  `fetch.py` (snapshot CLI), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property at a
-  point), `profile.py` (`build_profile`); `backend/routers/place.py` -- `/api/place/*`
+  `fetch.py` (snapshot CLI), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property and
+  ancient remains at a point), `profile.py` (`build_profile`), `permits.py` (`likely_permits`);
+  `backend/routers/place.py` -- `/api/place/*`. Tests: `backend/tests/unit/` mirrors `backend/` (fake snapshot in
+  `tests/unit/place/snapshot.py`; no real services, PCR-0011)
 - `backend/routers/benchmark.py` -- Benchmark view API: case sets (`SETS`: cases / caselaw / plans / tasks / generated), past results per case
   parsed from the result file names (`RESULT_FILE`; files from before `-explore-` count as explore = answer effort; `-x-<label>`
   runs show the label and model), and in-memory run jobs (`JOBS`, lost on restart)
@@ -640,7 +647,10 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage
 - `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
 - `frontend/components/place/` -- `PlacePanel` (map panel beside the chat, opened by the pin button in the message
-  bar), `PlaceMap` (MapLibre 6 + OpenFreeMap Positron, outlines per kind), `PlaceCard`; `frontend/lib/place.ts` -- types
+  bar: full-height map, the card as a glass sheet with a grabber, Apple Maps style; system font; controls styled in
+  `globals.css` under `.place-map`), `PlaceMap` (MapLibre 6 + OpenFreeMap Positron, outlines per kind, `bottomInset`
+  keeps the view centred above the sheet, attribution required by ODbL / OpenMapTiles / OpenFreeMap kept small),
+  `PlaceCard` (iOS-style grouped sections with icon tiles; "None found" vs "could not be reached"); `frontend/lib/place.ts` -- types
   and `fetchPlaceProfile` / `fetchPlaceCoverage`
 - `frontend/components/BenchmarkBrowser.tsx` -- Benchmark view (sidebar, above Database): browse the case sets, a case's
   reference (verdicts, key points, evidence, source, map crop) and past results, and "Test with the agent" (run + judge)

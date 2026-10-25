@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from dependencies import get_current_user
 from routers import place as place_router
-from tests.unit.place.snapshot import FETCHED, PIN, fake_property, registry
+from tests.unit.place.snapshot import FETCHED, PIN, fake_property, no_remains, registry
 
 
 @pytest.fixture
@@ -18,6 +18,7 @@ def client(store):
     app.dependency_overrides[place_router.get_place_store] = lambda: store
     app.dependency_overrides[place_router.get_property_lookup] = lambda: fake_property
     app.dependency_overrides[place_router.get_plan_registry] = lambda: registry
+    app.dependency_overrides[place_router.get_ancient_remains_lookup] = lambda: no_remains
     app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id="u1")
     return TestClient(app)
 

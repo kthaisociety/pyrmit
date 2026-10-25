@@ -94,6 +94,19 @@ _Avoid_: zoning, delområde (when only the användning is known)
 **Plan in progress**:
 A detaljplan at samråd or granskning: shown on the place card but not binding.
 
+**Protected area**:
+An area protected under miljöbalken 7 kap. (naturreservat, biotopskyddsområde, vattenskyddsområde, ...), with its own regulations; building against them needs a dispens. Natura 2000 sites are listed apart.
+
+**National interest**:
+A riksintresse under miljöbalken 3 or 4 kap. (naturvård, kulturmiljövård, totalförsvar, ...). Not a permit: the prövning must not significantly harm it.
+_Avoid_: national interest area, interest zone
+
+**Ancient remain**:
+A lämning in Riksantikvarieämbetet's register, with its antikvarisk bedömning. A "Fornlämning" is protected by kulturmiljölagen; a "Möjlig fornlämning" is for the länsstyrelse to decide.
+
+**Likely permit**:
+A permit or prövning the place card derives by fixed rules from the place profile (bygglov, dispens, tillstånd), with its legal basis and deciding authority. A consideration is listed with them but is not a permit.
+
 **Pilot kommun**:
 A kommun the map covers, because its layers have a snapshot (Uppsala for now). Anywhere else the place is "not covered yet".
 
@@ -109,4 +122,4 @@ A dated local copy of a pilot kommun's area layers, fetched with `python -m plac
 - Otherwise the **Law agent** searches **Law chunks** and the **Document agent** searches **Document chunks**, both by **Embedding** similarity.
 - The **Orchestrator** combines both agents' results into a **Verdict**, which becomes the **Feasibility analysis** saved as an assistant **Chat message**.
 - The **Access gate** sits in front of everything, including sign-in.
-- A **Pin** in a **Pilot kommun** gives a **Property** (looked up live) and a **Place profile** (from the **Snapshot**): its **Detaljplaner**, **Land-use zones** and **Plans in progress**. The **Place card** shows that profile.
+- A **Pin** in a **Pilot kommun** gives a **Property** (looked up live) and a **Place profile** (from the **Snapshot**): its **Detaljplaner**, **Land-use zones**, **Plans in progress**, **Protected areas** and **National interests**, plus the **Ancient remains** on it (looked up live). The **Likely permits** follow from that profile. The **Place card** shows all of it.

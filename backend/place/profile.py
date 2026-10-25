@@ -105,6 +105,12 @@ def _detaljplan(plans_in_force: list[dict], plan_layer: dict) -> str:
     return "outside" if plan_layer.get("complete") and plan_layer.get("status") == "ok" else "unknown"
 
 
+def _section_status(status_of: dict[str, str]) -> dict[str, str]:
+    """A section is "ok" when every national layer it is built from has its snapshot, else "unavailable"."""
+    return {section: "ok" if all(status_of[layer.id] == "ok" for layer in NATIONAL_LAYERS if layer.kind == kind)
+            else "unavailable" for section, kind in SECTION_KINDS.items()}
+
+
 def _not_covered(lat: float, lon: float) -> dict:
     return {"point": {"lat": lat, "lon": lon}, "kommun": None, "covered": False, "property": None,
             "property_status": "not_covered", "detaljplan": "unknown", "plans": [], "zones": [],
@@ -245,9 +251,7 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
                                               area if found else _around_pin(point, lat))
     consulted.append(remains_entry)
     sections = {section: [_without_share(row) for row in rows.get(kind, [])] for section, kind in SECTION_KINDS.items()}
-    section_status = {section: "ok" if all(status_of[layer.id] == "ok" for layer in NATIONAL_LAYERS
-                                           if layer.kind == kind) else "unavailable"
-                      for section, kind in SECTION_KINDS.items()} | {"ancient_remains": remains_entry["status"]}
+    section_status = _section_status(status_of) | {"ancient_remains": remains_entry["status"]}
 
     profile = {"point": {"lat": lat, "lon": lon}, "kommun": {"code": code, "name": kommun}, "covered": True,
                "property": found, "property_status": property_status,
