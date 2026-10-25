@@ -10,14 +10,14 @@ from place.profile import build_profile
 from tests.unit.place.snapshot import (
     EMPTY_LOT,
     FETCHED,
-    PIN,
     NATIONAL,
+    PIN,
     STREET,
     collection,
     fake_property,
-    square,
     registry,
     remains_at,
+    square,
     write_national_snapshot,
 )
 

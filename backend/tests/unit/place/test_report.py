@@ -1,7 +1,13 @@
 """place.report: the evaluation report's tables from small fake result files."""
 
 from place.check_sources import compare
-from place.report import agreement, answers_section, search_section, sources_section
+from place.report import (
+    agreement,
+    answers_section,
+    comparison_section,
+    search_section,
+    sources_section,
+)
 
 SOURCES = {"kommun": "0380", "seed": 25, "date": "2026-10-25T11:40:53+01:00", "snapshot": {"plans": "2026-10-25"},
            "points": [{"origin": "sample", "lat": 59.85, "lon": 17.64,
@@ -41,3 +47,11 @@ def test_the_answers_section_has_a_table_per_judge_and_their_agreement():
     assert "**Judge `j1`**" in text and "**Judge `j2`**" in text
     assert "| `norby` | Eksoppsvägen 37, Uppsala | 0.50 |" in text
     assert "differ by 0.50" in agreement(result, "j1", "j2")
+
+
+def test_the_comparison_sets_runs_side_by_side():
+    before = {"judge": "j1", "rows": ROWS}
+    after = {"judge": "j1", "rows": [{**ROWS[0], "grades": {"j1": {**ROWS[0]["grades"]["j1"], "points": 1.0}}}]}
+    text = comparison_section({"before": before, "after": after})
+    assert "| Pin (place profile before the question) | before | 1 | 0.50 |" in text
+    assert "| Pin (place profile before the question) | after | 1 | 1.00 |" in text
