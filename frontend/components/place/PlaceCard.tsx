@@ -252,6 +252,14 @@ function Strandskydd({ strandskydd }: { strandskydd: PlaceProfile['strandskydd']
   );
 }
 
+const SHOWN_ADDRESSES = 4;
+
+/** "Kungsgatan 63A, Kungsgatan 63B", or the first SHOWN_ADDRESSES and how many more. */
+function addressLine(addresses: string[]): string {
+  const shown = addresses.slice(0, SHOWN_ADDRESSES).join(', ');
+  return addresses.length > SHOWN_ADDRESSES ? `${shown} and ${addresses.length - SHOWN_ADDRESSES} more` : shown;
+}
+
 function Headline({ profile }: { profile: PlaceProfile }) {
   if (!profile.covered) {
     return <p className="text-sm text-zinc-600 dark:text-zinc-300">This place is not covered yet: the map covers Uppsala for now.</p>;
@@ -261,6 +269,9 @@ function Headline({ profile }: { profile: PlaceProfile }) {
       <h3 className="text-[22px] font-bold leading-tight tracking-[-0.02em] text-zinc-900 dark:text-white">
         {profile.property?.designation ?? 'Pinned point'}
       </h3>
+      {profile.property?.addresses?.length ? (
+        <p className="text-[15px] text-zinc-700 dark:text-zinc-200">{addressLine(profile.property.addresses)}</p>
+      ) : null}
       {profile.kommun && <p className="text-[13px] text-zinc-500 dark:text-zinc-400">{`Kommun: ${profile.kommun.name}`}</p>}
       {profile.property_status === 'none' && (
         <p className="text-[13px] text-amber-700 dark:text-amber-300">

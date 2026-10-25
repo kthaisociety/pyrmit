@@ -1,10 +1,11 @@
 """Live lookups at a point: the property (fastighet) from the pilot kommun's own map service."""
 
 import math
+import re
 from functools import lru_cache
 
 import httpx
-from shapely.geometry import mapping, shape
+from shapely.geometry import Point, mapping, shape
 from shapely.ops import unary_union
 
 from place.sources import (
@@ -17,6 +18,7 @@ from place.sources import (
 )
 
 UPPSALA_PROPERTY_LAYER = 51  # Fastighetsgränser: one polygon per part of a property, "fastighet" = "TRAKT 7:8"
+UPPSALA_ADDRESS_LAYER = 11   # Adresser: the kommun's belägenhetsadresser, one point per entrance
 TIMEOUT_S = 15
 COORDINATE_DECIMALS = 6      # ~0.1 m: pins closer than that share a cached lookup
 # Every kind of lämning in the register, from fornlämning to "ingen antikvarisk bedömning"
@@ -49,6 +51,31 @@ def _designation(kommun: str, fastighet: str) -> str:
     return f"{kommun} {trakt.title()} {number}" if trakt else f"{kommun} {fastighet.strip()}"
 
 
+def _natural(name: str) -> list:
+    """Sort key putting "Kungsgatan 9" before "Kungsgatan 10"."""
+    return [int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", name)]
+
+
+def _addresses_on(geometry) -> list[str] | None:
+    """The register's addresses whose point lies on the property, in natural order; None when the register fails
+    (the property itself is still found). Asks for the property's envelope and keeps the points on it."""
+    west, south, east, north = geometry.bounds
+    try:
+        response = httpx.get(f"{UPPSALA_MAP}/{UPPSALA_ADDRESS_LAYER}/query", timeout=TIMEOUT_S,
+                             headers={"User-Agent": USER_AGENT},
+                             params={"geometry": f"{west},{south},{east},{north}", "geometryType": "esriGeometryEnvelope",
+                                     "inSR": 4326, "spatialRel": "esriSpatialRelIntersects", "outFields": "Name",
+                                     "outSR": 4326, "f": "json"})
+        response.raise_for_status()
+        features = response.json()["features"]
+    except (httpx.HTTPError, ValueError, KeyError, TypeError):
+        return None
+    names = {feature["attributes"]["Name"] for feature in features
+             if feature.get("geometry") and feature["attributes"].get("Name")
+             and geometry.covers(Point(feature["geometry"]["x"], feature["geometry"]["y"]))}
+    return sorted(names, key=_natural)
+
+
 @lru_cache(maxsize=2048)
 def _uppsala_property(kommun: str, lon: float, lat: float) -> dict | None:
     hits = _query({"geometry": f"{lon},{lat}", "geometryType": "esriGeometryPoint", "inSR": 4326,
@@ -60,7 +87,7 @@ def _uppsala_property(kommun: str, lon: float, lat: float) -> dict | None:
     parts = _query({"where": f"fastighet = '{escaped}'"}) or hits
     geometry = unary_union([shape(part["geometry"]) for part in parts])
     return {"designation": _designation(kommun, fastighet), "geometry": mapping(geometry),
-            "source": "Uppsala kommun", "fetched": today()}
+            "addresses": _addresses_on(geometry), "source": "Uppsala kommun", "fetched": today()}
 
 
 def _search_square(area) -> tuple[float, float, float, float]:
@@ -105,7 +132,9 @@ def ancient_remains_at(geometry: dict) -> list[dict]:
 
 def property_at(code: str, lon: float, lat: float) -> dict | None:
     """The property at the point in pilot kommun `code`: {"designation" (e.g. "Uppsala Kungsängen 7:8"),
-    "geometry" (GeoJSON in WGS84, every part of the property), "source", "fetched" (ISO date)}.
+    "geometry" (GeoJSON in WGS84, every part of the property), "addresses" (the kommun register's addresses on it,
+    e.g. ["Kungsgatan 63A", "Kungsgatan 63B"]; [] for none, None when the register did not answer), "source",
+    "fetched" (ISO date)}.
 
     None when no property covers the point (a street, park or water) or the kommun has no property service.
     Raises PlaceSourceUnavailable when the service fails."""

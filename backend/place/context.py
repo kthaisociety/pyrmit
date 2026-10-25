@@ -9,7 +9,10 @@ NO_PIN_HINT = ("(No place is pinned on the map. If the answer depends on one spe
 OPENING = ("[Place pinned by the user on the map. This is the place the question is about: do not ask where it is. "
            "If the question names a different place than this one, ask the user which one they mean before "
            "answering.]")
-CLOSING = "[End of the pinned place. The user's question follows.]"
+CLOSING = ("[End of the pinned place. The user's question follows. If it names an address, property or place that is "
+           "not this pinned one (compare with the property and its addresses above), ask which place the user means "
+           "before answering.]")
+MAX_ADDRESSES = 8
 DETALJPLAN = {"inside": "inside a detaljplan", "outside": "outside any detaljplan (the kommun's plan map is complete)",
               "unknown": "no digital detaljplan found, an older plan may apply (ask the kommun)"}
 UNAVAILABLE = "not checked (the source could not be reached)"
@@ -39,6 +42,15 @@ def _section(title: str, rows: list[str], status: str) -> list[str]:
     return [f"{title}:", *rows] if rows else [f"{title}: none found."]
 
 
+def _addresses(found: dict | None) -> str:
+    """"; addresses on it: Kungsgatan 63A, Kungsgatan 63B" (at most MAX_ADDRESSES), or "" when none are known."""
+    addresses = (found or {}).get("addresses") or []
+    if not addresses:
+        return ""
+    more = len(addresses) - MAX_ADDRESSES
+    return "; addresses on it: " + ", ".join(addresses[:MAX_ADDRESSES]) + (f" and {more} more" if more > 0 else "")
+
+
 def _permit(permit: dict) -> str:
     kind = "Consideration" if permit["kind"] == "consideration" else "Permit"
     return f"- {kind}: {permit['title']} ({permit['law']}; {permit['authority']}). {permit['reason']}"
@@ -49,8 +61,11 @@ def place_context(profile: dict) -> str:
     property and kommun, inside or outside a detaljplan, each plan in force (aktbeteckning, name, laga kraft date),
     the land-use zones, the plans in progress, the protected areas, Natura 2000 sites, national interests and
     ancient remains, the strandskydd note and the likely permits, under the note that it is registry data, not a
-    decision. It tells the agent that this is the place the question is about (so it does not ask where), and to ask
-    which place is meant when the question names a different one. An uncovered place says the map does not cover it."""
+    decision. The property line names its addresses when the property lookup found them. It tells the agent that this
+    is the place the question is about (so it does not ask where), and, first and again right before the question, to
+    ask which place is meant when the question names a different one: the benchmark of 2026-10-25 found the agent
+    answering for the pinned place in 2 of 5 such questions, unable to tell that the named address lay elsewhere. An
+    uncovered place says the map does not cover it."""
     point = f"{profile['point']['lat']:.5f}, {profile['point']['lon']:.5f}"
     if not profile["covered"]:
         pilots = ", ".join(pilot["name"] for pilot in PILOTS.values())
@@ -59,7 +74,7 @@ def place_context(profile: dict) -> str:
     status = profile["section_status"]
     property_line = {
         "found": f"Property: {profile['property']['designation'] if profile['property'] else ''} "
-                 f"({profile['kommun']['name']} kommun).",
+                 f"({profile['kommun']['name']} kommun){_addresses(profile['property'])}.",
         "none": f"Property: none at the pin (a street, park or water in {profile['kommun']['name']} kommun).",
         "unavailable": f"Property: unknown (the property service did not answer), {profile['kommun']['name']} kommun.",
     }[profile["property_status"]]

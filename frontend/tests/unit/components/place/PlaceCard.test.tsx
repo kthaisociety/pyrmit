@@ -19,6 +19,18 @@ describe('place card', () => {
     expect(screen.getByText('Kommun: Uppsala')).toBeInTheDocument();
   });
 
+  it("shows the property's addresses under its name", () => {
+    /** The kommun's addresses on the property tell the user which house the designation is. */
+    card({ ...kungsangen, property: { ...kungsangen.property!, addresses: ['Kungsgatan 63A', 'Kungsgatan 63B'] } });
+    expect(screen.getByText('Kungsgatan 63A, Kungsgatan 63B')).toBeInTheDocument();
+  });
+
+  it('shortens a long address list', () => {
+    const addresses = Array.from({ length: 9 }, (_, i) => `Vägen ${i + 1}`);
+    card({ ...kungsangen, property: { ...kungsangen.property!, addresses } });
+    expect(screen.getByText('Vägen 1, Vägen 2, Vägen 3, Vägen 4 and 5 more')).toBeInTheDocument();
+  });
+
   it('lists the plans in force newest first, each with a link to its documents', () => {
     /** Plans come newest laga kraft date first with aktbeteckning, name, date and a document link. */
     card();

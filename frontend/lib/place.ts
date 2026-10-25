@@ -54,7 +54,13 @@ export interface PlaceProfile {
   point: Pin;
   kommun: { code: string; name: string } | null;
   covered: boolean;
-  property: { designation: string; geometry: GeoJSON.Geometry; source: string; fetched: string } | null;
+  property: {
+    designation: string;
+    geometry: GeoJSON.Geometry;
+    addresses?: string[] | null; // the kommun register's addresses on the property (null: register unavailable)
+    source: string;
+    fetched: string;
+  } | null;
   property_status: 'found' | 'none' | 'unavailable' | 'not_covered';
   detaljplan: 'inside' | 'outside' | 'unknown';
   plans: PlaceFeature[];
