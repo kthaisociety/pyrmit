@@ -70,6 +70,8 @@ def harness(monkeypatch, profile_of):
     app.dependency_overrides[get_db] = db_override
     app.dependency_overrides[get_current_user] = lambda: types.SimpleNamespace(id="u1")
     app.dependency_overrides[chat.get_place_profile] = lambda: profile_of
+    app.dependency_overrides[chat.get_law_text] = lambda: (
+        lambda law, section: "[c:aa11bb22cc33dd44] Miljöbalk 7 kap. 7 §" if (law, section) == ("MB", "7 kap. 7 §") else None)
     return types.SimpleNamespace(client=TestClient(app), Session=Session, asked=asked)
 
 
@@ -105,6 +107,13 @@ def test_a_pinned_question_gives_the_agent_the_place_profile(harness):
     for fact in ("Uppsala Kungsängen 7:8", "0380-P2002/5", "BCK", "Kungsängsängen", "Fyrisån", "Uppsala 123:1",
                  "Bygglov"):
         assert fact in question
+
+
+def test_a_pinned_question_carries_the_statute_text_of_its_permits(harness):
+    """The sections the permits cite come with the place, read from the corpus."""
+    ask(harness, PINNED)
+    [question] = harness.asked
+    assert "[c:aa11bb22cc33dd44] Miljöbalk 7 kap. 7 §" in question
 
 
 def test_the_question_itself_comes_after_the_place(harness):

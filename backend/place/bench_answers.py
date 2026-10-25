@@ -83,9 +83,10 @@ def jobs(cases: list[dict], conditions=CONDITIONS, repeats: int = 1) -> list[tup
             for condition in conditions if applies[condition](case)]
 
 
-def prompt(case: dict, condition: str, cases_by_id: dict[str, dict],
-           profile_of: Callable[[float, float], dict]) -> tuple[str, str, str | None]:
-    """(what the user typed, what the agent gets, the place data shown to it or None) for one case and condition."""
+def prompt(case: dict, condition: str, cases_by_id: dict[str, dict], profile_of: Callable[[float, float], dict],
+           law_text: Callable[[str, str], str | None] | None = None) -> tuple[str, str, str | None]:
+    """(what the user typed, what the agent gets, the place data shown to it or None) for one case and condition;
+    `law_text` adds the permits' statute text to a pinned place, as the chat does."""
     if condition == "address":
         typed, profile = case["question_address"], None
     elif condition == "vague":
@@ -94,7 +95,7 @@ def prompt(case: dict, condition: str, cases_by_id: dict[str, dict],
         typed, profile = cases_by_id[case["conflict_with"]]["question_address"], profile_of(case["pin"]["lat"], case["pin"]["lon"])
     else:
         typed, profile = case["question"], profile_of(case["pin"]["lat"], case["pin"]["lon"])
-    return typed, question_with_place(typed, profile), place_context(profile) if profile else None
+    return typed, question_with_place(typed, profile, law_text), place_context(profile, law_text) if profile else None
 
 
 def facts_named(case: dict, answer: str) -> list[str]:
@@ -159,9 +160,10 @@ class AnswerBench:
     place profile, agentic.bench.cited_sources and judge()."""
 
     def __init__(self, cases: list[dict], *, judge_model: str = JUDGE_MODEL, run_agent=None, tools=None,
-                 profile_of=None, sources_of=None, grade=None, max_cost: float = MAX_COST_USD):
+                 profile_of=None, sources_of=None, grade=None, max_cost: float = MAX_COST_USD,
+                 law_texts: bool = True):
         self.cases = {case["id"]: case for case in cases}
-        self.judge_model, self.max_cost = judge_model, max_cost
+        self.judge_model, self.max_cost, self.law_texts = judge_model, max_cost, law_texts
         self._run_agent, self._tools, self._profile_of = run_agent, tools, profile_of
         self._sources_of, self._grade = sources_of, grade or judge
         self._profiles: dict[tuple[float, float], dict] = {}
@@ -194,8 +196,9 @@ class AnswerBench:
         if self.spent >= self.max_cost:
             return None
         case = self.cases[case_id]
-        typed, question, place_text = prompt(case, condition, self.cases, self.profile_of)
         run_agent, tools = self._agent()
+        typed, question, place_text = prompt(case, condition, self.cases, self.profile_of,
+                                             self._law_text(tools) if self.law_texts else None)
         started = time.perf_counter()
         row = {"case": case_id, "condition": condition, "repeat": repeat, "question": typed}
         try:
@@ -217,6 +220,16 @@ class AnswerBench:
         with self._lock:
             self.spent += row["cost"] + row["grades"][self.judge_model]["cost"]
         return row
+
+    @staticmethod
+    def _law_text(tools) -> Callable[[str, str], str | None] | None:
+        if not hasattr(tools, "law_section"):
+            return None
+
+        def law_text(law: str, section: str) -> str | None:
+            result = tools.law_section(law, section)
+            return result.text if result.chunk_ids else None
+        return law_text
 
     def sources(self, row: dict) -> str:
         if self._sources_of is None:
@@ -295,7 +308,7 @@ def run_bench(cases: list[dict], *, conditions=CONDITIONS, repeats: int = 3, wor
                   "agent": {"model": os.getenv("AGENT_MODEL", "openai/gpt-6-luna"),
                             "effort": os.getenv("AGENT_EFFORT", "medium"),
                             "explore_effort": os.getenv("AGENT_EXPLORE_EFFORT", "medium"),
-                            "max_steps": int(os.getenv("AGENT_MAX_STEPS", "10"))},
+                            "max_steps": int(os.getenv("AGENT_MAX_STEPS", "10")), "law_texts": bench.law_texts},
                   "judge": bench.judge_model, "cases": [case["id"] for case in cases], "rows": []}
     done = {(row["case"], row["condition"], row["repeat"]) for row in result["rows"]}
     todo = [job for job in jobs(cases, conditions, repeats) if job not in done]
@@ -357,6 +370,7 @@ def main() -> None:
     run.add_argument("--max-cost", type=float, default=MAX_COST_USD, help="stop starting answers past this spend (USD)")
     run.add_argument("--label")
     run.add_argument("--resume", type=Path)
+    run.add_argument("--no-law-texts", action="store_true", help="leave the permits' statute text out (before 2026-10-25)")
     again = sub.add_parser("rejudge")
     again.add_argument("path", type=Path)
     again.add_argument("--judge-model", default="openai/gpt-6-luna")
@@ -368,7 +382,8 @@ def main() -> None:
     cases = load_cases()
     if args.command == "run":
         chosen = [case for case in cases if not args.cases or case["id"] in set(args.cases)]
-        bench = AnswerBench(cases, judge_model=args.judge_model, max_cost=args.max_cost)
+        bench = AnswerBench(cases, judge_model=args.judge_model, max_cost=args.max_cost,
+                            law_texts=not args.no_law_texts)
         result = run_bench(chosen, conditions=args.conditions, repeats=args.repeats, workers=args.workers,
                            bench=bench, label=args.label, resume=args.resume)
         print(f"{len(result['rows'])} answers, ${result['spent']} -> {result['path']}")

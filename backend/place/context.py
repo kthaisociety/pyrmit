@@ -1,6 +1,9 @@
 """The pinned place as the chat sees it: the place profile written out for the agent, before the user's question,
 and a compact copy for the answer's pipeline trace (where the chat session keeps its place, ADR-0004)."""
 
+import re
+from collections.abc import Callable
+
 from place.sources import PILOTS
 
 NO_PIN_HINT = ("(No place is pinned on the map. If the answer depends on one specific property and the place is "
@@ -13,6 +16,11 @@ CLOSING = ("[End of the pinned place. The user's question follows. If it names a
            "not this pinned one (compare with the property and its addresses above), ask which place the user means "
            "before answering.]")
 MAX_ADDRESSES = 8
+STATUTES = ("[Statute text of the sections the likely permits cite, from the corpus: cite these ids; no need to look "
+            "them up again.]")
+# "MB 7 kap. 7 §", "MB 7 kap. 21-22 §", "MB 7 kap. 28 a §", "3 kap. 6 § MB": a law, a chapter and its sections
+_SECTION_REF = re.compile(r"(?:(?P<before>[A-ZÅÄÖ]{2,4})\s+)?(?P<chapter>\d+)\s*kap\.\s*(?P<first>\d+)(?:\s*(?P<letter>[a-z])\b)?"
+                          r"(?:\s*-\s*(?P<last>\d+))?\s*§(?:\s+(?P<after>[A-ZÅÄÖ]{2,4}))?")
 DETALJPLAN = {"inside": "inside a detaljplan", "outside": "outside any detaljplan (the kommun's plan map is complete)",
               "unknown": "no digital detaljplan found, an older plan may apply (ask the kommun)"}
 UNAVAILABLE = "not checked (the source could not be reached)"
@@ -51,17 +59,45 @@ def _addresses(found: dict | None) -> str:
     return "; addresses on it: " + ", ".join(addresses[:MAX_ADDRESSES]) + (f" and {more} more" if more > 0 else "")
 
 
+def permit_sections(profile: dict) -> list[tuple[str, str]]:
+    """The statute sections the profile's likely permits cite, as (law, section) for the agent's law_section tool:
+    [("MB", "7 kap. 7 §"), ("KML", "2 kap. 12 §"), ...], in card order, each once. A range ("21-22 §") gives each
+    section; a chapter without a section ("PBL 9 kap.") is left out."""
+    sections = []
+    for permit in profile.get("permits") or []:
+        for ref in _SECTION_REF.finditer(permit.get("law") or ""):
+            law = ref["before"] or ref["after"]
+            if not law:
+                continue
+            last = int(ref["last"]) if ref["last"] and not ref["letter"] else int(ref["first"])
+            for number in range(int(ref["first"]), last + 1):
+                section = f"{ref['chapter']} kap. {number}{' ' + ref['letter'] if ref['letter'] else ''} §"
+                if (law, section) not in sections:
+                    sections.append((law, section))
+    return sections
+
+
+def _statutes(profile: dict, law_text: Callable[[str, str], str | None] | None) -> list[str]:
+    if law_text is None:
+        return []
+    texts = [text for law, section in permit_sections(profile) if (text := law_text(law, section))]
+    return [STATUTES, *texts] if texts else []
+
+
 def _permit(permit: dict) -> str:
     kind = "Consideration" if permit["kind"] == "consideration" else "Permit"
     return f"- {kind}: {permit['title']} ({permit['law']}; {permit['authority']}). {permit['reason']}"
 
 
-def place_context(profile: dict) -> str:
+def place_context(profile: dict, law_text: Callable[[str, str], str | None] | None = None) -> str:
     """The place profile as a block of English text that goes before the user's question: the pinned point, the
     property and kommun, inside or outside a detaljplan, each plan in force (aktbeteckning, name, laga kraft date),
     the land-use zones, the plans in progress, the protected areas, Natura 2000 sites, national interests and
     ancient remains, the strandskydd note and the likely permits, under the note that it is registry data, not a
-    decision. The property line names its addresses when the property lookup found them. It tells the agent that this
+    decision. The property line names its addresses when the property lookup found them, and the kommun line its
+    code. With `law_text` ((law, section) -> the section's text tagged [c:<chunk id>], or None), the text of the
+    sections the permits cite follows (permit_sections): the benchmark of 2026-10-25 found pinned answers spending
+    ~10 law_section calls on exactly these. It tells the agent that this
     is the place the question is about (so it does not ask where), and, first and again right before the question, to
     ask which place is meant when the question names a different one: the benchmark of 2026-10-25 found the agent
     answering for the pinned place in 2 of 5 such questions, unable to tell that the named address lay elsewhere. An
@@ -72,11 +108,12 @@ def place_context(profile: dict) -> str:
         return (f"[Place pinned by the user on the map at {point}. The map does not cover this place yet (pilot "
                 f"kommuner: {pilots}), so no registry data is known for it: answer from the question and the corpus.]")
     status = profile["section_status"]
+    kommun = f"{profile['kommun']['name']} kommun, kommun code {profile['kommun']['code']}"
     property_line = {
         "found": f"Property: {profile['property']['designation'] if profile['property'] else ''} "
-                 f"({profile['kommun']['name']} kommun){_addresses(profile['property'])}.",
-        "none": f"Property: none at the pin (a street, park or water in {profile['kommun']['name']} kommun).",
-        "unavailable": f"Property: unknown (the property service did not answer), {profile['kommun']['name']} kommun.",
+                 f"({kommun}){_addresses(profile['property'])}.",
+        "none": f"Property: none at the pin (a street, park or water in {kommun}).",
+        "unavailable": f"Property: unknown (the property service did not answer), {kommun}.",
     }[profile["property_status"]]
     lines = [
         OPENING, f"Pin: {point}.", property_line, f"Detaljplan: {DETALJPLAN[profile['detaljplan']]}.",
@@ -97,15 +134,17 @@ def place_context(profile: dict) -> str:
                   status["ancient_remains"]),
         f"Strandskydd: {profile['strandskydd']['reason']} {profile['strandskydd']['note']}",
         *_section("Likely permits (fixed rules from the registers)", [_permit(p) for p in profile["permits"]], "ok"),
-        *profile["notes"], CLOSING,
+        *profile["notes"], *_statutes(profile, law_text), CLOSING,
     ]
     return "\n".join(lines)
 
 
-def question_with_place(question: str, profile: dict | None) -> str:
-    """The question as the agent gets it: after the pinned place's profile (place_context), or after NO_PIN_HINT
-    when nothing is pinned. The chat and the answer benchmark (place.bench_answers) both send this."""
-    return (place_context(profile) if profile else NO_PIN_HINT) + "\n\n" + question
+def question_with_place(question: str, profile: dict | None,
+                        law_text: Callable[[str, str], str | None] | None = None) -> str:
+    """The question as the agent gets it: after the pinned place's profile (place_context, with the permits' statute
+    text when `law_text` is given), or after NO_PIN_HINT when nothing is pinned. The chat and the answer benchmark
+    (place.bench_answers) both send this."""
+    return (place_context(profile, law_text) if profile else NO_PIN_HINT) + "\n\n" + question
 
 
 def _without_geometry(row: dict | None) -> dict | None:

@@ -133,3 +133,9 @@ def test_rejudge_adds_a_second_judges_grades(tmp_path):
 def test_summary_counts_a_failed_run_as_an_error():
     rows = [{"case": "norby", "condition": "pin", "repeat": 0, "error": "Timeout", "facts_share": None}]
     assert summarise(rows, "j")["pin"]["errors"] == 1
+
+
+def test_the_pin_condition_can_carry_the_permits_statute_text():
+    profile = lambda lat, lon: {**fake_profile(lat, lon)}
+    _, sent, _ = prompt(CASES[0], "pin", BY_ID, profile, law_text=lambda law, section: "text")
+    assert sent.startswith("[Place pinned")  # an uncovered place has no permits, so no statute text

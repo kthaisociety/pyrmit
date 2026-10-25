@@ -51,6 +51,16 @@ def get_place_profile():
 
     return build_profile
 
+def get_law_text():
+    """The statute lookup of a pinned question's permits: (law, section) -> the section's text tagged [c:<chunk id>],
+    or None; the agent's corpus tools, loaded on first use (overridden in tests)."""
+    def law_text(law: str, section: str) -> str | None:
+        from agentic.service import get_tools
+
+        result = get_tools().law_section(law, section)
+        return result.text if result.chunk_ids else None
+    return law_text
+
 # Chunks per pool (laws / documents) given to the answer model; the local eval reaches ~0.93 recall at 10
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "10"))
 SSE_HEARTBEAT_S = 10  # idle stream -> keep-alive comment, well under proxy idle timeouts
@@ -329,6 +339,7 @@ Latest User Message: {original_content}"""
 def chat_stream(
         request: schemas.ChatRequest,
         place_profile=Depends(get_place_profile),
+        law_text=Depends(get_law_text),
         db: Session = Depends(get_db),
         user: models.User = Depends(get_current_user),
 ):
@@ -417,7 +428,7 @@ def chat_stream(
                         yield _sse({"type": "thinking", "label": "Looking up the pinned place"})
                         profile = place_profile(pinned.lat, pinned.lon)
                         yield emit("place", pin=pinned.model_dump(), profile=compact_profile(profile))
-                        question = question_with_place(original_content, profile)
+                        question = question_with_place(original_content, profile, law_text)
 
                     outcome = yield from stream_agent(question, history, record, _sse,
                                                       flush=lambda: list(emit_calls()))

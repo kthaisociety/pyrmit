@@ -83,6 +83,12 @@ Map (the place card beside the chat): `cd backend && python -m place.fetch --kom
 
 Lookup benchmark (no model calls): `python -m place.bench candidates --kommun 0380` proposes places covering the hard cases (`place/cases_draft_0380.jsonl`); check each by hand, fill in its `expected` layers and `checked`, set `locked` to the date and move it to `place/cases.jsonl`; then `python -m place.bench run --label <name>` scores the lookup per layer (`data/agentic/place-bench-*.json`) and `python -m place.bench compare <a> <b>` compares two runs.
 
+Place evaluation (report: `reports/place_eval_report.md`):
+- `python -m place.check_sources --n 300` (free) checks the snapshots against each provider's own point query.
+- `python -m place.check_search --n 150 --form typed|lower|no_letter` (free) searches Uppsala's register addresses through the map search.
+- `python -m place.bench_answers run --repeats 3` (paid, about $1 for 120 answers) has the chat agent answer the locked cases in `place/cases_answers.jsonl` with and without a pin. `rejudge <file> --judge-model openai/gpt-6-luna` adds a second judge.
+- `python -m place.report --sources … --search name=… --answers … [--compare name=…]` builds the report from the result files and `place/report_findings.md`.
+
 Open <http://localhost:3000>, enter the access-gate password, then sign up. The first start downloads the embedding model from Hugging Face (2.3 GB on a GPU, 570 MB on a CPU), then preloads the store in about 30–60 s.
 
 > `docker-compose.yml` predates the local corpus (no data mount, no GPU): use the manual setup above.

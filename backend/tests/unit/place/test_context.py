@@ -1,6 +1,12 @@
 """place.context: the pinned place written out for the agent, and the compact profile kept in the trace."""
 
-from place.context import CLOSING, compact_profile, place_context, question_with_place
+from place.context import (
+    CLOSING,
+    compact_profile,
+    permit_sections,
+    place_context,
+    question_with_place,
+)
 from tests.unit.place.snapshot import PIN
 
 
@@ -57,3 +63,39 @@ def test_the_question_follows_the_rule_to_ask_when_it_names_another_place(profil
     sent = question_with_place("Kan vi gräva en källare på Övre Slottsgatan 26B?", profile_of(*PIN))
     before_question = sent.split("\n\n")[0].splitlines()[-1]
     assert before_question == CLOSING and "ask" in CLOSING.lower() and "address" in CLOSING.lower()
+
+
+def fake_law_text(law, section):
+    """A corpus that knows two sections."""
+    return {("MB", "7 kap. 7 §"): "[c:aa11bb22cc33dd44] Miljöbalk 7 kap. 7 § ... dispens ...",
+            ("KML", "2 kap. 12 §"): "[c:bb22cc33dd44ee55] Kulturmiljölag 2 kap. 12 § ... tillstånd ..."}.get((law, section))
+
+
+def test_permit_sections_are_the_sections_the_permits_cite(profile_of):
+    """Each permit's law as (law, section), in card order, without chapters alone (PBL 9 kap.) and with ranges spread."""
+    sections = permit_sections(profile_of(*PIN))
+    assert ("MB", "7 kap. 7 §") in sections and ("KML", "2 kap. 12 §") in sections
+    assert ("MB", "7 kap. 28 a §") in sections and ("MB", "3 kap. 6 §") in sections
+    assert all(law != "PBL" for law, _ in sections)
+    assert len(sections) == len(set(sections))
+
+
+def test_a_range_of_sections_gives_each_section():
+    profile = {"permits": [{"law": "MB 7 kap. 21-22 §"}, {"law": "3 kap. 6 § MB"}, {"law": "KML 2 kap."}]}
+    assert permit_sections(profile) == [("MB", "7 kap. 21 §"), ("MB", "7 kap. 22 §"), ("MB", "3 kap. 6 §")]
+
+
+def test_the_place_context_carries_the_statute_text_of_the_permits(profile_of):
+    """The agent gets the cited sections' text with their chunk ids, so it need not look them up."""
+    text = question_with_place("Kan jag bygga?", profile_of(*PIN), law_text=fake_law_text)
+    assert "[c:aa11bb22cc33dd44] Miljöbalk 7 kap. 7 §" in text and "[c:bb22cc33dd44ee55]" in text
+    assert text.index("Statute text") < text.index(CLOSING)
+
+
+def test_without_a_law_lookup_the_context_has_no_statute_text(profile_of):
+    assert "Statute text" not in place_context(profile_of(*PIN))
+
+
+def test_the_place_context_gives_the_kommun_code(profile_of):
+    """The kommun code is given, so the agent need not call find_kommun."""
+    assert "kommun code 0380" in place_context(profile_of(*PIN))
