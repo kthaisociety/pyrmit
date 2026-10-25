@@ -108,10 +108,18 @@ export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, onMap
     };
   }, []);
 
-  // The visible part of the map is above the place card: keep the view centred there as the card moves
+  // The visible part of the map is above the place card: keep the view centred there as the card moves (set at
+  // once the first time, so it cannot race the first view; animated after)
+  const insetSet = useRef(false);
   useEffect(() => {
     const map = mapRef.current;
-    if (ready && map) map.easeTo({ padding: padding(map, bottomInset), duration: 300 });
+    if (!ready || !map) return;
+    if (insetSet.current) {
+      map.easeTo({ padding: padding(map, bottomInset), duration: 300 });
+    } else {
+      map.setPadding(padding(map, bottomInset));
+      insetSet.current = true;
+    }
   }, [ready, bottomInset]);
 
   useEffect(() => {
