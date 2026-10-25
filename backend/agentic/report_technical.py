@@ -199,6 +199,12 @@ def design_choices(s: dict) -> str:
         map_only = f"{sum('map' in note for note in coverage['unmeasured'].values())} of {sampled}"
     else:
         map_only = "several of those"
+    missing = (coverage or {}).get("total", {}).get("missing", {})
+    crawl_gaps = (f"Of the plan PDFs the sampled municipalities list, {missing.get('page_not_crawled', 0)} sit on plan "
+                  "pages never crawled (most likely one link past the depth limit) and "
+                  f"{missing.get('link_not_taken', 0)} are linked under a name "
+                  "without a plan word (\"Lagakraftbevis\", a place name) and not taken (benchmark report 2.11). "
+                  if missing else "")
     rows = [
         ("Crawl", "Page selection",
          f"Keyword score on URL + title ≥ {KEEP_SCORE} (<code>KEEP_SCORE</code>, <code>_KEYWORDS</code>); news, schools, "
@@ -243,8 +249,10 @@ def design_choices(s: dict) -> str:
          "A browser-based crawl is slower and heavier; map services need one integration per vendor",
          "Sites whose navigation is built in JavaScript (Jönköping, Lidingö's plan documents) and municipalities that "
          f"publish their plans only in a map or search application ({map_only} sampled for the coverage benchmark, "
-         "benchmark report 2.11) are covered only through the pages that link documents directly. Next: the national "
-         "plan register or the municipal map services (section 3.3)"),
+         "benchmark report 2.11) are covered only through the pages that link documents directly. "
+         f"{esc(crawl_gaps)}Next: follow a plan list's plan pages past the depth limit and take every on-topic PDF of "
+         "a plan page; the national plan register or the municipal map services (section 3.3); otherwise a "
+         "browser agent that lists, once per municipality, the plans of its map application for the crawler"),
         ("Extraction", "PDF text",
          "PyMuPDF text layer, repeated headers / footers removed; &lt; 150 characters per page = scanned, OCR by "
          f"PP-OCRv6 medium (recognition cut to the Latin characters, detection input 1280 px; text pages at 300 dpi and "
@@ -565,7 +573,15 @@ detect amendments before the consolidated text is updated.</li>
 nature; Boverket's guidance (PBL kunskapsbanken). Would turn spatial questions (“is my plot within 100 m of the
 shore?”) into data lookups.</li>
 <li><b>Municipal plan services</b> (WMS / plan registers): many municipalities publish plan boundaries as map services;
-combined with an address or property, they give the applicable plan.</li>
+combined with an address or property, they give the applicable plan. They are also the only door to the plans of the
+municipalities that publish them in a map or search application and nowhere else (about a third of the coverage
+sample).
+Access, formats and terms per service not checked yet.</li>
+<li><b>Map applications, through a browser agent used as a crawler</b>: where no service can be queried, an agent
+driving a browser (computer use) can open the municipality's map application once, list its plans and their document
+links, and hand them to the crawler, which downloads them like any other PDF. A one-off cost per municipality (a third
+of the coverage sample publishes its plans this way), repeated when the site changes. Used at answer time instead, it
+would be slow, costly per question and fragile.</li>
 </ul>
 
 <h2>4. Keeping the data current</h2>
@@ -1049,7 +1065,14 @@ pour détecter une modification avant la mise à jour du texte consolidé.</li>
 guides de Boverket (PBL kunskapsbanken). Elles transformeraient les questions spatiales (« ma parcelle est-elle à moins de
 100 m du rivage ? ») en simples consultations de données.</li>
 <li><b>Services de plans des communes</b> (WMS / registres de plans) : beaucoup de communes publient les périmètres des plans
-en service cartographique ; avec une adresse ou une parcelle, on obtient le plan applicable.</li>
+en service cartographique ; avec une adresse ou une parcelle, on obtient le plan applicable. C'est aussi le seul accès
+aux plans des communes qui ne les publient que dans une carte ou un outil de recherche (environ un tiers de
+l'échantillon de couverture). Accès, formats et conditions par service pas encore vérifiés.</li>
+<li><b>Cartes interactives, via un agent navigateur utilisé comme crawler</b> : quand aucun service n'est
+interrogeable, un agent qui pilote un navigateur peut ouvrir une fois la carte de la commune, lister ses plans et les
+liens de leurs documents, et les passer au crawler, qui les télécharge comme les autres PDF. Un coût ponctuel par commune
+(un tiers de l'échantillon de couverture publie ses plans ainsi), à refaire quand le site change. Utilisé au moment de
+répondre, il serait lent, coûteux à chaque question et fragile.</li>
 </ul>
 
 <h2>4. Garder les données à jour</h2>

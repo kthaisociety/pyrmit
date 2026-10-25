@@ -6,7 +6,13 @@
   "pdfs_found": 0.5664160401002506,
   "municipalities": 13,
   "unmeasured": 16,
-  "reference_fetched": "2026-10-22"
+  "reference_fetched": "2026-10-22",
+  "missing": {
+   "page_not_crawled": 171,
+   "link_not_taken": 164,
+   "copy": 10,
+   "filtered": 1
+  }
  },
  "by_kommun": {
   "Arvika": {
@@ -15,7 +21,11 @@
    "plans_complete": 2,
    "pdfs": 5,
    "pdfs_found": 2,
-   "plan_pages_found": 0
+   "plan_pages_found": 0,
+   "missing": {
+    "link_not_taken": 1,
+    "copy": 2
+   }
   },
   "Färgelanda": {
    "plans": 20,
@@ -23,7 +33,10 @@
    "plans_complete": 2,
    "pdfs": 20,
    "pdfs_found": 2,
-   "plan_pages_found": 0
+   "plan_pages_found": 0,
+   "missing": {
+    "link_not_taken": 18
+   }
   },
   "Hallsberg": {
    "plans": 20,
@@ -31,7 +44,11 @@
    "plans_complete": 18,
    "pdfs": 20,
    "pdfs_found": 18,
-   "plan_pages_found": 0
+   "plan_pages_found": 0,
+   "missing": {
+    "copy": 1,
+    "link_not_taken": 1
+   }
   },
   "Haparanda": {
    "plans": 8,
@@ -39,7 +56,10 @@
    "plans_complete": 0,
    "pdfs": 103,
    "pdfs_found": 0,
-   "plan_pages_found": 0
+   "plan_pages_found": 0,
+   "missing": {
+    "page_not_crawled": 103
+   }
   },
   "Härjedalen": {
    "plans": 20,
@@ -47,7 +67,10 @@
    "plans_complete": 10,
    "pdfs": 85,
    "pdfs_found": 68,
-   "plan_pages_found": 20
+   "plan_pages_found": 20,
+   "missing": {
+    "link_not_taken": 17
+   }
   },
   "Kalix": {
    "plans": 6,
@@ -55,7 +78,8 @@
    "plans_complete": 6,
    "pdfs": 6,
    "pdfs_found": 6,
-   "plan_pages_found": 6
+   "plan_pages_found": 6,
+   "missing": {}
   },
   "Kinda": {
    "plans": 15,
@@ -63,7 +87,10 @@
    "plans_complete": 0,
    "pdfs": 179,
    "pdfs_found": 79,
-   "plan_pages_found": 15
+   "plan_pages_found": 15,
+   "missing": {
+    "link_not_taken": 100
+   }
   },
   "Mullsjö": {
    "plans": 18,
@@ -71,7 +98,8 @@
    "plans_complete": 18,
    "pdfs": 18,
    "pdfs_found": 18,
-   "plan_pages_found": 0
+   "plan_pages_found": 0,
+   "missing": {}
   },
   "Norrtälje": {
    "plans": 20,
@@ -79,7 +107,13 @@
    "plans_complete": 7,
    "pdfs": 95,
    "pdfs_found": 31,
-   "plan_pages_found": 18
+   "plan_pages_found": 18,
+   "missing": {
+    "page_not_crawled": 59,
+    "copy": 3,
+    "link_not_taken": 1,
+    "filtered": 1
+   }
   },
   "Södertälje": {
    "plans": 10,
@@ -87,7 +121,10 @@
    "plans_complete": 9,
    "pdfs": 65,
    "pdfs_found": 63,
-   "plan_pages_found": 9
+   "plan_pages_found": 9,
+   "missing": {
+    "page_not_crawled": 2
+   }
   },
   "Vimmerby": {
    "plans": 20,
@@ -95,7 +132,11 @@
    "plans_complete": 18,
    "pdfs": 49,
    "pdfs_found": 44,
-   "plan_pages_found": 20
+   "plan_pages_found": 20,
+   "missing": {
+    "link_not_taken": 3,
+    "copy": 2
+   }
   },
   "Örebro": {
    "plans": 20,
@@ -103,7 +144,11 @@
    "plans_complete": 0,
    "pdfs": 78,
    "pdfs_found": 57,
-   "plan_pages_found": 20
+   "plan_pages_found": 20,
+   "missing": {
+    "link_not_taken": 20,
+    "copy": 1
+   }
   },
   "Östhammar": {
    "plans": 20,
@@ -111,7 +156,12 @@
    "plans_complete": 14,
    "pdfs": 75,
    "pdfs_found": 64,
-   "plan_pages_found": 17
+   "plan_pages_found": 17,
+   "missing": {
+    "link_not_taken": 3,
+    "copy": 1,
+    "page_not_crawled": 7
+   }
   }
  },
  "unmeasured": {

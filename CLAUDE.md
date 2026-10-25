@@ -437,8 +437,25 @@ a chunk id glued to a doc prefix, a valid doc_id next to a stale chunk_id, a chu
 (4) `python -m agentic.coverage sample|fetch|score`: the other benchmarks are built from the corpus and cannot see a
 missing plan; this one fetches live the plans-in-force list of 29 sampled kommuner (`agentic/coverage_sources.jsonl`,
 curated) and up to 20 plans each with their PDF links (`agentic/coverage_plans.jsonl`, versioned with its date), and
-scores the share found in documents.jsonl by URL. Oct 10 corpus: 24 % of 202 plans with a PDF, 8 % of their PDFs;
-16 kommuner unmeasurable (plans only in a map / search application, or 1-2 plans reachable).
+scores the share found in documents.jsonl by URL (reference fetched 2026-10-22: 202 plans in 13 measurable kommuner).
+Before the national crawl 24 % of the plans with a PDF, 8 % of their PDFs; since (2026-10-23, unchanged by the OCR,
+which makes PDFs readable but adds none) 76 % / 57 % (all PDFs of a plan: 51 %). `score` also records why each missing
+PDF is missing (`CAUSES`, `missing_cause`, from the kommun's manifest; benchmark report 2.11, Pipeline view): of 346,
+171 sit on plan pages never crawled while their list page was, most likely one link past `--max-depth` 4 (Haparanda
+103 = 0 %, Norrtälje 59); 164 are linked from a crawled page but not taken, because `take_pdf_link` drops a
+neutral-scored link without a `_PDF_HINTS` word and plan attachments are named after the place or the step
+(Färgelanda's "1507-280-torsberg-139-mfl.pdf" on the list page, "Lagakraftbevis", "Undersökning om betydande
+miljöpåverkan", "Protokollsutdrag": Kinda 100, Örebro 20, Härjedalen 17); 10 are copies of a kept document under
+another URL (`corpus.extract` keeps one per content); 1 a filter drop. A manifest records a page only when kept, so
+"never crawled" also covers a plan page fetched but not kept. 16 kommuner unmeasurable: 11 of the 29 publish their
+plans in force only in a map or search application (the corpus still has 2-157 plans each from their other pages,
+not checked whether in force), 4 reach only 1-2 plans, Göteborg's list page was unreachable.
+Leads (not done): follow a plan list's plan pages past the depth limit; on a plan page / plan list take every PDF link
+that is not off topic; count copies as found (match files, not only URLs); for map-only kommuner, the kommun's plan
+layers (WMS / WFS) or Lantmäteriet's digital plans (access and terms not checked), which also give address → plan;
+a browser agent driving the map application, used as a crawler: once per map-only kommun (11 of the 29 sampled),
+it lists the plans and their document links, which the crawler then downloads (a one-off cost per kommun, not per
+question; at answer time it would be slow, costly and fragile).
 Next: a check step on the draft answer (each claim against its cited chunk) to cut unsupported claims; expert review of a sample of generated cases; multi-turn cases (iterating on a project with the user); merge with
 the localisation work of the other developer (agent `TOOLS_GUIDE` / `tools.py` are theirs, `ROLE` / `MODES_GUIDE` /
 `ANSWER_FORMAT` / bench are ours; their localisation cases can be a `locate` task in the same case format).
@@ -745,6 +762,7 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/tests/test_ocr_bench.py` -- OCR benchmark scoring (near misses, labels, placement), tiles without duplicates
 - `backend/tests/test_index.py` -- VectorStore memmap growth, resume after an interrupted run
 - `backend/tests/test_health.py` -- tool failure counts per tool
+- `backend/tests/test_coverage.py` -- why a plan PDF of the coverage reference is missing (crawl manifest causes)
 - `backend/tests/test_replay.py` -- stored agent tool calls replayed on the real store (skipped without it, ~2 min)
 - Gotcha when editing through a shell heredoc: `\\b` in a Python string can arrive as a backspace character (it broke a
   chunker regex silently); write patch scripts to a file, and scan for control characters after shell edits

@@ -23,7 +23,7 @@ import random
 import re
 import ssl
 import time
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import unquote, urldefrag, urljoin, urlparse
@@ -32,8 +32,9 @@ import httpx
 import truststore
 from lxml import html as lxml_html
 
-from corpus.common import DOCUMENTS_PATH, MUNICIPALITIES_PATH, USER_AGENT, read_jsonl
+from corpus.common import DOCUMENTS_PATH, MUNICIPALITIES_PATH, USER_AGENT, WEB_DIR, read_jsonl
 from corpus.crawl import off_topic_pdf, robots_parser, url_key
+from corpus.pdf_filter import DECISIONS_PATH
 
 HERE = Path(__file__).resolve().parent
 SOURCES_PATH = HERE / "coverage_sources.jsonl"
@@ -43,6 +44,19 @@ SAMPLE = 30
 PLANS_PER_KOMMUN = 20  # listed plans fetched per municipality (a random sample of the list)
 DELAY = 2.0
 LIST_PAGE = re.compile(r"g[aä]llande[ -]?detaljplaner|antagna[ -]?detaljplaner|laga[ -]?kraft", re.I)
+# Why a listed PDF is not in the corpus, read from the kommun's crawl manifest (score: "missing"). The manifest
+# records a page only when it was kept, so "page_not_crawled" also covers a plan page fetched but not kept
+CAUSES = {
+    "page_not_crawled": "its plan page was never crawled, though the list page was (most likely one link past the "
+                        "crawl's depth limit)",
+    "link_not_taken": "linked from a crawled page but not taken: a link named after the place or the step "
+                      "(\"Lagakraftbevis\", \"Undersökning om betydande miljöpåverkan\") has no plan word "
+                      "(crawl.take_pdf_link)",
+    "skipped": "skipped as off topic (crawl.off_topic_pdf)",
+    "copy": "a copy of a document kept under another URL (corpus.extract keeps one per content; the score matches "
+            "URLs)",
+    "filtered": "dropped by the PDF filter",
+}
 
 
 def sample(seed: int) -> None:
@@ -231,6 +245,26 @@ async def fetch_all(seed: int) -> None:
     print(f"{sum(len(r) for r in results)} plans -> {PLANS_PATH}")
 
 
+def _crawl(code: str) -> dict:
+    """What a kommun's crawl recorded: kept pages, downloaded PDFs (url key -> id), skipped PDF links."""
+    entries = list(read_jsonl(WEB_DIR / code / "manifest.jsonl"))
+    return {"pages": {url_key(e["url"]) for e in entries if e.get("type") == "page"},
+            "pdfs": {url_key(e["url"]): e["id"] for e in entries if e.get("type") == "pdf"},
+            "skipped": {url_key(e["url"]) for e in entries if e.get("type") == "skipped_pdf"}}
+
+
+def missing_cause(keys: list[str], plan_url: str | None, code: str, crawl: dict, dropped: set[str]) -> str:
+    """CAUSES key of a listed PDF absent from the corpus (keys: url_key of each URL of its redirect chain)."""
+    pdf_id = next((crawl["pdfs"][key] for key in keys if key in crawl["pdfs"]), None)
+    if pdf_id:
+        return "filtered" if f"pdf:{code}:{pdf_id}" in dropped else "copy"
+    if any(key in crawl["skipped"] for key in keys):
+        return "skipped"
+    if not plan_url or url_key(plan_url) in crawl["pages"]:  # no plan page: the PDF is linked from the list page
+        return "link_not_taken"
+    return "page_not_crawled"
+
+
 def score() -> dict:
     corpus_pdfs, corpus_pages = {}, set()
     for doc in read_jsonl(DOCUMENTS_PATH):
@@ -248,13 +282,21 @@ def score() -> dict:
         if 0 < count < 3:
             unmeasured[kommun] = f"only {count} plan(s) with a PDF reachable from the list page"
     rows = [row for row in rows if row["kommun"] not in unmeasured]
+    codes = {row["kommun"]: row["kommun_code"] for row in read_jsonl(SOURCES_PATH)}
+    dropped = {d["doc_id"] for d in read_jsonl(DECISIONS_PATH) if d.get("keep") is False} if DECISIONS_PATH.exists() else set()
+    crawls = {}
     by_kommun = defaultdict(list)
     for row in rows:
         if row["plan"] is None:
             continue
         found = [url for url in row["pdfs"] if any(url_key(u) in corpus_pdfs for u in url.split(" -> "))]
+        code = codes[row["kommun"]]
+        if code not in crawls:
+            crawls[code] = _crawl(code)
+        missing = Counter(missing_cause([url_key(u) for u in url.split(" -> ")], row["plan_url"], code, crawls[code],
+                                        dropped) for url in row["pdfs"] if url not in found)
         by_kommun[row["kommun"]].append({
-            "plan": row["plan"], "pdfs": len(row["pdfs"]), "found": len(found),
+            "plan": row["plan"], "pdfs": len(row["pdfs"]), "found": len(found), "missing": missing,
             "page_found": bool(row["plan_url"]) and url_key(row["plan_url"]) in corpus_pages})
     table = {}
     print(f"{'municipality':<16} {'plans':>5} {'with a PDF':>11} {'all PDFs':>9} {'PDFs found':>11} {'plan page':>10}")
@@ -262,7 +304,8 @@ def score() -> dict:
         pdfs, found = sum(p["pdfs"] for p in plans), sum(p["found"] for p in plans)
         table[kommun] = {"plans": len(plans), "plans_with_a_pdf": sum(p["found"] > 0 for p in plans),
                          "plans_complete": sum(p["found"] == p["pdfs"] for p in plans),
-                         "pdfs": pdfs, "pdfs_found": found, "plan_pages_found": sum(p["page_found"] for p in plans)}
+                         "pdfs": pdfs, "pdfs_found": found, "plan_pages_found": sum(p["page_found"] for p in plans),
+                         "missing": dict(sum((p["missing"] for p in plans), Counter()))}
         t = table[kommun]
         print(f"{kommun:<16} {t['plans']:>5} {t['plans_with_a_pdf'] / t['plans']:>11.0%} "
               f"{t['plans_complete'] / t['plans']:>9.0%} {found / max(pdfs, 1):>11.0%} "
@@ -272,9 +315,11 @@ def score() -> dict:
              "plans_complete": sum(p["found"] == p["pdfs"] for p in plans) / max(len(plans), 1),
              "pdfs_found": sum(p["found"] for p in plans) / max(sum(p["pdfs"] for p in plans), 1),
              "municipalities": len(by_kommun), "unmeasured": len(unmeasured),
-             "reference_fetched": rows[0]["fetched_at"] if rows else None}
+             "reference_fetched": rows[0]["fetched_at"] if rows else None,
+             "missing": dict(sum((p["missing"] for p in plans), Counter()).most_common())}
     print(f"\nall: {total['plans']} plans in {total['municipalities']} municipalities; at least one PDF in the corpus "
           f"{total['plans_with_a_pdf']:.0%}, all PDFs {total['plans_complete']:.0%}; PDFs found {total['pdfs_found']:.0%}")
+    print("missing PDFs:", "; ".join(f"{n} {cause}" for cause, n in total["missing"].items()))
     for kommun, note in sorted(unmeasured.items()):
         print(f"not measurable: {kommun}: {note}")
     out = RESULTS_DIR / f"coverage-{date.today():%Y%m%d}.json"

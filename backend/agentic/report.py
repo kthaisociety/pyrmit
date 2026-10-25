@@ -502,6 +502,32 @@ def coverage_table(coverage: dict) -> str:
             f"<th>All its PDFs</th><th>PDFs found</th></tr>{rows}</table>")
 
 
+def coverage_gaps(coverage: dict) -> str:
+    """Why the listed PDFs are missing (agentic.coverage CAUSES, per municipality) and the leads they point to."""
+    from agentic.coverage import CAUSES
+
+    missing = coverage["total"].get("missing")
+    if not missing:
+        return ""
+    worst = lambda cause: ", ".join(f"{html.escape(k)} {t['missing'][cause]}" for k, t in sorted(
+        coverage["by_kommun"].items(), key=lambda item: -item[1].get("missing", {}).get(cause, 0))
+        if t.get("missing", {}).get(cause))
+    causes = "".join(f"<li><b>{n} PDF{'' if n == 1 else 's'}</b>: {html.escape(CAUSES[cause])}. {worst(cause)}.</li>"
+                     for cause, n in missing.items())
+    map_only = sum("map" in note for note in coverage.get("unmeasured", {}).values())
+    sampled = coverage["total"]["municipalities"] + coverage["total"].get("unmeasured", 0)
+    return f"""<p>Why the {sum(missing.values())} missing PDFs are missing, read from each municipality's crawl record:</p>
+<ul>{causes}</ul>
+<p>Leads, by expected gain: (1) follow the plan pages of a plan list past the depth limit (the pages under the
+list's path); (2) on a plan page or a plan list, take every PDF link that is not off topic, whatever its name;
+(3) count a copy of a kept document as found (match the file, not only the URL). The {map_only} of {sampled} sampled
+municipalities that publish their plans only in a map or search application need another source: Lantmäteriet's
+national access to digital detailed plans or the municipality's plan layers (WMS / WFS), which also give the plan
+boundaries (address → plan); otherwise, a browser agent driving the map application, used as a crawler: once per
+municipality it lists the plans and their document links, which the crawler then downloads (a one-off cost per
+municipality; at answer time it would be slow, costly and fragile).</p>"""
+
+
 def stratum(case: dict) -> str:
     """The expected outcome, as in bench.sample_cases: refused / granted / open (remitted, depends on facts)."""
     verdicts = set(case["verdicts"])
@@ -1217,7 +1243,8 @@ sampled municipalities (small, medium and large), their own list of plans in for
 <p>{coverage['total'].get('unmeasured', 0)} municipalities could not be measured: their list page links to no plan
 (they publish their plans in a map or search application, out of reach of a crawler), or was unreachable:
 {html.escape(', '.join(f'{k} ({v})' for k, v in sorted(coverage.get('unmeasured', {}).items())))}. For them the
-corpus has at most the plans linked elsewhere on the site. File: <code>{coverage['file']}</code>.</p>""" if coverage else "") + (f"""
+corpus has at most the plans linked elsewhere on the site. File: <code>{coverage['file']}</code>.</p>
+{coverage_gaps(coverage)}""" if coverage else "") + (f"""
 <h3>2.12 Document filters in the agent tools</h3>
 <p>The larger corpus makes a kommun's search results a mix of plans, comprehensive plans, permit pages and
 administration. <code>search</code>, <code>grep</code> and <code>list_documents</code> now take document types and a

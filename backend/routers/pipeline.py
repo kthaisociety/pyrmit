@@ -53,6 +53,14 @@ FILTER_PATHS = {
     ("review", False): "Removed after reading by hand",
     ("review", True): "Kept after reading by hand",
 }
+# agentic.coverage CAUSES, for a reader without the project's context
+MISSING_CAUSES = {
+    "page_not_crawled": "The plan's page was never visited (most likely one link deeper than the crawler goes)",
+    "link_not_taken": "Link seen, not followed: its name (a place, \"Lagakraftbevis\") does not say it is a plan document",
+    "skipped": "Judged off topic from its name",
+    "copy": "A copy of a document we keep under another address (there, but counted missing)",
+    "filtered": "Removed by the PDF filter (step 2)",
+}
 PLAN_STATUS = {
     "in_force": "In force (laga kraft)", "in_progress": "Being drawn up", "consultation": "In consultation (samråd)",
     "review": "In review (granskning)", "adopted": "Adopted, not yet in force", "unknown": "Status not found",
@@ -156,6 +164,11 @@ def crawl_step(check: dict) -> dict:
                   _pct(k["pdfs_found"] / max(k["pdfs"], 1))]
                  for name, k in sorted(((latest or {}).get("by_kommun") or {}).items())]
     unmeasured = [f"{name}: {why}" for name, why in sorted(((latest or {}).get("unmeasured") or {}).items())]
+    missing = total.get("missing") or {}
+    missing_rows = [[MISSING_CAUSES.get(cause, cause), n, ", ".join(
+        f"{name} {k['missing'][cause]}" for name, k in sorted(((latest or {}).get("by_kommun") or {}).items(),
+                                                             key=lambda item: -item[1].get("missing", {}).get(cause, 0))
+        if k.get("missing", {}).get(cause))] for cause, n in missing.items()]
 
     problems = len(empty) + len(at_cap)
     checks, _ = _checks(check, "Crawl")
@@ -191,6 +204,13 @@ def crawl_step(check: dict) -> dict:
             _section("Coverage per kommun (latest run)", f"{len(by_kommun)} kommuner measurable, {len(unmeasured)} not",
                      table={"columns": ["Kommun", "Plans checked", "At least one PDF", "PDFs found"], "rows": by_kommun},
                      examples=unmeasured),
+            *([_section("Why listed plan PDFs are missing", f"{sum(missing.values()):,} PDFs, by cause",
+                        text="Read from each kommun's crawl record. Next: follow the plan pages of a plan list one link "
+                             "deeper, take every on-topic PDF linked from a plan page whatever its name, count copies "
+                             "as found. Kommuner that publish their plans only in a map need another source (their map "
+                             "service or Lantmäteriet's digital plans), or a browser agent that goes through their "
+                             "map once and lists the plans for the crawler.",
+                        table={"columns": ["Cause", "PDFs", "Kommuner"], "rows": missing_rows})] if missing else []),
             _section("Every kommun crawled", f"{len(rows)} kommuner; problems: "
                      + (", ".join(empty + at_cap) if problems else "none"),
                      table={"columns": ["Kommun", "Web pages", "PDFs", "GB of PDFs", "Requests", "Notes"],
