@@ -8,6 +8,7 @@ from collections.abc import Callable
 import httpx
 
 from place.live import PlaceSourceUnavailable
+from place.profile import default_store
 from place.sources import NOMINATIM, USER_AGENT
 from place.store import PlaceStore
 
@@ -88,8 +89,6 @@ def search_places(query: str, *, client: httpx.Client | None = None, store: Plac
     `throttle` (default: one shared Throttle). `client`, `store` and `throttle` default to a client with the
     project's User-Agent, the snapshot store and the shared throttle. Raises PlaceSourceUnavailable when Nominatim
     does not answer."""
-    from place.profile import default_store
-
     key = _normalise(query)
     with _cache_lock:
         cached = _cache.get(key)

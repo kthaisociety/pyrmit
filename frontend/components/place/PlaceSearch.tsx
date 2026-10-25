@@ -3,6 +3,7 @@
 import { type FormEvent, useState } from 'react';
 import { Loader2, MapPin, Search } from 'lucide-react';
 
+import { GLASS } from '@/components/place/glass';
 import { searchPlaces, type PlaceSearchResult } from '@/lib/place';
 
 export interface PlaceSearchProps {
@@ -15,7 +16,6 @@ type SearchState =
   | { status: 'done'; query: string; results: PlaceSearchResult[] }
   | { status: 'failed'; message: string };
 
-const GLASS = 'bg-white/80 backdrop-blur-2xl backdrop-saturate-150 ring-1 ring-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:bg-zinc-900/75 dark:ring-white/10';
 
 /**
  * The floating search field of the map panel (labelled "Search for a place"): pressing Enter searches Swedish

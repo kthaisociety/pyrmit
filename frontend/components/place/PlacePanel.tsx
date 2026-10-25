@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 
 import PlaceCard from '@/components/place/PlaceCard';
+import { GLASS } from '@/components/place/glass';
 import PlaceMap, { type PlaceOutline } from '@/components/place/PlaceMap';
 import PlaceSearch from '@/components/place/PlaceSearch';
 import { fetchPlaceCoverage, fetchPlaceProfile, type Pin, type PlaceProfile, type PlaceSearchResult } from '@/lib/place';
@@ -19,8 +20,6 @@ type Lookup = { pin: Pin; profile: PlaceProfile | null; error: string | null };
 
 // The system font (SF Pro on Apple devices), as in Apple Maps
 const SYSTEM_FONT = '[font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif]';
-// Floating glass: translucent, blurred, with a light top edge
-const GLASS = 'bg-white/80 backdrop-blur-2xl backdrop-saturate-150 ring-1 ring-black/5 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:bg-zinc-900/75 dark:ring-white/10';
 
 function outlinesOf(profile: PlaceProfile | null): PlaceOutline[] {
   if (!profile) return [];
@@ -35,6 +34,33 @@ function outlinesOf(profile: PlaceProfile | null): PlaceOutline[] {
 function sheetCover(hasCard: boolean, expanded: boolean): number {
   if (!hasCard) return 0.1;
   return expanded ? 0.6 : 0.16;
+}
+
+// A search match on the map, waiting for "Pin here" before the pin moves
+function ProposalCard({ proposal, onCancel, onConfirm }: {
+  proposal: PlaceSearchResult; onCancel: () => void; onConfirm: () => void;
+}) {
+  return (
+    <div className={`flex items-center gap-2 rounded-xl px-3 py-2 ${GLASS}`}>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-zinc-900 dark:text-zinc-50">
+        {proposal.label}
+      </span>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="rounded-lg px-2 py-1 text-[13px] text-zinc-600 transition-transform duration-100 hover:bg-black/5 active:scale-95 dark:text-zinc-300"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={onConfirm}
+        className="rounded-lg bg-blue-500 px-3 py-1 text-[13px] font-semibold text-white shadow-sm transition-transform duration-100 hover:bg-blue-600 active:scale-95"
+      >
+        Pin here
+      </button>
+    </div>
+  );
 }
 
 function union(boxes: [number, number, number, number][]): [number, number, number, number] | null {
@@ -101,28 +127,14 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
       <div className="absolute left-3 right-14 top-3 z-20 space-y-1.5">
         <PlaceSearch onPropose={setProposal} />
         {proposal && (
-          <div className={`flex items-center gap-2 rounded-xl px-3 py-2 ${GLASS}`}>
-            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-zinc-900 dark:text-zinc-50">
-              {proposal.label}
-            </span>
-            <button
-              type="button"
-              onClick={() => setProposal(null)}
-              className="rounded-lg px-2 py-1 text-[13px] text-zinc-600 transition-transform duration-100 hover:bg-black/5 active:scale-95 dark:text-zinc-300"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onPinChange({ lat: proposal.lat, lon: proposal.lon });
-                setProposal(null);
-              }}
-              className="rounded-lg bg-blue-500 px-3 py-1 text-[13px] font-semibold text-white shadow-sm transition-transform duration-100 hover:bg-blue-600 active:scale-95"
-            >
-              Pin here
-            </button>
-          </div>
+          <ProposalCard
+            proposal={proposal}
+            onCancel={() => setProposal(null)}
+            onConfirm={() => {
+              onPinChange({ lat: proposal.lat, lon: proposal.lon });
+              setProposal(null);
+            }}
+          />
         )}
       </div>
 

@@ -453,6 +453,7 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | GET    | `/api/benchmark/run/{job_id}`     | Yes  | Progress (tool calls) and result of that job (polled: a run outlasts the frontend proxy timeout) |
 | GET    | `/api/place/profile?lat=&lon=`    | Yes  | Place profile of a pinned point: property (live), plans, zones, plans in progress, inside/outside detaljplan (no LLM) |
 | GET    | `/api/place/coverage`             | Yes  | Pilot kommuner with a snapshot (code, name, bbox, fetch date), for the map's first view |
+| GET    | `/api/place/search?q=`            | Yes  | Address / place search for the map (Nominatim, Sweden only, 1 request/s, cached, pilot kommuner first); 503 when down |
 
 All routes are additionally behind the access gate when it is enabled.
 
@@ -582,7 +583,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/routers/docs.py` -- Open a cited chunk in its original document (PDF page + highlight, or URL text fragment)
 - `backend/place/` -- place lookups for the map pin: `sources.py` (layers, attribute mapping, pilot kommuner),
   `fetch.py` (snapshot CLI), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property and
-  ancient remains at a point), `profile.py` (`build_profile`), `permits.py` (`likely_permits`);
+  ancient remains at a point), `profile.py` (`build_profile`), `permits.py` (`likely_permits`), `context.py` (the
+  place as text for the agent, `compact_profile`), `geocode.py` (`search_places`, `Throttle`: Nominatim's policy of one
+  request a second and no search-as-you-type);
   `backend/routers/place.py` -- `/api/place/*`. Tests: `backend/tests/unit/` mirrors `backend/` (fake snapshot in
   `tests/unit/place/snapshot.py`; no real services, PCR-0011)
 - `backend/routers/benchmark.py` -- Benchmark view API: case sets (`SETS`: cases / caselaw / plans / tasks / generated), past results per case
@@ -655,7 +658,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   bar: full-height map, the card as a glass sheet with a grabber, Apple Maps style; system font; controls styled in
   `globals.css` under `.place-map`), `PlaceMap` (MapLibre 6 + OpenFreeMap Positron, outlines per kind, `bottomInset`
   keeps the view centred above the sheet, attribution required by ODbL / OpenMapTiles / OpenFreeMap kept small),
-  `PlaceCard` (iOS-style grouped sections with icon tiles; "None found" vs "could not be reached"); `frontend/lib/place.ts` -- types
+  `PlaceCard` (iOS-style grouped sections with icon tiles; "None found" vs "could not be reached"), `PlaceSearch`
+  (floating search, Enter only; a match becomes a grey proposed pin with "Pin here"), `PlaceChip` (the chat's pinned
+  place above the input), `glass.ts` (the shared glass style); `frontend/lib/place.ts` -- types
   and `fetchPlaceProfile` / `fetchPlaceCoverage`
 - `frontend/components/BenchmarkBrowser.tsx` -- Benchmark view (sidebar, above Database): browse the case sets, a case's
   reference (verdicts, key points, evidence, source, map crop) and past results, and "Test with the agent" (run + judge)

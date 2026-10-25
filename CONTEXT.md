@@ -107,6 +107,9 @@ A lämning in Riksantikvarieämbetet's register, with its antikvarisk bedömning
 **Likely permit**:
 A permit or prövning the place card derives by fixed rules from the place profile (bygglov, dispens, tillstånd), with its legal basis and deciding authority. A consideration is listed with them but is not a permit.
 
+**Proposed pin**:
+A match of the map's address search, shown as a grey pin until the user confirms it with "Pin here". Only then does the **Pin** move and the place card change.
+
 **Place chip**:
 The pinned place shown above the message input. Tapping it opens the map; clearing it unpins the chat.
 
