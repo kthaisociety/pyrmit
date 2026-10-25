@@ -106,8 +106,8 @@ export interface PinnedPlace extends Pin {
 
 /** The chip's label for a place profile: the property and kommun ("Uppsala Kungsängen 7:8"), else the point. */
 export function placeLabel(profile: PlaceProfile): string {
-  void profile;
-  throw new Error('not implemented');
+  if (profile.property) return profile.property.designation;
+  return `${profile.point.lat.toFixed(5)}, ${profile.point.lon.toFixed(5)}`;
 }
 
 /**
@@ -115,6 +115,12 @@ export function placeLabel(profile: PlaceProfile): string {
  * traces (oldest message first), or null when no answer had one.
  */
 export function placeFromHistory(traces: ({ stage: string; data: Record<string, unknown> }[] | null | undefined)[]): PinnedPlace | null {
-  void traces;
-  throw new Error('not implemented');
+  let latest: PinnedPlace | null = null;
+  for (const event of traces.flatMap((trace) => trace ?? [])) {
+    const pin = event.stage === 'place' ? (event.data.pin as Partial<PinnedPlace> | undefined) : undefined;
+    if (typeof pin?.lat === 'number' && typeof pin?.lon === 'number') {
+      latest = { lat: pin.lat, lon: pin.lon, label: pin.label ?? null };
+    }
+  }
+  return latest;
 }

@@ -28,8 +28,9 @@ import ChunkCard from '@/components/ChunkCard';
 import PipelineTrace, { type PipelineEvent, type RetrievedChunk } from '@/components/PipelineTrace';
 import SourceViewer, { type Citation } from '@/components/SourceViewer';
 import CitedMarkdown from '@/components/CitedMarkdown';
+import PlaceChip from '@/components/place/PlaceChip';
 import PlacePanel from '@/components/place/PlacePanel';
-import type { Pin } from '@/lib/place';
+import { placeFromHistory, placeLabel, type Pin } from '@/lib/place';
 
 interface Message {
   id?: number;
@@ -716,7 +717,9 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   const [streaming, setStreaming] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
+  // The chat's pinned place: the pin and, once looked up, its label (kept apart so a label never moves the pin)
   const [pin, setPin] = useState<Pin | null>(null);
+  const [pinLabel, setPinLabel] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pendingSessionIdRef = useRef<string | null>(null);
   // Session we just created ourselves: its messages are already in state (with
@@ -737,6 +740,16 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     scrollToBottom();
   }, [messages]);
 
+  const clearPin = () => {
+    setPin(null);
+    setPinLabel(null);
+  };
+
+  const movePin = (next: Pin) => {
+    setPin(next);
+    setPinLabel(null);
+  };
+
   const loadHistory = (id: string, showLoading: boolean) => {
     if (showLoading) setLoading(true);
     authFetch(`/api/sessions/${id}`)
@@ -744,6 +757,12 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       .then((data: Message[]) => {
         if (sessionIdRef.current !== id) return; // the user moved to another chat meanwhile
         setMessages(data.map((msg) => ({ ...msg, pipeline: msg.trace ?? undefined })));
+        if (showLoading) {
+          // Opening a chat brings back the place its latest answer was about (ADR-0004)
+          const place = placeFromHistory(data.map((msg) => msg.trace));
+          setPin(place ? { lat: place.lat, lon: place.lon } : null);
+          setPinLabel(place?.label ?? null);
+        }
       })
       .catch((err) => console.error('Failed to fetch history', err))
       .finally(() => {
@@ -765,6 +784,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       loadHistory(sessionId, true);
     } else {
       setMessages([]);
+      setPin(null); // a new chat has no place yet
+      setPinLabel(null);
     }
      
   }, [sessionId]);
@@ -821,7 +842,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       const res = await authFetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newHistory, session_id: sessionId }),
+        body: JSON.stringify({ messages: newHistory, session_id: sessionId,
+                               place: pin ? { ...pin, label: pinLabel } : null }),
         signal: controller.signal,
       });
 
@@ -1061,6 +1083,12 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       {/* Input */}
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 pt-10 pb-6 px-4">
         <div className="max-w-3xl mx-auto">
+          {pin && (
+            <div className="mb-2">
+              <PlaceChip place={{ ...pin, label: pinLabel }} onOpen={() => setMapOpen(true)}
+                         onClear={clearPin} />
+            </div>
+          )}
           <form onSubmit={sendMessage} className="relative shadow-lg rounded-xl">
             <button
               type="button"
@@ -1094,7 +1122,10 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
         </div>
       </div>
     </div>
-    {mapOpen && <PlacePanel pin={pin} onPinChange={setPin} onClose={() => setMapOpen(false)} />}
+    {mapOpen && (
+      <PlacePanel pin={pin} onPinChange={movePin} onClose={() => setMapOpen(false)}
+                  onProfile={(profile) => setPinLabel(placeLabel(profile))} />
+    )}
     </div>
   );
 }

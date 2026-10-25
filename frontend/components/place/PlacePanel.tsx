@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 
 import PlaceCard from '@/components/place/PlaceCard';
@@ -48,8 +48,9 @@ function union(boxes: [number, number, number, number][]): [number, number, numb
  * The map panel beside the conversation (labelled "Map"): a click on the map moves the pin, and the place card of
  * the pin is fetched and shown in a sheet over the map, with the property, plans and zones outlined on it.
  */
-export default function PlacePanel({ pin, onPinChange, onClose }: PlacePanelProps) {
+export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: PlacePanelProps) {
   const [lookup, setLookup] = useState<Lookup | null>(null);
+  const onProfileRef = useRef(onProfile);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
   const [expanded, setExpanded] = useState(true);
 
@@ -59,12 +60,20 @@ export default function PlacePanel({ pin, onPinChange, onClose }: PlacePanelProp
       .catch(() => setBounds(null)); // the map then opens on all of Sweden
   }, []);
 
+  useEffect(() => {
+    onProfileRef.current = onProfile;
+  }, [onProfile]);
+
   // A late answer for a pin the user has already moved is dropped
   useEffect(() => {
     if (!pin) return;
     let current = true;
     fetchPlaceProfile(pin)
-      .then((profile) => current && setLookup({ pin, profile, error: null }))
+      .then((profile) => {
+        if (!current) return;
+        setLookup({ pin, profile, error: null });
+        onProfileRef.current?.(profile);
+      })
       .catch((err: Error) => current && setLookup({ pin, profile: null, error: err.message }));
     return () => {
       current = false;

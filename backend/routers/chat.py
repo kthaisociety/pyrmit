@@ -36,6 +36,7 @@ from observability import (
     start_observation,
 )
 from pipeline_trace import CallRecorder, recorded_chat_completion, response_usage
+from place.context import NO_PIN_HINT, compact_profile, place_context
 import schemas
 
 logger = logging.getLogger(__name__)
@@ -368,6 +369,7 @@ def chat_stream(
     # Capture for use inside generator
     messages_snapshot = list(request.messages)
     original_content = last_message.content
+    pinned = request.place
 
     def generate(db: Session) -> Generator[str, None, None]:
         with start_observation(
@@ -410,7 +412,14 @@ def chat_stream(
                     def record(**call):
                         recorder.record(**call)
 
-                    outcome = yield from stream_agent(original_content, history, record, _sse,
+                    question = NO_PIN_HINT + "\n\n" + original_content
+                    if pinned:
+                        yield _sse({"type": "thinking", "label": "Looking up the pinned place"})
+                        profile = place_profile(pinned.lat, pinned.lon)
+                        yield emit("place", pin=pinned.model_dump(), profile=compact_profile(profile))
+                        question = place_context(profile) + "\n\n" + original_content
+
+                    outcome = yield from stream_agent(question, history, record, _sse,
                                                       flush=lambda: list(emit_calls()))
                     yield from emit_calls()
                     yield emit("retrieval", agent="law", query=original_content, embedding_ok=True,

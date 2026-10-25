@@ -299,6 +299,19 @@ function ChunkList({ matches }: { matches: RetrievedChunk[] }) {
   );
 }
 
+// The "place" event of a pinned question: the pin and the place profile the agent got (ADR-0004)
+interface PlaceEventData {
+  pin: { lat: number; lon: number; label?: string | null };
+  profile: { property?: { designation?: string } | null; detaljplan?: string; permits?: unknown[] } | null;
+}
+
+function placeSummary(place: PlaceEventData): string {
+  const name = place.profile?.property?.designation ?? place.pin.label ?? 'Pinned point';
+  const plan = place.profile?.detaljplan ? ` · ${place.profile.detaljplan} detaljplan` : '';
+  const permits = place.profile?.permits ? ` · ${place.profile.permits.length} likely permits` : '';
+  return `${name}${plan}${permits}`;
+}
+
 export default function PipelineTrace({ events }: { events: PipelineEvent[] }) {
   const calls = events.filter((e) => e.stage === 'call').map((e) => e.data as unknown as CallRecord);
   const callsBy = (step: StepKey) => calls.filter((call) => stepOf(call) === step);
@@ -308,6 +321,7 @@ export default function PipelineTrace({ events }: { events: PipelineEvent[] }) {
   const retrievals = events.filter((e) => e.stage === 'retrieval').map((e) => e.data);
   const agentOutputs = events.filter((e) => e.stage === 'agent_output').map((e) => e.data);
   const verdict = events.find((e) => e.stage === 'verdict')?.data;
+  const place = events.find((e) => e.stage === 'place')?.data as PlaceEventData | undefined;
 
   const feasibility = intent?.route === 'feasibility';
   const agentRoute = intent?.route === 'agent';
@@ -337,6 +351,15 @@ export default function PipelineTrace({ events }: { events: PipelineEvent[] }) {
         <span>{tokensOf(calls)} tokens</span>
         {totalCost > 0 && <span className="font-medium text-amber-600 dark:text-amber-400">{formatCost(totalCost)}</span>}
       </div>
+
+      {place && (
+        <Step index={++index} title="Place" summary={placeSummary(place)} calls={[]}>
+          <Row label="Pin">
+            <span className="font-mono">{`${place.pin.lat.toFixed(5)}, ${place.pin.lon.toFixed(5)}`}</span>
+          </Row>
+          <JsonToggle label="Place profile given to the agent" value={place.profile} />
+        </Step>
+      )}
 
       {(translation || (intent && !agentRoute)) && (
         <Step
