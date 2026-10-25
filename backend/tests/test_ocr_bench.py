@@ -60,3 +60,25 @@ def test_line_cut_by_a_tile_edge():
     words, lines, _ = ocr_image(run, np.zeros((1000, 3000, 3), np.uint8), 2000, 200)
     assert reading_order(lines) == "Där gäller bestämmelsen inom planområdet"
     assert sum(w[4] == "inom" for w in words) == 1
+
+
+def test_new_process_when_gpu_memory_is_high(tmp_path, monkeypatch):
+    """The worker exits with RECYCLE_EXIT after a document once the card's memory passes --recycle-gpu-mb (not before
+    RECYCLE_MIN_PAGES pages); corpus.ocr then starts a fresh process, which skips the outputs already written."""
+    import json
+    from types import SimpleNamespace
+
+    import pytest
+
+    from corpus import ocr_engines
+
+    jobs = tmp_path / "jobs.jsonl"
+    jobs.write_text("".join(json.dumps({"pdf": f"{i}.pdf", "out": str(tmp_path / f"{i}.json")}) + "\n" for i in range(3)))
+    monkeypatch.setattr(ocr_engines, "ocr_pdf", lambda *a: {"pages": ["text"] * 15, "words": []})
+    monkeypatch.setattr(ocr_engines, "gpu_memory_used_mb", lambda: 7000)
+    args = SimpleNamespace(jobs=str(jobs), shard="0/1", dpi=300, map_dpi=200, tile=2000, overlap=200, recycle_pages=250,
+                           recycle_gpu_mb=6500)
+    with pytest.raises(SystemExit) as stop:
+        ocr_engines.run_jobs(None, "rapid-v6-medium", args)
+    assert stop.value.code == ocr_engines.RECYCLE_EXIT
+    assert [(tmp_path / f"{i}.json").exists() for i in range(3)] == [True, True, False]  # 15 pages, then 30 > 20

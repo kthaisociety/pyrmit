@@ -160,7 +160,8 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   GPU memory: DirectML keeps the buffers of every input shape it has run (recognition batch widths vary), so one
   process grew from ~3 to 7 GB of the 8 GB in 2 h, spilled into shared memory and read ~35 % fewer words per second;
   the worker exits after `RECYCLE_PAGES` (250) pages with `RECYCLE_EXIT` and `corpus.ocr` starts a fresh one (its
-  skip test reads only the first bytes of each output). MuPDF refuses to decode a whole image over its size limit
+  skip test reads only the first bytes of each output), or sooner when the card's used memory (`nvidia-smi`, all
+  processes) passes `RECYCLE_GPU_MB` (6.5 GB, after `RECYCLE_MIN_PAGES`): text pages took it to 7.4 GB within 250 pages. MuPDF refuses to decode a whole image over its size limit
   ("Overly large image": a 20674 x 19691 px scan of a 2.6 m Strömstad plankarta, 1 page of the 11k scans) and
   rendered the page blank; `render` then renders it in 2000 px strips. Speed (2026-10-24, same 24 first-night PDFs: 249 -> 152 s, -39 %, 4 % fewer words):
   detection input capped at 1280 px (`DET_SIDE`, `--det-side 0` = whole 2000 px tile: same words and labels on the

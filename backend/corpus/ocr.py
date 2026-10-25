@@ -36,6 +36,8 @@ WORKERS = 1
 # A new OCR process every 250 pages (~25 min of plankartor, a few seconds to load the models): DirectML keeps the
 # GPU memory of every input shape it has seen (ocr_engines.RECYCLE_EXIT)
 RECYCLE_PAGES = 250
+# or sooner once the card's used memory passes 6.5 of its 8 GB (text pages: 7.4 GB within 250 pages, 2026-10-25)
+RECYCLE_GPU_MB = 6500
 RECYCLE_EXIT = 3  # = corpus/ocr_engines.py RECYCLE_EXIT (that module runs in .venv-ocr)
 OCR_PYTHON = BACKEND_DIR / ".venv-ocr" / "Scripts" / "python.exe"
 JOBS_PATH = DATA_DIR / "ocr_jobs.jsonl"
@@ -131,7 +133,7 @@ def main() -> None:
     # The .venv interpreter sets PYTHONHOME to its own base Python (3.13): inherited, it made .venv-ocr's 3.12 load
     # the 3.13 standard library ("SRE module mismatch")
     env = {k: v for k, v in os.environ.items() if k not in ("PYTHONHOME", "PYTHONPATH", "__PYVENV_LAUNCHER__")}
-    command += ["--recycle-pages", str(RECYCLE_PAGES)]
+    command += ["--recycle-pages", str(RECYCLE_PAGES)] + ([] if args.cpu else ["--recycle-gpu-mb", str(RECYCLE_GPU_MB)])
 
     def work(shard: int) -> int:
         """One worker, started again each time it stops to give back its GPU memory."""

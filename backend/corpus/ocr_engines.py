@@ -26,6 +26,7 @@ onnxruntime-directml pymupdf` (kept apart from .venv, whose torch is the CUDA bu
 
 import argparse
 import json
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -38,8 +39,23 @@ Image.MAX_IMAGE_PIXELS = None  # plankartor rendered at 200 dpi reach 40-60 Mpx
 MAX_SIDE = 12000  # pixels: an A0 plankarta at 300 dpi is 14000 px
 # DirectML keeps the GPU buffers of every input shape it has run (recognition batches vary in width): one process
 # grew from ~3 to 7 GB of the RTX 4060's 8 GB in 2 h (2026-10-24 night), then spilled into shared memory and read
-# ~35 % fewer words per second. --recycle-pages exits with this code; corpus.ocr starts a fresh process
+# ~35 % fewer words per second. --recycle-pages exits with this code; corpus.ocr starts a fresh process.
+# Text pages grow it faster (more shapes per page): 250 pages of planbeskrivningar took it to 7.4 GB (2026-10-25), so
+# --recycle-gpu-mb also exits when the card's used memory passes a threshold (after a few pages, so another program
+# holding the GPU does not restart it after every document)
 RECYCLE_EXIT = 3
+RECYCLE_MIN_PAGES = 20
+
+
+def gpu_memory_used_mb() -> int | None:
+    """Memory used on the first NVIDIA GPU (every process: DirectML reports no per-process figure), None without
+    nvidia-smi."""
+    try:
+        output = subprocess.run(["nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits"],
+                                capture_output=True, text=True, timeout=10).stdout
+        return int(output.split()[0])
+    except (OSError, subprocess.SubprocessError, ValueError, IndexError):
+        return None
 
 
 def tiles(height: int, width: int, size: int, overlap: int):
@@ -465,6 +481,9 @@ def run_jobs(run, engine: str, args) -> None:
         if args.recycle_pages and pages >= args.recycle_pages:
             print(f"{done} PDFs OCRed, {pages} pages: new process (GPU memory)", flush=True)
             sys.exit(RECYCLE_EXIT)
+        if args.recycle_gpu_mb and pages >= RECYCLE_MIN_PAGES and (used := gpu_memory_used_mb() or 0) > args.recycle_gpu_mb:
+            print(f"{done} PDFs OCRed, {pages} pages, GPU memory {used} MB: new process", flush=True)
+            sys.exit(RECYCLE_EXIT)
     print(f"{done} PDFs OCRed")
 
 
@@ -513,6 +532,8 @@ def main() -> None:
     parser.add_argument("--shard", default="0/1", help="corpus: worker i of n takes every n-th job")
     parser.add_argument("--recycle-pages", type=int, default=0,
                         help=f"corpus: exit with code {RECYCLE_EXIT} after this many pages (corpus.ocr starts a new process)")
+    parser.add_argument("--recycle-gpu-mb", type=int, default=0,
+                        help=f"corpus: also exit with code {RECYCLE_EXIT} when the GPU's used memory passes this (MB)")
     args = parser.parse_args()
 
     options = ({"det_side": args.det_side} if args.det_side else {}) | ({"cuda": True} if args.cuda else {})
