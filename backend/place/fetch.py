@@ -30,11 +30,11 @@ ATTEMPTS = 2
 RETRY_DELAY_S = 1.0
 
 
-def _client() -> httpx.Client:
+def new_client() -> httpx.Client:
     return httpx.Client(headers={"User-Agent": USER_AGENT}, timeout=90, follow_redirects=True)
 
 
-def _get_json(client: httpx.Client, url: str, params: dict):
+def get_json(client: httpx.Client, url: str, params: dict):
     """GET a JSON payload, once more after a short pause if it fails. ArcGIS reports errors with HTTP 200."""
     for attempt in range(ATTEMPTS):
         try:
@@ -53,7 +53,7 @@ def _get_json(client: httpx.Client, url: str, params: dict):
 def kommun_boundary(client: httpx.Client, code: str) -> dict:
     """The kommun's boundary from OpenStreetMap (one Nominatim request), as a GeoJSON geometry."""
     name = PILOTS[code]["name"]
-    results = _get_json(client, f"{NOMINATIM}/search", {
+    results = get_json(client, f"{NOMINATIM}/search", {
         "q": f"{name} kommun", "countrycodes": "se", "polygon_geojson": 1, "polygon_threshold": 0.0005,
         "format": "jsonv2", "limit": 5})
     for result in results:
@@ -71,11 +71,11 @@ def fetch_arcgis(client: httpx.Client, layer: Layer, envelope: tuple | None) -> 
     if envelope:
         where.update(geometry=",".join(map(str, envelope)), geometryType="esriGeometryEnvelope", inSR=4326,
                      spatialRel="esriSpatialRelIntersects")
-    ids = _get_json(client, url, {**where, "returnIdsOnly": "true", "f": "json"}).get("objectIds") or []
+    ids = get_json(client, url, {**where, "returnIdsOnly": "true", "f": "json"}).get("objectIds") or []
     features = []
     for start in range(0, len(ids), ARCGIS_IDS_PER_REQUEST):
         batch = ids[start:start + ARCGIS_IDS_PER_REQUEST]
-        data = _get_json(client, url, {"objectIds": ",".join(map(str, batch)), "outFields": "*", "outSR": 4326,
+        data = get_json(client, url, {"objectIds": ",".join(map(str, batch)), "outFields": "*", "outSR": 4326,
                                        "f": "geojson"})
         features += data.get("features") or []
     return features
@@ -86,7 +86,7 @@ def fetch_wfs(client: httpx.Client, layer: Layer, envelope: tuple) -> list[dict]
     west, south, east, north = envelope
     features, seen = [], set()
     for start in range(0, WFS_MAX_FEATURES, WFS_PAGE):
-        data = _get_json(client, layer.url, {
+        data = get_json(client, layer.url, {
             "service": "WFS", "version": "2.0.0", "request": "GetFeature", "typeNames": layer.type_name,
             "outputFormat": "GEOJSON", "srsName": "urn:ogc:def:crs:EPSG::4326", "count": WFS_PAGE,
             "startIndex": start, "bbox": f"{south},{west},{north},{east},urn:ogc:def:crs:EPSG::4326"})
@@ -144,7 +144,7 @@ def fetch_kommun(code: str, only: set[str] | None = None, *, client: httpx.Clien
     out.mkdir(parents=True, exist_ok=True)
     manifest_path = out / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {"layers": {}}
-    with client or _client() as http:
+    with client or new_client() as http:
         kommun = _boundary(http, code, out, manifest, refresh=not only)
         for layer in layers:
             started = time.time()

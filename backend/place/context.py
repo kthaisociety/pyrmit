@@ -87,6 +87,12 @@ def place_context(profile: dict) -> str:
     return "\n".join(lines)
 
 
+def question_with_place(question: str, profile: dict | None) -> str:
+    """The question as the agent gets it: after the pinned place's profile (place_context), or after NO_PIN_HINT
+    when nothing is pinned. The chat and the answer benchmark (place.bench_answers) both send this."""
+    return (place_context(profile) if profile else NO_PIN_HINT) + "\n\n" + question
+
+
 def _without_geometry(row: dict | None) -> dict | None:
     return {key: value for key, value in row.items() if key != "geometry"} if row else row
 

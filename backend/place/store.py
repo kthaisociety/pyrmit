@@ -7,8 +7,15 @@ from pathlib import Path
 
 from shapely import STRtree
 from shapely.geometry import Point, shape
+from shapely.validation import make_valid
 
 GEO_DIR = Path(__file__).resolve().parent.parent / "data" / "geo"
+
+
+def _valid(geometry):
+    """The geometry repaired when the provider's is invalid (Naturvårdsverket sends rings outside their shell, ~0.3 %
+    of Uppsala's features): an invalid polygon gives wrong answers to "does it contain the pin"."""
+    return geometry if geometry.is_valid else make_valid(geometry)
 
 
 class _Layer:
@@ -17,7 +24,7 @@ class _Layer:
     def __init__(self, path: Path):
         data = json.loads(path.read_text(encoding="utf-8"))
         self.properties = [feature.get("properties") or {} for feature in data["features"]]
-        self.geometries = [shape(feature["geometry"]) for feature in data["features"]]
+        self.geometries = [_valid(shape(feature["geometry"])) for feature in data["features"]]
         self.index = STRtree(self.geometries)
 
     def intersecting(self, geometry) -> list[tuple[dict, object]]:

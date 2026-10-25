@@ -36,7 +36,7 @@ from observability import (
     start_observation,
 )
 from pipeline_trace import CallRecorder, recorded_chat_completion, response_usage
-from place.context import NO_PIN_HINT, compact_profile, place_context
+from place.context import compact_profile, question_with_place
 import schemas
 
 logger = logging.getLogger(__name__)
@@ -333,7 +333,7 @@ def chat_stream(
         user: models.User = Depends(get_current_user),
 ):
     """The chat's streamed answer (SSE). In the agent mode a pinned place (request.place) is the place the question
-    is about: its place profile goes before the question (place.context.place_context) and is saved as the "place"
+    is about: its place profile goes before the question (place.context.question_with_place) and is saved as the "place"
     pipeline event of the answer's trace, {"pin": {"lat", "lon", "label"}, "profile": compact_profile}, which is how
     the chat session keeps its place (ADR-0004). Without a pin the question gets place.context.NO_PIN_HINT."""
     if not request.messages:
@@ -412,12 +412,12 @@ def chat_stream(
                     def record(**call):
                         recorder.record(**call)
 
-                    question = NO_PIN_HINT + "\n\n" + original_content
+                    question = question_with_place(original_content, None)
                     if pinned:
                         yield _sse({"type": "thinking", "label": "Looking up the pinned place"})
                         profile = place_profile(pinned.lat, pinned.lon)
                         yield emit("place", pin=pinned.model_dump(), profile=compact_profile(profile))
-                        question = place_context(profile) + "\n\n" + original_content
+                        question = question_with_place(original_content, profile)
 
                     outcome = yield from stream_agent(question, history, record, _sse,
                                                       flush=lambda: list(emit_calls()))

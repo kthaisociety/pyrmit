@@ -189,7 +189,7 @@ def compare_runs(before: dict, after: dict) -> dict:
     return diff
 
 
-def _sample_points(store: PlaceStore, code: str, count: int, rng: random.Random) -> list[tuple[float, float]]:
+def sample_points(store: PlaceStore, code: str, count: int, rng: random.Random) -> list[tuple[float, float]]:
     """(lat, lon) points of the kommun: half inside its plans (where most cases are), half anywhere in it."""
     west, south, east, north = next(k["bbox"] for k in store.kommuner() if k["code"] == code)
     plans = [geometry for _, geometry in store.features(code, "plans", box(west, south, east, north))]
@@ -230,7 +230,7 @@ def candidates(code: str, n: int = 30, *, seed: int = 31, build: Callable[[float
 
     build, store = build or build_profile, store or default_store()
     sampled = [({"lat": lat, "lon": lon}, hard_case_tags(build(lat, lon)))
-               for lat, lon in _sample_points(store, code, n * SAMPLES_PER_CANDIDATE, random.Random(seed))]
+               for lat, lon in sample_points(store, code, n * SAMPLES_PER_CANDIDATE, random.Random(seed))]
     chosen, covered = [], set()
     for tag in HARD_CASES:  # first one place per hard case, then the most-tagged places
         hit = next((s for s in sampled if tag in s[1] and tag not in covered and s not in chosen), None)

@@ -11,8 +11,11 @@ from tests.unit.place.snapshot import (
     EMPTY_LOT,
     FETCHED,
     PIN,
+    NATIONAL,
     STREET,
+    collection,
     fake_property,
+    square,
     registry,
     remains_at,
     write_national_snapshot,
@@ -43,6 +46,18 @@ def test_lists_protected_areas_covering_the_property(store):
     assert reservat["authority"] == "Länsstyrelsen"
     assert reservat["date"] == "1951-03-02"
     assert reservat["url"] == "https://skyddadnatur.naturvardsverket.se/sknat/?nvrid=2001234"
+
+
+def test_finds_an_area_whose_provider_polygon_is_invalid(tmp_path):
+    """Naturvårdsverket sends some areas with a ring outside the shell it is listed under (16 % of Uppsala's
+    protected areas): the pin in that ring is still in the area, as the provider's own point query says."""
+    shell = square(17.660, 59.860, 17.670, 59.865)["coordinates"][0]
+    outside_ring = square(17.639, 59.849, 17.643, 59.852)["coordinates"][0]  # covers the property, outside the shell
+    national = NATIONAL | {"protected_areas": collection(
+        ({"type": "Polygon", "coordinates": [shell, outside_ring]},
+         {"NVRID": "2057244", "NAMN": "Gula stigen", "SKYDDSTYP": "Naturreservat", "BESLUTSMYNDIGHET": "Kommun"}))}
+    store = write_national_snapshot(tmp_path, national=national)
+    assert [area["name"] for area in profile(store)["protected_areas"]] == ["Gula stigen"]
 
 
 def test_lists_natura2000_sites_with_code_and_link(store):

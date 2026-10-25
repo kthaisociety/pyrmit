@@ -150,8 +150,8 @@ def remains_at(geometry):
     return [remain for remain in REMAINS if shape(remain["geometry"]).intersects(area)]
 
 
-def write_national_snapshot(tmp_path, missing=()):
-    store = write_snapshot(tmp_path, layers=LAYERS | NATIONAL, missing=missing)
+def write_national_snapshot(tmp_path, missing=(), national=NATIONAL):
+    store = write_snapshot(tmp_path, layers=LAYERS | national, missing=missing)
     manifest_path = tmp_path / "0380" / "manifest.json"
     manifest = json.loads(manifest_path.read_text())
     for layer_id, entry in manifest["layers"].items():
