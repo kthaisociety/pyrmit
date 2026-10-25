@@ -297,7 +297,7 @@ class CorpusTools:
     def _doc_id(self, doc_id: str | None) -> str | None:
         """The doc_id as stored: the model sometimes drops the 'pdf:' / 'page:' prefix ('0115:be42...') or copies the
         "(doc pdf:...)" of the tool output with its "doc " (14 stored reads, found by agentic.replay)."""
-        doc_id = (doc_id or "").strip().strip("[]()").removeprefix("doc ").strip()
+        doc_id = re.sub(r"^doc[: ]", "", (doc_id or "").strip().strip("[]()")).strip()  # also "doc:page:..."
         if re.fullmatch(r"\d{4}:\w+", doc_id):
             return next((f"{kind}:{doc_id}" for kind in ("pdf", "page") if self.corpus.doc(f"{kind}:{doc_id}")), doc_id)
         # Only the hash of 'page:0115:7e86b453f43e469e', often written as a chunk id ('c:7e86b453f43e469e')
@@ -438,7 +438,7 @@ class CorpusTools:
         if chunk_id:
             # The model copies ids as the tools print them ("[c:<id>]", "doc page:..."), passes a doc_id here, or
             # glues a chunk id to a doc prefix ("page:0305:<chunk id>"); agentic.replay checks these forms
-            chunk_id = chunk_id.strip().strip("[]").removeprefix("doc ").removeprefix("c:").strip()
+            chunk_id = re.sub(r"^doc[: ]", "", chunk_id.strip().strip("[]")).removeprefix("c:").strip()
             chunk = self.get_chunk(chunk_id)
             if chunk is None:
                 chunk = next((c for c in map(self.corpus.chunk, re.findall(r"(?<![0-9a-f])[0-9a-f]{16}(?![0-9a-f])",

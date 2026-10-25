@@ -45,6 +45,7 @@ def tools():
 @pytest.mark.parametrize("chunk_id", ["a1cbd51fb395f18a", "c:a1cbd51fb395f18a", "[c:a1cbd51fb395f18a]", "a1cbd51f",
                                       "pdf:0115:9f7dbdbeeb1b2010", "0115:9f7dbdbeeb1b2010",
                                       "c:9f7dbdbeeb1b2010", "doc pdf:0115:9f7dbdbeeb1b2010",
+                                      "doc:pdf:0115:9f7dbdbeeb1b2010",  # agentic.replay 2026-10-25
                                       "page:0115:a1cbd51fb395f18a"])  # a chunk id glued to a doc prefix
 def test_read_accepts_ids_as_written(tools, chunk_id):
     assert tools.read(chunk_id=chunk_id).chunk_ids == list(CHUNKS)

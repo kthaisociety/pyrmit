@@ -306,7 +306,7 @@ each model turn and tool call is recorded for the inspector ("Explore (agent)" s
 partial `c:` ids and open `[...]` groups held back until complete, repeats merged); the numbered source list
 ("- [n] label") is appended at the end and a `citations` pipeline event maps each n to its label and cited chunks.
 The answer format asks for the law reference in the sentence and `[c:id]` right after the claim, never nested.
-`read` also takes the id as printed (`c:<id>`, `[c:<id>]`), a doc_id passed as chunk_id, without its `pdf:` / `page:`
+`read` also takes the id as printed (`c:<id>`, `[c:<id>]`, `doc pdf:...` / `doc:pdf:...`), a doc_id passed as chunk_id, without its `pdf:` / `page:`
 prefix or reduced to its hash (`doc_ids_ending`) (before 2026-10-22, 1,845 benchmark reads failed on the `c:` prefix, 88 % never retried); `law_section` takes
 abbreviations (MPF, MBF, LRL...), names without diacritics and '9:4' / '4a §' / '18 c § punkt 1', and points to the
 SFS 2025:974 renumbering when a PBL 9 kap. number is missing; `grep` needs a kommun or scope='law' (a regex over every
