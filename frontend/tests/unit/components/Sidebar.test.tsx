@@ -73,4 +73,22 @@ describe('Sidebar', () => {
     expect(screen.getByText('anna@example.com')).toBeInTheDocument();
     await screen.findByText('Bygglov Storgatan 3');
   });
+
+  it('opens the Database view from the sidebar', async () => {
+    const props = renderSidebar();
+
+    await userEvent.click(screen.getByRole('button', { name: /Database/ }));
+
+    expect(props.onOpenDatabase).toHaveBeenCalled();
+    await screen.findByText('Bygglov Storgatan 3');
+  });
+
+  it('opens the Benchmark view from the sidebar', async () => {
+    const props = renderSidebar();
+
+    await userEvent.click(screen.getByRole('button', { name: /Benchmark/ }));
+
+    expect(props.onOpenBenchmark).toHaveBeenCalled();
+    await screen.findByText('Bygglov Storgatan 3');
+  });
 });
