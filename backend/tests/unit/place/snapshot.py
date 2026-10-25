@@ -3,6 +3,9 @@ the place tests. No real services (PCR-0011)."""
 
 import json
 
+from shapely.geometry import shape
+
+from place.sources import NATIONAL_LAYERS, layer_by_id
 from place.store import PlaceStore
 
 FETCHED = "2026-10-25"
@@ -98,3 +101,60 @@ def registry(code):
 def no_remains(geometry):
     """A fake ancient-remains register with nothing in it."""
     return []
+
+
+# The national layers and the ancient-remains register around the fake property (#36)
+AROUND_PROPERTY = square(17.630, 59.845, 17.650, 59.855)
+FAR_AWAY = square(17.80, 59.95, 17.81, 59.96)
+
+NATIONAL = {layer.id: collection() for layer in NATIONAL_LAYERS} | {
+    "protected_areas": collection(
+        (AROUND_PROPERTY, {"NVRID": "2001234", "NAMN": "Kungsängsängen", "SKYDDSTYP": "Naturreservat",
+                           "BESLUTSSTATUS": "Gällande", "BESLUTSMYNDIGHET": "Länsstyrelsen",
+                           "PROVNINGSMYNDIGHET_DISPENS": "Länsstyrelsen", "URSPR_BESLUTSDATUM": "1951-03-02"}),
+        (FAR_AWAY, {"NVRID": "2009999", "NAMN": "Långt bort", "SKYDDSTYP": "Biotopskyddsområde",
+                    "BESLUTSMYNDIGHET": "Kommun"}),
+    ),
+    "natura2000": collection(
+        (AROUND_PROPERTY, {"OMRADESKOD": "SE0210071", "OMRADESNAMN": "Kungsängen", "OMRADESTYP": "SCI",
+                           "UPPGIFTSLAMNARE": "Länsstyrelsen i Uppsala län"}),
+    ),
+    "riks_naturvard": collection(
+        (AROUND_PROPERTY, {"NAMN": "Fyrisån", "AMNESOMRAD": "Naturvård", "LAGRUM": "MB 3:6", "RIKSID": "3068",
+                           "BESKRIVNIN": "https://geodata.naturvardsverket.se/handlingar/rest/dokument/202397"}),
+    ),
+    "riks_kulturmiljo": collection(
+        (AROUND_PROPERTY, {"NAMN": "Uppsala stad", "ORIGINALID": "C 40",
+                           "OBJEKTLANK": "https://www.raa.se/riksintressen/c40"}),
+    ),
+}
+
+REMAINS = [
+    {"properties": {"lamningsnummer": "L1941:2381", "raa_nummer": "Uppsala 123:1", "lamningstyp": "Gravfält",
+                    "antikvarisk_bedomning": "Fornlämning",
+                    "url": "https://pub.raa.se/visa/objekt/lamning/d4e16ab8"},
+     "geometry": square(17.6405, 59.8502, 17.6410, 59.8505)},
+    {"properties": {"lamningsnummer": "L1941:3039", "raa_nummer": "Uppsala 586:1", "lamningstyp": "Boplats",
+                    "antikvarisk_bedomning": "Möjlig fornlämning",
+                    "url": "https://pub.raa.se/visa/objekt/lamning/82572d22"},
+     "geometry": square(17.6412, 59.8502, 17.6415, 59.8505)},
+    {"properties": {"lamningsnummer": "L1941:4000", "raa_nummer": None, "lamningstyp": "Färdväg",
+                    "antikvarisk_bedomning": "Övrig kulturhistorisk lämning",
+                    "url": "https://pub.raa.se/visa/objekt/lamning/aa11"},
+     "geometry": square(17.6416, 59.8506, 17.6418, 59.8508)},
+]
+
+
+def remains_at(geometry):
+    area = shape(geometry)
+    return [remain for remain in REMAINS if shape(remain["geometry"]).intersects(area)]
+
+
+def write_national_snapshot(tmp_path, missing=()):
+    store = write_snapshot(tmp_path, layers=LAYERS | NATIONAL, missing=missing)
+    manifest_path = tmp_path / "0380" / "manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    for layer_id, entry in manifest["layers"].items():
+        entry["provider"] = layer_by_id("0380", layer_id).provider
+    manifest_path.write_text(json.dumps(manifest))
+    return type(store)(tmp_path)

@@ -8,7 +8,15 @@ from fastapi.testclient import TestClient
 
 from dependencies import get_current_user
 from routers import place as place_router
-from tests.unit.place.snapshot import FETCHED, PIN, fake_property, no_remains, registry
+from tests.unit.place.snapshot import (
+    FETCHED,
+    PIN,
+    fake_property,
+    no_remains,
+    registry,
+    remains_at,
+    write_national_snapshot,
+)
 
 
 @pytest.fixture
@@ -49,3 +57,20 @@ def test_coverage_endpoint_lists_pilot_kommuner(client):
     assert uppsala["code"] == "0380"
     assert uppsala["bbox"] == pytest.approx([17.5, 59.7, 17.9, 60.0])
     assert uppsala["fetched"] == FETCHED
+
+
+# --- the constraints (#36) ---------------------------------------------------------------------------------------------------
+
+def test_profile_endpoint_carries_the_new_sections(tmp_path):
+    store = write_national_snapshot(tmp_path)
+    """GET /api/place/profile returns the constraints and permits."""
+    app = FastAPI()
+    app.include_router(place_router.router, prefix="/api")
+    app.dependency_overrides[place_router.get_place_store] = lambda: store
+    app.dependency_overrides[place_router.get_property_lookup] = lambda: fake_property
+    app.dependency_overrides[place_router.get_plan_registry] = lambda: registry
+    app.dependency_overrides[place_router.get_ancient_remains_lookup] = lambda: remains_at
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id="u1")
+    body = TestClient(app).get("/api/place/profile", params={"lat": PIN[0], "lon": PIN[1]}).json()
+    assert body["protected_areas"][0]["name"] == "Kungsängsängen"
+    assert any("Bygglov" in p["title"] for p in body["permits"])
