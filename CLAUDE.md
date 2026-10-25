@@ -585,7 +585,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   `fetch.py` (snapshot CLI), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property and
   ancient remains at a point), `profile.py` (`build_profile`), `permits.py` (`likely_permits`), `context.py` (the
   place as text for the agent, `compact_profile`), `geocode.py` (`search_places`, `Throttle`: Nominatim's policy of one
-  request a second and no search-as-you-type);
+  request a second and no search-as-you-type), `bench.py` (the lookup benchmark: facit in `place/cases.jsonl`, locked
+  entries only, dev / test (Norrtälje held out), per-layer precision / recall, `data/agentic/place-bench-*.json`, which
+  the Benchmark view's `bench-*` glob does not pick up; `candidates` proposes places, a person writes the facit);
   `backend/routers/place.py` -- `/api/place/*`. Tests: `backend/tests/unit/` mirrors `backend/` (fake snapshot in
   `tests/unit/place/snapshot.py`; no real services, PCR-0011)
 - `backend/routers/benchmark.py` -- Benchmark view API: case sets (`SETS`: cases / caselaw / plans / tasks / generated), past results per case

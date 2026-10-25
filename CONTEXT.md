@@ -113,6 +113,10 @@ A match of the map's address search, shown as a grey pin until the user confirms
 **Place chip**:
 The pinned place shown above the message input. Tapping it opens the map; clearing it unpins the chat.
 
+**Lookup facit**:
+The hand-checked answer for one property: its plans, zones, protections, remains and likely permits, and where each was checked. Locked with a date before the lookup ever runs on that property; later corrections are listed, not overwritten.
+_Avoid_: ground truth, gold labels
+
 **Pilot kommun**:
 A kommun the map covers, because its layers have a snapshot (Uppsala for now). Anywhere else the place is "not covered yet".
 
