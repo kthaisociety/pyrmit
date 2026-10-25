@@ -490,6 +490,7 @@ cd backend && uv pip install torch --index-url https://download.pytorch.org/whl/
 
 # Tests
 cd backend && pytest tests/
+cd frontend && bun run test                  # Vitest + jsdom + MSW, same setup as dev (PCR-0007, PCR-0008)
 ```
 
 ### Environment Variables
@@ -618,6 +619,11 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   reference (verdicts, key points, evidence, source, map crop) and past results, and "Test with the agent" (run + judge)
 - `frontend/components/Sidebar.tsx` -- Session list, new chat, Database / Settings buttons, user info
 - `frontend/components/Settings.tsx` -- Profile / password settings
+- `frontend/tests/` -- Vitest suite copied from dev: `unit/` mirrors `components/` and `lib/` (reference tests
+  `lib/auth.test.ts`, `components/Sidebar.test.tsx`, the rest `it.todo`), `mocks/handlers.ts` is the shared MSW fake
+  backend (override with `server.use(...)`), and `setup.ts` fails any test whose request has no handler.
+  `tests/acceptance.test.ts` exists only on an issue's branch. The Dockerfile installs with Bun from `bun.lock`
+  (PCR-0009; there is no `package-lock.json`)
 
 ---
 

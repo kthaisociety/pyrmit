@@ -77,6 +77,8 @@ cd ../frontend && bun install
 bun run dev
 ```
 
+Tests: `cd frontend && bun run test` (Vitest with a fake backend, no server needed) and `cd backend && pytest tests/`.
+
 Open <http://localhost:3000>, enter the access-gate password, then sign up. The first start downloads the embedding model from Hugging Face (2.3 GB on a GPU, 570 MB on a CPU), then preloads the store in about 30–60 s.
 
 > `docker-compose.yml` predates the local corpus (no data mount, no GPU): use the manual setup above.
