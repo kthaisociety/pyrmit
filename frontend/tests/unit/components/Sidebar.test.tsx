@@ -25,6 +25,16 @@ function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> = {}) {
 }
 
 describe('Sidebar', () => {
+  it('closes from its menu button', async () => {
+    /** The menu button at the top hides the sidebar. */
+    const onClose = vi.fn();
+    renderSidebar({ onClose });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close sidebar' }));
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it('lists the sessions from the backend, with a fallback title for untitled ones', async () => {
     renderSidebar();
 

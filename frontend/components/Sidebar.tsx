@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Plus, Settings, MessageSquare, Trash2, Check, X, Pencil, Database, FlaskConical } from 'lucide-react';
+import SidebarToggle from '@/components/SidebarToggle';
 import { authFetch } from '@/lib/auth';
 
 interface ChatSession {
@@ -25,9 +26,10 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onOpenDatabase: () => void;
   onOpenBenchmark: () => void;
+  onClose?: () => void; // the menu button: hides the sidebar
 }
 
-export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, refreshTrigger, user, onOpenSettings, onOpenDatabase, onOpenBenchmark }: SidebarProps) {
+export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, refreshTrigger, user, onOpenSettings, onOpenDatabase, onOpenBenchmark, onClose }: SidebarProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -94,10 +96,11 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
 
   return (
     <aside className="w-[260px] bg-zinc-50 dark:bg-black border-r border-zinc-200 dark:border-zinc-800 flex flex-col flex-shrink-0">
-      <div className="p-3">
+      <div className="flex items-center gap-1 p-3">
+        {onClose && <SidebarToggle open onClick={onClose} />}
         <button
           onClick={onNewChat}
-          className="w-full flex items-center gap-2 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-sm font-medium shadow-sm"
+          className="flex-1 flex items-center gap-2 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-sm font-medium shadow-sm"
         >
           <Plus size={16} />
           <span>New Chat</span>
