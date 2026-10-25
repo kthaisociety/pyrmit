@@ -211,6 +211,9 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   engelholm.se; 404 home -> host root; http -> https), `parse_sitemap` survives bad bytes (Luleå), the client uses the
   Windows certificate store (`truststore`, Högsby) and HTTP/2 (Malmö's HTTP/1.1 headers break h11), `.stockholm` hosts are
   one site (plans on vaxer.stockholm, permits on bygglov.stockholm). Karlskrona answers 403 to the crawler.
+  Wikidata websites that are wrong are fixed in `municipalities.WEBSITE_FIXES` (Gällivare: gellivare.se no longer
+  answers, gallivare.se). 11 crawled PDFs end without `%%EOF` (7 unreadable, e.g. Västerås "Ärende" plankartor):
+  downloaded again on 2026-10-25, the kommun servers send the same cut file.
   The technical report (section 5.1, `report_technical.design_choices`) lists these choices with their effect: update it
   when a setting changes.
 - `corpus.chunk` recognises a chapter only on its own line after a blank line, so wrapped references ("4 kap.

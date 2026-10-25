@@ -56,6 +56,11 @@ def short_name(label: str) -> str:
     return name
 
 
+# Websites Wikidata gets wrong: Gällivare's gellivare.se no longer answers (2026-10-23 crawl: 0 pages), the kommun is
+# on gallivare.se
+WEBSITE_FIXES = {"2523": "https://gallivare.se"}
+
+
 def pick_site(sites: set[str]) -> str | None:
     if not sites:
         return None
@@ -98,7 +103,7 @@ def main() -> None:
 
     municipalities = []
     for code, entry in sorted(by_code.items()):
-        entry["website"] = pick_site(sites[code])
+        entry["website"] = WEBSITE_FIXES.get(code) or pick_site(sites[code])
         entry["localities"] = sorted(localities[code])
         municipalities.append(entry)
 
