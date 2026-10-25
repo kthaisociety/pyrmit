@@ -46,6 +46,7 @@ class LocalRetriever:
         self.chunks = chunks
         self.is_law = np.array([c["kind"] == "law" for c in chunks])
         self.kommun = np.array([c.get("kommun_code") or "" for c in chunks])
+        self.doc_type = np.array([c.get("doc_type") or "" for c in chunks])
         self.places = CorpusPlaces(chunks)
         self.model = model
         self.embedder = None
@@ -115,8 +116,10 @@ class LocalRetriever:
 
     def search(self, query: str, query_sv: str | None = None, k: int = 5, mode: str = "hybrid",
                kommuner: list[str] | None | str = "auto", dense_lang: str = "en", candidates: int = 50,
-               rerank: bool = False, bm25_mode: str | None = None) -> dict[str, list[Hit]]:
-        """Top-k per pool. `kommuner="auto"` detects them in the query; None disables the filter."""
+               rerank: bool = False, bm25_mode: str | None = None, doc_types: list[str] | None = None,
+               title_contains: str | None = None) -> dict[str, list[Hit]]:
+        """Top-k per pool. `kommuner="auto"` detects them in the query; None disables the filter. doc_types /
+        title_contains restrict the kommun pool before ranking (laws are not filtered)."""
         if kommuner == "auto":
             # Union: a small place can share its name with a Wikidata locality elsewhere ("Veda" is in
             # Härnösand for Wikidata but the corpus mentions it in Vallentuna)
@@ -125,6 +128,11 @@ class LocalRetriever:
         local_mask = ~self.is_law
         if kommuner:
             local_mask &= np.isin(self.kommun, kommuner)
+        if doc_types:
+            local_mask &= np.isin(self.doc_type, doc_types)
+        if title_contains:
+            needle = title_contains.lower()
+            local_mask &= np.array([needle in (c.get("title") or "").lower() for c in self.chunks])
         masks = {"law": self.is_law, "local": local_mask}
 
         rankings: list[np.ndarray] = []

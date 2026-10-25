@@ -34,6 +34,9 @@ How to work:
    which area carries which code: when the question names a property (e.g. "Grimsta 5:125") or a precise place, open
    the plankarta around it (view_map_area with the plankarta doc_id and the property number) and only apply the rules
    of the zone the property is in. Search in Swedish (search), use grep for exact terms (plan names, property designations, 'nockhöjd', 'byggnadsarea', amounts), read the promising chunks/documents fully (read), quote the exact statute sections (law_section). Look at a plankarta image only if the needed rule is spatial or the text is missing (view_pdf_page).
+   search, grep and list_documents take doc_types (detaljplan, oversiktsplan, bygglov, strandskydd, avlopp, taxa,
+   other) and title_contains to stay within some documents (e.g. the översiktsplan of a big kommun);
+   grep(output='documents') shows which documents mention a term.
    The statutes are the current consolidated texts: PBL 9 kap. was renumbered by SFS 2025:974 (e.g. bygglov inside a
    detaljplan is now 9 kap. 56 §, outside 57 §, liten avvikelse 60-61 §, förhandsbesked 74 §; some sections have a
    second version in force from 2027-01-01). Do not rely on remembered section numbers: find provisions by searching
@@ -277,9 +280,10 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
                 fresh.append(len(conversation))
                 conversation.append(image_message(result))
             run.steps.append({"tool": call.name, "arguments": arguments, "chunks": result.chunk_ids,
-                              "output_chars": len(result.text), "image": bool(result.image_png), "ms": ms, "turn": step})
+                              "output_chars": len(result.text), "image": bool(result.image_png), "ms": ms, "turn": step,
+                              "error": result.error})
             emit({"type": "tool_result", "name": call.name, "result": result.text[:300],
-                  "chunks": len(result.chunk_ids), "ms": ms})
+                  "chunks": len(result.chunk_ids), "ms": ms, "error": result.error})
             emit({"type": "tool_done", "name": call.name, "input": json.dumps(arguments, ensure_ascii=False),
                   "output": result.text[:4000], "chunks": len(result.chunk_ids), "chunk_ids": result.chunk_ids, "ms": ms,
                   "image": bool(result.image_png)})

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 export interface ChunkCardProps {
@@ -11,6 +11,7 @@ export interface ChunkCardProps {
   meta?: string[];
   rank?: number;
   defaultOpen?: boolean;
+  actions?: ReactNode; // shown under the header, open or not (e.g. links to the original document)
 }
 
 // Cosine distance: 0 = identical, 1 = unrelated. Colour bands are a rough visual aid only,
@@ -29,6 +30,7 @@ export default function ChunkCard({
   meta = [],
   rank,
   defaultOpen = false,
+  actions,
 }: ChunkCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   const preview = content.replace(/\s+/g, ' ').slice(0, 220);
@@ -72,6 +74,7 @@ export default function ChunkCard({
           )}
         </div>
       </button>
+      {actions && <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2 pl-8">{actions}</div>}
       {open && (
         <pre className="max-h-96 overflow-auto whitespace-pre-wrap border-t border-zinc-200 px-3 py-2 font-sans text-xs leading-relaxed text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
           {content}

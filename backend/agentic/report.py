@@ -15,12 +15,12 @@ import re
 import shutil
 import sqlite3
 import subprocess
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
 
 from agentic.bench import CASES_PATH, RESULTS_DIR, sample_cases
-from corpus.common import DATA_DIR, read_jsonl
+from corpus.common import DATA_DIR, RESULTS_ROOT, read_jsonl
 from localrag.eval import matches
 from localrag.index import INDEX_DIR
 
@@ -339,6 +339,196 @@ def experiment_table() -> str:
     return f"<table>{head}{''.join(body)}</table>" if body else ""
 
 
+# Bug round (2026-10-22): the same 52 dev cases before (x-v3, 1 pass) and after the tool / data fixes (x-toolfix, 3 passes)
+BUG_ROUND = [("v3", "Before the fixes (2026-10-21, 1 pass)"), ("toolfix", "After the fixes (2026-10-22, 3 passes)")]
+
+
+def tool_health(rows: list[dict]) -> dict:
+    """Tool calls that returned nothing, per answer, from the stored steps."""
+    counts = Counter()
+    for row in rows:
+        for step in row.get("steps") or []:
+            if step["tool"] in ("read", "law_section") and not step.get("chunks"):
+                counts[step["tool"]] += 1
+    return {tool: counts[tool] / max(len(rows), 1) for tool in ("read", "law_section")}
+
+
+def bugfix_table() -> str:
+    import statistics
+
+    head = ("<tr><th>Run</th><th>n</th><th>Failed reads<br>per answer</th><th>Empty law_section<br>per answer</th>"
+            "<th>Key points<br>MiMo / Luna</th><th>Unsupported<br>MiMo / Luna</th><th>Evidence seen</th>"
+            "<th>Median latency</th><th>Median first token</th><th>Cost / question</th></tr>")
+    body = []
+    for label, name in BUG_ROUND:
+        rows = experiment_rows(label)
+        if not rows:
+            continue
+        luna = next((json.loads(f.read_text(encoding="utf-8"))
+                     for f in RESULTS_DIR.glob(f"rejudge-gpt-6-luna-*-x-{label}-and-more.json")), [])
+        health = tool_health(rows)
+        first = [r["first_token_s"] for r in rows if r.get("first_token_s")]
+        first_cell = f"{statistics.median(first):.0f} s" if first else "–"
+        body.append(
+            f"<tr><td>{html.escape(name)}</td><td>{len(rows)}</td><td>{fmt(health['read'])}</td>"
+            f"<td>{fmt(health['law_section'])}</td>"
+            f"<td>{fmt(mean([r['points'] for r in rows]))} / {fmt(mean([r['new']['points'] for r in luna]))}</td>"
+            f"<td>{fmt(mean([r['unsupported'] for r in rows]))} / {fmt(mean([r['new']['unsupported'] for r in luna]))}</td>"
+            f"<td>{fmt(mean([r['evidence'] for r in rows if r.get('evidence') is not None]))}</td>"
+            f"<td>{statistics.median(r['seconds'] for r in rows):.0f} s</td><td>{first_cell}</td>"
+            f"<td>${fmt(mean([r['cost'] for r in rows]), 4)}</td></tr>")
+    return f"<table>{head}{''.join(body)}</table>" if len(body) == 2 else ""
+
+
+# Section 2.12, written from the numbers of filters_table (update after a new run)
+FILTERS_READING = (
+    "The agent used the new filters in every answer (54 % of its searches, nearly all its greps and document lists), "
+    "made 2.1 fewer tool calls per answer and covered slightly more key points: +0.026 ± 0.015 per case for the MiMo "
+    "judge (explain / propose / develop seeds +0.08, generated cases +0.02, the 14 cases unchanged) and +0.065 ± 0.028 "
+    "for Luna on the 41 answers it re-judged (30 cases) before the OpenRouter credits ran out; 3 of the 156 answers "
+    "were lost the same way. Unsupported claims and cost did not move. The whole answer is ~1.5 s shorter but starts "
+    "~3 s later (first token 26 → 29 s). Narrow title filters return nothing more often (5 % of greps, 1 % before). "
+    "Measured on the 2026-10-22 corpus, where a municipality has a few hundred documents; on the national corpus, five "
+    "times larger, the filters should matter more (not measured yet). Kept.")
+
+
+def filter_use(rows: list[dict]) -> dict:
+    """How often the agent used what the 2026-10-24 tools added: document filters in search / grep, grep's documents
+    output, list_documents' doc_types and offset (its doc_type and title_contains existed before)."""
+    calls = Counter()
+    answers = 0
+    for row in rows:
+        used = False
+        for step in row.get("steps") or []:
+            arguments = step.get("arguments") or {}
+            tool = step["tool"]
+            new = (tool in ("search", "grep") and (arguments.get("doc_types") or arguments.get("title_contains"))
+                   or tool == "grep" and arguments.get("output") == "documents"
+                   or tool == "list_documents" and (arguments.get("doc_types") or arguments.get("offset")))
+            if tool in ("search", "grep", "list_documents"):
+                calls[tool] += 1
+                calls[f"{tool} new"] += bool(new)
+                used |= bool(new)
+        answers += used
+    return {"answers": answers, "calls": calls}
+
+
+def filters_table(before: str = "toolfix", after: str = "filters") -> str:
+    """The dev set before and after the document filters: means under both judges, and the paired difference per case
+    (mean of the repeats, then over the cases) with its standard error."""
+    import statistics
+
+    def luna(label: str) -> list[dict]:
+        return next((json.loads(f.read_text(encoding="utf-8"))
+                     for f in RESULTS_DIR.glob(f"rejudge-gpt-6-luna-*-x-{label}-and-more.json")), [])
+
+    def per_case(rows: list[dict], key) -> dict:
+        values = defaultdict(list)
+        for row in rows:
+            value = key(row)
+            if value is not None:
+                values[row["case"]].append(value)
+        return {case: statistics.mean(v) for case, v in values.items()}
+
+    runs = {label: (experiment_rows(label), luna(label)) for label in (before, after)}
+    if not all(rows for rows, _ in runs.values()):
+        return ""
+    body = []
+    for label, name in ((before, "Before (toolfix, 2026-10-22)"), (after, "With the document filters (2026-10-24)")):
+        rows, judged = runs[label]
+        use = filter_use(rows)
+        greps = [step for row in rows for step in row.get("steps") or [] if step["tool"] == "grep"]
+        empty_grep = sum(1 for step in greps if not step.get("chunks")) / max(len(greps), 1)
+        # A partial re-judging is another subset of cases: its mean is not comparable, the paired difference below is
+        partial = len(judged) < 0.9 * len(rows)
+        luna_points = f"({len(judged)} rejudged)" if partial else fmt(mean([r['new']['points'] for r in judged]))
+        luna_unsup = f"({len(judged)} rejudged)" if partial else fmt(mean([r['new']['unsupported'] for r in judged]))
+        body.append(
+            f"<tr><td>{name}</td><td>{len(rows)}</td>"
+            f"<td>{fmt(mean([r['points'] for r in rows]))} / {luna_points}</td>"
+            f"<td>{fmt(mean([r['unsupported'] for r in rows]))} / {luna_unsup}</td>"
+            f"<td>{fmt(mean([r['evidence'] for r in rows if r.get('evidence') is not None]))}</td>"
+            f"<td>{statistics.median(r['seconds'] for r in rows):.0f} s</td><td>${fmt(mean([r['cost'] for r in rows]), 4)}</td>"
+            f"<td>{use['answers'] / len(rows):.0%}</td><td>{empty_grep:.0%}</td></tr>")
+    diffs = []
+    for judge, key in (("MiMo", lambda r: r.get("points")), ("Luna", None)):
+        if key is None:
+            a, b = (per_case([r | {"points": r["new"]["points"]} for r in runs[label][1]], lambda r: r.get("points"))
+                    for label in (before, after))
+        else:
+            a, b = (per_case(runs[label][0], key) for label in (before, after))
+        common = sorted(set(a) & set(b))
+        delta = [b[c] - a[c] for c in common]
+        if len(delta) > 1:
+            diffs.append(f"{judge} judge {statistics.mean(delta):+.3f} ± {statistics.stdev(delta) / len(delta) ** 0.5:.3f} "
+                         f"({len(common)} cases)")
+    head = ("<tr><th>Run</th><th>n</th><th>Key points<br>MiMo / Luna</th><th>Unsupported<br>MiMo / Luna</th>"
+            "<th>Evidence seen</th><th>Median latency</th><th>Cost / question</th><th>Answers using a new filter</th>"
+            "<th>grep calls with no match</th></tr>")
+    return (f"<table>{head}{''.join(body)}</table><p>Key points, difference per case (after − before, mean ± standard "
+            f"error): {'; '.join(diffs)}.</p>")
+
+
+def health_table(label: str) -> str:
+    """Failed tool calls per tool of a labelled run (agentic.health)."""
+    from agentic.health import tool_health
+
+    rows = experiment_rows(label)
+    if not rows:
+        return ""
+    body = "".join(
+        f"<tr><td><code>{tool}</code></td><td>{h['calls']:,}</td><td>{h['failed']:,}</td><td>{h['rate']:.0%}</td>"
+        f"<td>{html.escape(', '.join(f'{k} {v}' for k, v in h['reasons'].items()) or '–')}</td>"
+        f"<td>{'above threshold' if h['flag'] else ''}</td></tr>"
+        for tool, h in tool_health(rows).items())
+    return ("<table><tr><th>Tool</th><th>Calls</th><th>Failed</th><th>Rate</th><th>Reasons</th><th></th></tr>"
+            f"{body}</table>")
+
+
+def latest_coverage() -> dict | None:
+    files = sorted(RESULTS_DIR.glob("coverage-*.json"))
+    return json.loads(files[-1].read_text(encoding="utf-8")) | {"file": files[-1].name} if files else None
+
+
+def coverage_table(coverage: dict) -> str:
+    rows = "".join(
+        f"<tr><td>{html.escape(kommun)}</td><td>{t['plans']}</td><td>{t['plans_with_a_pdf'] / t['plans']:.0%}</td>"
+        f"<td>{t['plans_complete'] / t['plans']:.0%}</td><td>{t['pdfs_found'] / max(t['pdfs'], 1):.0%}</td></tr>"
+        for kommun, t in sorted(coverage["by_kommun"].items()))
+    total = coverage["total"]
+    rows += (f"<tr><td><b>All</b></td><td><b>{total['plans']}</b></td><td><b>{total['plans_with_a_pdf']:.0%}</b></td>"
+             f"<td><b>{total['plans_complete']:.0%}</b></td><td><b>{total['pdfs_found']:.0%}</b></td></tr>")
+    return ("<table><tr><th>Municipality</th><th>Plans sampled</th><th>At least one PDF in the corpus</th>"
+            f"<th>All its PDFs</th><th>PDFs found</th></tr>{rows}</table>")
+
+
+def coverage_gaps(coverage: dict) -> str:
+    """Why the listed PDFs are missing (agentic.coverage CAUSES, per municipality) and the leads they point to."""
+    from agentic.coverage import CAUSES
+
+    missing = coverage["total"].get("missing")
+    if not missing:
+        return ""
+    worst = lambda cause: ", ".join(f"{html.escape(k)} {t['missing'][cause]}" for k, t in sorted(
+        coverage["by_kommun"].items(), key=lambda item: -item[1].get("missing", {}).get(cause, 0))
+        if t.get("missing", {}).get(cause))
+    causes = "".join(f"<li><b>{n} PDF{'' if n == 1 else 's'}</b>: {html.escape(CAUSES[cause])}. {worst(cause)}.</li>"
+                     for cause, n in missing.items())
+    map_only = sum("map" in note for note in coverage.get("unmeasured", {}).values())
+    sampled = coverage["total"]["municipalities"] + coverage["total"].get("unmeasured", 0)
+    return f"""<p>Why the {sum(missing.values())} missing PDFs are missing, read from each municipality's crawl record:</p>
+<ul>{causes}</ul>
+<p>The crawler handles the first two causes since October 2026: a plan page at the last depth still gives the plan
+pages it links, and every PDF of a plan page that is not off topic is taken, whatever its name; a copy of a kept
+document counts as found. The
+{map_only} of {sampled} sampled
+municipalities that publish their plans only in a map or search application need another source: Lantmäteriet's
+national access to digital detailed plans or the municipality's plan layers (WMS / WFS), which also give the plan
+boundaries (address → plan); otherwise, a browser agent driving the map application, used as a crawler: once per
+municipality it lists the plans and their document links, which the crawler then downloads (a one-off cost per
+municipality; at answer time it would be slow, costly and fragile).</p>"""
+
+
 def stratum(case: dict) -> str:
     """The expected outcome, as in bench.sample_cases: refused / granted / open (remitted, depends on facts)."""
     verdicts = set(case["verdicts"])
@@ -606,7 +796,11 @@ def build_html() -> str:
     sample = sample_cases(list(caselaw), 50)
     rulings = list(read_jsonl(DATA_DIR / "raw" / "caselaw" / "mod.jsonl"))
     relevant = sum(1 for r in rulings if r.get("relevant"))
-    plans = sum(1 for _ in (DATA_DIR / "plans.jsonl").open(encoding="utf-8")) if (DATA_DIR / "plans.jsonl").exists() else 0
+    # The runs of this report searched the corpus of 2026-10-22, kept as the data/small snapshot (the crawl of
+    # 2026-10-23 is ~5x larger and not benchmarked yet)
+    bench_corpus = RESULTS_ROOT / "small" / "corpus"
+    plans_path = (bench_corpus if (bench_corpus / "plans.jsonl").exists() else DATA_DIR) / "plans.jsonl"
+    plans = sum(1 for _ in plans_path.open(encoding="utf-8")) if plans_path.exists() else 0
     plans_n = f"{plans:,}" if LANG == "en" else f"{plans:,}".replace(",", " ")
     cases_label = {"cases14": tr("14 cas", "14 cases"), "mod": "MÖD", "plans": "plankarta"}
 
@@ -695,6 +889,10 @@ def build_html() -> str:
     regression = regression_table(runs, new_rows)
     agreement = judge_agreement()
     experiment_table_html = experiment_table()
+    bugfix_html = bugfix_table()
+    health_html = health_table("toolfix")
+    filters_html = filters_table()
+    coverage = latest_coverage()
     seed_cases = list(read_jsonl(CASES_PATH.parent / "cases_tasks.jsonl")) if (CASES_PATH.parent / "cases_tasks.jsonl").exists() else []
     gen_cases = (list(read_jsonl(CASES_PATH.parent / "cases_generated.jsonl"))
                  if (CASES_PATH.parent / "cases_generated.jsonl").exists() else [])
@@ -850,7 +1048,8 @@ and one streamed final answer.</td><td>Exploration effort <i>low</i> / <i>medium
 <i>high</i>; on the plankarta cases, ablations without the map tools</td></tr>
 </table>
 <p>Both answer in the same format (verdict, key rules with [c:id] citations, process, uncertainties) and search the same
-corpus: the full disk store (15 statutes, the crawled websites of the municipalities, {plans_n} indexed detailed plans).</p>
+corpus: the full disk store (15 statutes, the crawled websites of the municipalities, {plans_n} indexed detailed plans),
+as of 2026-10-22. The larger crawl of 2026-10-23 (about five times the documents) is not benchmarked yet.</p>
 
 <h3>1.2 Benchmark sets</h3>
 <table>
@@ -1000,7 +1199,62 @@ MiMo, +0.5 for Luna (CI −0.0 to +1.0). <b>Adopted</b> as the default prompt.</
 showed that a stronger writer covers more but invents more, and the budget did not allow measuring them properly.</li>
 </ul>
 <p>Two runs were cut by the machine (memory) and finished from their saved results; latencies are with the query
-embedding on the CPU. One pass per configuration: differences below ~0.05 are within the noise of a single pass.</p>""" if experiment_table_html else "") + f"""
+embedding on the CPU. One pass per configuration: differences below ~0.05 are within the noise of a single pass.</p>""" if experiment_table_html else "") + (f"""
+<h3>2.10 Bug round (2026-10-22)</h3>
+<p>The scores of the previous sections hid tool failures: they show what the answer covers, not what the agent tried
+and did not get. Reading the tool calls of the 1,108 stored agent answers found these bugs (fixed, with tests in
+<code>tests/test_tools.py</code>, <code>tests/test_agent_images.py</code>):</p>
+<ul>
+<li><b><code>read</code> failed on the id as printed</b>: tool outputs tag chunks <code>[c:&lt;id&gt;]</code> and the agent
+passed <code>c:&lt;id&gt;</code> back; 1,845 reads returned nothing, in 57 % of the answers, and 88 % of them were never
+retried, so the agent answered without the passage it had chosen to read. <code>read</code> now takes the id in every
+form the model writes (with <code>c:</code> or brackets, a doc id, a truncated id).</li>
+<li><b>Statute chapters filed under the previous chapter</b>: a chapter heading wrapped onto two lines, “10 Kap.” with a
+capital K, a bare “14 kap.” line: MB 4 kap. (national interests), JB 7 / 10 / 11 kap., FBL 1 / 14 kap., MPF 4 kap.,
+PBF 7 kap. had wrong chapter headers, so <code>law_section</code> did not find them (~70 calls returned nothing). The
+text and the chunk ids were right: headers fixed and the affected chunks re-embedded.</li>
+<li><b>Municipality-filtered queries scanned the whole table</b> (<code>kind != 'law'</code> does not use the index):
+~0.7 s per query, ~2.3 s per answer. <b><code>grep</code> without a municipality</b> ran a regex over the whole corpus
+(12–28 s); it now needs a municipality or the statutes.</li>
+<li><b>Every image was sent again on each later turn</b> (plan map crops, PDF pages): it now goes with the next model
+call only, and the agent is told to write down what it reads.</li>
+<li><b>Miscopied citation ids</b> (~1 % of the cited ids, wrong after the first characters) left the claim without a
+source in the chat and for the judge: they now resolve to the chunk shown to the agent with the longest common prefix.</li>
+<li><b>Garbled titles</b> (UTF-8 read as Latin-1 by the crawler: “fÃ¶r”) on ~285 documents of 15 municipalities:
+repaired at extraction, and these municipalities crawled again (their links were scored on garbled words).</li>
+</ul>
+<p>Same 52 dev cases, before and after (MiMo judge in the run, Luna judge with <code>agentic.rejudge</code>):</p>
+{bugfix_html}
+<p>The failures are gone and the agent is faster (median answer 64 → 39 s, first token 54 → 25 s) and better grounded
+(unsupported claims for the Luna judge 1.96 → 1.45 per answer), at the same cost. Key points did not move: the agent
+made up for the failed calls with more searches, so the bugs cost time and grounding rather than coverage. The results
+of sections 2.1–2.9 were measured with these bugs: their latencies are ~20–30 s too high and their unsupported claims
+too high; comparisons between configurations stay valid (all had the same bugs).</p>
+<p>Failed tool calls of the run after the fixes (<code>agentic.health</code>, printed by every benchmark run since):</p>
+{health_html}
+<p><code>plan_rules</code> fails on plans whose map was not crawled or has no text layer (no provision extracted:
+<code>no_data</code>): a data gap, not a tool bug.</p>""" if bugfix_html else "") + (f"""
+<h3>2.11 Coverage of the municipalities' plans</h3>
+<p>All the benchmarks above are built from documents of the corpus, so a plan the crawl never fetched cannot appear in
+them and its absence costs nothing in their scores. This benchmark starts outside the corpus: for {coverage['total']['municipalities'] + coverage['total'].get('unmeasured', 0)}
+sampled municipalities (small, medium and large), their own list of plans in force, fetched live
+({coverage['total']['reference_fetched']}), and for up to 20 listed plans the PDFs the plan page links to
+(<code>agentic.coverage</code>). Score: the share of those plans and PDFs found in the corpus (matched by URL).</p>
+{coverage_table(coverage)}
+<p>{coverage['total'].get('unmeasured', 0)} municipalities could not be measured: their list page links to no plan
+(they publish their plans in a map or search application, out of reach of a crawler), or was unreachable:
+{html.escape(', '.join(f'{k} ({v})' for k, v in sorted(coverage.get('unmeasured', {}).items())))}. For them the
+corpus has at most the plans linked elsewhere on the site. File: <code>{coverage['file']}</code>.</p>
+{coverage_gaps(coverage)}""" if coverage else "") + (f"""
+<h3>2.12 Document filters in the agent tools</h3>
+<p>The larger corpus makes a kommun's search results a mix of plans, comprehensive plans, permit pages and
+administration. <code>search</code>, <code>grep</code> and <code>list_documents</code> now take document types and a
+title filter, applied before ranking; <code>grep</code> can list the documents that match instead of the passages, and
+<code>list_documents</code> pages through long lists. The agent is told about them in three lines of its tool guide.
+Same dev set and protocol as section 2.10 (52 cases × 3 passes, MiMo judge in the run, Luna re-judging), same corpus
+(2026-10-22), so the difference is the tools and those three lines.</p>
+{filters_html}
+<p>{FILTERS_READING}</p>""" if filters_html else "") + f"""
 
 <h2>3. Reading the results</h2>
 <ul>
@@ -1060,7 +1314,8 @@ OCR local (EasyOCR) pour les PDF scannés</td></tr>
 <tr><td>Registre des détaljplaner</td><td>{plans_n} plans : statut, date de laga kraft, plankarta / planbeskrivning,
 planbestämmelser extraites (byggnadsarea, nockhöjd, fastighetsstorlek…)</td><td>Règles, sans LLM</td></tr>
 </table>
-<p>Au total 344 199 passages (chunks) dans 31 497 documents, 275 communes représentées. Recherche : embeddings locaux
+<p>Au total 344 199 passages (chunks) dans 31 497 documents, 275 communes représentées (corpus du 22 octobre, celui des
+runs de ce rapport ; le crawl du 23 octobre l'a quintuplé). Recherche : embeddings locaux
 <code>snowflake-arctic-embed-l-v2</code> (choisi sur un banc de recherche : 0,92 de rappel@5) + BM25 sur les racines suédoises
 (SQLite FTS5), fusion RRF, filtre par commune ; le tout sur disque (SQLite + vecteurs sur GPU, ~0,1 s par recherche).</p>
 
@@ -1196,7 +1451,8 @@ les cas MÖD refusés.</li>
 <li><b>Banc</b> : utiliser les {len(caselaw)} cas MÖD (échantillons de 50, 2 passages) pour chaque changement de prompt ou de
 modèle ; ajouter des cas « plankarta seulement », maintenant que les PDF scannés sont océrisés, une fois la lecture des
 cartes en place.</li>
-<li><b>Corpus</b> : l'OCR des 769 PDF scannés est fait (leur texte entre dans l'index à la prochaine reconstruction) ;
+<li><b>Corpus</b> : le crawl d'octobre a quintuplé le corpus, qui n'est pas encore évalué par ces bancs ; l'OCR de ses
+PDF scannés (PP-OCRv6, avec la position des mots) est en cours, leur texte entre dans l'index à la reconstruction suivante ;
 ensuite, relier chaque code de plan à sa zone sur la carte (modèle de vision), et chaque parcelle à son plan applicable
 (WMS des communes / Lantmäteriet).</li>
 <li><b>Juge</b> : faire relire un échantillon de notes par une personne du domaine pour calibrer le juge LLM.</li>

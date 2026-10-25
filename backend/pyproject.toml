@@ -40,6 +40,7 @@ local = [
     "PyStemmer>=2.2.0",
     "pymupdf>=1.24.0",
     "trafilatura>=1.12.0",
-    "httpx>=0.27.0",
+    "httpx[http2]>=0.27.0",  # the crawler uses HTTP/2
+    "truststore>=0.10.0",  # crawler TLS: the OS certificate store fetches missing intermediates
     "lxml>=5.0.0",
 ]

@@ -26,11 +26,11 @@ from agentic.bench import CASES_PATH, JUDGE_INSTRUCTIONS, TASK_JUDGE_INSTRUCTION
 from agentic.cases_from_caselaw import INSTRUCTIONS as CASE_INSTRUCTIONS
 from agentic.cases_from_corpus import IDEAS, INSTRUCTIONS as TASK_CASE_INSTRUCTIONS, REVIEW
 from agentic.grounding import INSTRUCTIONS as GROUNDING_INSTRUCTIONS
-from corpus.common import DATA_DIR, LAWS_DIR, WEB_DIR, read_jsonl
+from corpus.common import DATA_DIR, INDEX_DIR, LAWS_DIR, RESULTS_ROOT, WEB_DIR, read_jsonl
 
 OUTPUT_NAMES = {"fr": "pyrmit_rapport_technique", "en": "pyrmit_technical_report"}
-STORE = DATA_DIR.parent / "index" / "store" / "st-arctic-l-v2" / "corpus.sqlite"
-EVAL_DIR = DATA_DIR.parent / "eval"
+STORE = INDEX_DIR / "store" / "st-arctic-l-v2" / "corpus.sqlite"
+EVAL_DIR = RESULTS_ROOT / "eval"
 LANG = "en"
 
 
@@ -79,7 +79,34 @@ def corpus_stats() -> dict:
     stats["crawl"].update(pages=sum(d.get("pages", 0) for d in done), pdfs=sum(d.get("pdfs", 0) for d in done),
                           pdf_gb=round(sum(d.get("pdf_mb", 0) for d in done) / 1024, 1),
                           requests=sum(d.get("requests", 0) for d in done))
-    stats["ocr"] = len(list(WEB_DIR.glob("*/ocr/*.json")))
+    # The current caps (crawl.py defaults): the done lines keep the caps of each kommun's last full crawl
+    from corpus.crawl import MAX_PAGES as cap_pages, MAX_PDF_MB as cap_mb, MAX_PDFS as cap_pdfs, MAX_REQUESTS as cap_requests
+    skipped = Counter()
+    for d in done:
+        skipped.update(d.get("skipped") or {})
+    names = {m["code"]: m["short_name"] for m in json.loads((DATA_DIR / "municipalities.json").read_text(encoding="utf-8"))}
+    stats["crawl"].update(
+        cap_pages=cap_pages, cap_pdfs=cap_pdfs, cap_mb=cap_mb, cap_requests=cap_requests,
+        at_pdf_cap=sum(1 for d in done if d.get("max_pdfs") and d.get("pdfs", 0) >= d["max_pdfs"]),
+        at_request_cap=sum(1 for d in done if d.get("max_requests") and d.get("requests", 0) >= d["max_requests"]),
+        skipped=dict(skipped),
+        empty=sorted(names.get(p.parent.name, p.parent.name) for p, d in zip(manifests, [
+            json.loads(m.read_text(encoding="utf-8").strip().splitlines()[-1]) for m in manifests])
+            if d.get("done") and d.get("pages", 0) + d.get("pdfs", 0) == 0),
+        missing=sorted(name for code, name in names.items() if not (WEB_DIR / code / "manifest.jsonl").exists()))
+    from corpus.ocr import ENGINE_FAMILY, JOBS_PATH
+    stats["ocr"] = 0  # outputs of PP-OCRv6 (EasyOCR outputs of earlier runs are redone)
+    for path in WEB_DIR.glob("*/ocr/*.json"):
+        with path.open("rb") as handle:
+            stats["ocr"] += ENGINE_FAMILY.encode() in handle.read(200)
+    stats["ocr_jobs"] = sum(1 for _ in JOBS_PATH.open(encoding="utf-8")) if JOBS_PATH.exists() else 0
+    documents = DATA_DIR / "documents.jsonl"
+    stats["needs_ocr"] = sum(1 for line in documents.open(encoding="utf-8") if '"needs_ocr": true' in line)         if documents.exists() else 0
+    from corpus.pdf_filter import DECISIONS_PATH, FEATURES_PATH
+    chars = {row["doc_id"]: row["chars"] for row in read_jsonl(FEATURES_PATH)} if FEATURES_PATH.exists() else {}
+    dropped = [d["doc_id"] for d in read_jsonl(DECISIONS_PATH) if d["keep"] is False] if DECISIONS_PATH.exists() else []
+    stats["pdf_dropped"] = len(dropped)
+    stats["pdf_dropped_share"] = f"{sum(chars.get(i, 0) for i in dropped) / max(sum(chars.values()), 1):.1%}"
     plans_path = DATA_DIR / "plans.jsonl"
     plans = [json.loads(line) for line in plans_path.open(encoding="utf-8")] if plans_path.exists() else []
     stats["plans"] = len(plans)
@@ -92,7 +119,7 @@ def corpus_stats() -> dict:
     stats["caselaw_cases"] = len(caselaw)
     stats["caselaw_evidence"] = sum(1 for case in caselaw if case["evidence"])
     stats["caselaw_kommuner"] = len({code for case in caselaw for code in case["kommun"]})
-    candidates = report.DATA_DIR.parent / "agentic" / "plan_cases" / "candidates.json"
+    candidates = RESULTS_ROOT / "agentic" / "plan_cases" / "candidates.json"
     stats["plan_candidates"] = len(json.loads(candidates.read_text(encoding="utf-8"))) if candidates.exists() else 0
     stats["municipalities"] = len(json.loads((DATA_DIR / "municipalities.json").read_text(encoding="utf-8")))
     return stats
@@ -106,10 +133,13 @@ RETRIEVAL_ROWS = [  # (model | setup) rows of localrag.eval worth showing, in th
 
 
 def retrieval_table() -> str:
+    """The model / setup comparison (October runs on the corpus of their time): runs on the national corpus
+    ("corpus": "data") are left to corpus_table, they would mix corpora in one table."""
     latest: dict[str, dict] = {}
-    for path in sorted(EVAL_DIR.glob("*.json")):
-        summary = json.loads(path.read_text(encoding="utf-8")).get("summary", {})
-        latest.update(summary)
+    for path in sorted(EVAL_DIR.glob("2*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("corpus") != "data":
+            latest.update(data.get("summary", {}))
     rows = []
     for key in RETRIEVAL_ROWS:
         if key not in latest:
@@ -122,6 +152,216 @@ def retrieval_table() -> str:
     head = tr("<tr><th>Modèle</th><th>Réglage</th><th>R@1</th><th>R@5</th><th>R@10</th><th>Complet@5</th><th>MRR</th></tr>",
               "<tr><th>Model</th><th>Setup</th><th>R@1</th><th>R@5</th><th>R@10</th><th>Complete@5</th><th>MRR</th></tr>")
     return f"<table>{head}{''.join(rows)}</table>"
+
+
+def corpus_table() -> str:
+    """The same questions on the 2026-10-22 corpus (data/small) and on the national one (data): latest run of each,
+    with the recall@5 of the municipal passages apart (the statutes are the same in both)."""
+    from localrag.eval import QUESTIONS_PATH, is_law_matcher
+
+    runs = {}
+    for path in sorted(EVAL_DIR.glob("2*.json")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("corpus") in ("small", "data"):
+            runs[data["corpus"]] = data
+    if len(runs) < 2:
+        return ""
+    questions = {q["id"]: q for q in read_jsonl(QUESTIONS_PATH)}
+    rows = []
+    for setup in runs["data"]["summary"]:
+        for corpus, name in (("small", tr("22 octobre", "2026-10-22")), ("data", tr("national", "national"))):
+            m, details = runs[corpus]["summary"].get(setup), runs[corpus]["details"].get(setup, [])
+            if not m:
+                continue
+            local = [rank is not None and rank <= 5 for row in details
+                     for matcher, rank in zip(questions[row["id"]]["relevant"], row["ranks"]) if not is_law_matcher(matcher)]
+            rows.append(f"<tr><td>{esc(setup.split(' | ')[1])}</td><td>{name}</td>"
+                        + "".join(f"<td>{report.fmt(m[k])}</td>" for k in ("recall@1", "recall@5", "complete@5"))
+                        + f"<td>{report.fmt(sum(local) / max(len(local), 1))}</td></tr>")
+    head = tr("<tr><th>Réglage</th><th>Corpus</th><th>R@1</th><th>R@5</th><th>Complet@5</th><th>R@5 documents communaux</th></tr>",
+              "<tr><th>Setup</th><th>Corpus</th><th>R@1</th><th>R@5</th><th>Complete@5</th><th>R@5 municipal passages</th></tr>")
+    return f"<table>{head}{''.join(rows)}</table>"
+
+
+def design_choices(s: dict) -> str:
+    """Section 5.1: the technical choices that shape what the system can answer: the current setting, why, and its
+    effect (the history of a choice belongs in the commit messages, not here)."""
+    from agentic.tools import READ_LIMIT, SNIPPET
+    from corpus.crawl import KEEP_SCORE
+    from corpus.ocr import TIERS
+
+    c = s["crawl"]
+    empty = ", ".join(c["empty"] + c["missing"]) or "none"
+    skipped = ", ".join(f"{k.replace('_', ' ')} {v}" for k, v in c["skipped"].items()) or "–"
+    coverage = report.latest_coverage()
+    if coverage:
+        sampled = coverage["total"]["municipalities"] + len(coverage.get("unmeasured", {}))
+        map_only = f"{sum('map' in note for note in coverage['unmeasured'].values())} of {sampled}"
+    else:
+        map_only = "several of those"
+    missing = (coverage or {}).get("total", {}).get("missing", {})
+    crawl_gaps = (f"Of the plan PDFs the sampled municipalities list, {missing.get('page_not_crawled', 0)} sit on plan "
+                  "pages never crawled (most likely one link past the depth limit) and "
+                  f"{missing.get('link_not_taken', 0)} are linked under a name "
+                  "without a plan word (\"Lagakraftbevis\", a place name) and not taken (benchmark report 2.11); "
+                  "the crawler now follows a plan page's plan pages one level past the limit and takes every PDF "
+                  "of a plan page that is not off topic. "
+                  if missing else "")
+    rows = [
+        ("Crawl", "Page selection",
+         f"Keyword score on URL + title ≥ {KEEP_SCORE} (<code>KEEP_SCORE</code>, <code>_KEYWORDS</code>); news, schools, "
+         "care, culture, minutes and e-services skipped (<code>_NEGATIVE</code>); links followed on the same score, "
+         "but a negative word in a long link text does not hide an on-topic section (<code>link_relevance</code>); "
+         "the home page's site index (Webbkarta, A–Ö) is followed",
+         "Municipal websites are mostly off-topic; a fixed budget per municipality. Menu cards mix topics "
+         "(“Bygglov, … detaljplaner, … livsmedel”) and some menus are built in JavaScript",
+         "Rules published on a page whose URL and title carry no planning word are missing; council minutes and "
+         "local decisions are not in the corpus, so the agent has no local precedents"),
+        ("Crawl", "Budget per municipality",
+         f"{c['cap_pages']} pages, {c['cap_pdfs']} PDFs, {c['cap_mb']} MB per PDF, {c['cap_requests']} requests, "
+         "depth 4 (pages at the last depth still give their PDF links); one site section ≤ 1/5 of the pages",
+         "1 request/s per site: the budget sets the crawl time (one night for the country). Large municipalities "
+         "publish 1,000–3,000 PDFs; the section quota keeps a plan archive from using the whole budget",
+         f"{c['at_pdf_cap']} municipalities at the PDF cap, {c['at_request_cap']} at the request cap: their "
+         "remaining plans are missing and the agent reports “no plan found” for places that have one"),
+        ("Crawl", "Which PDFs",
+         "Linked from a relevant page, with a topic word or a plan hint in the link; only obvious noise is skipped "
+         "(<code>off_topic_pdf</code>: annual reports, alcohol licences, estate notices…, unless a plan word), "
+         "and each skipped link is recorded; one copy per URL (http/https, www) and per content hash",
+         "A word list cannot judge relevance: meeting notices carry planning decisions, waste rooms are a "
+         "building-permit topic, template titles lie (“Kallelse” on a planuppdrag decision). The real decision "
+         "is the relevance filter below, with a second opinion",
+         f"Skipped by this crawl: {skipped}"),
+        ("Filter", "PDF relevance",
+         "Rules on title, file name and link text (plan words win), then a logistic regression on arctic vectors "
+         "of those fields + the first 700 characters; every proposed drop goes to MiMo Flash (“keep when in "
+         "doubt”) or a manual review (<code>corpus/pdf_filter.py</code>, <code>pdf_review.jsonl</code>)",
+         "The large crawl brings municipal administration (HR policies, fees under the Environmental Code, "
+         "flag rules…). Losing a useful document costs more than keeping noise: the LLM kept ~1/3 of the drops "
+         "proposed by the rules or the model",
+         f"{num(s['pdf_dropped'])} PDFs dropped ({s['pdf_dropped_share']} of the PDF text), each confirmed by the "
+         "LLM or a review; borderline documents (energy plans, committee packs) stay"),
+        ("Crawl", "Politeness and failures",
+         "robots.txt (with Google's * and $), 1 request/s per host, a user agent naming the project; a "
+         "municipality that returns nothing keeps its previous crawl",
+         "Public sites, no load on them; a site down on the crawl day must not empty a municipality",
+         f"Municipalities without data: {esc(empty)} (site blocking this crawler, down or unreachable)"),
+        ("Crawl", "What a crawler cannot reach",
+         "HTML links only: no JavaScript, no map or search application",
+         "A browser-based crawl is slower and heavier; map services need one integration per vendor",
+         "Sites whose navigation is built in JavaScript (Jönköping, Lidingö's plan documents) and municipalities that "
+         f"publish their plans only in a map or search application ({map_only} sampled for the coverage benchmark, "
+         "benchmark report 2.11) are covered only through the pages that link documents directly. "
+         f"{esc(crawl_gaps)}Next: the national plan register or the municipal map services (section 3.3); otherwise a "
+         "browser agent that lists, once per municipality, the plans of its map application for the crawler"),
+        ("Extraction", "PDF text",
+         "PyMuPDF text layer, repeated headers / footers removed; &lt; 150 characters per page = scanned, OCR by "
+         f"PP-OCRv6 medium (recognition cut to the Latin characters, detection input 1280 px; text pages at 300 dpi and "
+         f"maps at 200, word boxes kept), every page, in this order: {'; '.join(f'{k} {v.split(' (')[0]}' for k, v in TIERS.items())}; "
+         "no topic filter here (the relevance filter decides)",
+         "Free on the local GPU; best of the engines measured on old plan scans (OCR benchmark: 87 % of the words and "
+         "8 of 13 property labels read on map crops, 69 % and 0 for EasyOCR); word boxes let the agent find a "
+         "property label on a scanned map",
+         f"{num(s['needs_ocr'])} scanned PDFs without OCR have no text: invisible to search and grep. Most are old "
+         "plans, whose rules are printed on the map itself, and old planbeskrivningar. Tables and map legends lose "
+         "their layout"),
+        ("Extraction", "Document type",
+         "First matching keyword in URL, link text, title, start of text (<code>doc_type</code>)",
+         "Cheap, transparent",
+         "A <code>doc_types</code> filter in search / grep / list_documents can miss a misclassified plan; a scan "
+         "without OCR has no text to classify on, so many old plan documents are typed “other”"),
+        ("Chunking", "Statutes",
+         "One chunk per § (lettered § separate), a chapter only on its own line; transitional provisions dropped; "
+         "a § with a future version is indexed twice",
+         "A § is the unit lawyers cite; references wrapped after “kap.” must not open a chapter",
+         "The agent cannot cite transitional rules (which version applies to an application filed before an "
+         "amendment); it may cite a version not yet in force"),
+        ("Chunking", "Documents",
+         "~1,500 characters on paragraph boundaries, a short previous paragraph repeated, header = municipality + "
+         "title + section heading; identical chunks kept once in the whole corpus",
+         "Fits the embedding model; standard plan wording would otherwise flood the results",
+         "A rule split over two chunks needs two reads; standard wording is citable from one plan only (~2 % of "
+         "plan provisions point to another chunk of the same map)"),
+        ("Retrieval", "Search",
+         "Snowflake arctic-embed-l-v2 on the Swedish query + BM25 on Swedish stems, fused (RRF), k = 8 (max 15), "
+         f"{SNIPPET}-character snippets; <code>read</code> returns up to {READ_LIMIT:,} characters",
+         "Best recall on the retrieval eval (section 6); BM25 brings exact names and numbers",
+         "The agent sees snippets first and must read to get the full rule; plan numbers and property labels "
+         "are found by grep / BM25, not by the embedding"),
+        ("Retrieval", "Place → municipality",
+         "Wikidata names and localities ∪ place names found in the corpus; the municipality named outright first",
+         "No property register (Lantmäteriet) yet",
+         "A place name shared by two municipalities can send the search to the wrong one (“Kårsta”: Vallentuna and "
+         "Örebro)"),
+        ("Agent", "Model and budget",
+         "GPT-6 Luna, exploration and answer at medium effort, at most 10 steps, the last one forced to "
+         "<code>answer_ready</code>",
+         "Chosen on the benchmark (accuracy first, then cost and time)",
+         "A question needing more than ~10 steps is answered with what was found; an image (map, page) is seen "
+         "for one step only, then only the agent's notes remain"),
+        ("Agent", "Answer format",
+         "Mode chosen by the agent (verdict / explain / propose / develop); every rule cited; “complete answer”",
+         "Benchmark report, section 2.9",
+         "Long answers; ~1.5 unsupported claims per answer remain (Luna judge)"),
+        ("Plans", "Plan registry",
+         "Rule-based: plans grouped by file name, status from URLs and text, provisions from coded lines",
+         "No national digital plan register in the corpus",
+         "Which map area carries which code is not extracted: per-zone rules need <code>view_map_area</code>, which "
+         "finds the property label in the text layer, or on a scan in the words the OCR located"),
+        ("Serving", "Timeouts",
+         "LLM call 180 s, 1 retry; SSE keep-alive every 10 s; the browser reloads after 45 s of silence",
+         "A stalled provider must not hold a worker or freeze the chat",
+         "An answer can take a few minutes in the worst case; it is never lost (saved by the worker)"),
+    ]
+    head = "<tr><th>Stage</th><th>Choice</th><th>Setting (code)</th><th>Why</th><th>Effect on the answers</th></tr>"
+    return "<table class='small'>" + head + "".join(
+        f"<tr><td>{a}</td><td><b>{b}</b></td><td>{c_}</td><td>{d}</td><td>{e}</td></tr>" for a, b, c_, d, e in rows) + "</table>"
+
+
+def verification_html() -> str:
+    """Section 7.10: the checks added after the bug round of 2026-10-22, with their latest results."""
+    check_path = DATA_DIR / "check.json"
+    check = json.loads(check_path.read_text(encoding="utf-8")) if check_path.exists() else None
+    replays = sorted((RESULTS_ROOT / "agentic").glob("replay-*.json"))
+    replay = json.loads(replays[-1].read_text(encoding="utf-8")) if replays else None
+    coverage = report.latest_coverage()
+    check_line = (f"Last run {check['checked_at'][:10]}: {check['errors']} errors, {check['warnings']} warnings."
+                  if check else "Not run yet.")
+    replay_line = (f"Last run: {sum(replay['calls'].values()):,} distinct stored calls, "
+                   f"{sum(replay['violations'].values())} failed on something the corpus has, "
+                   f"{sum(replay['stale'].values())} on ids that left the corpus since."
+                   if replay else "Not run yet.")
+    coverage_line = (f"Last run: {coverage['total']['plans']} plans of {coverage['total']['municipalities']} "
+                     f"municipalities, {coverage['total']['plans_with_a_pdf']:.0%} with at least one PDF in the corpus, "
+                     f"{coverage['total']['pdfs_found']:.0%} of their PDFs; {coverage['total'].get('unmeasured', 0)} "
+                     "municipalities publish their plans only in a map or search application (benchmark report, 2.11)."
+                     if coverage else "Not run yet.")
+    return f"""<h3>7.10 Verifying the system</h3>
+<p>The bugs found on 2026-10-22 (benchmark report, 2.10) had passed the unit tests and the benchmarks: the tests fed
+the tools the inputs we imagined, the benchmarks scored the final answer (the agent worked around failed calls), and the
+data were judged on totals (a median hid twenty empty municipalities). Four checks now look at what the system really
+does; they cost nothing (no LLM call).</p>
+<table>
+<tr><th>Check</th><th>What it catches</th><th>When</th><th>Latest result</th></tr>
+<tr><td><b>Data checks</b><br><code>python -m corpus.check</code></td><td>Municipalities with no or few documents, at a
+cap, or that lost half their items since the last check; PDFs no manifest references; garbled titles, replacement
+characters, script artefacts, off-topic or duplicate documents, the OCR backlog; statute sections out of order and
+chapter headings without chunks; chunks without a vector, a store behind <code>chunks.jsonl</code>; plans without any
+document. Exit code 1 on an error.</td><td>After every rebuild</td><td>{check_line}</td></tr>
+<tr><td><b>Tool health</b><br><code>agentic.health</code></td><td>Tool calls that returned nothing usable, per tool and
+reason (<code>ToolResult.error</code>: unknown_id, bad_args, not_found, no_data, exception), with a threshold per
+tool</td><td>Printed by every benchmark run; table in the benchmark report</td><td>Benchmark report, 2.10</td></tr>
+<tr><td><b>Replay</b><br><code>python -m agentic.replay</code>, <code>tests/test_replay.py</code></td><td>Every distinct
+call the agent made in the stored runs, replayed on the current corpus: no exception, a read of an id the corpus has
+succeeds whatever the form it was written in, a law_section of a section the corpus has succeeds</td><td>In the test
+suite (sample of 1,500 calls) and after a rebuild</td><td>{replay_line}</td></tr>
+<tr><td><b>Coverage</b><br><code>python -m agentic.coverage</code></td><td>What the corpus misses: the share of the plans a
+municipality lists (fetched live) whose documents are in the corpus</td><td>After a crawl; re-fetch the reference
+when sites change</td><td>{coverage_line}</td></tr>
+</table>
+<p>The app's <b>Pipeline</b> view shows these measurements per corpus-building step (collect, filter, OCR, index, plan
+registry, search tools), each with what the step does, how it is measured and the cases behind every check
+({code('routers/pipeline.py')}); the Benchmark view grades the answers end to end.</p>"""
 
 
 def prompt_block(text: str) -> str:
@@ -137,6 +377,7 @@ td code, li code, p code { white-space: nowrap; }
 .toc { columns: 2; font-size: 9pt; margin: 6pt 0 10pt; } .toc div { margin: 1pt 0; }
 .case { break-inside: auto; }
 img.crop { max-width: 60%; max-height: 300px; border: 1px solid #e5e7eb; border-radius: 4pt; margin: 6pt 0 2pt; }
+table.small { font-size: 7.8pt; } table.small td code { white-space: normal; }
 </style>"""
 
 
@@ -157,6 +398,7 @@ def build_html() -> str:
     judge_prompt, grounding_prompt = prompt_block(JUDGE_INSTRUCTIONS), prompt_block(GROUNDING_INSTRUCTIONS)
     case_prompt = prompt_block(CASE_INSTRUCTIONS)
     retrieval = retrieval_table()
+    corpus_retrieval = corpus_table()
     by_key = {(r["cases"], r["system"], r["explore"], r["answer"], r["ablation"]): r for r in runs}
     overview = report.overview_table([
         (name, [by_key.get((key, "rag", "–", "medium", "")), by_key.get((key, "agent", "medium", "medium", ""))])
@@ -210,7 +452,7 @@ def build_html() -> str:
     plan_example = ""
     if plan_cases:
         case = plan_cases[0]
-        image = report.DATA_DIR.parent / "agentic" / "plan_cases" / case.get("image", "")
+        image = RESULTS_ROOT / "agentic" / "plan_cases" / case.get("image", "")
         figure = (f"<img class='crop' src='data:image/png;base64,{base64.b64encode(image.read_bytes()).decode()}' "
                   f"alt='plan map crop'><p class='n'>{esc(case.get('source', ''))}</p>") if image.is_file() else ""
         plan_example = figure + report.examples_html(runs, "plans", [case])
@@ -297,7 +539,8 @@ LAV, FMH…)</td><td>Official consolidated text with amendment markers; free API
 fees, plans, comprehensive plans</td><td>Local rules and detailed plans are published by each municipality; no national
 full-text source</td><td>{code('corpus/crawl.py')} (<code>content_relevance</code>, <code>crawl</code>)</td><td>Public
 web pages; robots.txt honoured, 1 request/s per host</td></tr>
-<tr><td>Local OCR (EasyOCR, GPU)</td><td>Text of {num(s['ocr'])} scanned PDFs (old plan maps)</td><td>Old plans have no
+<tr><td>Local OCR (PP-OCRv6, GPU)</td><td>Text and word positions of the scanned PDFs (mostly old plan maps): {num(s['ocr'])} of
+{num(s['ocr_jobs'])} read so far</td><td>Old plans have no
 text layer</td><td>{code('corpus/ocr.py')}</td><td>Local processing</td></tr>
 <tr><td>Plan registry (derived)</td><td>{num(s['plans'])} plans, {num(s['plans_with_rules'])} with
 {num(s['provisions'])} extracted provisions</td><td>Agent needs plans as entities with status and rules</td>
@@ -310,11 +553,11 @@ protection; lagen.nu allows the ruling pages in robots.txt</td></tr>
 <h3>3.1 Statute versions in the corpus</h3>
 <table><tr><th>Statute</th><th>Consolidated up to</th><th>Downloaded</th></tr>{laws_rows}</table>
 <h3>3.2 Crawl</h3>
-<p>{c['kommuner']} municipalities crawled between {c['first']} and {c['last']} ({num(c['requests'])} requests). The
+<p>{c['kommuner']} municipalities crawled {f"on {c['first']}" if c['first'] == c['last'] else f"between {c['first']} and {c['last']}"} ({num(c['requests'])} requests). The
 crawler starts from each official website, follows links scored by topic keywords (building permits, plans, sewage,
 fees; negative keywords for unrelated sections), keeps pages with a relevance score ≥ 4 (<code>KEEP_SCORE</code>), PDFs
-linked from relevant pages, and caps each municipality (300 pages, 150 PDFs, 40 MB per PDF, 1,500 requests, depth 4,
-per-section quotas). Text is extracted with PyMuPDF block by block, repeated headers and footers removed
+linked from relevant pages, and caps each municipality ({c['cap_pages']} pages, {c['cap_pdfs']} PDFs,
+{c['cap_mb']} MB per PDF, {c['cap_requests']} requests, depth 4, per-section quotas). Text is extracted with PyMuPDF block by block, repeated headers and footers removed
 ({code('corpus/extract.py')} <code>page_blocks</code>, <code>strip_boilerplate</code>), each document classified
 (<code>doc_type</code>: {doc_types}).</p>
 <p>Corpus served by the app: {num(s.get('chunks', 0))} chunks in {num(s.get('docs', 0))} documents,
@@ -331,7 +574,15 @@ detect amendments before the consolidated text is updated.</li>
 nature; Boverket's guidance (PBL kunskapsbanken). Would turn spatial questions (“is my plot within 100 m of the
 shore?”) into data lookups.</li>
 <li><b>Municipal plan services</b> (WMS / plan registers): many municipalities publish plan boundaries as map services;
-combined with an address or property, they give the applicable plan.</li>
+combined with an address or property, they give the applicable plan. They are also the only door to the plans of the
+municipalities that publish them in a map or search application and nowhere else (about a third of the coverage
+sample).
+Access, formats and terms per service not checked yet.</li>
+<li><b>Map applications, through a browser agent used as a crawler</b>: where no service can be queried, an agent
+driving a browser (computer use) can open the municipality's map application once, list its plans and their document
+links, and hand them to the crawler, which downloads them like any other PDF. A one-off cost per municipality (a third
+of the coverage sample publishes its plans this way), repeated when the site changes. Used at answer time instead, it
+would be slow, costly per question and fragile.</li>
 </ul>
 
 <h2>4. Keeping the data current</h2>
@@ -375,7 +626,7 @@ yields drop).</li>
 <tr><td>Municipalities</td><td>Wikidata SPARQL → codes, websites, localities</td><td>{code('corpus/municipalities.py')}</td></tr>
 <tr><td>Statutes</td><td>Riksdagen API → raw text per SFS</td><td>{code('corpus/laws.py')}</td></tr>
 <tr><td>Crawl</td><td>Async, robots.txt, 1 req/s/host, topic scoring, caps, resumable manifests</td><td>{code('corpus/crawl.py')}</td></tr>
-<tr><td>OCR</td><td>EasyOCR sv+en on GPU, tiled pages, plans first</td><td>{code('corpus/ocr.py')}</td></tr>
+<tr><td>OCR</td><td>PP-OCRv6 medium (RapidOCR, DirectML), tiled pages, word boxes, plans first</td><td>{code('corpus/ocr.py')}</td></tr>
 <tr><td>Extraction</td><td>PyMuPDF blocks, boilerplate removal, doc types, OCR text when needed</td><td>{code('corpus/extract.py')}</td></tr>
 <tr><td>Chunking</td><td>One chunk per statute section (chapters only on their own line, lettered §, transitional
 provisions dropped); ~1,500-char document chunks; corpus-wide dedup; ids = hash(doc, index, text)</td>
@@ -387,7 +638,8 @@ vectors (memmap → GPU)</td><td>{code('localrag/store.py')} (<code>build</code>
 <tr><td>Plan registry</td><td>Plans, status, provisions tied to chunks</td><td>{code('corpus/plans.py')}</td></tr>
 <tr><td>Place → municipality</td><td>Wikidata names and localities ∪ corpus place names</td><td>{code('localrag/gazetteer.py')}</td></tr>
 <tr><td>Agent tools</td><td>find_kommun, search (hybrid RRF), grep, list_documents, read, law_section, plans, plan_rules,
-view_pdf_page; every output tagged with [c:chunk_id]</td><td>{code('agentic/tools.py')} (<code>CorpusTools</code>,
+view_map_area (also on OCRed scans), view_pdf_page; search / grep / list_documents filter on document types and
+title, grep can list the matching documents; every output tagged with [c:chunk_id]</td><td>{code('agentic/tools.py')} (<code>CorpusTools</code>,
 <code>TOOL_SCHEMAS</code>)</td></tr>
 <tr><td>Agent loop</td><td>Responses API tool loop: exploration turns at <code>explore_effort</code>, parallel tool
 calls, <code>answer_ready</code>, streamed final answer at <code>effort</code>, step budget</td><td>{code('agentic/agent.py')}
@@ -400,6 +652,12 @@ calls, <code>answer_ready</code>, streamed final answer at <code>effort</code>, 
 <p><b>Grounding by construction.</b> Tool outputs carry chunk ids; the answer format requires a [c:id] for every rule,
 number, fee or deadline, and forbids stating what was not read in a tool result. The chat replaces ids by numbers while
 streaming and attaches, for each number, the cited chunks (pipeline event <code>citations</code>).</p>
+
+<h3>5.1 Technical choices that shape the answers</h3>
+<p>Each choice below limits what the agent can find or say. They are listed with their current setting (read from the
+code and the crawl manifests when this report is generated), the reason, and the visible effect, so that a wrong or
+missing answer can be traced to one of them.</p>
+{design_choices(s)}
 
 <h2>6. Retrieval evaluation</h2>
 <p>{code('localrag/eval.py')} on {code('localrag/questions.jsonl')}: 45 use-case questions (permits, plans, sewage, fees,
@@ -414,6 +672,12 @@ bge-reranker-v2-m3.</p>
 API models (arctic-embed-l-v2: 0.92 recall@5); BM25 on English queries is useless on a Swedish corpus; neither BM25
 fusion nor the reranker beat dense retrieval on the Swedish query. The agent still uses hybrid search because exact
 wording (plan names, “20 meter”) matters inside its tool calls.</p>
+{f'''<p><b>National corpus</b>: the same questions on the corpus of 2026-10-22 and on the national one (arctic-embed-l-v2;
+<i>hybrid-sv-stem</i> = the agent's search, BM25 on Swedish stems). The four municipalities of the questions have three
+times more passages (18.8k → 59.7k with the statutes); no expected passage left the corpus, but some fall below the top
+5 (ranks 7 to 12), outranked by other documents of the same municipality. The statute misses are the same in both
+corpora: the loss is in the municipal documents.</p>
+{corpus_retrieval}''' if corpus_retrieval else ''}
 
 <h2>7. Evaluation: how the benchmarks are built and scored</h2>
 <p>Four benchmark sets, each built to answer a different question. All cases share one format (one JSON line per case):
@@ -638,6 +902,8 @@ and the options the judge finds, sourced or not. Judge prompt for propose ({code
 {propose_judge_prompt}
 {task_examples}
 
+{verification_html()}
+
 <h2>8. Results summary</h2>
 <p>Classic RAG and the agent at its default setting (exploration medium, answer medium) on the three sets; all
 configurations, charts and the reading of the results are in the benchmark report.</p>
@@ -765,7 +1031,8 @@ MB, JB, FBL, LAV, FMH…)</td><td>Texte consolidé officiel avec marqueurs de mo
 assainissement, taxes, plans, plans d'ensemble</td><td>Les règles locales et les plans détaillés sont publiés par chaque
 commune ; pas de source nationale en texte intégral</td><td>{code('corpus/crawl.py')} (<code>content_relevance</code>,
 <code>crawl</code>)</td><td>Pages publiques ; robots.txt respecté, 1 requête/s par site</td></tr>
-<tr><td>OCR local (EasyOCR, GPU)</td><td>Texte de {num(s['ocr'])} PDF scannés (anciennes plankartor)</td><td>Les vieux plans
+<tr><td>OCR local (PP-OCRv6, GPU)</td><td>Texte et position des mots des PDF scannés (surtout d'anciennes plankartor) : {num(s['ocr'])}
+sur {num(s['ocr_jobs'])} lus à ce jour</td><td>Les vieux plans
 n'ont pas de couche texte</td><td>{code('corpus/ocr.py')}</td><td>Traitement local</td></tr>
 <tr><td>Registre des plans (dérivé)</td><td>{num(s['plans'])} plans, dont {num(s['plans_with_rules'])} avec
 {num(s['provisions'])} prescriptions extraites</td><td>L'agent a besoin des plans comme entités, avec statut et règles</td>
@@ -778,7 +1045,7 @@ par le droit d'auteur ; le robots.txt de lagen.nu autorise les pages d'arrêts</
 <h3>3.1 Versions des lois dans le corpus</h3>
 <table><tr><th>Texte</th><th>Consolidé jusqu'à</th><th>Téléchargé le</th></tr>{laws_rows}</table>
 <h3>3.2 Crawl</h3>
-<p>{c['kommuner']} communes crawlées entre le {c['first']} et le {c['last']} ({num(c['requests'])} requêtes). Le crawler
+<p>{c['kommuner']} communes crawlées {f"le {c['first']}" if c['first'] == c['last'] else f"entre le {c['first']} et le {c['last']}"} ({num(c['requests'])} requêtes). Le crawler
 part du site officiel, suit les liens notés par mots-clés thématiques (permis, plans, assainissement, taxes ; mots-clés
 négatifs pour les rubriques hors sujet), garde les pages de score ≥ 4 (<code>KEEP_SCORE</code>), les PDF liés depuis des
 pages pertinentes, et plafonne chaque commune (300 pages, 150 PDF, 40 Mo par PDF, 1 500 requêtes, profondeur 4, quotas
@@ -799,7 +1066,14 @@ pour détecter une modification avant la mise à jour du texte consolidé.</li>
 guides de Boverket (PBL kunskapsbanken). Elles transformeraient les questions spatiales (« ma parcelle est-elle à moins de
 100 m du rivage ? ») en simples consultations de données.</li>
 <li><b>Services de plans des communes</b> (WMS / registres de plans) : beaucoup de communes publient les périmètres des plans
-en service cartographique ; avec une adresse ou une parcelle, on obtient le plan applicable.</li>
+en service cartographique ; avec une adresse ou une parcelle, on obtient le plan applicable. C'est aussi le seul accès
+aux plans des communes qui ne les publient que dans une carte ou un outil de recherche (environ un tiers de
+l'échantillon de couverture). Accès, formats et conditions par service pas encore vérifiés.</li>
+<li><b>Cartes interactives, via un agent navigateur utilisé comme crawler</b> : quand aucun service n'est
+interrogeable, un agent qui pilote un navigateur peut ouvrir une fois la carte de la commune, lister ses plans et les
+liens de leurs documents, et les passer au crawler, qui les télécharge comme les autres PDF. Un coût ponctuel par commune
+(un tiers de l'échantillon de couverture publie ses plans ainsi), à refaire quand le site change. Utilisé au moment de
+répondre, il serait lent, coûteux à chaque question et fragile.</li>
 </ul>
 
 <h2>4. Garder les données à jour</h2>
@@ -843,7 +1117,7 @@ change (chute du nombre de pages récupérées).</li>
 <tr><td>Communes</td><td>SPARQL Wikidata → codes, sites, localités</td><td>{code('corpus/municipalities.py')}</td></tr>
 <tr><td>Lois</td><td>API du Riksdag → texte brut par SFS</td><td>{code('corpus/laws.py')}</td></tr>
 <tr><td>Crawl</td><td>Asynchrone, robots.txt, 1 req/s/site, score thématique, plafonds, manifestes reprenables</td><td>{code('corpus/crawl.py')}</td></tr>
-<tr><td>OCR</td><td>EasyOCR sv+en sur GPU, pages en tuiles, plans d'abord</td><td>{code('corpus/ocr.py')}</td></tr>
+<tr><td>OCR</td><td>PP-OCRv6 medium (RapidOCR, DirectML), pages en tuiles, position des mots, plans d'abord</td><td>{code('corpus/ocr.py')}</td></tr>
 <tr><td>Extraction</td><td>Blocs PyMuPDF, retrait des en-têtes, types de documents, texte OCR si besoin</td><td>{code('corpus/extract.py')}</td></tr>
 <tr><td>Découpage</td><td>Un passage par article de loi (chapitre seulement sur sa propre ligne, § à lettre, dispositions
 transitoires retirées) ; passages de ~1 500 caractères pour les documents ; dédoublonnage global ; id = hash(doc, rang,
@@ -856,7 +1130,8 @@ vecteurs float16 (memmap → GPU)</td><td>{code('localrag/store.py')} (<code>bui
 <tr><td>Registre des plans</td><td>Plans, statut, prescriptions reliées aux passages</td><td>{code('corpus/plans.py')}</td></tr>
 <tr><td>Lieu → commune</td><td>Noms et localités Wikidata ∪ noms de lieux du corpus</td><td>{code('localrag/gazetteer.py')}</td></tr>
 <tr><td>Outils de l'agent</td><td>find_kommun, search (hybride RRF), grep, list_documents, read, law_section, plans,
-plan_rules, view_pdf_page ; chaque sortie marquée [c:chunk_id]</td><td>{code('agentic/tools.py')} (<code>CorpusTools</code>,
+plan_rules, view_map_area (aussi sur les scans océrisés), view_pdf_page ; search / grep / list_documents filtrent par
+type de document et par titre, grep peut lister les documents concernés ; chaque sortie marquée [c:chunk_id]</td><td>{code('agentic/tools.py')} (<code>CorpusTools</code>,
 <code>TOOL_SCHEMAS</code>)</td></tr>
 <tr><td>Boucle de l'agent</td><td>Boucle d'outils (Responses API) : tours d'exploration à <code>explore_effort</code>, appels
 en parallèle, <code>answer_ready</code>, réponse finale streamée à <code>effort</code>, budget de tours</td>
@@ -885,6 +1160,12 @@ modèles ouverts locaux égalent les modèles d'API (arctic-embed-l-v2 : 0,92 de
 ne sert à rien sur un corpus suédois ; ni la fusion BM25 ni le reranker ne battent la recherche dense sur la question
 suédoise. L'agent garde la recherche hybride, car la formulation exacte (noms de plans, « 20 meter ») compte dans ses
 appels d'outils.</p>
+{f'''<p><b>Corpus national</b> : les mêmes questions sur le corpus du 22 octobre et sur le corpus national (arctic-embed-l-v2 ;
+<i>hybrid-sv-stem</i> = la recherche de l'agent, BM25 sur les racines suédoises). Les quatre communes des questions ont trois
+fois plus de passages (18,8 k → 59,7 k avec les lois) ; aucun passage attendu n'a quitté le corpus, mais certains sortent
+des 5 premiers (rangs 7 à 12), dépassés par d'autres documents de la même commune. Les ratés sur les lois sont les mêmes
+dans les deux corpus : la perte porte sur les documents communaux.</p>
+{corpus_retrieval}''' if corpus_retrieval else ''}
 
 <h2>7. Évaluation de l'agent : méthodologie détaillée</h2>
 <h3>7.1 Jeux de cas</h3>

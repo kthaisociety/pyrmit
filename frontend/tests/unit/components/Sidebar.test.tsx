@@ -18,6 +18,7 @@ function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> = {}) {
     onOpenSettings: vi.fn(),
     onOpenDatabase: vi.fn(),
     onOpenBenchmark: vi.fn(),
+    onOpenPipeline: vi.fn(),
     ...overrides,
   };
   render(<Sidebar {...props} />);

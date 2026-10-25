@@ -7,6 +7,7 @@ import Sidebar from '@/components/Sidebar';
 import Settings from '@/components/Settings';
 import DatabaseBrowser from '@/components/DatabaseBrowser';
 import BenchmarkBrowser from '@/components/BenchmarkBrowser';
+import PipelineBrowser from '@/components/PipelineBrowser';
 import SidebarToggle from '@/components/SidebarToggle';
 import { authFetch, clearAccessToken, getStoredAccessToken } from '@/lib/auth';
 
@@ -21,7 +22,7 @@ export default function Home() {
   const [refreshSidebarTrigger, setRefreshSidebarTrigger] = useState(0);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<'chat' | 'settings' | 'database' | 'benchmark'>('chat');
+  const [view, setView] = useState<'chat' | 'settings' | 'database' | 'benchmark' | 'pipeline'>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const router = useRouter();
 
@@ -101,6 +102,7 @@ export default function Home() {
         onOpenSettings={() => setView('settings')}
         onOpenDatabase={() => setView('database')}
         onOpenBenchmark={() => setView('benchmark')}
+        onOpenPipeline={() => setView('pipeline')}
       />}
 
       <main className="flex-1 flex flex-col h-full relative min-w-0">
@@ -119,6 +121,8 @@ export default function Home() {
           <DatabaseBrowser onBack={() => setView('chat')} />
         ) : view === 'benchmark' ? (
           <BenchmarkBrowser onBack={() => setView('chat')} />
+        ) : view === 'pipeline' ? (
+          <PipelineBrowser onBack={() => setView('chat')} />
         ) : (
           <Chat
             sessionId={currentSessionId}

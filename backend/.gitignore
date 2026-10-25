@@ -3,6 +3,9 @@ __pycache__/
 *$py.class
 .env
 .venv
+.venv-ocr/
+.venv-ocr-cuda/
+*.pid
 env/
 venv/
 

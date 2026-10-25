@@ -96,7 +96,30 @@ def build(model: str) -> None:
         memmap[start:start + len(block)] = block.astype(np.float16)
     memmap.flush()
     (out / "meta.json").write_text(json.dumps({"model": model, "chunks": len(kept)}))
+    summary(out)
     print(f"Store: {len(kept)} chunks -> {out} ({time.perf_counter() - started:.0f}s)")
+
+
+def summary(directory: Path) -> list[dict]:
+    """Documents and chunks per kommun and document type, for the Database and Pipeline views. Cached in
+    summary.json next to the store: the GROUP BY reads all 1.9M rows (~30 s)."""
+    path, database = directory / "summary.json", directory / "corpus.sqlite"
+    stamp = database.stat().st_mtime
+    try:
+        cached = json.loads(path.read_text(encoding="utf-8"))
+        if cached.get("sqlite_mtime") == stamp:
+            return cached["rows"]
+    except (OSError, ValueError):
+        pass
+    connection = sqlite3.connect(f"file:{database}?mode=ro", uri=True)
+    rows = [{"kommun_code": code, "kommun": kommun, "kind": kind, "doc_type": doc_type, "documents": documents,
+             "chunks": chunks}
+            for code, kommun, kind, doc_type, documents, chunks in connection.execute(
+                "SELECT kommun_code, kommun, kind, doc_type, COUNT(DISTINCT doc_id), COUNT(*) FROM chunks "
+                "WHERE kind != 'law' GROUP BY kommun_code, kind, doc_type")]
+    connection.close()
+    path.write_text(json.dumps({"sqlite_mtime": stamp, "rows": rows}, ensure_ascii=False), encoding="utf-8")
+    return rows
 
 
 def _regexp(pattern: str, value: str | None) -> bool:
@@ -135,6 +158,7 @@ class DiskStore:
             raise FileNotFoundError(f"No store for {model}: run `python -m localrag.store --model {model}`")
         self.vectors = np.load(self.dir / "vectors.npy", mmap_mode="r")
         self._local = threading.local()
+        self._masks: dict[tuple, np.ndarray] = {}  # local_mask cache
         self.gpu = self._to_gpu()
 
     def _to_gpu(self):
@@ -163,6 +187,9 @@ class DiskStore:
     def query(self, sql: str, params: tuple = ()) -> list:
         return self.connection.execute(sql, params).fetchall()
 
+    def summary(self) -> list[dict]:
+        return summary(self.dir)
+
     def chunks_by_rowid(self, rowids: list[int]) -> dict[int, dict]:
         if not rowids:
             return {}
@@ -180,16 +207,40 @@ class DiskStore:
             chunk["chunk_index"] = int(chunk["chunk_index"])
         return chunk
 
-    def pool_rowids(self, pool: str, kommuner: list[str] | None) -> np.ndarray | None:
-        """Row ids of a pool; None = the whole local pool (too big to list, scanned in blocks)."""
+    def pool_rowids(self, pool: str, kommuner: list[str] | None, doc_types: list[str] | None = None,
+                    title_contains: str | None = None) -> np.ndarray | None:
+        """Row ids of a pool; None = the whole local pool (too big to list, scanned in blocks; its document
+        filters go through local_mask)."""
         if pool == "law":
             return np.array([r[0] for r in self.query("SELECT rowid FROM chunks WHERE kind = 'law'")], dtype=np.int64)
         if not kommuner:
             return None
         # kind IN, not kind != 'law': SQLite then uses the (kind, kommun_code) index
         sql = (f"SELECT rowid FROM chunks WHERE kind IN ('page', 'pdf') "
-               f"AND kommun_code IN ({','.join('?' * len(kommuner))})")
-        return np.array([r[0] for r in self.query(sql, tuple(kommuner))], dtype=np.int64)
+               f"AND kommun_code IN ({','.join('?' * len(kommuner))})") + self._filter_sql(doc_types, title_contains)
+        return np.array([r[0] for r in self.query(sql, (*kommuner, *(doc_types or []),
+                                                        *([f"%{title_contains}%"] if title_contains else [])))],
+                        dtype=np.int64)
+
+    @staticmethod
+    def _filter_sql(doc_types: list[str] | None, title_contains: str | None) -> str:
+        return ((f" AND doc_type IN ({','.join('?' * len(doc_types))})" if doc_types else "")
+                + (" AND title LIKE ?" if title_contains else ""))
+
+    def local_mask(self, doc_types: list[str] | None, title_contains: str | None) -> np.ndarray | None:
+        """Rows of the whole local pool passing the document filters (a full scan, ~2 s: cached per filter)."""
+        if not doc_types and not title_contains:
+            return None
+        key = (tuple(sorted(doc_types or [])), title_contains or "")
+        if key not in self._masks:
+            mask = np.zeros(self.vectors.shape[0], dtype=bool)
+            sql = "SELECT rowid FROM chunks WHERE kind != 'law'" + self._filter_sql(doc_types, title_contains)
+            params = (*(doc_types or []), *([f"%{title_contains}%"] if title_contains else []))
+            mask[[r[0] for r in self.query(sql, params)]] = True
+            if len(self._masks) >= 16:
+                self._masks.pop(next(iter(self._masks)))
+            self._masks[key] = mask
+        return self._masks[key]
 
     def _law_mask(self) -> np.ndarray:
         if not hasattr(self, "_law_rows"):
@@ -198,7 +249,10 @@ class DiskStore:
             self._law_rows = mask
         return self._law_rows
 
-    def dense_top(self, vector: np.ndarray, rowids: np.ndarray | None, n: int) -> list[int]:
+    def dense_top(self, vector: np.ndarray, rowids: np.ndarray | None, n: int, keep: np.ndarray | None = None) -> list[int]:
+        """Top n rows by dot product among `rowids`, or among the whole local pool (laws out; `keep`: rows passing
+        the document filters, see local_mask)."""
+        excluded = self._law_mask() if keep is None else ~keep
         if self.gpu is not None:
             import torch
 
@@ -211,8 +265,9 @@ class DiskStore:
                 top = torch.topk(scores.float(), min(n, len(rowids))).indices.cpu().numpy()
                 return [int(rowids[i]) for i in top]
             scores = (self.gpu @ query_gpu).float()
-            scores[torch.from_numpy(self._law_mask()).cuda()] = -float("inf")
-            return [int(i) for i in torch.topk(scores, n).indices.cpu().numpy()]
+            scores[torch.from_numpy(excluded).cuda()] = -float("inf")
+            top = torch.topk(scores, min(n, int((~excluded).sum()))).indices.cpu().numpy()
+            return [int(i) for i in top]
         query = vector.astype(np.float32)
         if rowids is not None:
             if len(rowids) == 0:
@@ -220,18 +275,18 @@ class DiskStore:
             rowids = np.sort(rowids)
             scores = self.vectors[rowids].astype(np.float32) @ query
             return [int(rowids[i]) for i in np.argsort(-scores)[:n]]
-        # Unfiltered local pool: stream the memmap in blocks, laws masked out
-        law = self._law_mask()
+        # Whole local pool: stream the memmap in blocks, laws (and filtered-out rows) masked out
         best: list[tuple[float, int]] = []
         for start in range(0, self.vectors.shape[0], 50000):
             scores = self.vectors[start:start + 50000].astype(np.float32) @ query
-            scores[law[start:start + len(scores)]] = -np.inf
+            scores[excluded[start:start + len(scores)]] = -np.inf
             top = np.argpartition(-scores, min(n, len(scores) - 1))[:n]
-            best.extend((float(scores[i]), start + int(i)) for i in top)
+            best.extend((float(scores[i]), start + int(i)) for i in top if scores[i] > -np.inf)
         best.sort(reverse=True)
         return [rowid for _, rowid in best[:n]]
 
-    def bm25_top(self, query: str, pool: str, kommuner: list[str] | None, n: int) -> list[int]:
+    def bm25_top(self, query: str, pool: str, kommuner: list[str] | None, n: int, doc_types: list[str] | None = None,
+                 title_contains: str | None = None) -> list[int]:
         tokens = [t for t in dict.fromkeys(analyze(query, "stem")) if t.isalnum()]
         if not tokens:
             return []
@@ -242,6 +297,12 @@ class DiskStore:
             match = f"({terms}) AND ({' OR '.join(f'zzk{code}' for code in kommuner)})"
         else:
             return []  # whole local corpus: common terms match ~100k chunks, too slow to score; dense covers it
+        if pool != "law" and (doc_types or title_contains):
+            sql = ("SELECT f.rowid FROM chunks_fts f JOIN chunks c ON c.rowid = f.rowid WHERE chunks_fts MATCH ?"
+                   + self._filter_sql(doc_types, title_contains).replace(" doc_type", " c.doc_type")
+                   .replace(" title", " c.title") + " ORDER BY bm25(chunks_fts) LIMIT ?")
+            params = (match, *(doc_types or []), *([f"%{title_contains}%"] if title_contains else []), n)
+            return [r[0] for r in self.query(sql, params)]
         sql = "SELECT rowid FROM chunks_fts WHERE chunks_fts MATCH ? ORDER BY bm25(chunks_fts) LIMIT ?"
         return [r[0] for r in self.query(sql, (match, n))]
 
@@ -259,7 +320,8 @@ class DiskRetriever:
 
     def search(self, query: str, query_sv: str | None = None, k: int = 5, mode: str = "dense",
                kommuner: list[str] | None | str = "auto", dense_lang: str = "sv", candidates: int = 50,
-               rerank: bool = False, bm25_mode: str | None = None) -> dict:
+               rerank: bool = False, bm25_mode: str | None = None, doc_types: list[str] | None = None,
+               title_contains: str | None = None) -> dict:
         if kommuner == "auto":
             kommuner = list(dict.fromkeys(detect_kommuner(query, query_sv or "") +
                                           self.places.detect(query, query_sv or "")))
@@ -269,10 +331,12 @@ class DiskRetriever:
         vectors = [v / max(np.linalg.norm(v), 1e-12) for v in vectors]
         results: dict = {}
         for pool in ("law", "local"):
-            rowids = self.store.pool_rowids(pool, kommuner or None)
-            rankings = [self.store.dense_top(v, rowids, candidates) for v in vectors]
+            filters = (doc_types, title_contains) if pool == "local" else (None, None)
+            rowids = self.store.pool_rowids(pool, kommuner or None, *filters)
+            keep = self.store.local_mask(*filters) if pool == "local" and rowids is None else None
+            rankings = [self.store.dense_top(v, rowids, candidates, keep) for v in vectors]
             if mode in ("bm25", "hybrid"):
-                rankings.append(self.store.bm25_top(query_sv or query, pool, kommuner or None, candidates))
+                rankings.append(self.store.bm25_top(query_sv or query, pool, kommuner or None, candidates, *filters))
             fused: dict[int, float] = {}
             for ranking in rankings:
                 for rank, rowid in enumerate(ranking):

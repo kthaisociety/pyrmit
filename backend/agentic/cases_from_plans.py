@@ -30,10 +30,10 @@ from pathlib import Path
 
 import pymupdf
 
-from corpus.common import DATA_DIR, WEB_DIR
+from corpus.common import DATA_DIR, RESULTS_ROOT, WEB_DIR
 from llm import get_openai_client, get_response_output_text, resolve_model_name
 
-OUT_DIR = DATA_DIR.parent / "agentic" / "plan_cases"
+OUT_DIR = RESULTS_ROOT / "agentic" / "plan_cases"
 CANDIDATES_PATH = OUT_DIR / "candidates.json"
 CASES_PATH = Path(__file__).resolve().parent / "cases_plans.jsonl"
 DEFAULT_MODEL = "openai/gpt-6-luna"

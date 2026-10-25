@@ -53,6 +53,11 @@ def rejoin(paragraphs: list[str]) -> list[str]:
                 paragraph[:1].islower()
                 or last_word in _CONTINUATION_ENDINGS
                 or previous.endswith(("-", ","))
+                # A reference wrapped after "kap." ("... enligt 6 kap." + "35 § 4 miljöbalken ska ..."): the next
+                # line would open a false "35 §" (PBL 5 kap. 11 a §, MBF 18 §, PBF 3 kap. 2 § were cut this way)
+                # A real section after a sentence ending on "... finns i 9 kap." starts with a capital
+                or (re.search(r"(?:^|\s)\d+ ?[a-z]? kap\.$", previous) and not _CHAPTER.match(previous)
+                    and re.match(r"\d+ ?[a-z]? § [\da-zåäö]", paragraph))
                 # A long line without a full stop is wrapped, unless it is a chapter heading: the heading under
                 # it ("4 kap. ... vissa områden" + "Områden som i sin helhet ...") would make it too long to be
                 # recognised, and the whole chapter was filed under the previous one
@@ -98,6 +103,12 @@ def split_long(text: str, max_chars: int) -> list[str]:
             part = part[cut:].strip()
         result.append(part)
     return result
+
+
+def _order(label: str) -> tuple:
+    """'11 a' -> (11, 'a')"""
+    match = re.match(r"(\d+) ?([a-z]?)", label)
+    return int(match.group(1)), match.group(2)
 
 
 def law_chunks(document: dict, max_chars: int) -> list[dict]:
@@ -163,6 +174,11 @@ def law_chunks(document: dict, max_chars: int) -> list[dict]:
             section, section_parts, heading = None, [], None
             continue
         section_match = _SECTION.match(paragraph)
+        # Sections only go forward within a chapter: "1 § 2 b. ..." after 11 a § is a wrapped reference
+        if (section_match and section is not None and section_match.group(2)[:1].isdigit()
+                and _order(section_match.group(1)) < _order(section)):
+            section_parts[-1] += " " + paragraph
+            continue
         if section_match:
             flush()
             section, section_parts = section_match.group(1), [section_match.group(2).strip()]
@@ -222,32 +238,40 @@ def main() -> None:
     args = parser.parse_args()
 
     seen_hashes: set[str] = set()
-    rows, duplicates = [], 0
-    for document in read_jsonl(DOCUMENTS_PATH):
-        if not document.get("text"):
-            continue
-        splitter = law_chunks if document["kind"] == "law" else document_chunks
-        for index, chunk in enumerate(splitter(document, args.max_chars)):
-            # The same PDF is often linked from several pages or kommuner: keep one copy
-            digest = hashlib.sha1(" ".join(chunk["text"].split()).lower().encode()).hexdigest()
-            if digest in seen_hashes:
-                duplicates += 1
+    duplicates = laws = 0
+
+    def rows():  # written as they come: the 2026-10-23 corpus (~2M chunks) did not fit in RAM as a list
+        nonlocal duplicates, laws
+        for document in read_jsonl(DOCUMENTS_PATH):
+            if not document.get("text"):
                 continue
-            seen_hashes.add(digest)
-            rows.append({
-                "chunk_id": stable_id(document["doc_id"], str(index), digest),
-                "doc_id": document["doc_id"],
-                "chunk_index": index,
-                "kind": document["kind"],
-                "doc_type": document["doc_type"],
-                "kommun_code": document.get("kommun_code"),
-                "kommun": document.get("kommun"),
-                "title": document["title"],
-                "url": document.get("url"),
-                **chunk,
-            })
-    count = write_jsonl(CHUNKS_PATH, rows)
-    laws = sum(1 for row in rows if row["kind"] == "law")
+            splitter = law_chunks if document["kind"] == "law" else document_chunks
+            for index, chunk in enumerate(splitter(document, args.max_chars)):
+                # The same PDF is often linked from several pages or kommuner: keep one copy
+                digest = hashlib.sha1(" ".join(chunk["text"].split()).lower().encode()).hexdigest()
+                # A statute section is never a duplicate of another one: the same wording in two places (JB 9 and
+                # 10 kap. 3 a §, "Har upphävts" sections) left the second unreachable by law_section until 2026-10-22.
+                # The id keeps the text hash only, so existing ids do not change
+                key = f"{document['doc_id']}|{chunk['section']}|{digest}" if document["kind"] == "law" else digest
+                if key in seen_hashes:
+                    duplicates += 1
+                    continue
+                seen_hashes.add(key)
+                laws += document["kind"] == "law"
+                yield {
+                    "chunk_id": stable_id(document["doc_id"], str(index), digest),
+                    "doc_id": document["doc_id"],
+                    "chunk_index": index,
+                    "kind": document["kind"],
+                    "doc_type": document["doc_type"],
+                    "kommun_code": document.get("kommun_code"),
+                    "kommun": document.get("kommun"),
+                    "title": document["title"],
+                    "url": document.get("url"),
+                    **chunk,
+                }
+
+    count = write_jsonl(CHUNKS_PATH, rows())
     print(f"{count} chunks ({laws} law, {count - laws} other), {duplicates} duplicates dropped -> {CHUNKS_PATH}")
 
 

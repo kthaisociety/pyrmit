@@ -133,13 +133,15 @@ Everything lives in `backend/data/` (gitignored, ~20 GB with PDFs; only `data/ag
 python -m corpus.municipalities   # Wikidata -> data/corpus/municipalities.json (290 kommuner, websites, ~10k localities)
 python -m corpus.laws             # Riksdagen open data -> data/corpus/raw/laws/*.txt (15 consolidated SFS)
 python -m corpus.crawl            # kommun websites -> data/corpus/raw/web/<code>/{pages,pdf,manifest.jsonl}
-python -m corpus.ocr              # optional: local EasyOCR (sv+en, GPU) of PDFs flagged needs_ocr -> raw/web/<code>/ocr/
+python -m corpus.ocr              # PP-OCRv6 (backend/.venv-ocr, GPU) of PDFs flagged needs_ocr -> raw/web/<code>/ocr/
 python -m corpus.extract          # -> data/corpus/documents.jsonl (PyMuPDF text blocks, OCR text when available)
+python -m corpus.pdf_filter features|classify|llm|apply   # relevance filter of the crawled PDFs (see below)
 python -m corpus.chunk            # -> data/corpus/chunks.jsonl (one chunk per law §, ~1500-char doc chunks)
 python -m localrag.index --model st-arctic-l-v2  # embeddings -> data/index/dense/<model>/ (incremental)
 python -m localrag.store --model st-arctic-l-v2  # disk store served by the app: SQLite (chunks, FTS5 BM25, places) + vectors.npy
-python -m localrag.eval --models st-bge-m3 ... # retrieval eval on localrag/questions.jsonl -> data/eval/
+python -m localrag.eval --models st-bge-m3 ... # retrieval eval on localrag/questions.jsonl -> data/eval/ (tagged with the corpus)
 python -m corpus.plans            # detaljplan registry + planbestämmelser -> data/corpus/plans.jsonl (needs the store)
+python -m corpus.check            # data checks after a rebuild (exit 1 on an error); then agentic.replay, agentic.coverage score
 ```
 
 - `corpus.plans` (rule-based, ~30 s): a plan = the detaljplan PDFs of a kommun whose file names reduce to the same
@@ -151,25 +153,139 @@ python -m corpus.plans            # detaljplan registry + planbestämmelser -> d
   Each is tied to its chunk for citation; `corpus.chunk` drops paragraphs repeated across the corpus (standard plan
   wording), so ~2 % fall back to a chunk of the same plankarta (`exact: false`). ~8.2k plans / 260 kommuner, ~1.4k
   with ~15.6k provisions. Which map area carries which code is not extracted (needs the vision model).
-- `corpus.ocr` processes detaljplaner first, short documents first (hours on the GPU for the 769 scanned PDFs);
-  then rerun `corpus.extract`, `corpus.chunk`, `localrag.index`, `localrag.store`, `corpus.plans`.
+- `corpus.ocr` writes the job list (`data/corpus/ocr_jobs.jsonl`) by tier (`TIERS`, `ocr_tier`; a first page larger
+  than A3 = a map; plan documents typed "other" count as plans: `PLAN_WORDS` / the current `doc_type` rules, e.g.
+  Huddinge's "Bestämmelse0126k-7018", Kalix's "_PK" files), every page: 1 plan maps and provisions (~12.5 h, 5.4k
+  PDFs), 2 plan texts (~16 h), 3 other planning types (~4 h), 4 studies attached to plans (~1 h), 5 other (~12 h), ~46 h
+  in all (2026-10-24, 0.66 s per tile); `MAX_TIER = 5` (`--max-tier` stops earlier); short documents first within a
+  tier; outputs of any PP-OCRv6 setting are kept once their cut lines are joined (`"text_from": "words"`), EasyOCR's
+  are redone. Cut lines: a printed line crossing a tile edge is read cut in both tiles; until 2026-10-24 21:00 both
+  were kept whole ("gäller bestämm iller bestämmelsen inom", 2x the repeated word pairs); now each tile gives the
+  line's words of its core (each engine word carries its line number) and `join_cut_lines` glues a word cut by the
+  edge ("byggnads" + "byggnadsarea"); the ~1.4k outputs from before are redone after the unread PDFs of their tier.
+  GPU memory: DirectML keeps the buffers of every input shape it has run (recognition batch widths vary), so one
+  process grew from ~3 to 7 GB of the 8 GB in 2 h, spilled into shared memory and read ~35 % fewer words per second;
+  the worker exits after `RECYCLE_PAGES` (250) pages with `RECYCLE_EXIT` and `corpus.ocr` starts a fresh one (its
+  skip test reads only the first bytes of each output), or sooner when the card's used memory (`nvidia-smi`, all
+  processes) passes `RECYCLE_GPU_MB` (6.5 GB, after `RECYCLE_MIN_PAGES`): text pages took it to 7.4 GB within 250 pages. MuPDF refuses to decode a whole image over its size limit
+  ("Overly large image": a 20674 x 19691 px scan of a 2.6 m Strömstad plankarta, 1 page of the 11k scans) and
+  rendered the page blank; `render` then renders it in 2000 px strips. Speed (2026-10-24, same 24 first-night PDFs: 249 -> 152 s, -39 %, 4 % fewer words):
+  detection input capped at 1280 px (`DET_SIDE`, `--det-side 0` = whole 2000 px tile: same words and labels on the
+  benchmark, 139 vs 140 of 305); recognition cut to its 550 Latin characters (`latin_rec_model`, of 18,710: the
+  multilingual model also reads Chinese...; output layer and metadata character list sliced, made once in
+  `<venv>/fast/`: ~35x less copied to the CPU per batch, same or better accuracy); `speed_up_rapidocr` (detection
+  pre-processing with `cv2.dnn.blobFromImage` instead of float64 numpy, word boxes one matrix product per line:
+  -12.5 % on real plans, identical words). One process (`WORKERS = 1`, `--shard i/n` exists): on real plan pages two
+  were 34 % slower in total (small benchmark crops had shown +28 %: measure on real pages).
+  CUDA (`--cuda`, `backend/.venv-ocr-cuda` with onnxruntime-gpu 1.23 and torch's CUDA 12 / cuDNN 9 DLLs,
+  `use_cuda_dlls`): cuDNN re-plans every convolution (~3 s) whenever an input shape changes, so `FixedShapes` pads
+  inputs to a few fixed shapes, one session each; then no faster than DirectML (0.55 vs 0.51 s per tile) and its
+  float16 models read nothing (overflow): DirectML stays the default and starts `corpus/ocr_engines.py --jobs` in `backend/.venv-ocr`
+  (PP-OCRv6 medium on DirectML; text pages at 300 dpi, pages larger than A3 at 200, 40 pages max). Each
+  `ocr/<pdf id>.json` holds `pages` (text in reading order, what `corpus.extract` uses) and `words` ([page, x0, y0, x1,
+  y1, text, score] in PDF points of the unrotated page, like `get_text("words")`: `view_map_area` finds labels there on
+  scans). Resumable (an output of the same engine is skipped). ~10.5k scanned PDFs / 44k pages at ~1.1 s per 2000 px
+  tile = ~66 h of GPU (5-35 s per plankarta); then rerun `corpus.extract`, the PDF filter, `corpus.chunk`, `localrag.index`, `localrag.store`,
+  `corpus.plans`. It needs the GPU memory the backend's store takes (vectors ~3.9 GB + model): run it with the app
+  stopped. The child process gets no `PYTHONHOME` (the .venv interpreter sets it to its own 3.13 base: inherited,
+  .venv-ocr's 3.12 loaded the 3.13 stdlib, "SRE module mismatch").
 
 - The crawler parses HTML with the charset httpx found (lxml alone read pages without a declared charset as latin-1:
   "fÃ¶r" in titles and link texts, ~285 documents of Haninge, Göteborg, Sala, Tranås...); `corpus.extract` repairs titles
   crawled before (`common.repair_mojibake`). Their pages were also scored on garbled titles when crawled.
-- The crawler honours robots.txt, 1 req/s per host, caps per kommun, resumes (a kommun whose manifest ends with
-  `{"done": true}` is skipped). Pages are kept on topic keywords (`content_relevance`), PDFs when linked from relevant pages.
+- The crawler honours robots.txt (`robots_parser`: Google's `*` / `$`, which urllib.robotparser ignores), 1 req/s per host,
+  caps per kommun, resumes (a kommun whose manifest ends with `{"done": true}` and caps >= the requested ones is skipped).
+  Pages are kept on topic keywords (`content_relevance`); links are followed on `link_relevance` (a negative word in a
+  long link text, e.g. "... livsmedel" in Surahammar's home card, no longer hides an on-topic section) and from the home
+  page also the site index (`_SITE_INDEX`: Webbkarta, A-Ö; Härryda builds its menus in JavaScript); pages at the last
+  depth (4) still give their PDF links (all three fixed 2026-10-23, after a first full crawl that day: Härryda and
+  Surahammar had 0 pages). A page about plans (`_PLAN_PAGE` in its path or title: a plan, a list of plans) at the last
+  depth still gives the plan pages it links (`_PLAN_PAGE` in their path), one level further, and every PDF it links
+  is taken unless `off_topic_pdf` ("Lagakraftbevis", "Protokollsutdrag", "1507-280-torsberg-139-mfl.pdf" have no plan
+  word, some a negative one); elsewhere a plan word in the PDF's name or link text outweighs a negative word (both
+  2026-10-25, from the coverage benchmark's causes; `PDF_LINKS_VERSION` 3). PDFs when linked from relevant pages, minus the obvious noise only
+  (`off_topic_pdf` on file name + link text: annual reports, alcohol licences, estate notices... unless a plan word;
+  each skipped link is recorded in the manifest as `{"type": "skipped_pdf", ...}`, which readers ignore). Everything
+  else is judged by `corpus.pdf_filter` after extraction; `corpus.extract` has no topic test any more (until 2026-10-23
+  a longer list, incl. avfall / kallelse / budget / förskol, dropped 407 PDFs there on the metadata title, one a
+  planuppdrag decision whose template title was "Kallelse", and the crawler skipped 2,176 links unrecorded).
+  `corpus.crawl --revisit` re-reads only the pages that linked a kommun's PDFs, its stored pages and sitemaps, and
+  adds the PDF links its manifest lacks, for manifests whose done line has `pdf_links` < `PDF_LINKS_VERSION`
+  (bump it when the PDF link rules change): ~35k requests for the country instead of ~160k for `--force` (Norrtälje:
+  314 vs 1,174 requests, 11 PDFs added, 7 of them plan investigations). One copy per `url_key` (http/https and www. variants) and per content hash (also deduplicated per kommun in
+  `corpus.extract`). Caps (defaults): 1000 pages, 3000 PDFs, 40 MB per PDF, 15000 requests (2026-10-23; at 1000 PDFs /
+  6000 requests 9 kommuner sat at the cap, at the older 30 PDFs 232 of 286). Göteborg (1480) answered nothing on the
+  2026-10-23 crawl and keeps its old 30-PDF crawl. The manifest is written to
+  `manifest.jsonl.part` and replaces `manifest.jsonl` at the end, unless the crawl got nothing (site down: the previous
+  crawl stays); the done line records caps, `queue_left` and `skipped`. `resolve_root` follows the home redirect (Ängelholm ->
+  engelholm.se; 404 home -> host root; http -> https), `parse_sitemap` survives bad bytes (Luleå), the client uses the
+  Windows certificate store (`truststore`, Högsby) and HTTP/2 (Malmö's HTTP/1.1 headers break h11), `.stockholm` hosts are
+  one site (plans on vaxer.stockholm, permits on bygglov.stockholm). Karlskrona answers 403 to the crawler.
+  Wikidata websites that are wrong are fixed in `municipalities.WEBSITE_FIXES` (Gällivare: gellivare.se no longer
+  answers, gallivare.se). 11 crawled PDFs end without `%%EOF` (7 unreadable, e.g. Västerås "Ärende" plankartor):
+  downloaded again on 2026-10-25, the kommun servers send the same cut file.
+  The technical report (section 5.1, `report_technical.design_choices`) lists these choices with their effect: update it
+  when a setting changes.
 - `corpus.chunk` recognises a chapter only on its own line after a blank line, so wrapped references ("4 kap.
   miljöbalken") don't open chapters; also "10 Kap." (JB) and a bare "14 kap." before its title or its 1 § (FBL), and a
   heading wrapped onto two lines is not glued to the next one (before 2026-10-22: MB 4 kap., JB 7/10/11 kap., FBL 1/14 kap.,
   MPF 4 kap., PBF 7 kap. were filed under the previous chapter; the text and chunk ids did not change); lettered paragraphs (`6 a §`) are separate chunks; transitional provisions dropped.
   Chunk ids include a text hash (not the header): `localrag.index` keeps a digest of each embedded header + text
   (`dense/<model>/digests.json`) and re-embeds in place the chunks whose header changed.
+  Scale (since the 2026-10-23 crawl, ~60k PDFs, ~8x the corpus before): `corpus.extract` and `corpus.chunk` write
+  documents / chunks as they come (the lists took the 16 GB machine's memory); `localrag.index` reads chunks.jsonl
+  twice from disk (count, then batches) and writes into `dense/<model>/vectors.npy` opened as a memmap that grows by
+  steps (`VectorStore._reserve`; rows past `len(ids.json)` are unused room; ids.json is saved every 50k chunks, after
+  the vectors, so an interrupted run resumes). Before, `np.vstack` + `np.save` of the whole matrix after every batch
+  was quadratic. `corpus.plans` still holds the detaljplan texts in RAM (1-2 GB). `tests/test_index.py`.
+- PDF relevance filter (`corpus/pdf_filter.py`, 2026-10-23; data in `data/corpus/pdf_filter/`): the big crawl also
+  brings kommun administration (miljöbalk fees, HR policies, flag rules, meeting packs...). Rules on title / file name /
+  link text (`KEEP` wins over `DROP`; `KEEP_HEAD` on the first page), then a logistic regression on arctic vectors of
+  those fields + the first 700 chars (trained on the rule labels, cached vectors) keeps when p >= 0.85. **No PDF is
+  dropped on a rule or the model alone** (the user's rule: losing a useful document is worse than keeping noise):
+  proposed drops and uncertain PDFs go to MiMo Flash (`llm`, ~$0.0001 each, keeps in doubt), the biggest uncertain ones
+  were reviewed by hand (`corpus/pdf_review.jsonl`, versioned, wins over everything). `corpus.extract` skips the
+  PDFs whose decision is `keep: false`; PDFs without a decision (new crawl) are kept until `features` + `classify`
+  + `llm` + `classify` + `apply` (removes them from documents.jsonl without re-extracting). `llm --check-model N`
+  measures the LLM's agreement with the model on a sample. Error that matters = useful documents dropped:
+  `eval-sample` prints random drops (not the reviewed ones) to label in `corpus/pdf_filter_eval.jsonl` (versioned),
+  `eval` gives the share per decision path with a Wilson interval (2026-10-23: 2/120, both Environmental Code fee
+  schedules, which carry the enskilt avlopp permit fee: `taxa ... miljöbalk` moved from DROP to KEEP, 120 PDFs
+  come back at the next classify). `tests/test_pdf_filter.py`.
+- OCR benchmark (`corpus/ocr_bench.py` + `corpus/ocr_engines.py`, 2026-10-23): `sample` picks plan pages
+  (synthetic = text-layer plankartor / planbeskrivningar rendered at 200 dpi and degraded like a scan, reference =
+  the text layer with word boxes; real = old scans, crops transcribed by hand in `corpus/ocr_reference.jsonl`,
+  versioned, words only), `crops` cuts the real crops, each engine runs from its own environment
+  (`ocr_engines.py --engine easyocr|rapid-v6-small|rapid-v6-medium [--gpu]`, large pages in 2000 px tiles), `score`
+  -> `data/eval/ocr-<date>.json`: words read (bag of words: a map has no reading order), within 1-2 edits, property
+  labels (`\d+:\d+`; also counted when read with "." or ","), words at the right place (synthetic). PP-OCRv6 runs
+  through RapidOCR (ONNX) in `backend/.venv-ocr` (gitignored) on **DirectML** (`onnxruntime-directml`; 0.75 s per
+  2000 px tile with word boxes, 4.8 s on the CPU): `onnxruntime-gpu` failed on its recognition model (cuDNN errors
+  with the CUDA 13 build, an illegal memory access in QuickGelu with the CUDA 12 one). Images in `data/ocr_bench/`.
+  Results 2026-10-23 (real map crops / synthetic maps / synthetic text pages, words read exactly): EasyOCR (used
+  before) 69 / 45 / 92 %, 0 of 13 property labels (the colon of "3:204" comes out as a point); PP-OCRv6 small
+  84 / 49 / 89 %, 6 labels; **medium 87 / 52 / 93 %, 8 labels** (chosen). The synthetic maps' reference is noisy (CAD
+  hatch glyphs, split words); words under 12 px are read 16 % of the time, and neither enlarging the image nor
+  rendering the scans at 300 dpi helped on maps (300 dpi did help the typewritten page: 84 vs 73 %).
+  Speed (2026-10-24, `ocr_engines.py --det-side N`, `-fp16` engines): float16 copies of the models (`fp16_models`,
+  onnxconverter-common installed with --no-deps) are no faster on DirectML; detection ~40 % / recognition ~50 % of a
+  tile's time; capping the detection input at 1280 px -25 % with no loss on synthetic maps, 960 px -36 % (-9 % of the
+  labels), small -32 % (-14 % labels, -5 points on text pages), small + 1280 -50 %. A rented RTX 4090 (~$0.34/h) would
+  do the whole backlog for a few dollars (not tried). `tests/test_ocr_bench.py`.
+- Corpus snapshots: `CORPUS_DATA_DIR` (relative to `backend/`, default `data`) selects the directory holding
+  `corpus/` + `index/`; benchmark results and evals stay in `data/agentic` / `data/eval` (`common.RESULTS_ROOT`).
+  `data/small` = the 2026-10-22 corpus (7.8k PDFs, 349k chunks; for demos / the PoC): `CORPUS_DATA_DIR=data/small`
+  in `.env` serves it. Its `corpus/raw` is a directory junction to `data/corpus/raw` (same PDFs), so
+  `corpus.check --delete-orphan-pdfs` keeps the PDFs any snapshot's documents.jsonl references.
 - `LocalRetriever` searches two pools like the chat (laws / kommun documents). The kommun pool is filtered to the
   kommuner named in the question (`gazetteer.detect_kommuner`, fallback `CorpusPlaces` for places missing from
   Wikidata, e.g. "Veda"). Modes (`LOCAL_RAG_MODE`): dense (default), bm25 (Swedish stems + compound 5-grams),
   hybrid (RRF); optional cross-encoder reranker. Defaults (`localrag/service.py`) follow the eval: arctic-l-v2 on
-  the Swedish query, no BM25 fusion, no reranker (neither beat dense-sv). The app serves from the **disk store**
+  the Swedish query, no BM25 fusion, no reranker (neither beat dense-sv). On the national corpus (2026-10-24, same 45
+  questions, `--allow-missing` counts passages a corpus lacks as misses; `hybrid-sv-stem` = the agent's search) recall@5
+  drops 0.94 -> 0.88 (dense-sv) and 0.89 -> 0.83 (hybrid-sv-stem): the 4 kommuner of the questions have 3x more
+  passages, no expected passage is missing, municipal recall@5 1.00 -> 0.92 (outranked, ranks 7-12), statutes
+  unchanged (0.80). Technical report section 6 (`corpus_table`), Pipeline view. The app serves from the **disk store**
   (`localrag/store.py`, `LOCAL_RAG_STORE=disk` default): chunks + metadata in SQLite, BM25 = FTS5 over pre-stemmed
   text with filter tokens (`zzpoollaw`, `zzk<code>`) so pool/kommun filters are posting-list intersections, vectors
   float16 in a memmap copied block-wise to the GPU (dense search = GPU matmul, ~0.1 s). Rebuild it after
@@ -203,13 +319,23 @@ each model turn and tool call is recorded for the inspector ("Explore (agent)" s
 partial `c:` ids and open `[...]` groups held back until complete, repeats merged); the numbered source list
 ("- [n] label") is appended at the end and a `citations` pipeline event maps each n to its label and cited chunks.
 The answer format asks for the law reference in the sentence and `[c:id]` right after the claim, never nested.
-`read` also takes the id as printed (`c:<id>`, `[c:<id>]`), a doc_id passed as chunk_id, without its `pdf:` / `page:`
+`read` also takes the id as printed (`c:<id>`, `[c:<id>]`, `doc pdf:...` / `doc:pdf:...`), a doc_id passed as chunk_id, without its `pdf:` / `page:`
 prefix or reduced to its hash (`doc_ids_ending`) (before 2026-10-22, 1,845 benchmark reads failed on the `c:` prefix, 88 % never retried); `law_section` takes
 abbreviations (MPF, MBF, LRL...), names without diacritics and '9:4' / '4a §' / '18 c § punkt 1', and points to the
 SFS 2025:974 renumbering when a PBL 9 kap. number is missing; `grep` needs a kommun or scope='law' (a regex over every
 kommun took 12-28 s) and filters on the index; an image (`view_map_area` / `view_pdf_page`) goes with the next model
 call only, then is replaced by a note (`send_images_once` in `agent.py`; the agent is told to write down what it reads); `find_kommun` lists
-the kommun named outright first ("Kårsta, Vallentuna": Örebro also has a Kårsta). Disk-store queries on kommun
+the kommun named outright first ("Kårsta, Vallentuna": Örebro also has a Kårsta). Document filters (2026-10-24; dev
+set on the 2026-10-22 corpus, `bench --label filters` vs `toolfix`, benchmark report 2.12: used in every answer, key
+points +0.026 ± 0.015 per case (MiMo) / +0.065 ± 0.028 (Luna, 41 answers re-judged before the OpenRouter credits ran
+out), 2.1 fewer tool calls, first token +3 s, 5 % of greps empty vs 1 %; kept; not measured on the national corpus):
+`search`, `grep` and `list_documents` take `doc_types` (`tools.DOC_TYPES`; `parse_doc_types` accepts
+a string, commas, "översiktsplan") and `title_contains`, applied before ranking (`DiskStore.pool_rowids` in SQL with a
+kommun; without one a cached row mask, `local_mask`, ~2 s the first time; FTS joined on chunks; `LocalRetriever` masks);
+a document filter leaves the statutes out of grep; `grep(output='documents')` groups the matches per document (most
+first); `list_documents` pages by `offset` (max 100). `view_map_area` on a page without text layer looks the label up
+in the OCR words (`_ocr_words`, `_label_key`: "5.125" / "5,125" read for "5:125", several words in a row) and lists the
+codes the OCR read in the area; not OCRed yet -> no_data. Disk-store queries on kommun
 chunks filter `kind IN LOCAL_KINDS` (page, pdf) so SQLite uses the (kind, kommun_code) index (`kind != 'law'` scanned
 the table, ~0.7 s per query). Robustness: ids of 8-15 hex characters (the model sometimes truncates) resolve by unique prefix
 (`CorpusTools.get_chunk` -> `ids_with_prefix`), unknown ids are dropped (no "?"), and groups are split on ";" (commas
@@ -309,7 +435,51 @@ missing, kommun-filtered SQLite queries scanned the table and every image was re
 (vs `x-v3`): failed reads 2.96 -> 0.32 per answer, answer time 55-71 s -> 33-45 s, first token 46-57 s -> 22-28 s,
 unsupported claims (Luna judge) 1.96 -> 1.45, key points unchanged (MiMo 0.71 -> 0.71, Luna 0.72 -> 0.69). Answers
 cite ~1 % of ids miscopied after their first characters: `tools.resolve_cited` maps them to the one shown chunk with the
-longest common prefix (>= 8) in the chat numbering and in the judge's sources. Reports not regenerated with this run.
+longest common prefix (>= 8) in the chat numbering and in the judge's sources. Benchmark report section 2.10.
+Verification (2026-10-22; technical report 7.10): the bugs above passed the tests and the benchmarks, so four free checks
+look at real behaviour. (1) `python -m corpus.check` after every rebuild (sections crawl / documents / laws / index /
+plans; exit 1 on an error; `data/corpus/check.json`: every line with its examples (`lines`, shown by the Pipeline
+view), a summary (documents per kind:type and per kommun, plan status, documents per plan), compared with the previous
+run per kommun; `--only` keeps the other sections of the previous file; `--delete-orphan-pdfs`: PDFs of earlier crawls
+no manifest or snapshot references, 1,814 / 5.2 GB deleted on 2026-10-24, 70 % byte-identical copies of kept PDFs;
+a WARN lists documents whose text names only other kommuner, "X kommun" / "X stad": 590 of 94k on 2026-10-23, mostly
+joint administrations publishing the members' plans and forms on one site, Askersund -> Laxå / Lekeberg, Avesta ->
+Fagersta / Norberg, Falun -> Borlänge, Vimmerby -> Hultsfred; they are filed under the site's kommun). It found: statute sections cut on a reference wrapped after "kap." ("enligt 6 kap." + "35 § 4 miljöbalken": PBL 5 kap.
+11 a §, MBF 18 §, PBF 3 kap. 2 §; `chunk.rejoin` + sections only go forward in `law_chunks`), identical statute sections
+dropped by the corpus-wide chunk dedup (JB 10 kap. 3 a §; law dedup key now includes the section, ids unchanged),
+6.5k duplicate pages (Sitevision `?open.12_...`, `.printable`: `crawl._VIEW_PARAMS`, page hash in the crawler and in
+`corpus.extract`), Sitevision "org.mozilla.javascript.Undefined@0" lines. (2) Tool health: `ToolResult.error`
+(unknown_id / bad_args / not_found / no_data / exception; `run_tool` turns a tool exception into "exception" instead of
+ending the run), recorded in the steps and the `tool_result` event; `agentic.health` prints failures per tool after
+every bench run (thresholds `THRESHOLDS`); report section 2.10. (3) `python -m agentic.replay` (`--search N`: also times N stored searches; p50 / p95 / max per tool) replays every distinct
+stored call (not search / images) on the current corpus: no exception, a read or law_section of something the corpus
+has must succeed (`tests/test_replay.py`: 1,500 calls, skipped without the store); it found reads with "doc pdf:...",
+a chunk id glued to a doc prefix, a valid doc_id next to a stale chunk_id, a chunk id as doc_id (all handled now).
+(4) `python -m agentic.coverage sample|fetch|score`: the other benchmarks are built from the corpus and cannot see a
+missing plan; this one fetches live the plans-in-force list of 29 sampled kommuner (`agentic/coverage_sources.jsonl`,
+curated) and up to 20 plans each with their PDF links (`agentic/coverage_plans.jsonl`, versioned with its date), and
+scores the share found in documents.jsonl by URL, or as a byte copy of a corpus PDF (`kept_copy`: `corpus.extract`
+keeps one document per content, under the URL it met first). Reference fetched 2026-10-22: 202 plans in 13 measurable
+kommuner. Before the national crawl 24 % of the plans with a PDF, 8 % of their PDFs; after it (2026-10-23; the OCR
+makes PDFs readable but adds none) 78 % / 58 % (all PDFs of a plan: 53 %; 76 / 57 / 51 % by URL only). `score` also
+records why each missing PDF is missing (`CAUSES`, `missing_cause`, from the kommun's manifest; benchmark report 2.11,
+Pipeline view). On that corpus, of 339: 171 on plan pages never crawled while their list page was, one link past
+`--max-depth` 4 (Haparanda 103 = 0 %, Norrtälje 59); 164 linked from a crawled page but not taken, because
+`take_pdf_link` dropped a neutral-scored link without a `_PDF_HINTS` word and plan attachments are named after the
+place or the step (Färgelanda's "1507-280-torsberg-139-mfl.pdf" on the list page, "Lagakraftbevis", "Undersökning om
+betydande miljöpåverkan", "Protokollsutdrag": Kinda 100, Örebro 20, Härjedalen 17); 3 downloaded but neither kept nor
+a copy; 1 a filter drop. A manifest records a page only when kept, so "never crawled" also covers a plan page fetched
+but not kept. Both crawl causes are fixed (crawler rules above, 2026-10-25); re-crawling 10 of the 13 kommuner with
+them downloaded 546 of their 560 listed PDFs (301 in the corpus before; Haparanda 0 -> 103 of 103, Färgelanda 2 -> 20,
+Kinda 79 -> 178), to be scored after a rebuild. 16 kommuner unmeasurable: 11 of the 29 publish their
+plans in force only in a map or search application (the corpus still has 2-157 plans each from their other pages,
+not checked whether in force), 4 reach only 1-2 plans, Göteborg's list page was unreachable.
+Leads (not done): a national `--force` crawl (the depth fix needs a full crawl; `--revisit` brings the plan-page PDFs
+of `PDF_LINKS_VERSION` 3 with ~35k requests); for map-only kommuner, the kommun's plan
+layers (WMS / WFS) or Lantmäteriet's digital plans (access and terms not checked), which also give address → plan;
+a browser agent driving the map application, used as a crawler: once per map-only kommun (11 of the 29 sampled),
+it lists the plans and their document links, which the crawler then downloads (a one-off cost per kommun, not per
+question; at answer time it would be slow, costly and fragile).
 Next: a check step on the draft answer (each claim against its cited chunk) to cut unsupported claims; expert review of a sample of generated cases; multi-turn cases (iterating on a project with the user); merge with
 the localisation work of the other developer (agent `TOOLS_GUIDE` / `tools.py` are theirs, `ROLE` / `MODES_GUIDE` /
 `ANSWER_FORMAT` / bench are ours; their localisation cases can be a `locate` task in the same case format).
@@ -473,7 +643,8 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | POST   | `/api/chunks/ingest-data-folder`  | Yes  | Ingest every supported file in a folder         |
 | POST   | `/api/analyze`                    | Yes  | Multi-agent feasibility analysis                |
 | GET    | `/api/db/overview`                | Yes  | Chunk counts per table and per source (`store`=neon/local) |
-| GET    | `/api/db/chunks`                  | Yes  | Paginated chunks (`table`=law/document, `source`, `q` text filter, `store`) |
+| GET    | `/api/db/chunks`                  | Yes  | Paginated chunks (`table`=law/document, `source` (local: kommun code), `doc_type`, `doc_id`, `q` text filter, `store`); local without a kommun: store order, `total` null with a text filter (not counted) |
+| GET    | `/api/db/documents`               | Yes  | Local disk store: a kommun's documents (`source`=kommun code, `doc_type`, `q` title filter) by type then title, with chunk counts |
 | POST   | `/api/db/search`                  | Yes  | Retrieval top-k on both pools, no LLM (`store`: neon = pgvector, local = localrag) |
 | GET    | `/api/docs/locate`                | Yes  | Where to open a cited chunk: PDF page + zoom on the passage, or original URL with `#:~:text=` |
 | GET    | `/api/docs/pdf/{chunk_id}`        | Yes  | The chunk's crawled PDF with the passage highlighted (PyMuPDF annotations) |
@@ -481,6 +652,7 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | GET    | `/api/benchmark/sets`, `/cases`, `/case`, `/image/{id}` | Yes | Benchmark case sets, cases, one case + its past results (from `data/agentic/bench-*.json`), plankarta crop |
 | POST   | `/api/benchmark/run`              | Yes  | Run the agent on a case now (chat settings) and grade it; background job (spends credits) |
 | GET    | `/api/benchmark/run/{job_id}`     | Yes  | Progress (tool calls) and result of that job (polled: a run outlasts the frontend proxy timeout) |
+| GET    | `/api/pipeline`                   | Yes  | Measurements of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency), read from the files the steps write; cached until one changes |
 | GET    | `/api/place/profile?lat=&lon=`    | Yes  | Place profile of a pinned point: property (live), plans, zones, plans in progress, inside/outside detaljplan (no LLM) |
 | GET    | `/api/place/coverage`             | Yes  | Pilot kommuner with a snapshot (code, name, bbox, fetch date), for the map's first view |
 | GET    | `/api/place/search?q=`            | Yes  | Address / place search for the map (street addresses from the pilot kommun's address register, else Nominatim: Sweden only, 1 request/s, pilot kommuner first; cached); 503 when Nominatim is down |
@@ -609,7 +781,10 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/routers/chat.py` -- Chat (plain + SSE stream): translate -> parse -> general RAG or orchestrator -> save
 - `backend/routers/chunks.py` -- Ingestion endpoints
 - `backend/routers/agents.py` -- `/api/analyze`
-- `backend/routers/db_browser.py` -- Read-only chunk browser + semantic search (never exposes user/auth tables or embeddings)
+- `backend/routers/db_browser.py` -- Read-only chunk browser + semantic search (never exposes user/auth tables or
+  embeddings). Local disk store (1.9M rows): kommun / type counts from `localrag.store.summary` (cached in
+  `store/<model>/summary.json`, written by `localrag.store`; the GROUP BY takes ~30 s), filters on `kommun_code`
+  (indexed; the kommun name and a sort over every row took 17-30 s per page)
 - `backend/routers/docs.py` -- Open a cited chunk in its original document (PDF page + highlight, or URL text fragment)
 - `backend/place/` -- place lookups for the map pin: `sources.py` (layers, attribute mapping, pilot kommuner),
   `fetch.py` (snapshot CLI), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property and
@@ -626,6 +801,13 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/routers/benchmark.py` -- Benchmark view API: case sets (`SETS`: cases / caselaw / plans / tasks / generated), past results per case
   parsed from the result file names (`RESULT_FILE`; files from before `-explore-` count as explore = answer effort; `-x-<label>`
   runs show the label and model), and in-memory run jobs (`JOBS`, lost on restart)
+- `backend/routers/pipeline.py` -- Pipeline view API, written for a reader without the project's context: six steps
+  (collect, filter, read/OCR, index, plan registry, search tools), each with what it does, how it is measured, a status,
+  key tiles and detail sections (tables with search / "show all", bars, meter, the `corpus.check` lines of that step
+  with their examples (`_checks`: crawl / documents + statutes + index / plans; passing ones folded), removed-PDF
+  examples), from `data/corpus/check.json`, the manifests' done lines, `data/agentic/coverage-*.json` / `replay-*.json`,
+  the PDF filter decisions + labels, `data/eval/ocr-*.json`, the OCR outputs and the latest `localrag.eval` file;
+  cached until a source file (or the OCR output count) changes. Separate from the Benchmark view (agent end to end)
 - `backend/routers/queryDB.py` -- Legacy standalone `RAG()` retrieval helper, not imported anywhere (chat retrieves via agents)
 - `backend/chunking/ingest_pipeline.py` -- OCR, chunk, embed, push
 - `backend/chunking/ingest_data_folder.py` -- Folder-level ingestion
@@ -640,7 +822,7 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/benchmark/` -- Retrieval-only embedding benchmark: `export_corpus.py` (freeze DB chunks to `data/corpus.jsonl`), `models.toml` (models to compare), `questions.jsonl` (hand-written questions, en+sv, labelled by verbatim excerpts since law chapter/section metadata is unreliable), `generate_questions.py` (synthetic questions via the chat LLM), `run.py` (hit@k / recall@5 / MRR, per-table search like the chat; caches corpus vectors in `cache/`, writes `results/`). Runs spend API credits
 - `backend/corpus/` -- `municipalities.py`, `laws.py`, `crawl.py`, `ocr.py`, `extract.py`, `chunk.py` (see "Offline Corpus"),
   `caselaw.py` (MÖD rulings from lagen.nu, for the case benchmark; not part of the searchable corpus),
-  `plans.py` (detaljplan registry + planbestämmelser)
+  `plans.py` (detaljplan registry + planbestämmelser), `check.py` (checks after a rebuild)
 - `backend/localrag/` -- `analyzer.py` (Swedish BM25 tokens), `gazetteer.py`, `index.py` (VectorStore), `retriever.py`
   (`LocalRetriever`), `service.py` (chat integration), `eval.py` + `questions.jsonl` (use-case questions with
   verbatim-excerpt / law-section labels), `rewrite_queries.py` (Swedish queries from the chat LLM), `models.toml`
@@ -649,7 +831,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat
   integration, `CitationNumberer`), `run.py` (CLI), `bench.py` + `cases.jsonl` (case benchmark),
   `cases_from_caselaw.py` (cases from MÖD rulings), `cases_tasks.jsonl` + `cases_from_corpus.py` (explain / propose /
-  develop cases), `rejudge.py` (second judge, agreement), `grounding.py`
+  develop cases), `rejudge.py` (second judge, agreement), `grounding.py`, `health.py` (failed tool calls per tool),
+  `replay.py` (stored tool calls replayed on the corpus), `coverage.py` + `coverage_sources.jsonl` / `coverage_plans.jsonl`
+  (share of the kommuner's listed plans in the corpus)
 - `backend/tests/test_agents.py` -- Agent / parser tests (incl. `TestParseQuery`); `_extract_json` returns {} on bad
   output and the agents then return their fallback result. It stubs `sqlalchemy` in `sys.modules`, so run it in its own pytest
   process: collected together with `test_chat_background.py` the latter fails to import
@@ -658,8 +842,18 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/tests/test_agent_citations.py` -- streamed citation numbering for every delta size
 - `backend/tests/test_bench_tasks.py` -- explain / propose / develop scoring (anchors, proposals, points per kind), fake judge
 - `backend/tests/test_tools.py` -- agent tools on a fake corpus (ids as the model writes them, section formats, grep
-  filters, miscopied citations), law chapter chunking, title repair
+  filters, doc_types / title filters, grep documents output, list_documents pages, view_map_area on a scan through OCR
+  words, miscopied citations), law chapter chunking, title repair
 - `backend/tests/test_agent_images.py` -- an image goes with the next model call only (fake LLM)
+- `backend/tests/test_crawl.py` -- robots.txt wildcards, `url_key` variants, off-topic PDFs, tolerant sitemaps
+- `backend/tests/test_pdf_filter.py` -- PDF filter rules, no drop without the LLM or a review
+- `backend/tests/test_ocr_bench.py` -- OCR benchmark scoring (near misses, labels, placement), tiles without duplicates
+- `backend/tests/test_index.py` -- VectorStore memmap growth, resume after an interrupted run
+- `backend/tests/test_health.py` -- tool failure counts per tool
+- `backend/tests/test_coverage.py` -- why a plan PDF of the coverage reference is missing (crawl manifest causes)
+- `backend/tests/test_replay.py` -- stored agent tool calls replayed on the real store (skipped without it, ~2 min)
+- Gotcha when editing through a shell heredoc: `\\b` in a Python string can arrive as a backspace character (it broke a
+  chunker regex silently); write patch scripts to a file, and scan for control characters after shell edits
 
 ### Agents (Multi-Agent RAG)
 
@@ -685,7 +879,15 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   per step / tool call (tool, its query or arguments, result summary, duration), the last 3 ("Show all" expands), shown
   only until the answer text starts (rebuilt from the saved trace for an answer still generating, `stepsFromTrace`); once finished, "Inspect pipeline" and a clickable "Sources" list (retrieved chunks per source, from `pipeline` events) below the answer
 - `frontend/components/PipelineTrace.tsx` -- "Inspect pipeline" panel rendering `pipeline` events (live or from saved `trace`): a totals line (time, tokens, cost) then one collapsible step per stage (Understand, Retrieve, Agents, Verdict, Answer) with a one-line summary, and the stage's API calls nested inside (assigned by call kind/name in `stepOf`). An expanded `view_map_area` / `view_pdf_page` tool call shows the image the agent looked at: traces store no images (tool records carry `tool` + `image`), `ToolImage` re-renders them from the call's arguments via `/api/docs/tool-image` (older traces: tool taken from the call name)
-- `frontend/components/DatabaseBrowser.tsx` -- Database view with a Neon / Local corpus toggle: stats, chunk browsing, search playground
+- `frontend/components/DatabaseBrowser.tsx` -- Database view with a Neon / Local corpus toggle: stats, chunk browsing, search
+  playground. Local kommun documents: kommun select (documents per kommun), document-type chips, then the kommun's
+  documents by type (`DocumentList`, click one for its chunks); without a kommun, chunks in store order. Every local
+  chunk (browse and search) links to its original (`SourceLinks`): crawled PDF opened at the passage in the
+  `SourceViewer` panel (`autoOpen`, n = 0: no citation number) plus the PDF's URL on the kommun site, web page /
+  statute in a new tab at the passage (`openPageAtChunk`); a document's "Open the PDF" lists its chunks beside it.
+  `/api/db/chunks` rows carry `url`, local `/api/db/search` matches `chunk_id` / `doc_id` / `kind` / `url`
+  (`localrag.service._row`). The 7 "legacy:" PoC documents have no original
+- `frontend/lib/corpus.ts` -- document type names / hints and number formatting shared by the Database and Pipeline views
 - `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)
 - `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage
 - `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
@@ -699,7 +901,10 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   and `fetchPlaceProfile` / `fetchPlaceCoverage`
 - `frontend/components/BenchmarkBrowser.tsx` -- Benchmark view (sidebar, above Database): browse the case sets, a case's
   reference (verdicts, key points, evidence, source, map crop) and past results, and "Test with the agent" (run + judge)
-- `frontend/components/Sidebar.tsx` -- Session list, new chat, Database / Settings buttons, user info
+- `frontend/components/PipelineBrowser.tsx` -- Pipeline view (sidebar, below Benchmark), progressive: an introduction,
+  a strip of the six steps (key number + status, click to open), one card per step (status, tiles; opened: what it does,
+  how it is measured, collapsible detail sections), a glossary
+- `frontend/components/Sidebar.tsx` -- Session list, new chat, Benchmark / Pipeline / Database / Settings buttons, user info
 - `frontend/components/Settings.tsx` -- Profile / password settings
 - `frontend/tests/` -- Vitest suite copied from dev: `unit/` mirrors `components/` and `lib/` (reference tests
   `lib/auth.test.ts`, `components/Sidebar.test.tsx`, the rest `it.todo`), `mocks/handlers.ts` is the shared MSW fake

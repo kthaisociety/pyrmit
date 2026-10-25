@@ -27,13 +27,13 @@ from pathlib import Path
 
 import numpy as np
 
-from corpus.common import read_jsonl
+from corpus.common import DATA_ROOT, RESULTS_ROOT, read_jsonl
 from localrag.gazetteer import detect_kommuner
 from localrag.index import INDEX_DIR, load_chunks
 from localrag.retriever import LocalRetriever
 
 QUESTIONS_PATH = Path(__file__).resolve().parent / "questions.jsonl"
-RESULTS_DIR = INDEX_DIR.parent / "eval"
+RESULTS_DIR = RESULTS_ROOT / "eval"
 RERANKER = "BAAI/bge-reranker-v2-m3"
 
 # name -> (mode, dense_lang, bm25 analyzer, query used for BM25)
@@ -47,6 +47,7 @@ SETUPS = {
     "hybrid": ("hybrid", "en", "compound", "sv"),
     "hybrid-both": ("hybrid", "both", "compound", "sv"),
     "hybrid-sv": ("hybrid", "sv", "compound", "sv"),
+    "hybrid-sv-stem": ("hybrid", "sv", "stem", "sv"),  # the agent's search tool (disk store: FTS5 over stems)
 }
 
 
@@ -76,7 +77,9 @@ def is_law_matcher(matcher: dict) -> bool:
     return matcher.get("kind") == "law" or "law" in matcher or "section" in matcher
 
 
-def prepare(questions: list[dict], chunks: list[dict]) -> None:
+def prepare(questions: list[dict], chunks: list[dict], allow_missing: bool = False) -> None:
+    """Chunk ids of each matcher group. A group nothing matches stops the run (a wrong label), unless allow_missing:
+    comparing corpora, a passage the other corpus lacks (crawl, PDF filter) is a miss of that corpus."""
     problems = []
     for question in questions:
         question["_groups"] = []
@@ -85,8 +88,10 @@ def prepare(questions: list[dict], chunks: list[dict]) -> None:
             if not ids:
                 problems.append(f"{question['id']}: nothing matches {matcher}")
             question["_groups"].append(("law" if is_law_matcher(matcher) else "local", ids))
-    if problems:
+    if problems and not allow_missing:
         raise SystemExit("Unmatched labels:\n  " + "\n  ".join(problems))
+    if problems:
+        print(f"{len(problems)} groups missing from this corpus (counted as misses):\n  " + "\n  ".join(problems))
 
 
 def evaluate(retriever: LocalRetriever, questions: list[dict], setup: str, rerank: bool,
@@ -158,6 +163,8 @@ def main() -> None:
     parser.add_argument("--by-tag", action="store_true", help="print recall@5 per question tag")
     parser.add_argument("--query-field", default="query_sv",
                         help="Swedish query to use: query_sv (hand-written) or query_sv_llm (localrag.rewrite_queries)")
+    parser.add_argument("--allow-missing", action="store_true",
+                        help="count label groups this corpus lacks as misses instead of stopping (corpus comparisons)")
     args = parser.parse_args()
 
     questions = list(read_jsonl(args.questions))
@@ -166,7 +173,7 @@ def main() -> None:
     kommuner = sorted({code for q in questions for code in q.get("kommun", [])})
     chunks = load_chunks(kommuner)
     by_id = {c["chunk_id"]: c for c in chunks}
-    prepare(questions, chunks)
+    prepare(questions, chunks, args.allow_missing)
     detected = np.mean([set(q.get("kommun", [])) <= set(detect_kommuner(q["question"])) for q in questions])
     print(f"{len(questions)} questions, {len(chunks)} chunks (laws + kommuner {kommuner}); "
           f"the Wikidata gazetteer alone finds the kommun in {detected:.0%} of questions")
@@ -200,7 +207,9 @@ def main() -> None:
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     out = RESULTS_DIR / f"{datetime.now():%Y%m%d-%H%M%S}.json"
-    out.write_text(json.dumps({"summary": results, "details": details}, indent=1), encoding="utf-8")
+    # corpus: the CORPUS_DATA_DIR snapshot evaluated ("data" = the corpus served, "small" = 2026-10-22)
+    out.write_text(json.dumps({"corpus": DATA_ROOT.name, "summary": results, "details": details}, indent=1),
+                   encoding="utf-8")
     print(f"\nSaved {out}")
 
 

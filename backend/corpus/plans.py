@@ -22,10 +22,10 @@ import sqlite3
 from collections import Counter, defaultdict
 from urllib.parse import unquote, urlparse
 
-from corpus.common import DATA_DIR, DOCUMENTS_PATH, read_jsonl, stable_id, write_jsonl
+from corpus.common import DATA_DIR, DOCUMENTS_PATH, INDEX_DIR, read_jsonl, stable_id, write_jsonl
 
 PLANS_PATH = DATA_DIR / "plans.jsonl"
-STORE_PATH = DATA_DIR.parent / "index" / "store" / "st-arctic-l-v2" / "corpus.sqlite"
+STORE_PATH = INDEX_DIR / "store" / "st-arctic-l-v2" / "corpus.sqlite"
 
 ROLES = [  # first match wins
     ("plankarta", r"plankarta|plankort|karta|_best\b|bestämmelser|bestammelser"),

@@ -1,0 +1,135 @@
+{
+ "total": {
+  "plans": 202,
+  "plans_with_a_pdf": 0.2376237623762376,
+  "plans_complete": 0.13861386138613863,
+  "pdfs_found": 0.07518796992481203,
+  "municipalities": 13,
+  "unmeasured": 16,
+  "reference_fetched": "2026-10-22"
+ },
+ "by_kommun": {
+  "Arvika": {
+   "plans": 5,
+   "plans_with_a_pdf": 2,
+   "plans_complete": 2,
+   "pdfs": 5,
+   "pdfs_found": 2,
+   "plan_pages_found": 0
+  },
+  "Färgelanda": {
+   "plans": 20,
+   "plans_with_a_pdf": 2,
+   "plans_complete": 2,
+   "pdfs": 20,
+   "pdfs_found": 2,
+   "plan_pages_found": 0
+  },
+  "Hallsberg": {
+   "plans": 20,
+   "plans_with_a_pdf": 4,
+   "plans_complete": 4,
+   "pdfs": 20,
+   "pdfs_found": 4,
+   "plan_pages_found": 0
+  },
+  "Haparanda": {
+   "plans": 8,
+   "plans_with_a_pdf": 0,
+   "plans_complete": 0,
+   "pdfs": 103,
+   "pdfs_found": 0,
+   "plan_pages_found": 0
+  },
+  "Härjedalen": {
+   "plans": 20,
+   "plans_with_a_pdf": 3,
+   "plans_complete": 0,
+   "pdfs": 85,
+   "pdfs_found": 3,
+   "plan_pages_found": 16
+  },
+  "Kalix": {
+   "plans": 6,
+   "plans_with_a_pdf": 6,
+   "plans_complete": 6,
+   "pdfs": 6,
+   "pdfs_found": 6,
+   "plan_pages_found": 6
+  },
+  "Kinda": {
+   "plans": 15,
+   "plans_with_a_pdf": 8,
+   "plans_complete": 0,
+   "pdfs": 179,
+   "pdfs_found": 15,
+   "plan_pages_found": 15
+  },
+  "Mullsjö": {
+   "plans": 18,
+   "plans_with_a_pdf": 11,
+   "plans_complete": 11,
+   "pdfs": 18,
+   "pdfs_found": 11,
+   "plan_pages_found": 0
+  },
+  "Norrtälje": {
+   "plans": 20,
+   "plans_with_a_pdf": 3,
+   "plans_complete": 2,
+   "pdfs": 95,
+   "pdfs_found": 7,
+   "plan_pages_found": 15
+  },
+  "Södertälje": {
+   "plans": 10,
+   "plans_with_a_pdf": 0,
+   "plans_complete": 0,
+   "pdfs": 65,
+   "pdfs_found": 0,
+   "plan_pages_found": 9
+  },
+  "Vimmerby": {
+   "plans": 20,
+   "plans_with_a_pdf": 9,
+   "plans_complete": 1,
+   "pdfs": 49,
+   "pdfs_found": 10,
+   "plan_pages_found": 11
+  },
+  "Örebro": {
+   "plans": 20,
+   "plans_with_a_pdf": 0,
+   "plans_complete": 0,
+   "pdfs": 78,
+   "pdfs_found": 0,
+   "plan_pages_found": 10
+  },
+  "Östhammar": {
+   "plans": 20,
+   "plans_with_a_pdf": 0,
+   "plans_complete": 0,
+   "pdfs": 75,
+   "pdfs_found": 0,
+   "plan_pages_found": 16
+  }
+ },
+ "unmeasured": {
+  "Ockelbo": "no plan with a PDF reachable from the list page (map or search application)",
+  "Göteborg": "list page unreachable",
+  "Laholm": "no plan with a PDF reachable from the list page (map or search application)",
+  "Lerum": "no plan with a PDF reachable from the list page (map or search application)",
+  "Bjuv": "no plan with a PDF reachable from the list page (map or search application)",
+  "Tjörn": "no plan with a PDF reachable from the list page (map or search application)",
+  "Höör": "no plan with a PDF reachable from the list page (map or search application)",
+  "Sjöbo": "no plan with a PDF reachable from the list page (map or search application)",
+  "Timrå": "no plan with a PDF reachable from the list page (map or search application)",
+  "Mölndal": "no plan with a PDF reachable from the list page (map or search application)",
+  "Hässleholm": "no plan with a PDF reachable from the list page (map or search application)",
+  "Värmdö": "no plan with a PDF reachable from the list page (map or search application)",
+  "Munkedal": "only 1 plan(s) with a PDF reachable from the list page",
+  "Solna": "only 1 plan(s) with a PDF reachable from the list page",
+  "Sunne": "only 2 plan(s) with a PDF reachable from the list page",
+  "Hallstahammar": "only 1 plan(s) with a PDF reachable from the list page"
+ }
+}
