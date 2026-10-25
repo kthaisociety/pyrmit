@@ -110,9 +110,11 @@ ANCIENT_REMAINS = Layer(id="raa_lamningar", kind="ancient_remain", title="Lämni
 # The national layers each section of the place card is built from
 SECTION_KINDS = {"protected_areas": "protected", "natura2000": "natura2000", "national_interests": "national_interest"}
 
-# Pilot kommuner: own layers + who answers "which property is this" (until Lantmäteriet's services are approved)
+# Pilot kommuner: own layers, who answers "which property is this" and the kommun's own address register
+# (until Lantmäteriet's services are approved)
 PILOTS = {
-    "0380": {"name": "Uppsala", "layers": UPPSALA_LAYERS, "property_service": "uppsala"},
+    "0380": {"name": "Uppsala", "layers": UPPSALA_LAYERS, "property_service": "uppsala",
+             "addresses": f"{UPPSALA_MAP}/11"},  # Adresser: the kommun's belägenhetsadresser (Name, PostCity)
 }
 
 
