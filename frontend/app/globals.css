@@ -25,3 +25,44 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+/* The map panel slides in from the side it closes to (components/place/PlacePanel.tsx) */
+@keyframes slide-in-right {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+/* Map panel controls as floating glass, like Apple Maps (components/place/PlacePanel.tsx) */
+.place-map .maplibregl-ctrl-top-right { top: 3rem; }
+.place-map .maplibregl-ctrl-top-left { top: 3.25rem; } /* the attribution, under the search field */
+.place-map .maplibregl-ctrl-group {
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.8);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.05), 0 8px 32px rgb(0 0 0 / 0.14);
+  backdrop-filter: blur(24px) saturate(150%);
+}
+.place-map .maplibregl-ctrl-group button { width: 32px; height: 32px; }
+.place-map .maplibregl-ctrl-group button + button { border-top: 1px solid rgb(0 0 0 / 0.08); }
+/* The attribution OpenStreetMap, OpenMapTiles and OpenFreeMap require, kept as small as Apple Maps' "Legal" */
+.place-map .maplibregl-ctrl-attrib {
+  margin: 6px 0 0 8px !important;
+  padding: 0;
+  background: none;
+  font-size: 9px;
+  line-height: 1.3;
+  opacity: 0.55;
+}
+.place-map .maplibregl-ctrl-attrib a { color: inherit; }
+@media (prefers-color-scheme: dark) {
+  .place-map .maplibregl-ctrl-group { background: rgb(39 39 42 / 0.75); }
+  .place-map .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1); }
+  .place-map .maplibregl-ctrl-attrib { color: rgb(212 212 216); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .place-map .maplibregl-ctrl-group {
+    background: rgb(255 255 255);
+    backdrop-filter: none;
+  }
+}

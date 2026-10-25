@@ -36,11 +36,30 @@ from observability import (
     start_observation,
 )
 from pipeline_trace import CallRecorder, recorded_chat_completion, response_usage
+from place.context import compact_profile, question_with_place
 import schemas
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def get_place_profile():
+    """The place-profile builder of a pinned question: lat, lon -> place.profile.build_profile (overridden in
+    tests)."""
+    from place.profile import build_profile
+
+    return build_profile
+
+def get_law_text():
+    """The statute lookup of a pinned question's permits: (law, section) -> the section's text tagged [c:<chunk id>],
+    or None; the agent's corpus tools, loaded on first use (overridden in tests)."""
+    def law_text(law: str, section: str) -> str | None:
+        from agentic.service import get_tools
+
+        result = get_tools().law_section(law, section)
+        return result.text if result.chunk_ids else None
+    return law_text
 
 # Chunks per pool (laws / documents) given to the answer model; the local eval reaches ~0.93 recall at 10
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "10"))
@@ -319,9 +338,15 @@ Latest User Message: {original_content}"""
 @router.post("/chat/stream")
 def chat_stream(
         request: schemas.ChatRequest,
+        place_profile=Depends(get_place_profile),
+        law_text=Depends(get_law_text),
         db: Session = Depends(get_db),
         user: models.User = Depends(get_current_user),
 ):
+    """The chat's streamed answer (SSE). In the agent mode a pinned place (request.place) is the place the question
+    is about: its place profile goes before the question (place.context.question_with_place) and is saved as the "place"
+    pipeline event of the answer's trace, {"pin": {"lat", "lon", "label"}, "profile": compact_profile}, which is how
+    the chat session keeps its place (ADR-0004). Without a pin the question gets place.context.NO_PIN_HINT."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
@@ -355,6 +380,7 @@ def chat_stream(
     # Capture for use inside generator
     messages_snapshot = list(request.messages)
     original_content = last_message.content
+    pinned = request.place
 
     def generate(db: Session) -> Generator[str, None, None]:
         with start_observation(
@@ -397,8 +423,16 @@ def chat_stream(
                     def record(**call):
                         recorder.record(**call)
 
-                    outcome = yield from stream_agent(original_content, history, record, _sse,
-                                                      flush=lambda: list(emit_calls()))
+                    answered = request.answer_to_question
+                    question = question_with_place(original_content, None, answered=answered)
+                    if pinned:
+                        yield _sse({"type": "thinking", "label": "Looking up the pinned place"})
+                        profile = place_profile(pinned.lat, pinned.lon)
+                        yield emit("place", pin=pinned.model_dump(), profile=compact_profile(profile))
+                        question = question_with_place(original_content, profile, law_text, answered=answered)
+
+                    outcome = yield from stream_agent(question, history, record, _sse,
+                                                      flush=lambda: list(emit_calls()), allow_ask=not answered)
                     yield from emit_calls()
                     yield emit("retrieval", agent="law", query=original_content, embedding_ok=True,
                                matches=outcome["law_rows"])
@@ -407,6 +441,9 @@ def chat_stream(
                     # The answer itself was streamed by stream_agent; append the numbered source list
                     # [n] -> source label + cited chunks, for the clickable citations in the UI
                     yield emit("citations", items=outcome["citations"])
+                    if outcome.get("choices") or outcome.get("offer_pin"):  # the agent asked: shown as buttons
+                        yield emit("choices", options=outcome.get("choices") or [],
+                                   offer_pin=bool(outcome.get("offer_pin")))
                     suffix = _format_sources(outcome["sources"], numbered=True)
                     accumulated = outcome["answer"] + suffix
                     yield _sse({"type": "response.output_text.delta", "delta": suffix})

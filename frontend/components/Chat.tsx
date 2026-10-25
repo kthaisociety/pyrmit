@@ -28,6 +28,9 @@ import ChunkCard from '@/components/ChunkCard';
 import PipelineTrace, { type PipelineEvent, type RetrievedChunk } from '@/components/PipelineTrace';
 import SourceViewer, { type Citation } from '@/components/SourceViewer';
 import CitedMarkdown from '@/components/CitedMarkdown';
+import PlaceChip from '@/components/place/PlaceChip';
+import PlacePanel from '@/components/place/PlacePanel';
+import { placeFromHistory, placeLabel, type Pin } from '@/lib/place';
 
 interface Message {
   id?: number;
@@ -127,6 +130,56 @@ function parseAssistantContent(content: string): { body: string; sources: string
     .filter(Boolean);
 
   return { body, sources };
+}
+
+/** The options of a question the agent asked the user to choose from (its `choices` event), and whether it also
+ *  offers to pin the place on the map. */
+function getChoices(pipeline: PipelineEvent[]): { options: string[]; offerPin: boolean } {
+  const data = pipeline.find((item) => item.stage === 'choices')?.data;
+  const options = Array.isArray(data?.options)
+    ? data.options.filter((option: unknown): option is string => typeof option === 'string')
+    : [];
+  return { options, offerPin: data?.offer_pin === true };
+}
+
+/** The options under the agent's question: clicking one sends it as the user's reply; "Pin it on the map" opens the
+ *  map. The user can always type something else instead. */
+function Choices({ options, offerPin, onChoose, onPin, awaitingPin }: {
+  options: string[];
+  offerPin: boolean;
+  onChoose: (option: string) => void;
+  onPin?: () => void;
+  awaitingPin?: boolean; // the user clicked "Pin it on the map": the next pin answers the question
+}) {
+  return (
+    <div className="mt-3 space-y-2">
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Answer options">
+      {offerPin && onPin && (
+        <button
+          type="button"
+          onClick={onPin}
+          className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-zinc-700 active:scale-[0.97] dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+        >
+          <MapPin size={14} aria-hidden />
+          Pin it on the map
+        </button>
+      )}
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          onClick={() => onChoose(option)}
+          className="rounded-full border border-zinc-300 bg-white px-3.5 py-1.5 text-sm font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-50 active:scale-[0.97] dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+      {awaitingPin ? 'Click the map to pin the place: it is sent as your answer.' : 'Or type your own answer below.'}
+    </p>
+    </div>
+  );
 }
 
 function getCitations(pipeline: PipelineEvent[]): Citation[] {
@@ -641,15 +694,22 @@ function AssistantBubble({
   isStreaming,
   onCopy,
   copied,
+  onChoose,
+  onPin,
+  awaitingPin,
 }: {
   message: Message;
   isStreaming: boolean;
   onCopy: () => void;
   copied: boolean;
+  onChoose?: (option: string) => void; // set on the last answer only: older questions have been answered
+  onPin?: () => void;
+  awaitingPin?: boolean;
 }) {
   const { body, sources } = parseAssistantContent(message.content);
   const hasBody = Boolean(body.trim());
   const citations = getCitations(message.pipeline ?? []);
+  const choices = getChoices(message.pipeline ?? []);
   const [openCitation, setOpenCitation] = useState<Citation | null>(null);
   // Answer still being generated on the server (the user left and came back): refreshed by polling
   const inBackground = !isStreaming && message.status === 'streaming';
@@ -694,6 +754,11 @@ function AssistantBubble({
         </div>
       )}
 
+      {onChoose && !isStreaming && !inBackground && (choices.options.length > 0 || choices.offerPin) && (
+        <Choices options={choices.options} offerPin={choices.offerPin} onChoose={onChoose} onPin={onPin}
+                 awaitingPin={awaitingPin} />
+      )}
+
       {!isStreaming && !inBackground && (
         <AnswerDetails
           sources={sources}
@@ -713,6 +778,12 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
+  // The chat's pinned place: the pin and, once looked up, its label (kept apart so a label never moves the pin)
+  const [pin, setPin] = useState<Pin | null>(null);
+  const [pinLabel, setPinLabel] = useState<string | null>(null);
+  // "Pin it on the map" was clicked: the pin set after it (not the one already there) answers the agent's question
+  const [awaitingPin, setAwaitingPin] = useState<{ from: Pin | null } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pendingSessionIdRef = useRef<string | null>(null);
   // Session we just created ourselves: its messages are already in state (with
@@ -733,6 +804,16 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     scrollToBottom();
   }, [messages]);
 
+  const clearPin = () => {
+    setPin(null);
+    setPinLabel(null);
+  };
+
+  const movePin = (next: Pin) => {
+    setPin(next);
+    setPinLabel(null);
+  };
+
   const loadHistory = (id: string, showLoading: boolean) => {
     if (showLoading) setLoading(true);
     authFetch(`/api/sessions/${id}`)
@@ -740,6 +821,12 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       .then((data: Message[]) => {
         if (sessionIdRef.current !== id) return; // the user moved to another chat meanwhile
         setMessages(data.map((msg) => ({ ...msg, pipeline: msg.trace ?? undefined })));
+        if (showLoading) {
+          // Opening a chat brings back the place its latest answer was about (ADR-0004)
+          const place = placeFromHistory(data.map((msg) => msg.trace));
+          setPin(place ? { lat: place.lat, lon: place.lon } : null);
+          setPinLabel(place?.label ?? null);
+        }
       })
       .catch((err) => console.error('Failed to fetch history', err))
       .finally(() => {
@@ -761,6 +848,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       loadHistory(sessionId, true);
     } else {
       setMessages([]);
+      setPin(null); // a new chat has no place yet
+      setPinLabel(null);
     }
      
   }, [sessionId]);
@@ -786,8 +875,23 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
 
   const sendMessage = async (e: FormEvent) => {
     e.preventDefault();
-    const trimmedInput = input.trim();
-    if (!trimmedInput) return;
+    await send(input);
+  };
+
+  // The pin set after "Pin it on the map" goes back to the agent as the answer, with the place (once it is named)
+  useEffect(() => {
+    if (!awaitingPin || !pin || !pinLabel) return;
+    const from = awaitingPin.from;
+    if (from && from.lat === pin.lat && from.lon === pin.lon) return;
+    setAwaitingPin(null);
+    void send(`I pinned the place on the map: ${pinLabel}. Assess that place.`, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingPin, pin, pinLabel]);
+
+  // `answer`: the message answers the agent's own question (a clicked option, or a pin from its button)
+  const send = async (text: string, answer = false) => {
+    const trimmedInput = text.trim();
+    if (!trimmedInput || loading) return;
 
     const userMsg: Message = { role: 'user', content: trimmedInput };
     const newHistory = [...messages, userMsg];
@@ -817,7 +921,9 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       const res = await authFetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newHistory, session_id: sessionId }),
+        body: JSON.stringify({ messages: newHistory, session_id: sessionId,
+                               place: pin ? { ...pin, label: pinLabel } : null,
+                               ...(answer ? { answer_to_question: true } : {}) }),
         signal: controller.signal,
       });
 
@@ -991,7 +1097,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   const lastIdx = messages.length - 1;
 
   return (
-    <div className="flex flex-col h-full w-full relative">
+    <div className="flex h-full w-full">
+    <div className="flex flex-col h-full flex-1 min-w-0 relative">
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto p-4 space-y-6 pb-32 pt-10">
           {messages.length === 0 && (
@@ -1038,6 +1145,9 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
                   isStreaming={streaming && i === lastIdx}
                   message={msg}
                   onCopy={() => handleCopy(msg.content, i)}
+                  onChoose={i === lastIdx && !loading ? (option) => void send(option, true) : undefined}
+                  onPin={() => { setMapOpen(true); setAwaitingPin({ from: pin }); }}
+                  awaitingPin={awaitingPin !== null && i === lastIdx}
                 />
               )}
 
@@ -1056,13 +1166,28 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       {/* Input */}
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 pt-10 pb-6 px-4">
         <div className="max-w-3xl mx-auto">
+          {pin && (
+            <div className="mb-2">
+              <PlaceChip place={{ ...pin, label: pinLabel }} onOpen={() => setMapOpen(true)}
+                         onClear={clearPin} />
+            </div>
+          )}
           <form onSubmit={sendMessage} className="relative shadow-lg rounded-xl">
+            <button
+              type="button"
+              onClick={() => setMapOpen((open) => !open)}
+              aria-label={mapOpen ? 'Hide map' : 'Open map'}
+              aria-pressed={mapOpen}
+              className={`absolute left-2 top-2 bottom-2 px-2.5 rounded-lg transition-transform duration-100 active:scale-95 flex items-center justify-center ${mapOpen ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
+            >
+              <MapPin size={18} />
+            </button>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about building permits..."
-              className="w-full p-4 pr-24 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full p-4 pl-14 pr-24 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               disabled={loading || streaming}
             />
             <button
@@ -1079,6 +1204,11 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
           </p>
         </div>
       </div>
+    </div>
+    {mapOpen && (
+      <PlacePanel pin={pin} onPinChange={movePin} onClose={() => setMapOpen(false)}
+                  onProfile={(profile) => setPinLabel(placeLabel(profile))} />
+    )}
     </div>
   );
 }

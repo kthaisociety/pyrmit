@@ -1,9 +1,15 @@
 # CLAUDE.md
 
-## Hard Constraints
+## Project Knowledge
 
-- **Do not make any git-related actions** (no commits, no pushes, no branch operations)
-- **Do not create documentation files** unless explicitly requested
+The team's agent workflow (from `dev`). Load these only when the task needs them:
+
+- `.claude/skills` -- the project skills (`/map-epic`, `/architect-issue`, `/implement-issue`, `/refactor-issue`, ...), use these first hand. Kept local (`.git/info/exclude`), copied from the Custom-skills repo.
+- `CONTEXT.md` -- domain language: what a detaljplan, chunk, verdict etc. mean and how they connect
+- `docs/pcr/` -- project-wide conventions. Binding. Read before changing code. Never edit one outside a `/challenge-pcr` session.
+- `docs/adr/` -- decisions scoped to one part of the codebase. Binding inside their scope.
+
+On this line (`v1`, not yet merged with `dev`'s `backend/src/` restructure) the code map below is the accurate one; `CONTEXT.md` owns the domain terms.
 
 ---
 
@@ -341,10 +347,21 @@ reference in italics) that open
 `#page=N&zoom=scale,left,top&navpanes=0`, passage highlighted; web pages and statutes opened in a new tab with a
 `#:~:text=` fragment that Chrome scrolls to and highlights; scanned PDFs: page from the OCR text, no highlight).
 The page is found by searching the chunk's 6-word phrases in the PDF (chunks store no page numbers).
-The agent branch runs before the rewrite step and returns early.
+The agent branch runs before the rewrite step and returns early. With a map pin (`request.place`, #37) the worker builds
+the place profile (`get_place_profile` dependency), puts `place.context.place_context` before the question ("do not ask
+where", "ask which place" when another is named) and emits a `place` pipeline event `{pin, profile}` (profile without
+geometries); without a pin the question gets `NO_PIN_HINT`. The chat session's place is the latest `place` event of its
+answers' traces (ADR-0004: no new columns on the shared tables); `Chat.tsx` restores the `PlaceChip` from it
+(`placeFromHistory`) and keeps the pin and its label in separate state, so a label update never refetches the profile.
 Gotcha: **PBL 9 kap. was renumbered by SFS 2025:974** (bygglov in/outside a detaljplan now 9 kap. 56/57 §, liten
 avvikelse 60-61 §, förhandsbesked 74 §; some sections have a second version in force 2027-01-01). Rulings and the
 model's memory use the old numbers (9:30, 9:31 b, 9:17), so the prompt tells the agent to find provisions by wording.
+The reform also changed the exemptions (corpus text, checked 2026-10-25): komplementbyggnad / komplementbostadshus up to
+30 m² inside a detaljplan (9 kap. 4 §) and 50 m² outside (5 §) need no bygglov and no anmälan any more (PBF 6 kap. 1 §
+lists none), tillbyggnad up to 30 m² below the ridge needs no bygglov (10 §), fasadändring needs bygglov in a plan only
+on buildings other than one- / two-dwelling houses facing a public place (15 § 3), and 34-37 § bring the bygglov back
+(4.5 m from the boundary without the neighbours' consent, totalförsvar areas, protected values). References written
+from memory get this wrong: check them against the law chunks.
 Benchmark: `python -m agentic.bench` (14 feasibility cases in `agentic/cases.jsonl`: evidence recall, LLM-judge
 key points, cost, latency, first-token time; RAG vs agent; `--cases-file cases_caselaw.jsonl --store disk` for cases
 from any kommun on the full disk store) and `python -m agentic.grounding <results.json>` (claims supported by the
@@ -490,12 +507,60 @@ run one benchmark process at a time (threads via `--workers` are fine); results 
 rerunning `agentic.rejudge` continues. A run that sits a long time before its first case may be stuck at startup
 (Hugging Face model check): the result file name is stamped when the cases start.
 
+### Place Lookup (map pin, epic #31)
+
+```
+1. python -m place.fetch --kommun 0380  -> data/geo/0380/ (gitignored): kommun.geojson (OSM boundary), one GeoJSON per
+   layer (Uppsala's plans / tillägg / områdesbestämmelser / pågående / användning from its ArcGIS service, Naturvårdsverket
+   skyddade områden + Natura 2000 WFS, Boverket riksintressen) and manifest.json (fetch date, licence, count,
+   "complete" = the plan layer holds every plan in force). ~10 s, 10k features (ADR-0002: snapshots, not per-pin calls)
+2. The chat's map panel (components/place/) -> GET /api/place/profile -> place.profile.build_profile:
+   kommun from the snapshot boundaries, the property live from Uppsala's layer 51 (place.live, cached per point),
+   features that contain the pin or cover >= 2 % of the property, plans newest first matched to the corpus registry by
+   name, "outside" detaljplan only with a complete plan layer (else "unknown"); the national layers by the same rule;
+   ancient remains live from RAÄ (WMS GetFeatureInfo, buffer = half the image over a square whose inscribed circle
+   covers the property, then filtered to it; 30 m around the pin without a property); strandskydd "not checked";
+   section_status ok / unavailable / not_covered so "none" never hides "not checked"; place.permits.likely_permits by
+   fixed rules (bygglov by detaljplan status, dispens per protected area with the register's dispens authority,
+   Natura 2000 tillstånd, KML tillstånd per Fornlämning, riksintressen as considerations). No model calls (ADR-0003)
+3. The map's search (GET /api/place/search -> place.geocode.search_places): a street and number goes first to the pilot
+   kommun's own address register (Uppsala's layer 11, 56k belägenhetsadresser; "Kungsgatan 47" also finds 47A-E, the
+   typed post town picks among equal names), anything else or no register hit to Nominatim (1 request/s)
+```
+
+Evaluation (2026-10-25, report `reports/place_eval_report.md`, built by `python -m place.report` from the result files
+plus the hand-written `place/report_findings.md`):
+- `python -m place.check_sources --n 300` (free): each snapshot layer against the provider's own point query (ArcGIS
+  identify with tolerance 0, WFS Intersects filter) at seeded points + the draft facit places, and the profile time
+  -> `data/agentic/place-sources-*.json`. Not a facit: it checks the copy, not the data.
+- `python -m place.check_search --n 150 [--form typed|lower|no_letter]` (free, Nominatim at 1 req/s): register addresses
+  searched as typed, scored on distance and same property -> `place-search-*.json`. Since the search uses the same
+  register, the typed form alone grades the register against itself: the lower / no_letter forms test typing variants.
+- `python -m place.bench_answers run --repeats 3 --workers 4` (paid, ~$0.008 per answer incl. the MiMo judge): the chat
+  agent on `place/cases_answers.jsonl` (15 Uppsala places, references locked before the run) under the conditions pin /
+  address / vague / conflict, the question built by `place.context.question_with_place` as in the chat; `rejudge
+  <file> --judge-model openai/gpt-6-luna` adds the second judge -> `place-answers-*.json`. The address condition counts
+  "asks to pin it" without scoring it (the no-pin hint tells the agent to)
+
+Gotchas: Uppsala's streets are properties too (Dragarbrunn 1:2, Kronåsen 1:2), so a pin on a street gets that property and
+every plan it crosses; ~5 % of Uppsala's register address points inside plans lie on such a street property.
+Naturvårdsverket sends some polygons with a ring outside its shell (15 of 93 protected areas in Uppsala): `PlaceStore`
+repairs invalid geometries with `make_valid` on load, else "contains the pin" is wrong (Gula stigen was missed).
+Länsstyrelsernas strandskydd services answered 403 during a planned outage (22-27 Oct 2026); the durable source is NGP
+Strandskydd (#32). RAÄ has no bulk download (ancient remains must be live). The corpus registry holds no Uppsala plan
+provisions (61 plans, none with provisions), so a pinned Uppsala plan always says "provisions not indexed". The
+totalförsvar "stoppområde för höga objekt" covers ~86 % of Uppsala's points and is listed on almost every card. OSM
+lacks most Swedish house numbers: Nominatim found the house for 28 % of Uppsala's addresses (the rest: the street or
+nothing), hence the register first. MapLibre 6 loads its worker from a file next to its own module, which bundlers move:
+`PlaceMap.pointAtBundledWorker` emits it with `new URL(..., import.meta.url)`. A `.next` folder from before the repo
+moved (KTHAIS -> Projekt) made Turbopack panic ("Next.js package not found"): delete `.next` after moving the repo.
+
 ### Chat Request
 
 The frontend uses `POST /api/chat/stream` (SSE). `POST /api/chat` runs the same logic non-streamed.
 
 ```
-1. POST /api/chat/stream { messages, session_id? }
+1. POST /api/chat/stream { messages, session_id?, place?: {lat, lon, label} }   (place = the map pin, epic #31)
 2. Access-gate middleware, then get_current_user validates the Bearer JWT
 3. Create/lookup ChatSession, save the user message AND an empty assistant message (status "streaming")
    -> the generation runs in a background thread (run_in_background) that is independent of the HTTP
@@ -588,6 +653,9 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | POST   | `/api/benchmark/run`              | Yes  | Run the agent on a case now (chat settings) and grade it; background job (spends credits) |
 | GET    | `/api/benchmark/run/{job_id}`     | Yes  | Progress (tool calls) and result of that job (polled: a run outlasts the frontend proxy timeout) |
 | GET    | `/api/pipeline`                   | Yes  | Measurements of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency), read from the files the steps write; cached until one changes |
+| GET    | `/api/place/profile?lat=&lon=`    | Yes  | Place profile of a pinned point: property (live), plans, zones, plans in progress, inside/outside detaljplan (no LLM) |
+| GET    | `/api/place/coverage`             | Yes  | Pilot kommuner with a snapshot (code, name, bbox, fetch date), for the map's first view |
+| GET    | `/api/place/search?q=`            | Yes  | Address / place search for the map (street addresses from the pilot kommun's address register, else Nominatim: Sweden only, 1 request/s, pilot kommuner first; cached); 503 when Nominatim is down |
 
 All routes are additionally behind the access gate when it is enabled.
 
@@ -656,6 +724,7 @@ cd backend && uv pip install torch --index-url https://download.pytorch.org/whl/
 
 # Tests
 cd backend && pytest tests/
+cd frontend && bun run test                  # Vitest + jsdom + MSW, same setup as dev (PCR-0007, PCR-0008)
 ```
 
 ### Environment Variables
@@ -717,6 +786,18 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   `store/<model>/summary.json`, written by `localrag.store`; the GROUP BY takes ~30 s), filters on `kommun_code`
   (indexed; the kommun name and a sort over every row took 17-30 s per page)
 - `backend/routers/docs.py` -- Open a cited chunk in its original document (PDF page + highlight, or URL text fragment)
+- `backend/place/` -- place lookups for the map pin: `sources.py` (layers, attribute mapping, pilot kommuner),
+  `fetch.py` (snapshot CLI), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property and
+  ancient remains at a point), `profile.py` (`build_profile`), `permits.py` (`likely_permits`), `context.py` (the
+  place as text for the agent, `compact_profile`, `question_with_place`: what the agent is sent, used by the chat and
+  the answer benchmark), `geocode.py` (`search_places`: the kommun's address register first, then Nominatim;
+  `register_addresses`; `Throttle`: Nominatim's policy of one request a second and no search-as-you-type),
+  `check_sources.py` / `check_search.py` / `bench_answers.py` / `report.py` (the evaluation, see "Place Lookup"),
+  `bench.py` (the lookup benchmark: facit in `place/cases.jsonl`, locked
+  entries only, dev / test (Norrtälje held out), per-layer precision / recall, `data/agentic/place-bench-*.json`, which
+  the Benchmark view's `bench-*` glob does not pick up; `candidates` proposes places, a person writes the facit);
+  `backend/routers/place.py` -- `/api/place/*`. Tests: `backend/tests/unit/` mirrors `backend/` (fake snapshot in
+  `tests/unit/place/snapshot.py`; no real services, PCR-0011)
 - `backend/routers/benchmark.py` -- Benchmark view API: case sets (`SETS`: cases / caselaw / plans / tasks / generated), past results per case
   parsed from the result file names (`RESULT_FILE`; files from before `-explore-` count as explore = answer effort; `-x-<label>`
   runs show the label and model), and in-memory run jobs (`JOBS`, lost on restart)
@@ -810,6 +891,14 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)
 - `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage
 - `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
+- `frontend/components/place/` -- `PlacePanel` (map panel beside the chat, opened by the pin button in the message
+  bar: full-height map, the card as a glass sheet with a grabber, Apple Maps style; system font; controls styled in
+  `globals.css` under `.place-map`), `PlaceMap` (MapLibre 6 + OpenFreeMap Positron, outlines per kind, `bottomInset`
+  keeps the view centred above the sheet, attribution required by ODbL / OpenMapTiles / OpenFreeMap kept small),
+  `PlaceCard` (iOS-style grouped sections with icon tiles; "None found" vs "could not be reached"), `PlaceSearch`
+  (floating search, Enter only; a match becomes a grey proposed pin with "Pin here"), `PlaceChip` (the chat's pinned
+  place above the input), `glass.ts` (the shared glass style); `frontend/lib/place.ts` -- types
+  and `fetchPlaceProfile` / `fetchPlaceCoverage`
 - `frontend/components/BenchmarkBrowser.tsx` -- Benchmark view (sidebar, above Database): browse the case sets, a case's
   reference (verdicts, key points, evidence, source, map crop) and past results, and "Test with the agent" (run + judge)
 - `frontend/components/PipelineBrowser.tsx` -- Pipeline view (sidebar, below Benchmark), progressive: an introduction,
@@ -817,6 +906,11 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   how it is measured, collapsible detail sections), a glossary
 - `frontend/components/Sidebar.tsx` -- Session list, new chat, Benchmark / Pipeline / Database / Settings buttons, user info
 - `frontend/components/Settings.tsx` -- Profile / password settings
+- `frontend/tests/` -- Vitest suite copied from dev: `unit/` mirrors `components/` and `lib/` (reference tests
+  `lib/auth.test.ts`, `components/Sidebar.test.tsx`, the rest `it.todo`), `mocks/handlers.ts` is the shared MSW fake
+  backend (override with `server.use(...)`), and `setup.ts` fails any test whose request has no handler.
+  `tests/acceptance.test.ts` exists only on an issue's branch. The Dockerfile installs with Bun from `bun.lock`
+  (PCR-0009; there is no `package-lock.json`)
 
 ---
 

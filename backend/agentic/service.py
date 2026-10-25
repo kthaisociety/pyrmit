@@ -153,10 +153,12 @@ class CitationNumberer:
 
 
 def stream_agent(question: str, history: list[dict], record: Callable[..., None], sse: Callable[[dict], str],
-                 flush: Callable[[], list[str]] = lambda: []) -> Generator[str, None, dict]:
+                 flush: Callable[[], list[str]] = lambda: [], allow_ask: bool = True) -> Generator[str, None, dict]:
     """Yield SSE strings while the agent works, including the final answer as it streams (citations
-    already numbered); return {"answer", "law_rows", "local_rows", "sources", "citations", "run"}.
+    already numbered); return {"answer", "law_rows", "local_rows", "sources", "citations", "choices" (the options of
+    an ask_user question, else []), "offer_pin", "run"}.
 
+    `allow_ask=False` keeps the agent from asking the user again (the message answers its question).
     `flush` returns the pipeline events of the calls recorded so far: streamed (and so saved with the
     message) as the agent goes, so someone reopening the chat mid-run sees its progress."""
     from agentic.agent import run_agent
@@ -173,7 +175,7 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
                 effort=os.getenv("AGENT_EFFORT", "medium").strip(),
                 explore_effort=os.getenv("AGENT_EXPLORE_EFFORT", "medium").strip() or None,
                 max_steps=int(os.getenv("AGENT_MAX_STEPS", "10")),
-                on_event=events.put,
+                on_event=events.put, allow_ask=allow_ask,
             )
         except Exception as exc:
             outcome["error"] = exc
@@ -223,4 +225,4 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
     law_rows = [chunk_row(c) for c in chunks if c["kind"] == "law"]
     local_rows = [chunk_row(c) for c in chunks if c["kind"] != "law"]
     return {"answer": answer, "law_rows": law_rows, "local_rows": local_rows, "sources": numberer.labels,
-            "citations": numberer.citations(), "run": run}
+            "citations": numberer.citations(), "choices": list(run.choices), "offer_pin": run.offer_pin, "run": run}
