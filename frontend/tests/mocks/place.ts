@@ -45,6 +45,40 @@ export const kungsangen: PlaceProfile = {
     row({ kind: 'plan_pending', layer: 'plans_pending', layer_title: 'Pågående detaljplaner',
           name: 'Kungsängen 7:8 m.fl.', ref: 'PLA 2024-001', status: 'Samråd', text: 'Bostäder' }),
   ],
+  protected_areas: [
+    row({ kind: 'protected', layer: 'protected_areas', layer_title: 'Skyddade områden', name: 'Kungsängsängen',
+          ref: '2001234', type: 'Naturreservat', authority: 'Länsstyrelsen', date: '1951-03-02',
+          url: 'https://skyddadnatur.naturvardsverket.se/sknat/?nvrid=2001234', source: 'Naturvårdsverket' }),
+  ],
+  natura2000: [
+    row({ kind: 'natura2000', layer: 'natura2000', layer_title: 'Natura 2000', name: 'Kungsängen', ref: 'SE0210071',
+          type: 'SCI', url: 'https://natura2000.eea.europa.eu/Natura2000/SDF.aspx?site=SE0210071',
+          source: 'Naturvårdsverket' }),
+  ],
+  national_interests: [
+    row({ kind: 'national_interest', layer: 'riks_kulturmiljo', layer_title: 'Riksintresse kulturmiljövård',
+          name: 'Uppsala stad', type: 'Riksintresse kulturmiljövård', law: 'MB 3 kap. 6 §',
+          url: 'https://www.raa.se/riksintressen/c40', source: 'Boverket (sammanställning)' }),
+  ],
+  ancient_remains: [
+    row({ kind: 'ancient_remain', layer: 'raa_lamningar', layer_title: 'Lämningar', name: 'Gravfält',
+          ref: 'Uppsala 123:1', type: 'Gravfält', status: 'Fornlämning',
+          url: 'https://pub.raa.se/visa/objekt/lamning/d4e16ab8', source: 'Riksantikvarieämbetet' }),
+  ],
+  strandskydd: {
+    status: 'not_checked',
+    reason: 'The länsstyrelser\'s strandskydd services could not be reached.',
+    note: 'A strandskyddsdispens may be needed within 100 m of a shoreline.',
+  },
+  permits: [
+    { title: 'Bygglov (building permit)', law: 'PBL 9 kap.', authority: 'Byggnadsnämnden, Uppsala kommun',
+      reason: 'Tested against the detaljplan.', kind: 'permit' },
+    { title: 'Dispens from the naturreservat regulations of Kungsängsängen', law: 'MB 7 kap. 7 §',
+      authority: 'Länsstyrelsen', reason: 'The property lies in a naturreservat.', kind: 'permit' },
+    { title: 'Uppsala stad: the prövning must not significantly harm this riksintresse', law: 'MB 3 kap. 6 §',
+      authority: 'Uppsala kommun / Länsstyrelsen', reason: 'Riksintresse kulturmiljövård.', kind: 'consideration' },
+  ],
+  section_status: { protected_areas: 'ok', natura2000: 'ok', national_interests: 'ok', ancient_remains: 'ok' },
   layers: [
     { id: 'plans', title: 'Gällande detaljplaner', provider: 'Uppsala kommun', licence: 'open data',
       fetched: '2026-10-25', status: 'ok' },
@@ -52,8 +86,14 @@ export const kungsangen: PlaceProfile = {
   notes: ['Registry data, not a decision: the adopted plan documents and the authorities\' decisions are binding.'],
 };
 
+export const nothingAround: PlaceProfile = {
+  ...kungsangen, protected_areas: [], natura2000: [], national_interests: [], ancient_remains: [],
+  section_status: { protected_areas: 'ok', natura2000: 'unavailable', national_interests: 'ok', ancient_remains: 'ok' },
+};
+
 export const kaboOutside: PlaceProfile = {
   ...kungsangen,
+  protected_areas: [], natura2000: [], national_interests: [], ancient_remains: [],
   point: { lat: 59.88, lon: 17.68 },
   property: { designation: 'Uppsala Kåbo 1:1', geometry: square(17.679, 59.879, 17.681, 59.881),
               source: 'Uppsala kommun', fetched: '2026-10-25' },
@@ -68,6 +108,9 @@ export const street: PlaceProfile = { ...kungsangen, property: null, property_st
 export const notCovered: PlaceProfile = {
   ...kungsangen, point: { lat: 57.7, lon: 11.97 }, kommun: null, covered: false, property: null,
   property_status: 'not_covered', detaljplan: 'unknown', plans: [], zones: [], pending_plans: [], layers: [],
+  protected_areas: [], natura2000: [], national_interests: [], ancient_remains: [], permits: [],
+  section_status: { protected_areas: 'not_covered', natura2000: 'not_covered', national_interests: 'not_covered',
+                    ancient_remains: 'not_covered' },
 };
 
 export const propertyUnavailable: PlaceProfile = { ...kungsangen, property: null, property_status: 'unavailable' };

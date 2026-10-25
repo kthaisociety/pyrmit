@@ -39,6 +39,17 @@ export interface PlaceLayer {
   status: 'ok' | 'unavailable';
 }
 
+// A permit or prövning the place points to, by fixed rules; a consideration is not a permit (e.g. a riksintresse)
+export interface PlacePermit {
+  title: string;
+  law: string;
+  authority: string;
+  reason: string;
+  kind: 'permit' | 'consideration';
+}
+
+export type SectionStatus = 'ok' | 'unavailable' | 'not_covered';
+
 export interface PlaceProfile {
   point: Pin;
   kommun: { code: string; name: string } | null;
@@ -49,6 +60,14 @@ export interface PlaceProfile {
   plans: PlaceFeature[];
   zones: PlaceFeature[];
   pending_plans: PlaceFeature[];
+  protected_areas: PlaceFeature[];
+  natura2000: PlaceFeature[];
+  national_interests: PlaceFeature[];
+  ancient_remains: PlaceFeature[];
+  strandskydd: { status: 'not_checked'; reason: string; note: string };
+  permits: PlacePermit[];
+  // "ok": the sources answered (an empty list means none found); "unavailable": one did not
+  section_status: Record<'protected_areas' | 'natura2000' | 'national_interests' | 'ancient_remains', SectionStatus>;
   layers: PlaceLayer[];
   notes: string[];
 }

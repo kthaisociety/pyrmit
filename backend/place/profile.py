@@ -19,6 +19,7 @@ from place.store import PlaceStore
 NOT_A_DECISION = ("Registry data, not a decision: the adopted plan documents and the authorities' decisions are "
                   "binding.")
 
+ANCIENT_REMAINS_RADIUS_M = 30         # without a property: remains this close to the pin
 MIN_SHARE = 0.02                     # a feature covering less of the property only touches its boundary
 FINISHED_STAGES = {"avslutat", "avbrutet", "avbruten"}  # still in the kommun's "pågående" layer, no longer in progress
 PLAN_KINDS = ("plan", "plan_addition", "area_regulations")
@@ -123,10 +124,11 @@ def _layer_rows(store: PlaceStore, code: str, layer: Layer, meta: dict, point, a
 
 def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
                   property_at: Callable[[str, float, float], dict | None] | None = None,
-                  plan_registry: Callable[[str], list[dict]] | None = None) -> dict:
-    """Place profile of a point in WGS84. `store`, `property_at` (code, lon, lat) and `plan_registry` (kommun code
-    -> plan records of data/corpus/plans.jsonl) default to the snapshots, the live property service and the
-    corpus registry.
+                  plan_registry: Callable[[str], list[dict]] | None = None,
+                  ancient_remains_at: Callable[[dict], list[dict]] | None = None) -> dict:
+    """Place profile of a point in WGS84. `store`, `property_at` (code, lon, lat), `plan_registry` (kommun code
+    -> plan records of data/corpus/plans.jsonl) and `ancient_remains_at` (GeoJSON geometry -> register features,
+    see place.live) default to the snapshots, the live property service, the corpus registry and Riksantikvarieämbetet.
 
     Returns:
     - "point": {"lat", "lon"}
@@ -141,17 +143,33 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
       no property), newest laga kraft date first
     - "zones": land-use zones (användning) on the property
     - "pending_plans": plans in progress covering the property (not binding)
+    - "protected_areas": protected areas covering the property (naturreservat, biotopskyddsområde, ...): type,
+      name, deciding authority, decision date and a link to the decision; "permit_authority" is the authority that
+      decides dispens
+    - "natura2000": Natura 2000 sites covering the property, with their site code and a link to the site
+    - "national_interests": riksintressen (miljöbalken 3 and 4 kap.) covering the property, with their kind, name,
+      legal basis ("law") and a link to the description where there is one
+    - "ancient_remains": ancient remains on the property (or within ANCIENT_REMAINS_RADIUS_M of the pin when there
+      is no property): ref = RAÄ number, type = kind of remain, status = antikvarisk bedömning, url = Fornsök
+    - "strandskydd": {"status": "not_checked", "reason", "note"}: the reason it was not checked and the reminder
+      that a strandskyddsdispens may be needed within 100 m of a shoreline
+    - "permits": place.permits.likely_permits of this profile
+    - "section_status": {"protected_areas", "natura2000", "national_interests", "ancient_remains"}: "ok" when every
+      source of the section answered (an empty list then means none was found), "unavailable" when one did not,
+      "not_covered" outside the pilot kommuner
     - "layers": [{"id", "title", "provider", "licence", "fetched", "status"}] for every layer consulted
     - "notes": user-facing caveats, the first one NOT_A_DECISION
 
-    Every row of plans, zones and pending_plans is a feature of `place.sources.feature` plus "source" (provider),
+    Every row of plans, zones, pending_plans, protected_areas, natura2000, national_interests and ancient_remains
+    is a feature of `place.sources.feature` plus "source" (provider),
     "fetched" (snapshot date) and "geometry" (GeoJSON). Plans also carry "corpus_plan_id" (the matching plan of
     the corpus registry, or None) and "provisions_indexed" (True when that plan has provisions); zones carry
     "share", the fraction of the property they cover (1.0 without a property). A feature counts when it contains
     the pin or covers at least 2 % of the property, so neighbours that only touch its boundary are left out.
 
     Outside the pilot kommuner, kommun is None, covered False, property_status "not_covered", detaljplan
-    "unknown" and the lists are empty. Raises ValueError when lat or lon is not a coordinate."""
+    "unknown", the lists are empty, every section_status is "not_covered" and there are no permits. Raises
+    ValueError when lat or lon is not a coordinate."""
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):  # also rejects NaN
         raise ValueError(f"Not a coordinate: lat={lat}, lon={lon}")
     store = store or default_store()

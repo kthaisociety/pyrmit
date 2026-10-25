@@ -51,6 +51,15 @@ def _uppsala_property(kommun: str, lon: float, lat: float) -> dict | None:
             "source": "Uppsala kommun", "fetched": today()}
 
 
+def ancient_remains_at(geometry: dict) -> list[dict]:
+    """The ancient remains (lämningar) of Riksantikvarieämbetet's register that meet `geometry` (GeoJSON in WGS84:
+    the property, or a small circle around the pin): [{"properties": <the register's attributes: lamningsnummer,
+    raa_nummer, lamningstyp, antikvarisk_bedomning, url, ...>, "geometry": <GeoJSON>}].
+
+    Raises PlaceSourceUnavailable when the register does not answer."""
+    raise NotImplementedError
+
+
 def property_at(code: str, lon: float, lat: float) -> dict | None:
     """The property at the point in pilot kommun `code`: {"designation" (e.g. "Uppsala Kungsängen 7:8"),
     "geometry" (GeoJSON in WGS84, every part of the property), "source", "fetched" (ISO date)}.
