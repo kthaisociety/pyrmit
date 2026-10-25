@@ -24,8 +24,8 @@ PROTECTED_AREA_LAW = {
 }
 
 
-def _permit(title: str, law: str, authority: str, reason: str, kind: str = "permit") -> dict:
-    return {"title": title, "law": law, "authority": authority, "reason": reason, "kind": kind}
+def _permit(key: str, title: str, law: str, authority: str, reason: str, kind: str = "permit") -> dict:
+    return {"key": key, "title": title, "law": law, "authority": authority, "reason": reason, "kind": kind}
 
 
 def _authority(name: str | None, kommun: str) -> str:
@@ -36,13 +36,13 @@ def _authority(name: str | None, kommun: str) -> str:
 
 
 def _bygglov(detaljplan: str, kommun: str) -> dict:
-    return _permit("Bygglov (building permit)", "PBL 9 kap.", f"Byggnadsnämnden, {kommun} kommun",
+    return _permit("bygglov", "Bygglov (building permit)", "PBL 9 kap.", f"Byggnadsnämnden, {kommun} kommun",
                    BYGGLOV_REASON[detaljplan])
 
 
 def _protected_area(area: dict, kommun: str) -> dict:
     kind = (area["type"] or "skyddat område").strip()
-    return _permit(f"Dispens from the {kind.lower()} regulations of {area['name']}",
+    return _permit(f"dispens:{area['ref']}", f"Dispens from the {kind.lower()} regulations of {area['name']}",
                    PROTECTED_AREA_LAW.get(kind.lower(), "MB 7 kap."),
                    _authority(area.get("permit_authority") or area.get("authority"), kommun),
                    f"The property lies in the {kind.lower()} {area['name']}: measures its regulations forbid need "
@@ -50,24 +50,25 @@ def _protected_area(area: dict, kommun: str) -> dict:
 
 
 def _natura2000(site: dict) -> dict:
-    return _permit(f"Natura 2000 tillstånd for {site['name']} ({site['ref']})", "MB 7 kap. 28 a §", LANSSTYRELSEN,
+    return _permit(f"natura2000:{site['ref']}", f"Natura 2000 tillstånd for {site['name']} ({site['ref']})", "MB 7 kap. 28 a §", LANSSTYRELSEN,
                    "Needed if the measure may significantly affect the site, even from outside it.")
 
 
 def _ancient_remain(remain: dict) -> dict | None:
     label = f"{remain['ref']} ({remain['type']})"
     if remain["status"] == "Fornlämning":
-        return _permit(f"Tillstånd for ingrepp i fornlämning {label}", "KML 2 kap. 12 §", LANSSTYRELSEN,
+        return _permit(f"fornlamning:{remain['ref']}", f"Tillstånd for ingrepp i fornlämning {label}", "KML 2 kap. 12 §", LANSSTYRELSEN,
                        "It is forbidden to disturb, remove, dig out, cover or build on a fornlämning without one.")
     if remain["status"] == "Möjlig fornlämning":
-        return _permit(f"Contact the länsstyrelse about {label}: a possible fornlämning", "KML 2 kap.",
+        return _permit(f"contact:{remain['ref']}", f"Contact the länsstyrelse about {label}: a possible fornlämning", "KML 2 kap.",
                        LANSSTYRELSEN, "The länsstyrelse decides whether it is protected before you build.",
                        kind="consideration")
     return None
 
 
 def _national_interest(interest: dict, kommun: str) -> dict:
-    return _permit(f"{interest['name']}: the prövning must not significantly harm this riksintresse",
+    return _permit(f"riksintresse:{interest['name']}",
+                   f"{interest['name']}: the prövning must not significantly harm this riksintresse",
                    interest["law"] or "MB 3-4 kap.", f"{kommun} kommun / {LANSSTYRELSEN}",
                    f"{interest['type']}: weighed in the prövning, not a permit of its own.", kind="consideration")
 
