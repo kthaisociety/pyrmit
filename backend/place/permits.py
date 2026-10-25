@@ -84,8 +84,9 @@ def likely_permits(profile: dict) -> list[dict]:
       fornlämning" asks the user to contact the länsstyrelse instead
     - one consideration per national interest: the prövning must not significantly harm it (not a permit)
 
-    Returns [{"title", "law", "authority", "reason", "kind"}], kind "permit" or "consideration". An uncovered place
-    has none."""
+    Returns [{"key", "title", "law", "authority", "reason", "kind"}], kind "permit" or "consideration". The key is
+    stable across runs, for the benchmark: "bygglov", "dispens:<NVRID>", "natura2000:<site code>",
+    "fornlamning:<RAÄ number>", "contact:<RAÄ number>", "riksintresse:<name>". An uncovered place has none."""
     if not profile.get("covered"):
         return []
     kommun = profile["kommun"]["name"]
