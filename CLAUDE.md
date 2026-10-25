@@ -221,7 +221,12 @@ reference in italics) that open
 `#page=N&zoom=scale,left,top&navpanes=0`, passage highlighted; web pages and statutes opened in a new tab with a
 `#:~:text=` fragment that Chrome scrolls to and highlights; scanned PDFs: page from the OCR text, no highlight).
 The page is found by searching the chunk's 6-word phrases in the PDF (chunks store no page numbers).
-The agent branch runs before the rewrite step and returns early.
+The agent branch runs before the rewrite step and returns early. With a map pin (`request.place`, #37) the worker builds
+the place profile (`get_place_profile` dependency), puts `place.context.place_context` before the question ("do not ask
+where", "ask which place" when another is named) and emits a `place` pipeline event `{pin, profile}` (profile without
+geometries); without a pin the question gets `NO_PIN_HINT`. The chat session's place is the latest `place` event of its
+answers' traces (ADR-0004: no new columns on the shared tables); `Chat.tsx` restores the `PlaceChip` from it
+(`placeFromHistory`) and keeps the pin and its label in separate state, so a label update never refetches the profile.
 Gotcha: **PBL 9 kap. was renumbered by SFS 2025:974** (bygglov in/outside a detaljplan now 9 kap. 56/57 §, liten
 avvikelse 60-61 §, förhandsbesked 74 §; some sections have a second version in force 2027-01-01). Rulings and the
 model's memory use the old numbers (9:30, 9:31 b, 9:17), so the prompt tells the agent to find provisions by wording.
@@ -355,7 +360,7 @@ moved (KTHAIS -> Projekt) made Turbopack panic ("Next.js package not found"): de
 The frontend uses `POST /api/chat/stream` (SSE). `POST /api/chat` runs the same logic non-streamed.
 
 ```
-1. POST /api/chat/stream { messages, session_id? }
+1. POST /api/chat/stream { messages, session_id?, place?: {lat, lon, label} }   (place = the map pin, epic #31)
 2. Access-gate middleware, then get_current_user validates the Bearer JWT
 3. Create/lookup ChatSession, save the user message AND an empty assistant message (status "streaming")
    -> the generation runs in a background thread (run_in_background) that is independent of the HTTP

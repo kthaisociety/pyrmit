@@ -93,6 +93,12 @@ def _without_geometry(row: dict | None) -> dict | None:
 
 def compact_profile(profile: dict) -> dict:
     """The profile without any geometry (the property's and every row's), to keep the pipeline trace small."""
-    return {key: ([_without_geometry(row) for row in value] if isinstance(value, list) and value
-                  and isinstance(value[0], dict) else _without_geometry(value) if key == "property" else value)
-            for key, value in profile.items()}
+    compact = {}
+    for key, value in profile.items():
+        if key == "property":
+            compact[key] = _without_geometry(value)
+        elif isinstance(value, list):
+            compact[key] = [_without_geometry(row) if isinstance(row, dict) else row for row in value]
+        else:
+            compact[key] = value
+    return compact

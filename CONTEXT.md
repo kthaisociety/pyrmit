@@ -107,6 +107,9 @@ A lämning in Riksantikvarieämbetet's register, with its antikvarisk bedömning
 **Likely permit**:
 A permit or prövning the place card derives by fixed rules from the place profile (bygglov, dispens, tillstånd), with its legal basis and deciding authority. A consideration is listed with them but is not a permit.
 
+**Place chip**:
+The pinned place shown above the message input. Tapping it opens the map; clearing it unpins the chat.
+
 **Pilot kommun**:
 A kommun the map covers, because its layers have a snapshot (Uppsala for now). Anywhere else the place is "not covered yet".
 
@@ -123,3 +126,4 @@ A dated local copy of a pilot kommun's area layers, fetched with `python -m plac
 - The **Orchestrator** combines both agents' results into a **Verdict**, which becomes the **Feasibility analysis** saved as an assistant **Chat message**.
 - The **Access gate** sits in front of everything, including sign-in.
 - A **Pin** in a **Pilot kommun** gives a **Property** (looked up live) and a **Place profile** (from the **Snapshot**): its **Detaljplaner**, **Land-use zones**, **Plans in progress**, **Protected areas** and **National interests**, plus the **Ancient remains** on it (looked up live). The **Likely permits** follow from that profile. The **Place card** shows all of it.
+- A question asked with a **Pin** is answered from its **Place profile**, and the answer keeps that **Pin**: reopening the **Chat session** brings back its **Place chip**.
