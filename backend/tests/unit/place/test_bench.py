@@ -1,14 +1,27 @@
-"""Acceptance tests for #39: the lookup benchmark for Uppsala place cards. Temporary, folded into tests/unit/ by
-refactor-issue. Fake profiles from the fake snapshot: no network, no model (PCR-0011)."""
+"""place.bench: the place-lookup benchmark on profiles of the fake snapshot, and the permits' stable keys. No
+network, no model (PCR-0011)."""
 
 import json
 
 import pytest
 
-from place.bench import (HARD_CASES, candidates, compare_runs, hard_case_tags, load_cases, observed, run_bench,
-                         score_case)
+from place.bench import (
+    HARD_CASES,
+    candidates,
+    compare_runs,
+    hard_case_tags,
+    load_cases,
+    observed,
+    run_bench,
+    score_case,
+)
 from place.profile import build_profile
-from tests.unit.place.snapshot import fake_property, registry, remains_at, write_national_snapshot
+from tests.unit.place.snapshot import (
+    fake_property,
+    registry,
+    remains_at,
+    write_national_snapshot,
+)
 
 PERFECT = {"property": "Uppsala Kungsängen 7:8", "detaljplan": "inside",
            "plans": ["0380-P2012/9", "0380-O2005/1", "0380-P2002/5", "0380-P1990/3"], "zones": ["BCK", "P"],
