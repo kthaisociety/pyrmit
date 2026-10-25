@@ -1,5 +1,6 @@
 // Place lookups for the chat's map pin: the place profile of a point and the kommuner the map covers
 // (backend/place/, GET /api/place/*).
+import { authFetch } from '@/lib/auth';
 
 export interface Pin {
   lat: number;
@@ -59,13 +60,22 @@ export interface PlaceCoverage {
   fetched: string;
 }
 
+async function getJson<T>(url: string): Promise<T> {
+  const response = await authFetch(url);
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(typeof data?.detail === 'string' ? data.detail : `HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
 /** The place profile of a pinned point. Throws an Error with the backend's message when the lookup fails. */
 export async function fetchPlaceProfile(pin: Pin): Promise<PlaceProfile> {
-  void pin;
-  throw new Error('not implemented');
+  const query = new URLSearchParams({ lat: String(pin.lat), lon: String(pin.lon) });
+  return getJson<PlaceProfile>(`/api/place/profile?${query}`);
 }
 
 /** The pilot kommuner the map covers, for its first view. Throws an Error when the lookup fails. */
 export async function fetchPlaceCoverage(): Promise<PlaceCoverage[]> {
-  throw new Error('not implemented');
+  return getJson<PlaceCoverage[]>('/api/place/coverage');
 }

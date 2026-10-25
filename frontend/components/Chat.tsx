@@ -28,6 +28,8 @@ import ChunkCard from '@/components/ChunkCard';
 import PipelineTrace, { type PipelineEvent, type RetrievedChunk } from '@/components/PipelineTrace';
 import SourceViewer, { type Citation } from '@/components/SourceViewer';
 import CitedMarkdown from '@/components/CitedMarkdown';
+import PlacePanel from '@/components/place/PlacePanel';
+import type { Pin } from '@/lib/place';
 
 interface Message {
   id?: number;
@@ -713,6 +715,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   const [loading, setLoading] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [pin, setPin] = useState<Pin | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pendingSessionIdRef = useRef<string | null>(null);
   // Session we just created ourselves: its messages are already in state (with
@@ -991,7 +995,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   const lastIdx = messages.length - 1;
 
   return (
-    <div className="flex flex-col h-full w-full relative">
+    <div className="flex h-full w-full">
+    <div className="flex flex-col h-full flex-1 min-w-0 relative">
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto p-4 space-y-6 pb-32 pt-10">
           {messages.length === 0 && (
@@ -1057,12 +1062,21 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 pt-10 pb-6 px-4">
         <div className="max-w-3xl mx-auto">
           <form onSubmit={sendMessage} className="relative shadow-lg rounded-xl">
+            <button
+              type="button"
+              onClick={() => setMapOpen((open) => !open)}
+              aria-label={mapOpen ? 'Close map' : 'Open map'}
+              aria-pressed={mapOpen}
+              className={`absolute left-2 top-2 bottom-2 px-2.5 rounded-lg transition-transform duration-100 active:scale-95 flex items-center justify-center ${mapOpen ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
+            >
+              <MapPin size={18} />
+            </button>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask about building permits..."
-              className="w-full p-4 pr-24 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full p-4 pl-14 pr-24 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               disabled={loading || streaming}
             />
             <button
@@ -1079,6 +1093,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
           </p>
         </div>
       </div>
+    </div>
+    {mapOpen && <PlacePanel pin={pin} onPinChange={setPin} onClose={() => setMapOpen(false)} />}
     </div>
   );
 }

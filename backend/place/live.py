@@ -1,8 +1,54 @@
 """Live lookups at a point: the property (fastighet) from the pilot kommun's own map service."""
 
+from functools import lru_cache
+
+import httpx
+from shapely.geometry import mapping, shape
+from shapely.ops import unary_union
+
+from place.sources import PILOTS, UPPSALA_MAP, USER_AGENT, today
+
+UPPSALA_PROPERTY_LAYER = 51  # Fastighetsgränser: one polygon per part of a property, "fastighet" = "TRAKT 7:8"
+TIMEOUT_S = 15
+COORDINATE_DECIMALS = 6      # ~0.1 m: pins closer than that share a cached lookup
+
 
 class PlaceSourceUnavailable(Exception):
     """A live source did not answer: network error, HTTP error or an unreadable payload."""
+
+
+def _query(params: dict) -> list[dict]:
+    try:
+        response = httpx.get(f"{UPPSALA_MAP}/{UPPSALA_PROPERTY_LAYER}/query", timeout=TIMEOUT_S,
+                             headers={"User-Agent": USER_AGENT},
+                             params={"outFields": "fastighet", "outSR": 4326, "f": "geojson", **params})
+        response.raise_for_status()
+        data = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        raise PlaceSourceUnavailable(f"Uppsala property service: {exc}") from exc
+    if "error" in data:
+        raise PlaceSourceUnavailable(f"Uppsala property service: {data['error']}")
+    return data.get("features") or []
+
+
+def _designation(kommun: str, fastighet: str) -> str:
+    """'KUNGSÄNGEN 7:8' -> 'Uppsala Kungsängen 7:8' (the kommun name, then the trakt in title case)."""
+    trakt, _, number = fastighet.strip().rpartition(" ")
+    return f"{kommun} {trakt.title()} {number}" if trakt else f"{kommun} {fastighet.strip()}"
+
+
+@lru_cache(maxsize=2048)
+def _uppsala_property(lon: float, lat: float) -> dict | None:
+    hits = _query({"geometry": f"{lon},{lat}", "geometryType": "esriGeometryPoint", "inSR": 4326,
+                   "spatialRel": "esriSpatialRelIntersects"})
+    if not hits:
+        return None
+    fastighet = hits[0]["properties"]["fastighet"]
+    escaped = fastighet.replace("'", "''")
+    parts = _query({"where": f"fastighet = '{escaped}'"}) or hits
+    geometry = unary_union([shape(part["geometry"]) for part in parts])
+    return {"designation": _designation(PILOTS["0380"]["name"], fastighet), "geometry": mapping(geometry),
+            "source": "Uppsala kommun", "fetched": today()}
 
 
 def property_at(code: str, lon: float, lat: float) -> dict | None:
@@ -11,4 +57,6 @@ def property_at(code: str, lon: float, lat: float) -> dict | None:
 
     None when no property covers the point (a street, park or water) or the kommun has no property service.
     Raises PlaceSourceUnavailable when the service fails."""
-    raise NotImplementedError
+    if PILOTS.get(code, {}).get("property_service") != "uppsala":
+        return None
+    return _uppsala_property(round(lon, COORDINATE_DECIMALS), round(lat, COORDINATE_DECIMALS))

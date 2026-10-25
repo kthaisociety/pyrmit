@@ -17,7 +17,7 @@ from dev_access import (
     request_has_dev_access,
 )
 from embeddings import EmbeddingConfig
-from routers import access_gate, chat, auth, chunks, agents, db_browser, docs, benchmark
+from routers import access_gate, chat, auth, chunks, agents, db_browser, docs, benchmark, place
 from logging_config import setup_logging
 
 setup_logging()
@@ -113,6 +113,7 @@ app.include_router(agents.router, prefix="/api", tags=["agents"])
 app.include_router(db_browser.router, prefix="/api", tags=["db-browser"])
 app.include_router(docs.router, prefix="/api", tags=["docs"])
 app.include_router(benchmark.router, prefix="/api", tags=["benchmark"])
+app.include_router(place.router, prefix="/api", tags=["place"])
 
 @app.get("/")
 def read_root():
