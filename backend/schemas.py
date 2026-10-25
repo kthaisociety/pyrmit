@@ -239,6 +239,7 @@ class ChunkRow(BaseModel):
     kind: str | None = None
     doc_type: str | None = None
     kommun: str | None = None
+    url: str | None = None
 
 
 class DocumentRow(BaseModel):
@@ -276,6 +277,11 @@ class ChunkSearchMatch(BaseModel):
     chunk_index: int | None = None
     distance: float | None = None
     content: str
+    # Local corpus: to open the original document (/api/docs/locate)
+    chunk_id: str | None = None
+    doc_id: str | None = None
+    kind: str | None = None
+    url: str | None = None
 
 
 class ChunkSearchResponse(BaseModel):

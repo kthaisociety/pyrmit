@@ -127,6 +127,7 @@ def _row_from_chunk(chunk: dict) -> schemas.ChunkRow:
         kind=chunk["kind"],
         doc_type=None if law else chunk.get("doc_type"),
         kommun=None if law else chunk.get("kommun"),
+        url=chunk.get("url"),
     )
 
 
@@ -315,7 +316,8 @@ def semantic_search(
         def to_local_matches(rows):
             return [
                 schemas.ChunkSearchMatch(source=row["source"], chunk_index=row["chunk_index"], distance=None,
-                                         content=row["content"])
+                                         content=row["content"], chunk_id=row["chunk_id"], doc_id=row["doc_id"],
+                                         kind=row["kind"], url=row["url"])
                 for row in rows
             ]
 

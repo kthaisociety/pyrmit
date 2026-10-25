@@ -1,10 +1,11 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronRight, Loader2, Search } from 'lucide-react';
+import { createContext, FormEvent, useContext, useEffect, useState } from 'react';
+import { ArrowLeft, ChevronDown, ChevronRight, ExternalLink, FileText, Loader2, Search } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
 import { DOC_TYPE_LABELS, docTypeName, formatNumber } from '@/lib/corpus';
 import ChunkCard from '@/components/ChunkCard';
+import SourceViewer, { CitedChunk, Citation, openPageAtChunk } from '@/components/SourceViewer';
 
 type TableName = 'law' | 'document';
 type Tab = TableName | 'search';
@@ -61,6 +62,7 @@ interface ChunkRow {
   kind?: string | null;
   doc_type?: string | null;
   kommun?: string | null;
+  url?: string | null;
 }
 
 interface ChunkPage {
@@ -76,6 +78,10 @@ interface SearchMatch {
   chunk_index: number | null;
   distance: number | null;
   content: string;
+  chunk_id?: string | null; // local corpus
+  doc_id?: string | null;
+  kind?: string | null;
+  url?: string | null;
 }
 
 interface SearchResponse {
@@ -103,6 +109,66 @@ function chunkMeta(row: ChunkRow, showKommun: boolean): string[] {
   if (row.kind === 'pdf' || row.kind === 'page') meta.push(row.kind === 'pdf' ? 'PDF' : 'web page');
   if (!row.has_embedding) meta.push('no embedding');
   return meta;
+}
+
+// Opens the side panel on a local chunk's PDF (DatabaseBrowser holds the panel)
+const ViewSource = createContext<(citation: Citation) => void>(() => {});
+
+function toCited(row: ChunkRow): CitedChunk {
+  return {
+    chunk_id: row.id,
+    doc_id: row.doc_id ?? undefined,
+    kind: row.kind ?? undefined,
+    source: row.source,
+    chunk_index: row.chunk_index,
+    url: row.url,
+    content: row.content,
+  };
+}
+
+const LINK_BUTTON =
+  'inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-zinc-200 px-2 py-0.5 text-[11px] text-zinc-600 hover:border-zinc-400 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300';
+
+/** Local corpus chunk: its PDF opened at the passage (side panel), or its web page / statute in a new tab. */
+function SourceLinks({ chunk }: { chunk: CitedChunk }) {
+  const view = useContext(ViewSource);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  if (chunk.doc_id?.startsWith('pdf:')) {
+    return (
+      <>
+        <button type="button" className={LINK_BUTTON} onClick={() => view({ n: 0, label: chunk.source, chunks: [chunk] })}>
+          <FileText size={11} /> PDF at this passage
+        </button>
+        {chunk.url && (
+          <a href={chunk.url} target="_blank" rel="noreferrer" title={chunk.url} className={LINK_BUTTON}>
+            <ExternalLink size={11} /> On the kommun&apos;s website
+          </a>
+        )}
+      </>
+    );
+  }
+  if (chunk.kind !== 'page' && chunk.kind !== 'law') return null; // "legacy:" PoC documents: no original kept
+  const openPage = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await openPageAtChunk(chunk.chunk_id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <button type="button" className={LINK_BUTTON} disabled={busy} onClick={openPage}>
+        {busy ? <Loader2 size={11} className="animate-spin" /> : <ExternalLink size={11} />}
+        {chunk.kind === 'law' ? 'Statute at this section' : 'Web page at this passage'}
+      </button>
+      {error && <span className="text-[11px] text-red-500">{error}</span>}
+    </>
+  );
 }
 
 function StatCard({ label, overview, unit }: { label: string; overview?: TableOverview; unit: string }) {
@@ -184,6 +250,7 @@ const DOC_PAGE_SIZE = 50;
 
 /** One document of a kommun: click to load its chunks. */
 function DocumentItem({ doc }: { doc: DocumentRow }) {
+  const view = useContext(ViewSource);
   const [chunks, setChunks] = useState<ChunkRow[] | null>(null);
   const [open, setOpen] = useState(false);
   const toggle = () => {
@@ -209,14 +276,32 @@ function DocumentItem({ doc }: { doc: DocumentRow }) {
       </button>
       {open && (
         <div className="space-y-1.5 border-t border-zinc-200 px-3 py-2 dark:border-zinc-700">
-          {doc.url && (
-            <a href={doc.url} target="_blank" rel="noreferrer" className="block truncate text-[11px] text-blue-600 hover:underline dark:text-blue-400">
-              {doc.url}
-            </a>
-          )}
+          <div className="flex min-w-0 items-center gap-2">
+            {doc.doc_id.startsWith('pdf:') && chunks && chunks.length > 0 && (
+              <button
+                type="button"
+                className={LINK_BUTTON}
+                onClick={() => view({ n: 0, label: doc.title, chunks: chunks.map(toCited) })}
+              >
+                <FileText size={11} /> Open the PDF
+              </button>
+            )}
+            {doc.url && (
+              <a href={doc.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-[11px] text-blue-600 hover:underline dark:text-blue-400">
+                {doc.url}
+              </a>
+            )}
+          </div>
           {!chunks && <Loader2 size={14} className="animate-spin text-zinc-400" />}
           {chunks?.map((row) => (
-            <ChunkCard key={row.id} source={row.source} chunkIndex={row.chunk_index} content={row.content} meta={chunkMeta(row, false)} />
+            <ChunkCard
+              key={row.id}
+              source={row.source}
+              chunkIndex={row.chunk_index}
+              content={row.content}
+              meta={chunkMeta(row, false)}
+              actions={<SourceLinks chunk={toCited(row)} />}
+            />
           ))}
           {chunks && doc.chunks > chunks.length && (
             <p className="text-[11px] text-zinc-500">First {chunks.length} of {formatNumber(doc.chunks)} chunks.</p>
@@ -453,6 +538,7 @@ function ChunkTableView({ table, sources, store }: { table: TableName; sources: 
                 chunkIndex={row.chunk_index}
                 content={row.content}
                 meta={chunkMeta(row, byKommun)}
+                actions={store === 'local' && row.kind ? <SourceLinks chunk={toCited(row)} /> : undefined}
               />
             ))}
           </div>
@@ -558,6 +644,21 @@ function SemanticSearchView({ store }: { store: Store }) {
                 chunkIndex={match.chunk_index}
                 distance={match.distance}
                 content={match.content}
+                actions={
+                  match.chunk_id ? (
+                    <SourceLinks
+                      chunk={{
+                        chunk_id: match.chunk_id,
+                        doc_id: match.doc_id ?? undefined,
+                        kind: match.kind ?? undefined,
+                        source: match.source,
+                        chunk_index: match.chunk_index,
+                        url: match.url,
+                        content: match.content,
+                      }}
+                    />
+                  ) : undefined
+                }
               />
             ))
           )}
@@ -573,6 +674,7 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [loadedStore, setLoadedStore] = useState<Store | null>(null);
   const [error, setError] = useState('');
+  const [viewing, setViewing] = useState<Citation | null>(null);
   const labels = STORE_LABELS[store];
   const currentOverview = loadedStore === store ? overview : null;
 
@@ -647,18 +749,21 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
             ))}
           </div>
 
-          {tab === 'search' ? (
-            <SemanticSearchView key={store} store={store} />
-          ) : (
-            <ChunkTableView
-              key={`${store}-${tab}`}
-              table={tab}
-              store={store}
-              sources={currentOverview?.[tab].sources ?? []}
-            />
-          )}
+          <ViewSource.Provider value={setViewing}>
+            {tab === 'search' ? (
+              <SemanticSearchView key={store} store={store} />
+            ) : (
+              <ChunkTableView
+                key={`${store}-${tab}`}
+                table={tab}
+                store={store}
+                sources={currentOverview?.[tab].sources ?? []}
+              />
+            )}
+          </ViewSource.Provider>
         </div>
       </div>
+      {viewing && <SourceViewer citation={viewing} onClose={() => setViewing(null)} autoOpen />}
     </div>
   );
 }

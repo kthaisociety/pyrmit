@@ -33,9 +33,27 @@ interface Location {
   source_url?: string | null;
 }
 
+async function locateChunk(chunkId: string): Promise<Location> {
+  const response = await authFetch(`/api/docs/locate?chunk_id=${encodeURIComponent(chunkId)}`);
+  if (!response.ok) throw new Error(`locate failed (${response.status})`);
+  return response.json();
+}
+
+// A web page or statute in a new tab, scrolled to the chunk's wording (Chrome text fragment)
+export async function openPageAtChunk(chunkId: string): Promise<void> {
+  const location = await locateChunk(chunkId);
+  if (location.type === 'url' && location.url) window.open(location.url, '_blank', 'noopener,noreferrer');
+  else throw new Error('No original page is available for this source.');
+}
+
 // Side panel: the cited chunks, and the original document opened where the chunk is
-// (PDF at its page with the chunk highlighted, or the web page / statute scrolled to it by Chrome)
-export default function SourceViewer({ citation, onClose }: { citation: Citation; onClose: () => void }) {
+// (PDF at its page with the chunk highlighted, or the web page / statute scrolled to it by Chrome).
+// n = 0: not a citation (Database view); autoOpen: open the first chunk's document right away
+export default function SourceViewer({ citation, onClose, autoOpen = false }: {
+  citation: Citation;
+  onClose: () => void;
+  autoOpen?: boolean;
+}) {
   const [pdf, setPdf] = useState<{ blobUrl: string; url: string; page: number; note: string } | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,9 +81,7 @@ export default function SourceViewer({ citation, onClose }: { citation: Citation
     setLoading(chunk.chunk_id);
     setError(null);
     try {
-      const response = await authFetch(`/api/docs/locate?chunk_id=${encodeURIComponent(chunk.chunk_id)}`);
-      if (!response.ok) throw new Error(`locate failed (${response.status})`);
-      const location: Location = await response.json();
+      const location = await locateChunk(chunk.chunk_id);
       if (mine !== request.current) return;
       if (location.type === 'pdf' && location.pdf_url) {
         // Fetched with the auth header, shown from a blob URL: the browser's PDF viewer opens it at #page
@@ -98,6 +114,11 @@ export default function SourceViewer({ citation, onClose }: { citation: Citation
     }
   };
 
+  useEffect(() => {
+    if (autoOpen && citation.chunks.length > 0) open(citation.chunks[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [citation, autoOpen]);
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={onClose}>
       <aside
@@ -105,9 +126,11 @@ export default function SourceViewer({ citation, onClose }: { citation: Citation
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex items-start gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-700">
-          <span className="mt-0.5 rounded-md bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-            {citation.n}
-          </span>
+          {citation.n > 0 && (
+            <span className="mt-0.5 rounded-md bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+              {citation.n}
+            </span>
+          )}
           <h2 className="min-w-0 flex-1 text-sm font-semibold text-zinc-800 dark:text-zinc-100">{citation.label}</h2>
           <button onClick={onClose} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800" title="Close">
             <X size={16} />
@@ -128,6 +151,17 @@ export default function SourceViewer({ citation, onClose }: { citation: Citation
                     chunk.doc_id?.startsWith('pdf:') ? <FileText size={12} /> : <ExternalLink size={12} />}
                   {chunk.doc_id?.startsWith('pdf:') ? 'Open the PDF at this passage' : 'Open the original at this passage'}
                 </button>
+                {chunk.url && chunk.doc_id?.startsWith('pdf:') && (
+                  <a
+                    href={chunk.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={chunk.url}
+                    className="ml-1.5 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    <ExternalLink size={12} /> On the kommun&apos;s website
+                  </a>
+                )}
               </div>
             ))}
             {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}

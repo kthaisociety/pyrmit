@@ -91,6 +91,9 @@ def _row(hit) -> dict[str, Any]:
     content = chunk_text(chunk)
     return {
         "source": source,
+        "chunk_id": chunk["chunk_id"],
+        "doc_id": chunk["doc_id"],
+        "kind": chunk["kind"],
         "chunk_index": chunk.get("chunk_index"),
         "distance": None,
         "score": round(hit.score, 6),
