@@ -63,8 +63,11 @@ MODES_GUIDE = """Kinds of questions (the mode of answer_ready; a question can mi
   detaljplan vs förhandsbesked + bygglov, liten avvikelse, dispens, shared facilities as a gemensamhetsanläggning),
   and what you need to know from the user.
 When the answer turns on something only the user can tell and no useful answer is possible without it (which place
-is meant, which of two projects), call ask_user (alone) with one short question and 2-4 short options the user can
-click, instead of answering; do not use it for details you can state as assumptions."""
+is meant, which of two projects), call ask_user (alone) instead of answering; do not use it for details you can state
+as assumptions. Its options are buttons: each must be a complete reply you can act on without more input, named so
+the user recognises it (e.g. "Use the pinned property, Fålhagen 61:11" / "Answer generally for Södermalm, Stockholm";
+note when a named place lies outside the kommun of the pin). Never an option that asks the user to provide or type
+something: they can always type. To have them pin a place, set offer_pin instead of writing it as an option."""
 
 ANSWER_FORMAT = """Answer in English, in markdown, in the format of the mode you chose:
 - verdict:
@@ -118,6 +121,7 @@ class AgentRun:
     first_token_s: float | None = None  # time until the first answer token (streamed answer)
     mode: str | None = None  # kind of question the agent chose in answer_ready (MODES)
     choices: list[str] = field(default_factory=list)  # ask_user: the options offered with the question (the answer)
+    offer_pin: bool = False  # ask_user: also offer to pin the place on the map
     error: str | None = None
 
 
@@ -153,20 +157,24 @@ ASK_USER_TOOL = {
                    "(e.g. which place they mean). The question becomes the reply; the options are shown as buttons.",
     "parameters": {"type": "object", "properties": {
         "question": {"type": "string", "description": "one short question, in English"},
-        "options": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": MAX_CHOICES,
-                    "description": "2-4 short answers the user can click, e.g. the pinned place and the named one"},
+        "options": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": MAX_CHOICES,
+                    "description": "1-4 complete replies the user can click and you can act on without more input "
+                                   "(never 'please provide ...')"},
+        "offer_pin": {"type": "boolean", "description": "also show a button that opens the map to pin the place"},
     }, "required": ["question", "options"]},
 }
 
 
-def _choices(arguments: str | None) -> tuple[str, list[str]]:
-    """(question, options) of an ask_user call: options trimmed, without empties or repeats, at most MAX_CHOICES."""
+def _choices(arguments: str | None) -> tuple[str, list[str], bool]:
+    """(question, options, offer_pin) of an ask_user call: options trimmed, without empties or repeats, at most
+    MAX_CHOICES."""
     try:
         parsed = json.loads(arguments or "{}")
     except json.JSONDecodeError:
         parsed = {}
     options = [str(option).strip() for option in parsed.get("options") or []]
-    return str(parsed.get("question") or "").strip(), list(dict.fromkeys(o for o in options if o))[:MAX_CHOICES]
+    return (str(parsed.get("question") or "").strip(), list(dict.fromkeys(o for o in options if o))[:MAX_CHOICES],
+            bool(parsed.get("offer_pin")))
 
 
 def _run_call(tools: CorpusTools, call) -> tuple:
@@ -239,9 +247,9 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
             break
         asked = next((c for c in calls if c.name == "ask_user"), None)
         if asked:  # a question for the user is the reply: no tools, no final answer turn
-            question, choices = _choices(asked.arguments)
+            question, choices, offer_pin = _choices(asked.arguments)
             if question:
-                run.answer, run.choices = question, choices
+                run.answer, run.choices, run.offer_pin = question, choices, offer_pin
                 break
             conversation.append({"type": "function_call_output", "call_id": asked.call_id,
                                  "output": "ask_user needs a question: answer instead, or ask again."})

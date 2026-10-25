@@ -169,6 +169,7 @@ def test_a_question_with_options_records_them_for_the_buttons(harness):
     ask(harness, PINNED)
     [event] = [e for e in saved_answer(harness).trace if e["stage"] == "choices"]
     assert event["data"]["options"] == ["The pinned Uppsala property", "A site in Södermalm"]
+    assert event["data"]["offer_pin"] is False
 
 
 def test_an_ordinary_answer_records_no_options(harness):

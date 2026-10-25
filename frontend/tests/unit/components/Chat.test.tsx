@@ -197,6 +197,27 @@ describe('questions with options', () => {
     expect(sent!.messages.at(-1)).toEqual({ role: 'user', content: 'A site in Södermalm' });
   });
 
+  it('offers to pin the place on the map, which opens the map', async () => {
+    /** A question that needs a place can come with a button that opens the map. */
+    server.use(http.get('*/api/sessions/s3', () => HttpResponse.json([
+      ASKED[0],
+      { ...ASKED[1], session_id: 's3',
+        trace: [{ type: 'pipeline', stage: 'choices', data: { options: ['Answer generally'], offer_pin: true } }] },
+    ])));
+    chat('s3');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Pin it on the map' }));
+
+    expect(await screen.findByTestId('map')).toBeInTheDocument();
+  });
+
+  it('says the user can also type their own answer', async () => {
+    server.use(http.get('*/api/sessions/s2', () => HttpResponse.json(ASKED)));
+    chat('s2');
+
+    expect(await screen.findByText(/or type your own answer/i)).toBeInTheDocument();
+  });
+
   it('shows no options under an earlier answer', async () => {
     /** Once the user has answered, the old question's buttons are gone. */
     server.use(http.get('*/api/sessions/s2', () => HttpResponse.json([

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from place.sources import PILOTS
 
 NO_PIN_HINT = ("(No place is pinned on the map. If the answer depends on one specific property and the place is "
-               "unclear, ask with ask_user, one option being to pin it on the map in the chat.)")
+               "unclear, ask with ask_user and offer_pin.)")
 
 OPENING = ("[Place pinned by the user on the map. This is the place the question is about: do not ask where it is, "
            "and do not call find_kommun: the kommun and its code are given below. "

@@ -132,16 +132,37 @@ function parseAssistantContent(content: string): { body: string; sources: string
   return { body, sources };
 }
 
-/** The options of a question the agent asked the user to choose from (its `choices` event), else none. */
-function getChoices(pipeline: PipelineEvent[]): string[] {
-  const options = pipeline.find((item) => item.stage === 'choices')?.data.options;
-  return Array.isArray(options) ? options.filter((option): option is string => typeof option === 'string') : [];
+/** The options of a question the agent asked the user to choose from (its `choices` event), and whether it also
+ *  offers to pin the place on the map. */
+function getChoices(pipeline: PipelineEvent[]): { options: string[]; offerPin: boolean } {
+  const data = pipeline.find((item) => item.stage === 'choices')?.data;
+  const options = Array.isArray(data?.options)
+    ? data.options.filter((option: unknown): option is string => typeof option === 'string')
+    : [];
+  return { options, offerPin: data?.offer_pin === true };
 }
 
-/** The options under the agent's question: clicking one sends it as the user's reply. */
-function Choices({ options, onChoose }: { options: string[]; onChoose: (option: string) => void }) {
+/** The options under the agent's question: clicking one sends it as the user's reply; "Pin it on the map" opens the
+ *  map. The user can always type something else instead. */
+function Choices({ options, offerPin, onChoose, onPin }: {
+  options: string[];
+  offerPin: boolean;
+  onChoose: (option: string) => void;
+  onPin?: () => void;
+}) {
   return (
-    <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Answer options">
+    <div className="mt-3 space-y-2">
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Answer options">
+      {offerPin && onPin && (
+        <button
+          type="button"
+          onClick={onPin}
+          className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-zinc-700 active:scale-[0.97] dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+        >
+          <MapPin size={14} aria-hidden />
+          Pin it on the map
+        </button>
+      )}
       {options.map((option) => (
         <button
           key={option}
@@ -152,6 +173,8 @@ function Choices({ options, onChoose }: { options: string[]; onChoose: (option: 
           {option}
         </button>
       ))}
+    </div>
+    <p className="text-xs text-zinc-500 dark:text-zinc-400">Or type your own answer below.</p>
     </div>
   );
 }
@@ -669,16 +692,19 @@ function AssistantBubble({
   onCopy,
   copied,
   onChoose,
+  onPin,
 }: {
   message: Message;
   isStreaming: boolean;
   onCopy: () => void;
   copied: boolean;
   onChoose?: (option: string) => void; // set on the last answer only: older questions have been answered
+  onPin?: () => void;
 }) {
   const { body, sources } = parseAssistantContent(message.content);
   const hasBody = Boolean(body.trim());
   const citations = getCitations(message.pipeline ?? []);
+  const choices = getChoices(message.pipeline ?? []);
   const [openCitation, setOpenCitation] = useState<Citation | null>(null);
   // Answer still being generated on the server (the user left and came back): refreshed by polling
   const inBackground = !isStreaming && message.status === 'streaming';
@@ -723,8 +749,8 @@ function AssistantBubble({
         </div>
       )}
 
-      {onChoose && !isStreaming && !inBackground && getChoices(message.pipeline ?? []).length > 0 && (
-        <Choices options={getChoices(message.pipeline ?? [])} onChoose={onChoose} />
+      {onChoose && !isStreaming && !inBackground && (choices.options.length > 0 || choices.offerPin) && (
+        <Choices options={choices.options} offerPin={choices.offerPin} onChoose={onChoose} onPin={onPin} />
       )}
 
       {!isStreaming && !inBackground && (
@@ -1100,6 +1126,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
                   message={msg}
                   onCopy={() => handleCopy(msg.content, i)}
                   onChoose={i === lastIdx && !loading ? (option) => void send(option) : undefined}
+                  onPin={() => setMapOpen(true)}
                 />
               )}
 

@@ -43,3 +43,12 @@ def test_options_are_trimmed_deduplicated_and_capped(monkeypatch):
 def test_ask_user_is_offered_to_the_model():
     assert "ask_user" in agent.SYSTEM_PROMPT
     assert agent.ASK_USER_TOOL["name"] == "ask_user"
+
+
+def test_ask_user_can_offer_to_pin_the_place(monkeypatch):
+    run, _ = run_with(monkeypatch, {"question": "Which property?", "options": ["Answer generally"], "offer_pin": True})
+    assert run.choices == ["Answer generally"] and run.offer_pin is True
+
+
+def test_the_prompt_forbids_options_that_ask_for_more_input():
+    assert "Never an option that asks the user to provide" in agent.SYSTEM_PROMPT
