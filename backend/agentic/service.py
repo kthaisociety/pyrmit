@@ -155,7 +155,8 @@ class CitationNumberer:
 def stream_agent(question: str, history: list[dict], record: Callable[..., None], sse: Callable[[dict], str],
                  flush: Callable[[], list[str]] = lambda: []) -> Generator[str, None, dict]:
     """Yield SSE strings while the agent works, including the final answer as it streams (citations
-    already numbered); return {"answer", "law_rows", "local_rows", "sources", "citations", "run"}.
+    already numbered); return {"answer", "law_rows", "local_rows", "sources", "citations", "choices" (the options of
+    an ask_user question, else []), "run"}.
 
     `flush` returns the pipeline events of the calls recorded so far: streamed (and so saved with the
     message) as the agent goes, so someone reopening the chat mid-run sees its progress."""
@@ -223,4 +224,4 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
     law_rows = [chunk_row(c) for c in chunks if c["kind"] == "law"]
     local_rows = [chunk_row(c) for c in chunks if c["kind"] != "law"]
     return {"answer": answer, "law_rows": law_rows, "local_rows": local_rows, "sources": numberer.labels,
-            "citations": numberer.citations(), "run": run}
+            "citations": numberer.citations(), "choices": list(run.choices), "run": run}

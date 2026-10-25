@@ -132,6 +132,30 @@ function parseAssistantContent(content: string): { body: string; sources: string
   return { body, sources };
 }
 
+/** The options of a question the agent asked the user to choose from (its `choices` event), else none. */
+function getChoices(pipeline: PipelineEvent[]): string[] {
+  const options = pipeline.find((item) => item.stage === 'choices')?.data.options;
+  return Array.isArray(options) ? options.filter((option): option is string => typeof option === 'string') : [];
+}
+
+/** The options under the agent's question: clicking one sends it as the user's reply. */
+function Choices({ options, onChoose }: { options: string[]; onChoose: (option: string) => void }) {
+  return (
+    <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Answer options">
+      {options.map((option) => (
+        <button
+          key={option}
+          type="button"
+          onClick={() => onChoose(option)}
+          className="rounded-full border border-zinc-300 bg-white px-3.5 py-1.5 text-sm font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-50 active:scale-[0.97] dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function getCitations(pipeline: PipelineEvent[]): Citation[] {
   const event = pipeline.find((item) => item.stage === 'citations');
   return ((event?.data.items as Citation[] | undefined) ?? []);
@@ -644,11 +668,13 @@ function AssistantBubble({
   isStreaming,
   onCopy,
   copied,
+  onChoose,
 }: {
   message: Message;
   isStreaming: boolean;
   onCopy: () => void;
   copied: boolean;
+  onChoose?: (option: string) => void; // set on the last answer only: older questions have been answered
 }) {
   const { body, sources } = parseAssistantContent(message.content);
   const hasBody = Boolean(body.trim());
@@ -695,6 +721,10 @@ function AssistantBubble({
           <Loader2 size={14} className="animate-spin" />
           {inBackground ? 'Still generating, this updates automatically' : 'Starting'}
         </div>
+      )}
+
+      {onChoose && !isStreaming && !inBackground && getChoices(message.pipeline ?? []).length > 0 && (
+        <Choices options={getChoices(message.pipeline ?? [])} onChoose={onChoose} />
       )}
 
       {!isStreaming && !inBackground && (
@@ -811,8 +841,12 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
 
   const sendMessage = async (e: FormEvent) => {
     e.preventDefault();
-    const trimmedInput = input.trim();
-    if (!trimmedInput) return;
+    await send(input);
+  };
+
+  const send = async (text: string) => {
+    const trimmedInput = text.trim();
+    if (!trimmedInput || loading) return;
 
     const userMsg: Message = { role: 'user', content: trimmedInput };
     const newHistory = [...messages, userMsg];
@@ -1065,6 +1099,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
                   isStreaming={streaming && i === lastIdx}
                   message={msg}
                   onCopy={() => handleCopy(msg.content, i)}
+                  onChoose={i === lastIdx && !loading ? (option) => void send(option) : undefined}
                 />
               )}
 

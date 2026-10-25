@@ -46,12 +46,13 @@ def harness(monkeypatch, profile_of):
     with Session() as db:
         db.add(models.User(id="u1", name="Test", email="test@example.com"))
         db.commit()
-    asked = []
+    asked, choices = [], []
 
     def fake_stream_agent(question, history, record, sse, flush=list):
         asked.append(question)
         yield sse({"type": "response.output_text.delta", "delta": "An answer."})
-        return {"answer": "An answer.", "law_rows": [], "local_rows": [], "sources": [], "citations": [], "run": None}
+        return {"answer": "An answer.", "law_rows": [], "local_rows": [], "sources": [], "citations": [],
+                "choices": list(choices), "run": None}
 
     monkeypatch.setattr(chat, "SessionLocal", Session)
     monkeypatch.setattr(chat, "get_openai_client", lambda: object())
@@ -72,7 +73,7 @@ def harness(monkeypatch, profile_of):
     app.dependency_overrides[chat.get_place_profile] = lambda: profile_of
     app.dependency_overrides[chat.get_law_text] = lambda: (
         lambda law, section: "[c:aa11bb22cc33dd44] Miljöbalk 7 kap. 7 §" if (law, section) == ("MB", "7 kap. 7 §") else None)
-    return types.SimpleNamespace(client=TestClient(app), Session=Session, asked=asked)
+    return types.SimpleNamespace(client=TestClient(app), Session=Session, asked=asked, choices=choices)
 
 
 def ask(harness, place=None):
@@ -160,3 +161,16 @@ def test_an_answer_without_pin_records_no_place(harness):
     """Without a pin there is no place event."""
     ask(harness)
     assert not [e for e in saved_answer(harness).trace if e["stage"] == "place"]
+
+
+def test_a_question_with_options_records_them_for_the_buttons(harness):
+    """When the agent asks the user to choose, the options are saved with the answer, for the chat's buttons."""
+    harness.choices.extend(["The pinned Uppsala property", "A site in Södermalm"])
+    ask(harness, PINNED)
+    [event] = [e for e in saved_answer(harness).trace if e["stage"] == "choices"]
+    assert event["data"]["options"] == ["The pinned Uppsala property", "A site in Södermalm"]
+
+
+def test_an_ordinary_answer_records_no_options(harness):
+    ask(harness, PINNED)
+    assert not [e for e in saved_answer(harness).trace if e["stage"] == "choices"]

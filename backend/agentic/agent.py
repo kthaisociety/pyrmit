@@ -61,7 +61,10 @@ MODES_GUIDE = """Kinds of questions (the mode of answer_ready; a question can mi
 - develop: the place and the idea are given (roughly) and the user asks what is missing or how to make it work: find
   what could block it and the ways to make it work (another location or scale, phasing, the plan route: planbesked +
   detaljplan vs förhandsbesked + bygglov, liten avvikelse, dispens, shared facilities as a gemensamhetsanläggning),
-  and what you need to know from the user."""
+  and what you need to know from the user.
+When the answer turns on something only the user can tell and no useful answer is possible without it (which place
+is meant, which of two projects), call ask_user (alone) with one short question and 2-4 short options the user can
+click, instead of answering; do not use it for details you can state as assumptions."""
 
 ANSWER_FORMAT = """Answer in English, in markdown, in the format of the mode you chose:
 - verdict:
@@ -114,6 +117,7 @@ class AgentRun:
     seconds: float = 0.0
     first_token_s: float | None = None  # time until the first answer token (streamed answer)
     mode: str | None = None  # kind of question the agent chose in answer_ready (MODES)
+    choices: list[str] = field(default_factory=list)  # ask_user: the options offered with the question (the answer)
     error: str | None = None
 
 
@@ -142,6 +146,29 @@ ANSWER_READY_TOOL = {
 }
 
 
+MAX_CHOICES = 4
+ASK_USER_TOOL = {
+    "type": "function", "name": "ask_user",
+    "description": "Call (alone) instead of answering when only the user can settle what the answer depends on "
+                   "(e.g. which place they mean). The question becomes the reply; the options are shown as buttons.",
+    "parameters": {"type": "object", "properties": {
+        "question": {"type": "string", "description": "one short question, in English"},
+        "options": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": MAX_CHOICES,
+                    "description": "2-4 short answers the user can click, e.g. the pinned place and the named one"},
+    }, "required": ["question", "options"]},
+}
+
+
+def _choices(arguments: str | None) -> tuple[str, list[str]]:
+    """(question, options) of an ask_user call: options trimmed, without empties or repeats, at most MAX_CHOICES."""
+    try:
+        parsed = json.loads(arguments or "{}")
+    except json.JSONDecodeError:
+        parsed = {}
+    options = [str(option).strip() for option in parsed.get("options") or []]
+    return str(parsed.get("question") or "").strip(), list(dict.fromkeys(o for o in options if o))[:MAX_CHOICES]
+
+
 def _run_call(tools: CorpusTools, call) -> tuple:
     try:
         arguments = json.loads(call.arguments or "{}")
@@ -167,7 +194,8 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
     pool = ThreadPoolExecutor(max_workers=6)
     asked_for_answer = False
     disabled = set(disabled_tools or ())
-    schemas = [schema for schema in TOOL_SCHEMAS if schema["name"] not in disabled] + [ANSWER_READY_TOOL]
+    schemas = [schema for schema in TOOL_SCHEMAS if schema["name"] not in disabled] + [ANSWER_READY_TOOL,
+                                                                                         ASK_USER_TOOL]
     note = f"\n\nNot available in this session: {', '.join(sorted(disabled))}." if disabled else ""
     instructions = SYSTEM_PROMPT + note
     # An image goes with the next model call only (re-sending every image each turn multiplied the input tokens):
@@ -209,6 +237,14 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
         if not calls:  # answered without calling answer_ready: keep it
             run.answer = response.output_text or ""
             break
+        asked = next((c for c in calls if c.name == "ask_user"), None)
+        if asked:  # a question for the user is the reply: no tools, no final answer turn
+            question, choices = _choices(asked.arguments)
+            if question:
+                run.answer, run.choices = question, choices
+                break
+            conversation.append({"type": "function_call_output", "call_id": asked.call_id,
+                                 "output": "ask_user needs a question: answer instead, or ask again."})
         ready = [c for c in calls if c.name == "answer_ready"]
         for call in ready:
             try:
@@ -220,7 +256,7 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
             conversation.append({"type": "function_call_output", "call_id": call.call_id,
                                  "output": f"Write the final answer now, in {fmt}."})
             asked_for_answer = True
-        work = [c for c in calls if c.name != "answer_ready"]
+        work = [c for c in calls if c.name not in ("answer_ready", "ask_user")]
         for call in work:
             emit({"type": "tool_call", "name": call.name, "input": call.arguments or "{}"})
         # Independent calls of one turn run in parallel (DB reads, GPU search, PDF rendering)

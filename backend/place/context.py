@@ -7,7 +7,7 @@ from collections.abc import Callable
 from place.sources import PILOTS
 
 NO_PIN_HINT = ("(No place is pinned on the map. If the answer depends on one specific property and the place is "
-               "unclear, suggest that the user pins it on the map in the chat.)")
+               "unclear, ask with ask_user, one option being to pin it on the map in the chat.)")
 
 OPENING = ("[Place pinned by the user on the map. This is the place the question is about: do not ask where it is, "
            "and do not call find_kommun: the kommun and its code are given below. "
@@ -15,7 +15,7 @@ OPENING = ("[Place pinned by the user on the map. This is the place the question
            "answering.]")
 CLOSING = ("[End of the pinned place. The user's question follows. If it names an address, property or place that is "
            "not this pinned one (compare with the property and its addresses above), ask which place the user means "
-           "before answering.]")
+           "with ask_user, the pinned place and the named one as options, before answering.]")
 MAX_ADDRESSES = 8
 STATUTES = ("[Statute text of the sections the likely permits cite, from the corpus: cite these ids; no need to look "
             "them up again.]")

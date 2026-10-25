@@ -159,3 +159,55 @@ describe('the pinned place in the chat', () => {
   });
 
 });
+
+describe('questions with options', () => {
+  const ASKED = [
+    { id: 1, role: 'user', content: 'Can I build 20 apartments in Södermalm?', session_id: 's2',
+      created_at: '2026-10-25T10:00:00Z' },
+    { id: 2, role: 'assistant', content: 'Which place do you mean?', session_id: 's2',
+      created_at: '2026-10-25T10:00:05Z', status: 'done',
+      trace: [{ type: 'pipeline', stage: 'choices',
+                data: { options: ['The pinned Uppsala property', 'A site in Södermalm'] } }] },
+  ];
+
+  it('shows the options of the last answer as buttons', async () => {
+    /** When the agent asks the user to choose, each option is a button under its question. */
+    server.use(http.get('*/api/sessions/s2', () => HttpResponse.json(ASKED)));
+    chat('s2');
+
+    expect(await screen.findByRole('button', { name: 'The pinned Uppsala property' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'A site in Södermalm' })).toBeInTheDocument();
+  });
+
+  it('sends the clicked option as the next message', async () => {
+    /** Clicking an option answers with that option, as if the user had typed it. */
+    let sent: { messages: { role: string; content: string }[] } | null = null;
+    server.use(
+      http.get('*/api/sessions/s2', () => HttpResponse.json(ASKED)),
+      http.post('*/api/chat/stream', async ({ request }) => {
+        sent = (await request.json()) as typeof sent;
+        return sse({ type: 'session_id', session_id: 's2' }, { type: 'done', session_id: 's2' });
+      }),
+    );
+    chat('s2');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'A site in Södermalm' }));
+
+    await waitFor(() => expect(sent).not.toBeNull());
+    expect(sent!.messages.at(-1)).toEqual({ role: 'user', content: 'A site in Södermalm' });
+  });
+
+  it('shows no options under an earlier answer', async () => {
+    /** Once the user has answered, the old question's buttons are gone. */
+    server.use(http.get('*/api/sessions/s2', () => HttpResponse.json([
+      ...ASKED,
+      { id: 3, role: 'user', content: 'A site in Södermalm', session_id: 's2', created_at: '2026-10-25T10:01:00Z' },
+      { id: 4, role: 'assistant', content: 'In Södermalm ...', session_id: 's2', created_at: '2026-10-25T10:01:30Z',
+        status: 'done', trace: [] },
+    ])));
+    chat('s2');
+
+    await screen.findByText(/In Södermalm/);
+    expect(screen.queryByRole('button', { name: 'The pinned Uppsala property' })).not.toBeInTheDocument();
+  });
+});

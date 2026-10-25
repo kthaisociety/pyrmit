@@ -440,6 +440,8 @@ def chat_stream(
                     # The answer itself was streamed by stream_agent; append the numbered source list
                     # [n] -> source label + cited chunks, for the clickable citations in the UI
                     yield emit("citations", items=outcome["citations"])
+                    if outcome.get("choices"):  # the agent asked the user to choose: shown as buttons
+                        yield emit("choices", options=outcome["choices"])
                     suffix = _format_sources(outcome["sources"], numbered=True)
                     accumulated = outcome["answer"] + suffix
                     yield _sse({"type": "response.output_text.delta", "delta": suffix})
