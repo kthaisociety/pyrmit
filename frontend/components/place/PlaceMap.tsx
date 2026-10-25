@@ -89,9 +89,10 @@ export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, onMap
         container: container.current, style: STYLE_URL, bounds: SWEDEN, fitBoundsOptions: { padding: 24 },
         attributionControl: false, dragRotate: false, pitchWithRotate: false,
       });
-      // Zoom under the panel's close button, attribution top left: the place card covers the bottom
+      // Zoom under the panel's close button; the attribution the map's licences require, small, top left (the place
+      // card covers the bottom)
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
-      map.addControl(new maplibregl.AttributionControl({ compact: true }), 'top-left');
+      map.addControl(new maplibregl.AttributionControl({ compact: false }), 'top-left');
       map.on('click', (event: MapMouseEvent) => onClickRef.current({ lat: event.lngLat.lat, lon: event.lngLat.lng }));
       map.on('load', () => {
         addOutlineLayers(map);
