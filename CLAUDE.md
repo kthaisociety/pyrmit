@@ -243,7 +243,11 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   link text (`KEEP` wins over `DROP`; `KEEP_HEAD` on the first page), then a logistic regression on arctic vectors of
   those fields + the first 700 chars (trained on the rule labels, cached vectors) keeps when p >= 0.85. **No PDF is
   dropped on a rule or the model alone** (the user's rule: losing a useful document is worse than keeping noise):
-  proposed drops and uncertain PDFs go to MiMo Flash (`llm`, ~$0.0001 each, keeps in doubt), the biggest uncertain ones
+  proposed drops and uncertain PDFs go to MiMo Flash (`llm`, ~$0.0001 each, keeps in doubt), except the deterministic
+  `SURE_DROP` words (`by: "sure-rule"`, only while the LLM has not answered and the first page has no `KEEP` word):
+  the 21 DROP words the judges confirmed on >= 97 % of >= 15 judged PDFs (`agreement` prints the measure; 2026-10-25:
+  sotning 130/132, skolskjuts 65/65, socialtjänst 55/55...; DROP as a whole only 2,499 of 3,250), so a rebuild
+  without the paid `llm` step still drops those; the biggest uncertain ones
   were reviewed by hand (`corpus/pdf_review.jsonl`, versioned, wins over everything). `corpus.extract` skips the
   PDFs whose decision is `keep: false`; PDFs without a decision (new crawl) are kept until `features` + `classify`
   + `llm` + `classify` + `apply` (removes them from documents.jsonl without re-extracting). `llm --check-model N`

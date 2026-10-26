@@ -1,6 +1,6 @@
 """PDF relevance filter: plan words win over off-topic words, and no PDF is dropped without an LLM or a review."""
 
-from corpus.pdf_filter import decide, rule
+from corpus.pdf_filter import decide, rule, sure_drop
 
 
 def row(title="", file="", anchor="", head=""):
@@ -24,3 +24,15 @@ def test_no_drop_without_a_second_judge():
     assert decide(True, "detaljplan", 0.01, None, None)["keep"] is True
     assert decide(None, "", 0.95, None, None) == {"keep": True, "by": "model", "why": ""}
     assert decide(True, "detaljplan", 0.9, {"keep": False}, None)["keep"] is False  # a review wins
+
+
+def test_sure_words_drop_without_the_llm():
+    sotning = row("Taxa för sotning och brandskyddskontroll")
+    assert sure_drop(sotning, rule(sotning)[1])
+    assert decide(False, "sotning", 0.5, None, None, sure=True) == {"keep": False, "by": "sure-rule", "why": "sotning"}
+    assert decide(False, "sotning", 0.5, None, {"keep": True}, sure=True)["keep"] is True  # an LLM answer wins
+    assert decide(False, "sotning", 0.5, {"keep": True}, None, sure=True)["keep"] is True  # so does a review
+    flagg = row("Riktlinjer för flagg")
+    assert not sure_drop(flagg, rule(flagg)[1])  # a DROP word the judges did not always confirm: waits for the LLM
+    planned = row("Taxa för sotning", head="Gäller även byggnader inom detaljplan för Kvarnbacken")
+    assert not sure_drop(planned, rule(planned)[1])  # a plan word on the first page

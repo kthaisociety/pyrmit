@@ -8,7 +8,9 @@ dementia guidelines... Three stages, each decision kept with its origin:
    labels, keeps the rest when it is confident (p >= HIGH) and proposes a drop when p <= LOW
 3. review: the biggest uncertain ones are read by hand (`corpus/pdf_review.jsonl`, versioned); every other proposed
    drop and uncertain PDF goes to an LLM (`llm`, ~$0.0001 per PDF with MiMo Flash), which keeps it in doubt.
-   Losing a useful document costs more than keeping noise: no PDF is dropped on a rule or the model alone.
+   Losing a useful document costs more than keeping noise: no PDF is dropped on a rule or the model alone, except
+   on the DROP words the judges confirmed almost always (`SURE_DROP`, measured by `agreement`) while the LLM has not
+   answered (a rebuild without the LLM step still drops those).
 
     cd backend
     python -m corpus.pdf_filter features   # from documents.jsonl + manifests (new doc_ids are added)
@@ -140,6 +142,16 @@ def features() -> None:
     print(f"{added} PDFs added, {len(known) + added} in {FEATURES_PATH}")
 
 
+# DROP words the judges (review, else LLM) confirmed on >= 97 % of the >= 15 PDFs they judged (`agreement`,
+# 2026-10-25): a PDF whose name matches one and whose first page has no plan word is dropped without an LLM answer
+SURE_AGREEMENT, SURE_MIN_JUDGED = 0.97, 15
+SURE_DROP = frozenset({
+    "sotning", "minoritet", "allmanna handling", "skolskjuts", "serveringstillstand", "socialtjanst", "maltid",
+    "bibliotek", "foreningsbidrag", "personuppgift", "ekonomiskt bistand", "flaggning", "arvode", "dataskydd",
+    "skydd mot olyckor", "stipendi", "dokumenthanteringsplan", "rekrytering", "diskriminering", "omsorg",
+    "kretsloppsplan"})
+
+
 def name_text(row: dict) -> str:
     return fold(f"{row['title']} {row['file']} {row['anchor']}")
 
@@ -155,6 +167,11 @@ def rule(row: dict) -> tuple[bool | None, str]:
     if match := KEEP_HEAD.search(fold(row["head"])):
         return True, "head: " + match.group(0)
     return None, ""
+
+
+def sure_drop(row: dict, why: str) -> bool:
+    """A drop the rules make alone: a SURE_DROP word in the name and no plan word on the first page."""
+    return why in SURE_DROP and not KEEP.search(fold(row["head"]))
 
 
 def model_text(row: dict) -> str:
@@ -191,8 +208,9 @@ def load_llm() -> dict[str, dict]:
     return {row["doc_id"]: row for row in read_jsonl(LLM_PATH)} if LLM_PATH.exists() else {}
 
 
-def decide(rule_keep: bool | None, why: str, p: float, review: dict | None, answer: dict | None) -> dict:
-    """keep True / False, or None while an LLM answer is pending (corpus.extract keeps those)."""
+def decide(rule_keep: bool | None, why: str, p: float, review: dict | None, answer: dict | None,
+           sure: bool = False) -> dict:
+    """keep True / False, or None while an LLM answer is pending (corpus.extract keeps those). `sure`: sure_drop."""
     if review:
         return {"keep": review["keep"], "by": "review", "why": review.get("why", "")}
     if rule_keep is True:
@@ -200,9 +218,11 @@ def decide(rule_keep: bool | None, why: str, p: float, review: dict | None, answ
     if rule_keep is None and p >= HIGH:
         return {"keep": True, "by": "model", "why": ""}
     # Losing a useful document costs more than keeping noise: a rule or the model only proposes a drop, the LLM
-    # decides (and keeps in doubt)
+    # decides (and keeps in doubt); without its answer only the sure words drop
     proposed = "rule" if rule_keep is False else "model" if p <= LOW else "uncertain"
     if answer is None:
+        if sure:
+            return {"keep": False, "by": "sure-rule", "why": why}
         return {"keep": None, "by": f"{proposed}+pending", "why": why}
     return {"keep": answer["keep"], "by": f"{proposed}+llm", "why": answer.get("why", "")}
 
@@ -224,7 +244,7 @@ def classify() -> None:
     proba = classifier.predict_proba(X)[:, list(classifier.classes_).index(True)]
     reviews, answers = load_reviews(), load_llm()
     decisions = [{"doc_id": row["doc_id"], **decide(keep, why, float(p), reviews.get(row["doc_id"]),
-                                                    answers.get(row["doc_id"])),
+                                                    answers.get(row["doc_id"]), keep is False and sure_drop(row, why)),
                   "p": round(float(p), 3), "rule": keep}
                  for row, (keep, why), p in zip(rows, labels, proba)]
     write_jsonl(DECISIONS_PATH, decisions)
@@ -244,6 +264,23 @@ def stats() -> None:
     # The model against the rules where both exist: how often would it have overruled them
     disagree = [d for d in read_jsonl(DECISIONS_PATH) if d["rule"] is not None and (d["p"] >= 0.5) != d["rule"]]
     print(f"  model disagrees with the rules on {len(disagree)} PDFs")
+
+
+def agreement(min_judged: int = SURE_MIN_JUDGED) -> None:
+    """How often the judges (review, else LLM) dropped the PDFs each DROP word proposed, first pages with a plan word
+    left out as in sure_drop: the evidence for SURE_DROP."""
+    reviews, answers = load_reviews(), load_llm()
+    judged: dict[str, list[bool]] = {}
+    for row in read_jsonl(FEATURES_PATH):
+        keep, why = rule(row)
+        judge = reviews.get(row["doc_id"]) or answers.get(row["doc_id"])
+        if keep is False and judge and not KEEP.search(fold(row["head"])):
+            judged.setdefault(why, []).append(not judge["keep"])
+    for why, drops in sorted(judged.items(), key=lambda item: -len(item[1])):
+        share = sum(drops) / len(drops)
+        sure = len(drops) >= min_judged and share >= SURE_AGREEMENT
+        print(f"  {why:28} {sum(drops):4}/{len(drops):<4} dropped ({share:6.1%}){'  sure' if sure else ''}"
+              f"{'  in SURE_DROP' if why in SURE_DROP else ''}")
 
 
 def uncertain(limit: int, offset: int = 0) -> list[dict]:
@@ -389,7 +426,7 @@ def dropped_ids() -> set[str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Relevance filter of the crawled PDFs")
     parser.add_argument("step", choices=["features", "classify", "review", "llm", "apply", "stats", "eval-sample",
-                                         "eval"])
+                                         "eval", "agreement"])
     parser.add_argument("--limit", type=int, default=200)
     parser.add_argument("--offset", type=int, default=0)
     parser.add_argument("--model", default="xiaomi/mimo-v2.6-flash")
@@ -410,6 +447,8 @@ def main() -> None:
         eval_sample(args.limit)
     elif args.step == "eval":
         evaluate()
+    elif args.step == "agreement":
+        agreement()
     else:
         stats()
 
