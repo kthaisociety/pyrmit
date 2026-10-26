@@ -128,7 +128,7 @@ PostgreSQL + pgvector (db -- port 5432)
 
 JWT `sid` references `sessions.id`; JWT and session share the same UTC expiry.
 The legacy `sessions.token` column is unused. Tokens without `sid` require a new login.
-Protected-request 401s clear the local JWT; access-gate errors redirect separately to `/dev-access`.
+Protected-request 401s clear the local JWT only if it is still the token that request sent (a late 401 must not erase a newer login); access-gate errors redirect separately to `/dev-access`.
 Network/server errors preserve the JWT and allow retry. Expired rows are not automatically deleted.
 Revocation applies to subsequent requests; already authorized chat streams are not interrupted.
 

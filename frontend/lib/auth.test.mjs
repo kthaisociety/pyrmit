@@ -61,3 +61,32 @@ test('403, server and network errors preserve token', async () => {
   assert.equal(storedToken, 'test-jwt');
   assert.deepEqual(redirects, []);
 });
+
+test('late 401 for an old token does not erase a newer login', async () => {
+  let release;
+  globalThis.fetch = (_input, init) => {
+    assert.equal(init.headers.get('Authorization'), 'Bearer test-jwt');
+    return new Promise((resolve) => {
+      release = () => resolve(Response.json({ detail: 'Could not validate credentials' }, { status: 401 }));
+    });
+  };
+  const pending = authFetch('/api/auth/me');
+  storedToken = 'newer-jwt';
+  release();
+  await pending;
+  assert.equal(storedToken, 'newer-jwt');
+  assert.deepEqual(redirects, []);
+});
+
+test('late 401 after logout in another tab still redirects', async () => {
+  let release;
+  globalThis.fetch = () => new Promise((resolve) => {
+    release = () => resolve(Response.json({ detail: 'Could not validate credentials' }, { status: 401 }));
+  });
+  const pending = authFetch('/api/auth/me');
+  storedToken = null;
+  release();
+  await pending;
+  assert.equal(storedToken, null);
+  assert.deepEqual(redirects, ['/auth']);
+});
