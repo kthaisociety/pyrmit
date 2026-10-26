@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -42,7 +42,7 @@ def _authenticate_user(db: Session, email: str, password: str) -> models.User | 
 
 def _issue_access_token(user: models.User, db: Session) -> schemas.Token:
     session_id = str(uuid.uuid4())
-    expires_at = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(
+    expires_at = datetime.now(UTC).replace(microsecond=0) + timedelta(
         minutes=get_access_token_expire_minutes()
     )
     access_token = create_access_token(

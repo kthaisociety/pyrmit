@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
@@ -33,7 +33,7 @@ def get_current_session(
     session = db.query(models.Session).filter(
         models.Session.id == session_id,
         models.Session.user_id == user_id,
-        models.Session.expires_at > datetime.now(timezone.utc),
+        models.Session.expires_at > datetime.now(UTC),
     ).first()
     if session is None or session.user is None:
         raise HTTPException(
