@@ -514,6 +514,11 @@ rerunning `agentic.rejudge` continues. A run that sits a long time before its fi
    layer (Uppsala's plans / tillägg / områdesbestämmelser / pågående / användning from its ArcGIS service, Naturvårdsverket
    skyddade områden + Natura 2000 WFS, Boverket riksintressen) and manifest.json (fetch date, licence, count,
    "complete" = the plan layer holds every plan in force). ~10 s, 10k features (ADR-0002: snapshots, not per-pin calls)
+   python -m place.plan_documents --kommun 0380  -> each plan's page (UrlDokument, 1,413 plans) and its PDFs into the
+   crawl folder data/corpus/raw/web/0380/ + data/geo/0380/plan_pages.json (aktbeteckning -> page), 1 request/s. The
+   entries go before the manifest's done line, which `corpus.crawl --revisit` needs last (until 2026-10-25 they were
+   appended after it, so the revisit skipped Uppsala); a plan whose page a later `crawl --force` dropped from the
+   manifest is recorded again. Run it after a crawl of 0380, not during (both rewrite the manifest)
 2. The chat's map panel (components/place/) -> GET /api/place/profile -> place.profile.build_profile:
    kommun from the snapshot boundaries, the property live from Uppsala's layer 51 (place.live, cached per point),
    features that contain the pin or cover >= 2 % of the property, plans newest first matched to the corpus registry by
