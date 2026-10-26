@@ -1,146 +1,46 @@
-# CLAUDE.md
+# AGENTS.md
 
-## Hard Constraints
+## Project Knowledge
 
-- **Do not make any git-related actions** (no commits, no pushes, no branch operations)
-- **Do not create documentation files** unless explicitly requested
+Load these only when the task needs them:
 
----
-
-## Project Overview
-
-Pyrmit is a Swedish legal RAG (Retrieval-Augmented Generation) chat assistant focused on Swedish land law and urban planning regulations (*fastighetsrätt*, *Plan- och bygglagen*). Users can upload planning documents (detaljplaner as PDF), which are OCR-processed, chunked, and embedded into a PostgreSQL+pgvector database. The chat interface uses RAG to retrieve relevant law and document chunks before calling OpenAI GPT to answer questions in Swedish legal context.
+- `.claude/skills` -- The project skills, use these first hand. 
+- `CONTEXT.md` -- domain language: what a detaljplan, chunk, verdict etc. mean and how they connect
+- `docs/pcr/` -- project-wide conventions (stack, model calls, embeddings, answer language). Binding. Read before changing code.
+- `docs/adr/` -- decisions scoped to one part of the codebase. Binding inside their scope.
 
 ---
 
-## System Topology
+## Package Map
 
-```
-User (browser)
-    |
-    | HTTP (fetch with credentials/cookies)
-    v
-Next.js Frontend (frontend/ -- port 3000)
-    |
-    | REST API calls
-    v
-FastAPI Backend (backend/ -- port 8000)
-    |
-    |--- Auth router   (/api/auth/*)      -- signup, signin, signout, /me
-    |--- Chat router   (/api/chat, /api/sessions/*)  -- RAG chat, session history
-    |--- Chunks router (/api/chunks/*)    -- ingest detaljplan PDFs / law txt files
-    |--- Agents router (/api/analyze)     -- multi-agent feasibility analysis
-    |
-    |--- RAG pipeline (routers/queryDB.py)
-    |       |--- pgvector cosine similarity query on document_chunks
-    |       |--- pgvector cosine similarity query on law_chunks
-    |
-    |--- Chunking pipeline (chunking/)
-    |       |--- PDF -> Mistral OCR -> Markdown
-    |       |--- Markdown/TXT -> DetaljplanChunker / LawChunker
-    |       |--- OpenAI text-embedding-3-large (3072-dim)
-    |       |--- PushDB (Supabase client) -> document_chunks / law_chunks tables
-    |
-    v
-PostgreSQL + pgvector (db -- port 5432)
-    Tables: users, accounts, sessions, chat_sessions, chat_messages,
-            document_chunks (Vector 3072), law_chunks (Vector 3072)
-```
-
-### Package Map
-
-| Name              | Location             | Type               | Purpose                                                              |
-| ----------------- | -------------------- | ------------------ | -------------------------------------------------------------------- |
-| `backend`         | `backend/`           | Python (FastAPI)   | REST API, auth, chat with RAG, chunking ingestion, DB models         |
-| `frontend`        | `frontend/`          | TypeScript (Next.js) | Chat UI with sidebar session list, auth pages, cookie-based auth   |
-| `agents`          | `backend/agents/`    | Python (FastAPI)     | Multi-agent RAG: LawAgent + DocumentAgent + Orchestrator            |
-
----
-
-## State Ownership
-
-| Concern                        | Owner          | Key File(s)                                              |
-| ------------------------------ | -------------- | -------------------------------------------------------- |
-| User auth & sessions           | Backend        | `backend/routers/auth.py`, `backend/models.py`           |
-| Chat session & message history | Backend (DB)   | `backend/routers/chat.py`, `backend/models.py`           |
-| Embedding generation           | Backend        | `backend/routers/chat.py` (inline), `backend/chunking/ingest_pipeline.py` |
-| RAG retrieval                  | Backend        | `backend/routers/queryDB.py`                             |
-| Document chunking (detaljplan) | Backend        | `backend/chunking/chunk_detaljplan.py`                   |
-| Law chunking                   | Backend        | `backend/chunking/chunk_laws.py`                         |
-| DB push (Supabase)             | Backend        | `backend/db/push_db.py`                                  |
-| DB models (SQLAlchemy ORM)     | Backend        | `backend/models.py`                                      |
-| Chat UI / session switching    | Frontend       | `frontend/components/Chat.tsx`, `frontend/components/Sidebar.tsx` |
-| Auth pages (login/signup)      | Frontend       | `frontend/app/auth/`                                     |
-| System prompts                 | Backend        | `backend/prompts/land_law_prompt.yaml`                   |
-| Agent analysis (feasibility)   | Backend        | `backend/agents/`, `backend/routers/agents.py`           |
-
----
-
-## Data Flow
-
-### Document Ingestion (Detaljplan PDF)
-
-```
-1. POST /api/chunks/ingest-detaljplan { input_path, output_path }
-2. backend/chunking/ingest_pipeline.py:
-   a. ensure_markdown_source: if PDF -> Mistral OCR -> .md file saved to data/ocr_markdown/
-   b. DetaljplanChunker splits markdown into semantic chunks
-   c. embed_texts_batch: OpenAI text-embedding-3-large (batched, 3072-dim)
-   d. PushDB.push_chunks -> Supabase document_chunks table
-3. Returns { inserted, deleted } counts
-```
-
-### Law Ingestion (Static TXT files)
-
-```
-1. Run chunking/ingest_laws.py (or POST /api/chunks/ingest-laws)
-2. LawChunker splits law TXT by chapter/section structure
-3. Embed with OpenAI text-embedding-3-large
-4. PushDB.push_law_chunks -> Supabase law_chunks table
-```
-
-### Chat Request (Multi-Agent RAG)
-
-```
-1. POST /api/chat { messages, session_id? }
-2. auth middleware: validate session cookie -> get user
-3. Create/lookup ChatSession in DB
-4. Save user message to chat_messages
-5. parse_query(message) -> extract location, units, project_type
-6. If location or units missing -> return Swedish clarifying prompt
-7. LawAgent: embed query -> cosine search on law_chunks -> GPT structured JSON
-8. DocumentAgent: embed query -> cosine search on document_chunks -> GPT structured JSON
-9. Orchestrator: combine results -> feasibility verdict + confidence
-10. format_response(result) -> formatted plain-text analysis
-11. Save assistant response as ChatMessage in DB
-12. Return MessageResponse { role, content, session_id }
-```
-
-### Auth Flow
-
-```
-1. POST /api/auth/signup -> creates User + Account + Session, sets session cookie
-2. POST /api/auth/signin -> verifies password (argon2), creates Session, sets session cookie
-3. GET  /api/auth/me     -> validates session cookie -> returns User
-4. POST /api/auth/signout -> deletes Session, clears cookie
-```
+| Name       | Location          | Type                 | Purpose                                                      |
+| ---------- | ----------------- | -------------------- | ------------------------------------------------------------ |
+| `backend`  | `backend/`        | Python (FastAPI)     | REST API, auth, chat with RAG, ingestion, DB models          |
+| `frontend` | `frontend/`       | TypeScript (Next.js) | Chat UI with sidebar session list, auth page, access gate    |
+| `agents`   | `backend/src/agents/` | Python               | Multi-agent RAG: LawAgent + DocumentAgent + Orchestrator     |
 
 ---
 
 ## API Routes
 
-| Method | Path                              | Auth | Purpose                                      |
-| ------ | --------------------------------- | ---- | -------------------------------------------- |
-| POST   | `/api/auth/signup`                | No   | Register new user                            |
-| POST   | `/api/auth/signin`                | No   | Sign in, set session cookie                  |
-| POST   | `/api/auth/signout`               | Yes  | Sign out, clear cookie                       |
-| GET    | `/api/auth/me`                    | Yes  | Get current user                             |
-| GET    | `/api/sessions`                   | Yes  | List chat sessions for user                  |
-| GET    | `/api/sessions/{session_id}`      | Yes  | Get message history for a session            |
-| POST   | `/api/chat`                       | Yes  | Send message, get RAG-powered response       |
-| POST   | `/api/chunks/ingest-detaljplan`   | No   | Ingest a detaljplan PDF or markdown file     |
-| POST   | `/api/chunks/ingest-laws`         | No   | Ingest law TXT files into law_chunks         |
-| POST   | `/api/analyze`                    | Yes  | Multi-agent feasibility analysis             |
+| Method | Path                               | Purpose                                   |
+| ------ | ---------------------------------- | ----------------------------------------- |
+| POST   | `/api/access-gate/unlock`          | Pass the access gate, set its cookie      |
+| POST   | `/api/auth/signup`                 | Register, returns JWT                     |
+| POST   | `/api/auth/signin`                 | Sign in, returns JWT                      |
+| POST   | `/api/auth/token`                  | OAuth2 password form login, returns JWT   |
+| POST   | `/api/auth/signout`                | Client-side signout, no server revocation |
+| GET    | `/api/auth/me`                     | Current user                              |
+| GET    | `/api/sessions`                    | List chat sessions                        |
+| GET    | `/api/sessions/{session_id}`       | Messages in a chat session                |
+| DELETE | `/api/sessions`                    | Delete all chat sessions                  |
+| DELETE | `/api/sessions/{session_id}`       | Delete one chat session                   |
+| POST   | `/api/chat`                        | Send message, get response                |
+| POST   | `/api/chat/stream`                 | Send message, stream response             |
+| GET    | `/api/history`                     | Message history                           |
+| POST   | `/api/chunks/ingest-detaljplan`    | Ingest one detaljplan PDF or Markdown     |
+| POST   | `/api/chunks/ingest-data-folder`   | Ingest every file in a data folder        |
+| POST   | `/api/analyze`                     | Multi-agent feasibility analysis          |
 
 ---
 
@@ -149,14 +49,14 @@ PostgreSQL + pgvector (db -- port 5432)
 | Table              | Key Columns                                                              |
 | ------------------ | ------------------------------------------------------------------------ |
 | `users`            | id, name, email, email_verified, image                                   |
-| `accounts`         | id, user_id (FK), provider_id, password (argon2 hash)                   |
-| `sessions`         | id, user_id (FK), token, expires_at                                      |
+| `accounts`         | id, user_id (FK), provider_id, password (hash)                           |
+| `sessions`         | id, user_id (FK), token, expires_at (not used by auth, see ADR-0001)     |
 | `chat_sessions`    | id, user_id (FK), title, updated_at                                      |
 | `chat_messages`    | id, session_id (FK), role, content, created_at                           |
 | `document_chunks`  | id, document_id, document_name, chunk_index, content, embedding (3072)  |
 | `law_chunks`       | id, law_name, source_file, chapter, section, chunk_index, content, embedding (3072) |
 
-Migrations/init: `backend/db/init.sql`. Match functions (pgvector): `backend/db/match_functions.sql`.
+Migrations/init: `backend/src/db/init.sql`. Match functions (pgvector): `backend/src/db/match_functions.sql`.
 
 ---
 
@@ -166,14 +66,24 @@ Migrations/init: `backend/db/init.sql`. Match functions (pgvector): `backend/db/
 # Start all services (db, backend, frontend) via Docker
 docker-compose up --build
 
-# Backend only (dev, requires local .env)
-cd backend && uvicorn main:app --reload --port 8000
+# Backend only (dev, requires local .env). uv installs from uv.lock (PCR-0009)
+cd backend && uv sync && uv run uvicorn main:app --app-dir src --reload --port 8000
 
-# Frontend only (dev)
-cd frontend && npm install && npm run dev
+# Frontend only (dev). Bun installs from bun.lock (PCR-0009)
+cd frontend && bun install && bun run dev
 
-# Ingest law chunks (run once after DB is up)
-cd backend && python chunking/ingest_laws.py
+# Backend tests and lint (config in backend/pyproject.toml)
+cd backend && uv run pytest
+cd backend && uv run ruff check
+
+# Frontend tests and lint
+cd frontend && bun run test
+cd frontend && bun run test:coverage
+cd frontend && bun run lint
+
+# Ingest law chunks (run once after DB is up). Input .txt files go in backend/src/chunking/laws/,
+# detaljplan files in backend/src/chunking/data/. Neither folder is tracked, create them locally.
+cd backend && uv run python src/chunking/ingest_laws.py
 
 # Ingest a detaljplan PDF via API
 curl -X POST http://localhost:8000/api/chunks/ingest-detaljplan \
@@ -183,20 +93,21 @@ curl -X POST http://localhost:8000/api/chunks/ingest-detaljplan \
 
 ### Environment Variables
 
-Backend `.env` (backend/.env):
-```
-DATABASE_URL=postgresql://user:password@localhost:5432/pyrmit
-OPENAI_API_KEY=...
-MISTRAL_API_KEY=...       # For PDF OCR
-SUPABASE_URL=...          # For PushDB (chunk ingestion)
-SUPABASE_KEY=...          # Anon/publishable key
-SUPABASE_SERVICE_KEY=...  # Service role key; required for ingest (bypasses RLS on law_chunks/document_chunks)
-```
+Backend (`backend/.env`), names as read by the code:
 
-Frontend `.env` (frontend/.env):
-```
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
+- `DATABASE_URL`
+- `AI_GATEWAY_API_KEY` (if set, model calls go through the Vercel AI Gateway) or `OPENAI_API_KEY`
+- `MISTRAL_API_KEY` -- PDF OCR
+- `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` -- optional, turn on Langfuse tracing of model calls
+- `OPENAI_BASE_URL` -- optional override of the OpenAI endpoint
+- `JWT_SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`
+- `ACCESS_GATE_PASSWORD`, `ACCESS_GATE_COOKIE_DOMAIN`, `ACCESS_GATE_COOKIE_SAMESITE`, `ACCESS_GATE_COOKIE_SECURE`
+- `DEV_ACCESS_PASSWORD`, `APP_ENV`, `CORS_ALLOWED_ORIGINS`, `COOKIE_SAMESITE`, `COOKIE_SECURE`
+
+Frontend (`frontend/.env`):
+
+- `NEXT_PUBLIC_API_URL` (e.g. `http://localhost:8000`)
+- `API_PROXY_TARGET`
 
 ---
 
@@ -204,37 +115,66 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ### Backend (Python / FastAPI)
 
-- `backend/main.py` -- FastAPI app entry, CORS, router registration
-- `backend/models.py` -- SQLAlchemy ORM models (User, Session, ChatSession, ChatMessage, DocumentChunk, LawChunk)
-- `backend/schemas.py` -- Pydantic request/response schemas
-- `backend/dependencies.py` -- `get_current_user` auth dependency (reads session cookie)
-- `backend/routers/auth.py` -- Signup, signin, signout, /me endpoints
-- `backend/routers/chat.py` -- Chat endpoint: embed -> RAG -> OpenAI -> save to DB
-- `backend/routers/queryDB.py` -- `RAG()` function: pgvector cosine distance retrieval
-- `backend/routers/chunks.py` -- Ingestion endpoints for detaljplan and law files
-- `backend/chunking/ingest_pipeline.py` -- Core ingestion: OCR, chunk, embed, push
-- `backend/chunking/chunk_detaljplan.py` -- Detaljplan-specific chunker
-- `backend/chunking/chunk_laws.py` -- Swedish law TXT chunker (chapter/section aware)
-- `backend/chunking/ingest_laws.py` -- CLI script to ingest all law TXT files
-- `backend/db/database.py` -- SQLAlchemy engine + `get_db` session factory
-- `backend/db/push_db.py` -- `PushDB` class: Supabase client for chunk ingestion
-- `backend/db/init.sql` -- DB initialisation (pgvector extension, table creation)
-- `backend/prompts/land_law_prompt.yaml` -- Swedish land law system prompt for chat
+- `backend/src/main.py` -- FastAPI app entry, CORS, router registration
+- `backend/src/llm.py` -- OpenAI client and model name resolution, AI Gateway switch (PCR-0003)
+- `backend/src/observability.py` -- Langfuse tracing wrappers for chat and embedding calls, no-op when Langfuse is not configured
+- `backend/src/models.py` -- SQLAlchemy ORM models
+- `backend/src/schemas.py` -- Pydantic request/response schemas
+- `backend/src/security.py` -- JWT creation/decoding, password hashing
+- `backend/src/dependencies.py` -- `get_current_user` auth dependency (reads bearer token)
+- `backend/src/routers/access_gate.py` -- Access gate unlock
+- `backend/src/routers/auth.py` -- Signup, signin, token, signout, /me, profile, password
+- `backend/src/routers/chat.py` -- Chat and streaming chat endpoints, chat session CRUD
+- `backend/src/routers/chunks.py` -- Ingestion endpoints
+- `backend/src/chunking/ingest_pipeline.py` -- Core ingestion: OCR, chunk, embed, push
+- `backend/src/chunking/chunk_detaljplan.py` -- Detaljplan chunker
+- `backend/src/chunking/chunk_laws.py` -- Law TXT chunker (chapter/section aware)
+- `backend/src/chunking/ingest_laws.py` -- CLI script to ingest all law TXT files
+- `backend/src/chunking/embed.py` -- Embedding helpers
+- `backend/src/ocr/` -- Mistral OCR, PDF to Markdown
+- `backend/src/db/database.py` -- SQLAlchemy engine + `get_db` session factory
+- `backend/src/db/push_db.py` -- `PushDB` class: psycopg2 inserts into chunk tables
+- `backend/src/db/init.sql` -- DB initialisation (pgvector extension, table creation)
+- `backend/src/prompts/land_law_prompt.yaml` -- Prompt that rewrites user questions into Swedish legal search terms
 
 ### Frontend (TypeScript / Next.js)
 
-- `frontend/app/page.tsx` -- Main page: auth check, layout with Sidebar + Chat
-- `frontend/app/auth/` -- Login / signup pages
+- `frontend/app/(protected)/page.tsx` -- Main page: layout with Sidebar + Chat
+- `frontend/app/(protected)/auth/page.tsx` -- Login / signup page
+- `frontend/app/dev-access/` -- Access gate form
+- `frontend/lib/auth.ts` -- Auth helpers, `authFetch`
 - `frontend/components/Chat.tsx` -- Chat message list, input form, session history fetch
 - `frontend/components/Sidebar.tsx` -- Session list, new chat button, user info + logout
+- `frontend/components/Settings.tsx` -- User settings
 
 ### Agents (Multi-Agent RAG)
 
-- `backend/agents/law_agent.py` -- RAG agent for statutory law (OpenAI GPT + SQLAlchemy pgvector on law_chunks)
-- `backend/agents/document_agent.py` -- RAG agent for detaljplan documents (OpenAI GPT + SQLAlchemy pgvector on document_chunks)
-- `backend/agents/orchestrator.py` -- Coordinates LawAgent + DocumentAgent, feasibility analysis
-- `backend/agents/parsers.py` -- Parse user queries, format agent responses
-- `backend/routers/agents.py` -- POST /api/analyze endpoint
+- `backend/src/agents/base.py` -- `BaseRAGAgent`: shared embedding, pgvector retrieval, LLM call
+- `backend/src/agents/law_agent.py` -- LawAgent on law_chunks
+- `backend/src/agents/document_agent.py` -- DocumentAgent on document_chunks
+- `backend/src/agents/orchestrator.py` -- Combines both into the verdict
+- `backend/src/agents/parsers.py` -- `parse_query`, `format_response`
+- `backend/src/agents/AGENTIC_FLOW.md` -- Detailed agent flow
+- `backend/src/routers/agents.py` -- POST /api/analyze endpoint
+
+### Tests
+
+- `backend/tests/unit/` -- pytest unit tests, one file per module in `backend/src/`, same folder layout. `backend/tests/test_acceptance.py` is the one temporary exception, it exists only on an issue's branch. No real database or model calls (PCR-0011). Most files hold only a docstring so far. Known failures are marked `xfail` with a linked issue.
+- `frontend/tests/unit/` -- Vitest + jsdom + React Testing Library, one `*.test.ts(x)` file per module in `components/` and `lib/` (PCR-0007). `frontend/tests/acceptance.test.ts` is the one temporary exception, it exists only on an issue's branch. `lib/auth.test.ts` and `components/Sidebar.test.tsx` are the reference examples; the rest are `it.todo` placeholders.
+- `frontend/tests/mocks/handlers.ts` -- MSW fake backend shared by all frontend tests; override per test with `server.use(...)` (PCR-0008). Unhandled requests fail the test.
+- `frontend/tests/setup.ts`, `frontend/vitest.config.mts` -- test setup and Vitest config.
+- `backend/pyproject.toml` `[tool.ruff.lint.per-file-ignores]` -- ruff baseline of pre-existing problems. Shrink only (PCR-0012).
+
+### CI
+
+- `.github/workflows/frontend.yml` -- `frontend / lint`, `frontend / test`, `frontend / docker` (builds the image, does not publish)
+- `.github/workflows/backend.yml` -- `backend / lint`, `backend / test`, `backend / docker` (builds the image and checks key imports)
+- Both run on every PR into and push to `dev` and `main`, with no path filter. All six are required checks via the "CI green" ruleset (PCR-0010).
+
+### Team Skills
+
+- `.claude/skills/` -- shared Claude Code skills, copied from the committed state of the Custom-skills repo. Update by re-copying from that repo, not by editing here.
+- `docs/skills-tutorial.html` -- team tutorial for the skills: board, git flow, prompts per skill
 
 ---
 
@@ -243,14 +183,14 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 > If a bug occurs, you should always be able to answer:
 > **"Is this a data/retrieval bug (backend) or a display/UX bug (frontend)?"**
 
-- **Auth bugs**: Session cookie not set/expired, 401s -> investigate `backend/routers/auth.py`, `backend/dependencies.py`
-- **RAG quality bugs**: Wrong or irrelevant chunks returned -> investigate `backend/routers/queryDB.py`, embedding model, chunk size
-- **Ingestion bugs**: Chunks not appearing in DB -> investigate `backend/chunking/ingest_pipeline.py`, `backend/db/push_db.py`
-- **Chat bugs**: Wrong answer, missing context -> investigate `backend/routers/chat.py` prompt construction and RAG call
+- **Auth bugs**: Missing/expired bearer token, 401s -> investigate `backend/src/routers/auth.py`, `backend/src/security.py`, `backend/src/dependencies.py`. Redirects to the access gate -> `backend/src/routers/access_gate.py`, `frontend/lib/`
+- **RAG quality bugs**: Wrong or irrelevant chunks returned -> investigate `backend/src/agents/base.py`, embedding model, chunk size
+- **Ingestion bugs**: Chunks not appearing in DB -> investigate `backend/src/chunking/ingest_pipeline.py`, `backend/src/db/push_db.py`
+- **Chat bugs**: Wrong answer, missing context -> investigate `backend/src/routers/chat.py` prompt construction and retrieval call
 - **Frontend bugs**: UI not updating, session not switching, auth redirect loop -> investigate `frontend/components/`
 
 ---
 
 ## Maintenance
 
-After every successful change, update this CLAUDE.md if there are changes to the structure or to relevant CLAUDE.md sections.
+After every successful change, update the file that owns what changed: this file for routes, schema, commands, env vars and key files; `CONTEXT.md` for domain terms. Never edit a file in `docs/pcr/` outside a `/challenge-pcr` session.

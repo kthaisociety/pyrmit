@@ -5,10 +5,12 @@ WORKDIR /app
 
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
+# Bun installs packages from bun.lock (PCR-0009); Node still builds and runs the app.
+COPY --from=oven/bun:1.2.8-alpine /usr/local/bin/bun /usr/local/bin/bun
 
-COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+COPY package.json bun.lock ./
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
