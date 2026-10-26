@@ -36,6 +36,7 @@ interface SourceCount {
   key?: string | null; // local corpus: kommun code (the filter value)
   documents?: number | null;
   types?: TypeCount[] | null;
+  scanned?: number | null; // local corpus: scanned PDFs read by the OCR
 }
 
 interface TableOverview {
@@ -237,6 +238,7 @@ interface DocumentRow {
   doc_type: string | null;
   url: string | null;
   chunks: number;
+  scanned?: boolean; // a scanned PDF whose text comes from the OCR
 }
 
 interface DocumentPage {
@@ -267,6 +269,14 @@ function DocumentItem({ doc }: { doc: DocumentRow }) {
       <button onClick={toggle} className="flex w-full items-center gap-2 px-3 py-2 text-left">
         <span className="text-zinc-400">{open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
         <span className="min-w-0 flex-1 truncate text-xs font-medium text-zinc-800 dark:text-zinc-100">{doc.title}</span>
+        {doc.scanned && (
+          <span
+            title="Scanned PDF without a text layer: its text was read by the OCR"
+            className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+          >
+            OCR
+          </span>
+        )}
         <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
           {doc.kind === 'pdf' ? 'PDF' : 'web page'}
         </span>
@@ -313,7 +323,17 @@ function DocumentItem({ doc }: { doc: DocumentRow }) {
 }
 
 /** A kommun's documents, grouped by type (the order the backend sorts them in), 50 per page. */
-function DocumentList({ source, docType, text }: { source: string; docType: string; text: string }) {
+function DocumentList({
+  source,
+  docType,
+  text,
+  scanned,
+}: {
+  source: string;
+  docType: string;
+  text: string;
+  scanned: boolean;
+}) {
   const [offset, setOffset] = useState(0);
   const [page, setPage] = useState<DocumentPage | null>(null);
   const [loadedQuery, setLoadedQuery] = useState('');
@@ -321,6 +341,7 @@ function DocumentList({ source, docType, text }: { source: string; docType: stri
   const params = new URLSearchParams({ source, offset: String(offset), limit: String(DOC_PAGE_SIZE) });
   if (docType) params.set('doc_type', docType);
   if (text) params.set('q', text);
+  if (scanned) params.set('scanned', 'true');
   const query = params.toString();
   const loading = loadedQuery !== query;
 
@@ -344,8 +365,10 @@ function DocumentList({ source, docType, text }: { source: string; docType: stri
           {loading
             ? 'Loading…'
             : total === 0
-              ? 'No documents'
-              : `Documents ${formatNumber(offset + 1)}–${formatNumber(offset + items.length)} of ${formatNumber(total)}${text ? ` with "${text}" in the title` : ''}`}
+              ? scanned
+                ? 'No scanned PDF read by the OCR here'
+                : 'No documents'
+              : `${scanned ? 'Scanned PDFs' : 'Documents'} ${formatNumber(offset + 1)}–${formatNumber(offset + items.length)} of ${formatNumber(total)}${text ? ` with "${text}" in the title` : ''}`}
         </span>
         <div className="flex gap-2">
           <button
@@ -405,6 +428,7 @@ function sumTypes(sources: SourceCount[]): TypeCount[] {
 function ChunkTableView({ table, sources, store }: { table: TableName; sources: SourceCount[]; store: Store }) {
   const [source, setSource] = useState('');
   const [docType, setDocType] = useState('');
+  const [scannedOnly, setScannedOnly] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [text, setText] = useState('');
   const [offset, setOffset] = useState(0);
@@ -468,7 +492,8 @@ function ChunkTableView({ table, sources, store }: { table: TableName; sources: 
           <option value="">{byKommun ? `All kommuner (${formatNumber(sources.length)})` : 'All sources'}</option>
           {sources.map((s) => (
             <option key={s.key ?? s.name} value={s.key ?? s.name}>
-              {s.name} ({s.documents != null ? `${formatNumber(s.documents)} documents` : `${formatNumber(s.count)} chunks`})
+              {s.name} ({s.documents != null ? `${formatNumber(s.documents)} documents` : `${formatNumber(s.count)} chunks`}
+              {s.scanned ? `, ${formatNumber(s.scanned)} scanned` : ''})
             </option>
           ))}
         </select>
@@ -497,6 +522,12 @@ function ChunkTableView({ table, sources, store }: { table: TableName; sources: 
           }}
         />
       )}
+      {documentsMode && (
+        <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+          <input type="checkbox" checked={scannedOnly} onChange={(e) => setScannedOnly(e.target.checked)} />
+          Only scanned PDFs (text read by the OCR)
+        </label>
+      )}
       {byKommun && !source && (
         <p className="text-xs text-zinc-500">
           Pick a kommun to see its documents sorted by type. Without one, chunks come in the order the corpus stores
@@ -505,7 +536,13 @@ function ChunkTableView({ table, sources, store }: { table: TableName; sources: 
       )}
 
       {documentsMode ? (
-        <DocumentList key={`${source}-${docType}-${text}`} source={source} docType={docType} text={text} />
+        <DocumentList
+          key={`${source}-${docType}-${text}-${scannedOnly}`}
+          source={source}
+          docType={docType}
+          text={text}
+          scanned={scannedOnly}
+        />
       ) : (
         <>
           <div className="flex items-center justify-between text-xs text-zinc-500">

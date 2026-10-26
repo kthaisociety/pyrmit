@@ -220,6 +220,7 @@ class SourceCount(BaseModel):
     key: str | None = None            # value to filter on when it differs from the name (local corpus: kommun code)
     documents: int | None = None
     types: list[TypeCount] | None = None  # local corpus: documents per type within the kommun
+    scanned: int | None = None  # local corpus: scanned PDFs read by the OCR (its outputs)
 
 
 class ChunkTableOverview(BaseModel):
@@ -258,6 +259,7 @@ class DocumentRow(BaseModel):
     doc_type: str | None = None
     url: str | None = None
     chunks: int
+    scanned: bool = False  # a scanned PDF whose text comes from the OCR
 
 
 class DocumentPage(BaseModel):

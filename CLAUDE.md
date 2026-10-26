@@ -653,7 +653,7 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | POST   | `/api/analyze`                    | Yes  | Multi-agent feasibility analysis                |
 | GET    | `/api/db/overview`                | Yes  | Chunk counts per table and per source (`store`=neon/local) |
 | GET    | `/api/db/chunks`                  | Yes  | Paginated chunks (`table`=law/document, `source` (local: kommun code), `doc_type`, `doc_id`, `q` text filter, `store`); local without a kommun: store order, `total` null with a text filter (not counted) |
-| GET    | `/api/db/documents`               | Yes  | Local disk store: a kommun's documents (`source`=kommun code, `doc_type`, `q` title filter) by type then title, with chunk counts |
+| GET    | `/api/db/documents`               | Yes  | Local disk store: a kommun's documents (`source`=kommun code, `doc_type`, `q` title filter, `scanned`=only the scanned PDFs read by the OCR) by type then title, with chunk counts and a `scanned` flag (an OCR output exists: the store has no OCR column) |
 | POST   | `/api/db/search`                  | Yes  | Retrieval top-k on both pools, no LLM (`store`: neon = pgvector, local = localrag) |
 | GET    | `/api/docs/locate`                | Yes  | Where to open a cited chunk: PDF page + zoom on the passage, or original URL with `#:~:text=` |
 | GET    | `/api/docs/pdf/{chunk_id}`        | Yes  | The chunk's crawled PDF with the passage highlighted (PyMuPDF annotations) |
@@ -889,8 +889,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   only until the answer text starts (rebuilt from the saved trace for an answer still generating, `stepsFromTrace`); once finished, "Inspect pipeline" and a clickable "Sources" list (retrieved chunks per source, from `pipeline` events) below the answer
 - `frontend/components/PipelineTrace.tsx` -- "Inspect pipeline" panel rendering `pipeline` events (live or from saved `trace`): a totals line (time, tokens, cost) then one collapsible step per stage (Understand, Retrieve, Agents, Verdict, Answer) with a one-line summary, and the stage's API calls nested inside (assigned by call kind/name in `stepOf`). An expanded `view_map_area` / `view_pdf_page` tool call shows the image the agent looked at: traces store no images (tool records carry `tool` + `image`), `ToolImage` re-renders them from the call's arguments via `/api/docs/tool-image` (older traces: tool taken from the call name)
 - `frontend/components/DatabaseBrowser.tsx` -- Database view with a Neon / Local corpus toggle: stats, chunk browsing, search
-  playground. Local kommun documents: kommun select (documents per kommun), document-type chips, then the kommun's
-  documents by type (`DocumentList`, click one for its chunks); without a kommun, chunks in store order. Every local
+  playground. Local kommun documents: kommun select (documents and scanned PDFs per kommun), document-type chips,
+  "Only scanned PDFs" (OCR) checkbox, then the kommun's documents by type (`DocumentList`, click one for its chunks;
+  scans carry an OCR badge); without a kommun, chunks in store order. Every local
   chunk (browse and search) links to its original (`SourceLinks`): crawled PDF opened at the passage in the
   `SourceViewer` panel (`autoOpen`, n = 0: no citation number) plus the PDF's URL on the kommun site, web page /
   statute in a new tab at the passage (`openPageAtChunk`); a document's "Open the PDF" lists its chunks beside it.

@@ -88,7 +88,8 @@ def _kommun_overview(rows: list[dict]) -> schemas.ChunkTableOverview:
         types = [schemas.TypeCount(doc_type=t, **c) for t, c in kommun["types"].items()]
         types.sort(key=lambda t: DOC_TYPE_ORDER.index(t.doc_type) if t.doc_type in DOC_TYPE_ORDER else 99)
         sources.append(schemas.SourceCount(name=kommun["name"], key=code, count=sum(t.chunks for t in types),
-                                           documents=sum(t.documents for t in types), types=types))
+                                           documents=sum(t.documents for t in types), types=types,
+                                           scanned=len(_scanned_doc_ids(code))))
     sources.sort(key=lambda s: s.name)
     total = sum(s.count for s in sources)
     return schemas.ChunkTableOverview(total=total, with_embedding=total, sources=sources)
@@ -152,10 +153,26 @@ def _local_page(table: str, source: str | None, doc_type: str | None, q: str | N
     return schemas.ChunkPage(total=len(rows), offset=offset, limit=limit, items=items)
 
 
+def _scanned_doc_ids(code: str) -> set[str]:
+    """doc_ids of the kommun's scanned PDFs whose text comes from the OCR: corpus.ocr writes an output for scans only
+    (the store has no OCR column)."""
+    from corpus.common import WEB_DIR
+
+    folder = WEB_DIR / code / "ocr"
+    return {f"pdf:{code}:{path.stem}" for path in folder.glob("*.json")} if folder.is_dir() else set()
+
+
 def _store_documents(store, source: str, doc_type: str | None, q: str | None, offset: int,
-                     limit: int) -> schemas.DocumentPage:
-    """A kommun's documents (from its chunks: the store has no document table), by type then title."""
+                     limit: int, scanned: bool = False) -> schemas.DocumentPage:
+    """A kommun's documents (from its chunks: the store has no document table), by type then title; `scanned`: only
+    the scanned PDFs read by the OCR."""
     where, params = ["kind IN ('page', 'pdf')", "kommun_code = ?"], [source]
+    scanned_ids = _scanned_doc_ids(source)
+    if scanned:
+        if not scanned_ids:
+            return schemas.DocumentPage(total=0, offset=offset, limit=limit, items=[])
+        where.append(f"doc_id IN ({', '.join('?' * len(scanned_ids))})")
+        params += sorted(scanned_ids)
     if doc_type:
         where.append("doc_type = ?")
         params.append(doc_type)
@@ -167,7 +184,8 @@ def _store_documents(store, source: str, doc_type: str | None, q: str | None, of
     rows = store.query(f"SELECT doc_id, MIN(title), MIN(kind), MIN(doc_type), MIN(url), COUNT(*) FROM chunks "
                        f"WHERE {condition} GROUP BY doc_id ORDER BY MIN({_TYPE_RANK}), MIN(title), doc_id "
                        f"LIMIT ? OFFSET ?", (*params, limit, offset))
-    items = [schemas.DocumentRow(doc_id=doc_id, title=title or doc_id, kind=kind, doc_type=dtype, url=url, chunks=n)
+    items = [schemas.DocumentRow(doc_id=doc_id, title=title or doc_id, kind=kind, doc_type=dtype, url=url, chunks=n,
+                                 scanned=doc_id in scanned_ids)
              for doc_id, title, kind, dtype, url, n in rows]
     return schemas.DocumentPage(total=total, offset=offset, limit=limit, items=items)
 
@@ -289,15 +307,17 @@ def list_documents(
     source: str,
     doc_type: str | None = None,
     q: str | None = None,
+    scanned: bool = False,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
     _user: models.User = Depends(get_current_user),
 ):
-    """Local disk store only: a kommun's documents by type, then title (q filters the title)."""
+    """Local disk store only: a kommun's documents by type, then title (q filters the title, scanned keeps the
+    scanned PDFs read by the OCR)."""
     store = _local_store()
     if store is None:
         return schemas.DocumentPage(total=0, offset=offset, limit=limit, items=[])
-    return _store_documents(store, source, doc_type, q, offset, limit)
+    return _store_documents(store, source, doc_type, q, offset, limit, scanned)
 
 
 @router.post("/db/search", response_model=schemas.ChunkSearchResponse)
