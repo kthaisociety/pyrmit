@@ -67,7 +67,7 @@
 
 <!-- 1 -->
 <section class="slide title-slide">
-  <div class="kicker">KTH AI Society · Pyrmit · status, October 26, 2026</div>
+  <div class="kicker">KTH AI Society · Pyrmit · project status</div>
   <h1>What we built, what it needs to run,<br>and what is left</h1>
   <p class="lede">A chat assistant for Swedish land use and building permits that answers from each kommun's own plans and
     from the law, and cites every claim.</p>
@@ -111,7 +111,7 @@
 <section class="slide">
   <div class="kicker">What we built</div>
   <h1>Four building blocks</h1>
-  <p class="lede">Built and measured since October; every number in this deck comes from a result file in the repository.</p>
+  <p class="lede">Every number in this deck comes from a result file in the repository.</p>
   <div class="grid g4">
     <div class="card">
       <span class="tag">1 · Data</span>
@@ -121,7 +121,7 @@
     <div class="card">
       <span class="tag">2 · Pipeline</span>
       <div class="big" style="margin-top:14px">11.4k <small>scans read</small></div>
-      <div class="label">crawl, OCR, filter, index, plan registry and checks, rerun every night on one GPU PC</div>
+      <div class="label">crawl, OCR, filter, index, plan registry and checks, in one script on a GPU PC</div>
     </div>
     <div class="card">
       <span class="tag">3 · Agent</span>
@@ -138,7 +138,7 @@
     <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6575"/></marker></defs>
     <g font-size="15" fill="#1b2433">
       <rect x="0" y="40" width="220" height="64" rx="12" fill="#f3f5f8"/><text x="110" y="68" text-anchor="middle" font-weight="650">Kommun websites</text><text x="110" y="89" text-anchor="middle" fill="#5b6575" font-size="13">plans, PDFs, guidance · laws</text>
-      <rect x="310" y="40" width="220" height="64" rx="12" fill="#e3f2f0"/><text x="420" y="68" text-anchor="middle" font-weight="650">Pipeline (nightly)</text><text x="420" y="89" text-anchor="middle" fill="#5b6575" font-size="13">builds the corpus</text>
+      <rect x="310" y="40" width="220" height="64" rx="12" fill="#e3f2f0"/><text x="420" y="68" text-anchor="middle" font-weight="650">Pipeline</text><text x="420" y="89" text-anchor="middle" fill="#5b6575" font-size="13">builds the corpus</text>
       <rect x="620" y="40" width="220" height="64" rx="12" fill="#e3f2f0"/><text x="730" y="68" text-anchor="middle" font-weight="650">Agent</text><text x="730" y="89" text-anchor="middle" fill="#5b6575" font-size="13">reads the corpus, answers</text>
       <rect x="930" y="40" width="220" height="64" rx="12" fill="#f3f5f8"/><text x="1040" y="68" text-anchor="middle" font-weight="650">User in the chat</text><text x="1040" y="89" text-anchor="middle" fill="#5b6575" font-size="13">question + map pin</text>
       <rect x="620" y="0" width="0" height="0"/>
@@ -170,19 +170,19 @@
       <h2>Are the plans in it? Coverage benchmark</h2>
       <p class="muted" style="font-size:15px;margin:0 0 10px">Share of the plans a kommun lists as in force that the corpus has
         (202 plans, 13 kommuner, fetched live)</p>
-      <svg viewBox="0 0 460 300" width="460" height="300" role="img" aria-label="Coverage: 24 % on Oct 22, 78 % on Oct 23, 91 % on Oct 25">
+      <svg viewBox="0 0 460 300" width="460" height="300" role="img" aria-label="Coverage: 24 % after the first crawl, 78 % after the national crawl, 91 % after revisiting the plan pages">
         <g font-size="15" fill="#1b2433">
           <line x1="40" y1="250" x2="450" y2="250" stroke="#d9dee5"/>
           <rect x="70" y="202" width="90" height="48" rx="6" fill="#c9ced6"/><text x="115" y="192" text-anchor="middle" font-weight="700" font-size="22">24 %</text>
           <rect x="200" y="94" width="90" height="156" rx="6" fill="#7fb8b0"/><text x="245" y="84" text-anchor="middle" font-weight="700" font-size="22">78 %</text>
           <rect x="330" y="68" width="90" height="182" rx="6" fill="#0f766e"/><text x="375" y="58" text-anchor="middle" font-weight="700" font-size="22">91 %</text>
-          <text x="115" y="272" text-anchor="middle" fill="#5b6575" font-size="13.5">Oct 22</text><text x="115" y="290" text-anchor="middle" fill="#5b6575" font-size="12.5">first crawl</text>
-          <text x="245" y="272" text-anchor="middle" fill="#5b6575" font-size="13.5">Oct 23</text><text x="245" y="290" text-anchor="middle" fill="#5b6575" font-size="12.5">national crawl</text>
-          <text x="375" y="272" text-anchor="middle" fill="#5b6575" font-size="13.5">Oct 25</text><text x="375" y="290" text-anchor="middle" fill="#5b6575" font-size="12.5">plan pages revisited</text>
+          <text x="115" y="272" text-anchor="middle" fill="#5b6575" font-size="13.5">First crawl</text><text x="115" y="290" text-anchor="middle" fill="#5b6575" font-size="12.5">7.8k PDFs</text>
+          <text x="245" y="272" text-anchor="middle" fill="#5b6575" font-size="13.5">National crawl</text><text x="245" y="290" text-anchor="middle" fill="#5b6575" font-size="12.5">~60k PDFs</text>
+          <text x="375" y="272" text-anchor="middle" fill="#5b6575" font-size="13.5">Plan pages revisited</text><text x="375" y="290" text-anchor="middle" fill="#5b6575" font-size="12.5">77.8k PDFs</text>
         </g>
       </svg>
       <p style="font-size:15px;margin:6px 0 0">Still missing: plans only shown in a <b>map application</b> (11 of the 29
-        sampled kommuner) and pages too deep for the last crawl.</p>
+        sampled kommuner) and pages too deep for the crawl.</p>
     </div>
   </div>
   <div class="foot"><span>Pyrmit · status deck</span><span>4</span></div>
@@ -191,11 +191,11 @@
 <!-- 5 -->
 <section class="slide">
   <div class="kicker">2 · Pipeline</div>
-  <h1>From websites to a checked corpus, every night</h1>
+  <h1>From websites to a checked corpus</h1>
   <svg viewBox="0 0 1152 190" width="1152" height="190" role="img" aria-label="Pipeline steps" style="margin-top:6px">
     <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6575"/></marker></defs>
     <g font-size="15" fill="#1b2433" text-anchor="middle">
-      <g><rect x="0" y="20" width="140" height="92" rx="12" fill="#f3f5f8"/><text x="70" y="52" font-weight="650">Crawl</text><text x="70" y="74" font-size="13" fill="#5b6575">290 sites</text><text x="70" y="93" font-size="13" fill="#5b6575">weekly, ~3 h</text></g>
+      <g><rect x="0" y="20" width="140" height="92" rx="12" fill="#f3f5f8"/><text x="70" y="52" font-weight="650">Crawl</text><text x="70" y="74" font-size="13" fill="#5b6575">290 sites</text><text x="70" y="93" font-size="13" fill="#5b6575">revisit ~3 h</text></g>
       <g><rect x="168" y="20" width="140" height="92" rx="12" fill="#fdf1e3"/><text x="238" y="52" font-weight="650">OCR</text><text x="238" y="74" font-size="13" fill="#5b6575">scanned PDFs</text><text x="238" y="93" font-size="13" fill="#5b6575">GPU, by priority</text></g>
       <g><rect x="336" y="20" width="140" height="92" rx="12" fill="#f3f5f8"/><text x="406" y="52" font-weight="650">Extract</text><text x="406" y="74" font-size="13" fill="#5b6575">text per document</text><text x="406" y="93" font-size="13" fill="#5b6575">~25 min</text></g>
       <g><rect x="504" y="20" width="140" height="92" rx="12" fill="#f3f5f8"/><text x="574" y="52" font-weight="650">Filter</text><text x="574" y="74" font-size="13" fill="#5b6575">drop off-topic PDFs</text><text x="574" y="93" font-size="13" fill="#5b6575">rules + model</text></g>
@@ -208,7 +208,7 @@
       <line x1="646" y1="66" x2="668" y2="66" stroke="#5b6575" stroke-width="2" marker-end="url(#ar5)"/>
       <line x1="814" y1="66" x2="836" y2="66" stroke="#5b6575" stroke-width="2" marker-end="url(#ar5)"/>
       <line x1="982" y1="66" x2="1004" y2="66" stroke="#5b6575" stroke-width="2" marker-end="url(#ar5)"/>
-      <text x="576" y="150" font-size="14" fill="#5b6575">One script runs it: OCR until 07:00, then the rebuild (~3 h this morning, 505k new passages), then the checks; a failed check keeps yesterday's corpus.</text>
+      <text x="576" y="150" font-size="14" fill="#5b6575">One script runs it: OCR until a set hour, then the rebuild (~3 h for 505k new passages), then the checks; a failed check keeps the previous corpus.</text>
     </g>
   </svg>
   <div class="grid g3" style="margin-top:6px">
@@ -223,7 +223,7 @@
       <svg viewBox="0 0 330 96" width="330" height="96" role="img" aria-label="Words read on real map crops: PP-OCRv6 87 %, EasyOCR 69 %">
         <g font-size="14" fill="#1b2433">
           <text x="0" y="22">PP-OCRv6 (chosen)</text><rect x="135" y="8" width="148" height="20" rx="4" fill="#0f766e"/><text x="290" y="23" font-weight="700">87 %</text>
-          <text x="0" y="58">EasyOCR (before)</text><rect x="135" y="44" width="117" height="20" rx="4" fill="#c9ced6"/><text x="259" y="59" font-weight="700">69 %</text>
+          <text x="0" y="58">EasyOCR (replaced)</text><rect x="135" y="44" width="117" height="20" rx="4" fill="#c9ced6"/><text x="259" y="59" font-weight="700">69 %</text>
           <text x="0" y="90" font-size="12.5" fill="#5b6575">words read on hand-transcribed scans of plan maps</text>
         </g>
       </svg>
@@ -250,8 +250,8 @@
       <svg viewBox="0 0 600 250" width="600" height="250" role="img" aria-label="Where the embedding model runs">
         <defs><marker id="arE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6575"/></marker></defs>
         <g font-size="14.5" fill="#1b2433">
-          <text x="0" y="16" font-size="12.5" fill="#5b6575" letter-spacing="1.5">OFFLINE · EVERY NIGHT · GPU</text>
-          <rect x="0" y="28" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="85" y="58" text-anchor="middle" font-weight="650">New passages</text><text x="85" y="80" text-anchor="middle" font-size="12.5" fill="#5b6575">505k this morning</text>
+          <text x="0" y="16" font-size="12.5" fill="#5b6575" letter-spacing="1.5">OFFLINE · AT EACH REBUILD · GPU</text>
+          <rect x="0" y="28" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="85" y="58" text-anchor="middle" font-weight="650">New passages</text><text x="85" y="80" text-anchor="middle" font-size="12.5" fill="#5b6575">505k in one rebuild</text>
           <rect x="215" y="28" width="170" height="70" rx="12" fill="#0f766e"/><text x="300" y="58" text-anchor="middle" font-weight="700" fill="#fff">arctic-embed-l-v2</text><text x="300" y="80" text-anchor="middle" font-size="12.5" fill="#d5ece8">GPU, ~60 passages/s</text>
           <rect x="430" y="28" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="515" y="58" text-anchor="middle" font-weight="650">Vectors</text><text x="515" y="80" text-anchor="middle" font-size="12.5" fill="#5b6575">1,024 numbers each, ~5 GB</text>
           <line x1="172" y1="63" x2="211" y2="63" stroke="#5b6575" stroke-width="2" marker-end="url(#arE)"/>
@@ -276,15 +276,15 @@
       <p style="font-size:15px;margin:0 0 10px" class="muted">Corpus and queries must use the same model: switching means
         embedding the whole corpus again, once.</p>
       <table>
-        <tr><th></th><th>Local (today)</th><th>Via a gateway</th></tr>
+        <tr><th></th><th>Local (in use)</th><th>Via a gateway</th></tr>
         <tr><td class="k">Model</td><td>arctic-embed-l-v2 (not on OpenRouter)</td><td>bge-m3, multilingual-e5-large or Qwen3-8B on OpenRouter: recall 0.91–0.92, within noise</td></tr>
-        <tr><td class="k">Cost</td><td>free; GPU time</td><td>~$7 to embed the corpus once (~685M tokens at $0.01/M), ~$1 a night after</td></tr>
-        <tr><td class="k">Hosting</td><td>model in the server's RAM; bulk indexing needs a GPU</td><td>nothing to host; the nightly index needs no GPU (only the OCR does)</td></tr>
+        <tr><td class="k">Cost</td><td>free; GPU time</td><td>~$7 to embed the corpus once (~685M tokens at $0.01/M), ~$1 per rebuild after</td></tr>
+        <tr><td class="k">Hosting</td><td>model in the server's RAM; bulk indexing needs a GPU</td><td>nothing to host; indexing needs no GPU (only the OCR does)</td></tr>
         <tr><td class="k">Risk</td><td>none new</td><td>recall to measure again on the full corpus (~$2.5); Neon's gateway only has Qwen3-0.6B (0.81) and English models</td></tr>
       </table>
     </div>
   </div>
-  <div class="foot"><span>Pyrmit · status deck · recall from the Oct 9 model evaluation (localrag.eval); prices on OpenRouter</span><span>6</span></div>
+  <div class="foot"><span>Pyrmit · status deck · recall from the model evaluation (localrag.eval); prices on OpenRouter</span><span>6</span></div>
 </section>
 
 <!-- 6 -->
@@ -405,10 +405,10 @@
       <line x1="0" y1="330" x2="1152" y2="330" stroke="#d9dee5" stroke-dasharray="6 6"/>
       <text x="0" y="360" font-size="13" fill="#5b6575" letter-spacing="1.5">OFFLINE</text>
       <rect x="0" y="378" width="250" height="100" rx="12" fill="#f3f5f8"/><text x="125" y="408" text-anchor="middle" font-weight="650">Sources</text><text x="125" y="430" text-anchor="middle" font-size="13" fill="#5b6575">290 kommun websites, Riksdagen,</text><text x="125" y="448" text-anchor="middle" font-size="13" fill="#5b6575">Wikidata · NGP, Lantmäteriet</text><text x="125" y="466" text-anchor="middle" font-size="13" fill="#5b6575">(access pending)</text>
-      <rect x="320" y="378" width="420" height="100" rx="14" fill="#e3f2f0"/><text x="530" y="408" text-anchor="middle" font-weight="700">GPU machine: the nightly pipeline</text><text x="530" y="432" text-anchor="middle" font-size="13.5">crawl → OCR → index → checks → snapshot N+1</text><text x="530" y="456" text-anchor="middle" font-size="13" fill="#5b6575">our PC today (8 GB GPU); a rented GPU for peaks</text>
+      <rect x="320" y="378" width="420" height="100" rx="14" fill="#e3f2f0"/><text x="530" y="408" text-anchor="middle" font-weight="700">GPU machine: the pipeline</text><text x="530" y="432" text-anchor="middle" font-size="13.5">crawl → OCR → index → checks → snapshot N+1</text><text x="530" y="456" text-anchor="middle" font-size="13" fill="#5b6575">our PC (8 GB GPU); a rented GPU for peaks</text>
       <line x1="252" y1="428" x2="316" y2="428" stroke="#5b6575" stroke-width="2" marker-end="url(#ar8)"/>
       <path d="M742,428 L1132,428 L1132,118 L1104,118" fill="none" stroke="#b45309" stroke-width="2.2" stroke-dasharray="6 4" marker-end="url(#ar8)"/>
-      <text x="800" y="418" font-size="13" fill="#b45309">publishes PDFs + a checked snapshot each night</text>
+      <text x="800" y="418" font-size="13" fill="#b45309">publishes PDFs + a checked snapshot after each rebuild</text>
     </g>
   </svg>
   <div class="foot"><span>Pyrmit · status deck · $ = monthly cost</span><span>9</span></div>
@@ -420,18 +420,18 @@
   <h1>Three ways to provide those services</h1>
   <table style="margin-top:10px">
     <tr><th style="width:150px"></th><th>A · Best of each (recommended)</th><th>B · Everything on Neon</th><th>C · Managed cloud</th></tr>
-    <tr><td class="k">LLM</td><td>OpenRouter (today)</td><td>Neon AI Gateway</td><td>Vercel AI Gateway (already supported)</td></tr>
+    <tr><td class="k">LLM</td><td>OpenRouter (in use)</td><td>Neon AI Gateway</td><td>Vercel AI Gateway (already supported)</td></tr>
     <tr><td class="k">Files</td><td>Cloudflare R2</td><td>Neon Object Storage</td><td>AWS S3</td></tr>
-    <tr><td class="k">Database</td><td>Neon Postgres (today)</td><td>Neon Postgres</td><td>Neon Postgres</td></tr>
+    <tr><td class="k">Database</td><td>Neon Postgres (in use)</td><td>Neon Postgres</td><td>Neon Postgres</td></tr>
     <tr><td class="k">Embeddings</td><td>local on the server (CPU), or OpenRouter</td><td>local: Neon's embedding models are weaker for Swedish</td><td>local, or the gateway</td></tr>
     <tr><td class="k">Backend</td><td>one server (e.g. Hetzner, EU)</td><td>one server: Neon Functions run Node, our backend is Python</td><td>managed containers (Fly, Railway, Cloud Run)</td></tr>
     <tr><td class="k">Per month</td><td><b>~€20–35</b> + LLM (+ OpenRouter's fee on credits)</td><td><b>~€22–37</b> + LLM at list price</td><td><b>≥ $45</b> (16 GB container, to price) + LLM</td></tr>
     <tr><td class="k">For</td><td>every model, incl. MiMo (2nd judge, PDF filter); a capped key per person; cost of each call; mature</td><td>one bill; no markup on models; files branch with the database (a PR branch sees its own corpus)</td><td>no server to look after; scales up</td></tr>
-    <tr><td class="k">Against</td><td>four accounts; a server to look after</td><td>GA only since Sep 2026; no MiMo; default caps $20/day and 200k tokens/min; no cost per call</td><td>dearest; S3 charges egress ($0.09/GB); more to configure</td></tr>
+    <tr><td class="k">Against</td><td>four accounts; a server to look after</td><td>just out of beta; no MiMo; default caps $20/day and 200k tokens/min; no cost per call</td><td>dearest; S3 charges egress ($0.09/GB); more to configure</td></tr>
   </table>
   <p style="font-size:15px;margin-top:14px" class="muted">Files for 225 GB: R2 ~$3.2/month (no egress fee), Neon ~$5.2/month (500 GB egress included). The LLM
     dominates either way: ~$10 per 1,000 answers. Server prices to check before ordering.</p>
-  <div class="foot"><span>Pyrmit · status deck · Neon prices checked on neon.com on Oct 26, 2026; R2 and S3 from the Oct 9 hosting report; server, container and Vercel prices to check</span><span>10</span></div>
+  <div class="foot"><span>Pyrmit · status deck · Neon prices from neon.com; R2 and S3 from the hosting report; server, container and Vercel prices to check</span><span>10</span></div>
 </section>
 
 <!-- 10 -->
@@ -449,15 +449,15 @@
       <rect x="800" y="34" width="150" height="70" rx="12" fill="#e7eef8"/><text x="875" y="74" font-weight="650">Staging</text>
       <rect x="980" y="34" width="170" height="70" rx="12" fill="#0f766e"/><text x="1065" y="74" font-weight="650" fill="#fff">Production</text>
       <g stroke="#5b6575" stroke-width="2"><line x1="162" y1="69" x2="186" y2="69" marker-end="url(#ar10)"/><line x1="372" y1="69" x2="396" y2="69" marker-end="url(#ar10)"/><line x1="572" y1="69" x2="596" y2="69" marker-end="url(#ar10)"/><line x1="772" y1="69" x2="796" y2="69" marker-end="url(#ar10)"/><line x1="952" y1="69" x2="976" y2="69" marker-end="url(#ar10)"/></g>
-      <text x="0" y="168" text-anchor="start" font-size="13" fill="#5b6575" letter-spacing="1.5">DATA · on the GPU machine, at night</text>
-      <rect x="0" y="184" width="160" height="70" rx="12" fill="#f3f5f8"/><text x="80" y="214" font-weight="650">Crawl</text><text x="80" y="236" font-size="12.5" fill="#5b6575">weekly revisit</text>
-      <rect x="190" y="184" width="180" height="70" rx="12" fill="#fdf1e3"/><text x="280" y="214" font-weight="650">OCR + rebuild</text><text x="280" y="236" font-size="12.5" fill="#5b6575">nightly script</text>
+      <text x="0" y="168" text-anchor="start" font-size="13" fill="#5b6575" letter-spacing="1.5">DATA · on the GPU machine</text>
+      <rect x="0" y="184" width="160" height="70" rx="12" fill="#f3f5f8"/><text x="80" y="214" font-weight="650">Crawl</text><text x="80" y="236" font-size="12.5" fill="#5b6575">revisit of known pages</text>
+      <rect x="190" y="184" width="180" height="70" rx="12" fill="#fdf1e3"/><text x="280" y="214" font-weight="650">OCR + rebuild</text><text x="280" y="236" font-size="12.5" fill="#5b6575">one script</text>
       <rect x="400" y="184" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="485" y="214" font-weight="650">Free checks</text><text x="485" y="236" font-size="12.5" fill="#5b6575">data, replay, coverage</text>
       <rect x="600" y="184" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="685" y="214" font-weight="650">Snapshot N+1</text><text x="685" y="236" font-size="12.5" fill="#5b6575">to object storage</text>
       <rect x="800" y="184" width="150" height="70" rx="12" fill="#e7eef8"/><text x="875" y="214" font-weight="650">Staging</text><text x="875" y="236" font-size="12.5" fill="#5b6575">paid benchmarks</text>
       <rect x="980" y="184" width="170" height="70" rx="12" fill="#0f766e"/><text x="1065" y="224" font-weight="650" fill="#fff">Production</text>
       <g stroke="#5b6575" stroke-width="2"><line x1="162" y1="219" x2="186" y2="219" marker-end="url(#ar10)"/><line x1="372" y1="219" x2="396" y2="219" marker-end="url(#ar10)"/><line x1="572" y1="219" x2="596" y2="219" marker-end="url(#ar10)"/><line x1="772" y1="219" x2="796" y2="219" marker-end="url(#ar10)"/><line x1="952" y1="219" x2="976" y2="219" marker-end="url(#ar10)"/></g>
-      <text x="485" y="292" font-size="13.5" fill="#9f1239">a failed check stops the release, not the night</text>
+      <text x="485" y="292" font-size="13.5" fill="#9f1239">a failed check stops the release, not the pipeline</text>
     </g>
   </svg>
   <div class="grid g3" style="margin-top:4px">
@@ -476,11 +476,11 @@
     <tr><th style="width:150px">Stream</th><th>Task</th><th>Why</th><th style="width:170px">Effort · cost</th></tr>
     <tr><td class="k">Client</td><td><b>Talk to the client</b>: who the users are, their real questions, which kommuner first; have them check a sample of our benchmark cases</td><td>we have built without user feedback; the cases are written by us and by models</td><td>a meeting · free</td></tr>
     <tr><td class="k">Data</td><td><b>Finish the OCR</b> (3.7k lower-priority scans)</td><td>the rest of the scans become searchable</td><td>~18 h GPU · free</td></tr>
-    <tr><td class="k"></td><td><b>Full re-crawl</b>; plans of map-only kommuner from their map services, as for Uppsala</td><td>66 of the 79 plan PDFs still missing sit on pages too deep; 11 of 29 kommuner list plans only in a map</td><td>a night + per kommun · free</td></tr>
+    <tr><td class="k"></td><td><b>Full re-crawl</b>; plans of map-only kommuner from their map services, as for Uppsala</td><td>66 of the 79 plan PDFs still missing sit on pages too deep; 11 of 29 kommuner list plans only in a map</td><td>several hours + per kommun · free</td></tr>
     <tr><td class="k"></td><td><b>NGP and Lantmäteriet</b> once access is granted</td><td>structured plan rules, official plan IDs, a complete list to measure coverage</td><td>after approval · to check</td></tr>
-    <tr><td class="k">Agent</td><td><b>Check each claim</b> against its cited passage before the answer is sent</td><td>1.45 unsupported claims per answer today</td><td>days · ~$2 per test round</td></tr>
+    <tr><td class="k">Agent</td><td><b>Check each claim</b> against its cited passage before the answer is sent</td><td>1.45 unsupported claims per answer</td><td>days · ~$2 per test round</td></tr>
     <tr><td class="k"></td><td><b>Better benchmarks</b>: expert-reviewed references, multi-turn cases, pinned places beyond Uppsala, plan-map zones</td><td>the scores are only as good as the references</td><td>ongoing · ~$2–3 per round</td></tr>
-    <tr><td class="k">Platform</td><td><b>Host it</b> (option A or B), publish corpus snapshots, backend tests in CI, the nightly script versioned</td><td>today the app and the pipeline run on one PC</td><td>~1 week · ~€20–35/month</td></tr>
+    <tr><td class="k">Platform</td><td><b>Host it</b> (option A or B), publish corpus snapshots, backend tests in CI, the pipeline script versioned</td><td>the app and the pipeline run on one PC</td><td>~1 week · ~€20–35/month</td></tr>
   </table>
   <div class="foot"><span>Pyrmit · status deck</span><span>12</span></div>
 </section>
