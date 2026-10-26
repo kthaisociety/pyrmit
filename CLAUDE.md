@@ -503,7 +503,14 @@ text was restructured (2026-10-17); the French bodies are the older layout. Both
 so sections are top level). The bench's RAG answer is streamed
 (`run_rag` records `first_token_s`).
 The key reports (benchmark, technical, hosting PDF + Markdown) are copied into `reports/` (versioned; the generators
-write to `../pyrmit_doc/`, so copy them again after regenerating).
+write to `../pyrmit_doc/`, so copy them again after regenerating). `reports/pyrmit_architecture_report.html` (hand-written,
+inline SVG diagrams: current system, target layers, needs and costs, pooling, data stores and releases, workflows,
+worktrees) is the source of its PDF: render it with `agentic.report.write_pdf` and copy the PDF next to it.
+`reports/pyrmit_status_deck.html` (hand-written 16:9 slides for newcomers: what was built, the embedding model local
+vs through a gateway, what hosting needs, the options A OpenRouter + R2 / B all on Neon / C managed cloud, the
+workflow, remaining tasks) prints
+to `pyrmit_status_deck.pdf` with headless Chrome (`--print-to-pdf`, `@page` 1280 x 720 px); its numbers are copied
+from the result files by hand, so update them with the data.
 Gotcha (Windows): stopping a background shell does not kill its Python children; a "killed" benchmark can keep running
 and spending credits. Check with `Get-CimInstance Win32_Process` and `Stop-Process`; for a chained `sh script.sh`, stop
 the `sh.exe` first or it starts the next step. Claude Code reaps background shells when RAM runs low (16 GB machine):

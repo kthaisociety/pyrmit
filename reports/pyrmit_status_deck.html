@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pyrmit status deck</title>
+<style>
+  :root {
+    --ink: #1b2433; --muted: #5b6575; --line: #d9dee5; --soft: #f3f5f8; --paper: #ffffff;
+    --accent: #0f766e; --accent-soft: #e3f2f0; --money: #b45309; --money-soft: #fdf1e3;
+    --blue: #2f5f9e; --blue-soft: #e7eef8; --warn: #9f1239; --warn-soft: #fbe9ee;
+  }
+  @page { size: 1280px 720px; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #e9ecf0; color: var(--ink);
+    font-family: "Segoe UI", Inter, system-ui, -apple-system, Helvetica, Arial, sans-serif; }
+  .slide { width: 1280px; height: 720px; margin: 24px auto; background: var(--paper); position: relative;
+    padding: 52px 64px 40px; overflow: hidden; page-break-after: always; break-after: page; }
+  @media print { body { background: none; } .slide { margin: 0; } }
+  .kicker { font-size: 15px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); font-weight: 650; }
+  h1 { font-size: 40px; line-height: 1.12; margin: 8px 0 6px; font-weight: 700; letter-spacing: -.01em; }
+  h2 { font-size: 21px; margin: 0 0 8px; font-weight: 650; }
+  .lede { font-size: 20px; color: var(--muted); margin: 0 0 22px; max-width: 1050px; line-height: 1.35; }
+  p, li { font-size: 17px; line-height: 1.4; }
+  .muted { color: var(--muted); }
+  .foot { position: absolute; left: 64px; right: 64px; bottom: 18px; font-size: 12.5px; color: var(--muted);
+    display: flex; justify-content: space-between; }
+  .grid { display: grid; gap: 18px; }
+  .g2 { grid-template-columns: 1fr 1fr; } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); }
+  .card { background: var(--soft); border-radius: 14px; padding: 18px 20px; }
+  .card h2 { font-size: 19px; }
+  .big { font-size: 40px; font-weight: 700; line-height: 1; letter-spacing: -.02em; }
+  .big small { font-size: 18px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+  .label { font-size: 15px; color: var(--muted); margin-top: 6px; line-height: 1.3; }
+  .tag { display: inline-block; font-size: 13px; font-weight: 650; padding: 3px 9px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); }
+  .tag.money { background: var(--money-soft); color: var(--money); }
+  .tag.blue { background: var(--blue-soft); color: var(--blue); }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); }
+  ul.tight { margin: 6px 0 0; padding-left: 20px; } ul.tight li { margin: 3px 0; font-size: 16px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; vertical-align: top; padding: 9px 12px; font-size: 15px; line-height: 1.32; border-bottom: 1px solid var(--line); }
+  th { font-size: 14px; color: var(--muted); font-weight: 650; text-transform: uppercase; letter-spacing: .05em; }
+  td.k { font-weight: 650; white-space: nowrap; color: var(--muted); }
+  svg text { font-family: "Segoe UI", Inter, system-ui, Helvetica, Arial, sans-serif; }
+  .title-slide { display: flex; flex-direction: column; justify-content: center; padding: 80px 96px;
+    background: linear-gradient(135deg, #0f766e 0%, #134e4a 100%); color: #fff; }
+  .title-slide h1 { font-size: 64px; margin: 14px 0 18px; }
+  .title-slide .lede { color: #d5ece8; font-size: 24px; max-width: 900px; }
+  .title-slide .kicker { color: #9fe3d6; }
+  .chat { background: var(--soft); border-radius: 16px; padding: 20px 22px; }
+  .bubble { border-radius: 14px; padding: 12px 16px; font-size: 16.5px; line-height: 1.4; margin: 0 0 12px; }
+  .q { background: var(--accent); color: #fff; margin-left: 120px; }
+  .a { background: #fff; border: 1px solid var(--line); margin-right: 40px; }
+  .chip { display: inline-block; min-width: 22px; text-align: center; font-size: 13px; font-weight: 700; color: var(--accent);
+    background: var(--accent-soft); border-radius: 6px; padding: 0 5px; margin: 0 1px; }
+  .src { font-size: 14px; color: var(--muted); margin: 4px 0 0; }
+  .lane { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .lane:last-child { border-bottom: 0; }
+  .who { font-size: 20px; font-weight: 700; } .who span { display: block; font-size: 14px; font-weight: 500; color: var(--muted); margin-top: 3px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill { background: var(--soft); border-radius: 10px; padding: 8px 12px; font-size: 15px; line-height: 1.3; }
+  .pill b { display: block; font-size: 15.5px; }
+</style>
+</head>
+<body>
+
+<!-- 1 -->
+<section class="slide title-slide">
+  <div class="kicker">KTH AI Society · Pyrmit · status, October 26, 2026</div>
+  <h1>What we built, what it needs to run,<br>and what is left</h1>
+  <p class="lede">A chat assistant for Swedish land use and building permits that answers from each kommun's own plans and
+    from the law, and cites every claim.</p>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="kicker">The idea</div>
+  <h1>Ask about a place, get an answer from its plans and the law</h1>
+  <div class="grid g2" style="grid-template-columns: 1.15fr 1fr; gap: 36px; margin-top: 18px;">
+    <div class="chat">
+      <div class="bubble q">Can I add a 25 m² guest house on my plot? (the place is pinned on the map)</div>
+      <div class="bubble a"><b>Verdict: probably yes, without bygglov</b>, if the plan's building-area limit for the plot
+        still allows it <span class="chip">1</span>. A komplementbostadshus up to 30 m² inside a detaljplan needs no
+        bygglov <span class="chip">2</span>, but closer than 4.5 m to the boundary the neighbours must agree
+        <span class="chip">3</span>…
+        <p class="src">[1] Detaljplan of the plot: plankarta and bestämmelser · [2] PBL 9 kap. 4 § · [3] PBL 9 kap. 34 §</p>
+      </div>
+      <p class="src" style="margin-top:2px">Illustration of the answer format; each [n] opens the cited passage in its
+        original PDF or statute.</p>
+    </div>
+    <div>
+      <h2>What makes it hard</h2>
+      <ul class="tight">
+        <li><b>290 kommuner</b>, each with its own website, plans and PDFs, many of them scanned decades ago.</li>
+        <li>The rules sit in <b>plan maps</b>: codes printed on zones of a drawing.</li>
+        <li><b>The law changes</b>: PBL 9 kap. was renumbered in 2025 (SFS 2025:974); the models remember the old version.</li>
+        <li>Answers must be <b>sourced</b>: an unsupported claim is worse than no answer.</li>
+      </ul>
+      <h2 style="margin-top:22px">What it does</h2>
+      <ul class="tight">
+        <li>Gives a verdict, explains a rule, proposes projects or develops an idea.</li>
+        <li>Asks back when the place or the project is unclear.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>Pyrmit · status deck</span><span>2</span></div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="kicker">What we built</div>
+  <h1>Four building blocks</h1>
+  <p class="lede">Built and measured since October; every number in this deck comes from a result file in the repository.</p>
+  <div class="grid g4">
+    <div class="card">
+      <span class="tag">1 · Data</span>
+      <div class="big" style="margin-top:14px">113k <small>documents</small></div>
+      <div class="label">from all 290 kommun websites and 15 statutes; 2.39M searchable passages</div>
+    </div>
+    <div class="card">
+      <span class="tag">2 · Pipeline</span>
+      <div class="big" style="margin-top:14px">11.4k <small>scans read</small></div>
+      <div class="label">crawl, OCR, filter, index, plan registry and checks, rerun every night on one GPU PC</div>
+    </div>
+    <div class="card">
+      <span class="tag">3 · Agent</span>
+      <div class="big" style="margin-top:14px">12 <small>tools</small></div>
+      <div class="label">searches, reads and looks at plan maps before it answers, citing each source; ~40 s, ~$0.01 an answer</div>
+    </div>
+    <div class="card">
+      <span class="tag">4 · Map</span>
+      <div class="big" style="margin-top:14px">2× <small>better answers</small></div>
+      <div class="label">a pinned place gives the agent the property, its plans and protected areas (Uppsala pilot)</div>
+    </div>
+  </div>
+  <svg viewBox="0 0 1152 150" width="1152" height="150" style="margin-top:26px" role="img" aria-label="How the blocks connect">
+    <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6575"/></marker></defs>
+    <g font-size="15" fill="#1b2433">
+      <rect x="0" y="40" width="220" height="64" rx="12" fill="#f3f5f8"/><text x="110" y="68" text-anchor="middle" font-weight="650">Kommun websites</text><text x="110" y="89" text-anchor="middle" fill="#5b6575" font-size="13">plans, PDFs, guidance · laws</text>
+      <rect x="310" y="40" width="220" height="64" rx="12" fill="#e3f2f0"/><text x="420" y="68" text-anchor="middle" font-weight="650">Pipeline (nightly)</text><text x="420" y="89" text-anchor="middle" fill="#5b6575" font-size="13">builds the corpus</text>
+      <rect x="620" y="40" width="220" height="64" rx="12" fill="#e3f2f0"/><text x="730" y="68" text-anchor="middle" font-weight="650">Agent</text><text x="730" y="89" text-anchor="middle" fill="#5b6575" font-size="13">reads the corpus, answers</text>
+      <rect x="930" y="40" width="220" height="64" rx="12" fill="#f3f5f8"/><text x="1040" y="68" text-anchor="middle" font-weight="650">User in the chat</text><text x="1040" y="89" text-anchor="middle" fill="#5b6575" font-size="13">question + map pin</text>
+      <rect x="620" y="0" width="0" height="0"/>
+      <line x1="222" y1="72" x2="306" y2="72" stroke="#5b6575" stroke-width="2" marker-end="url(#ar3)"/>
+      <line x1="532" y1="72" x2="616" y2="72" stroke="#5b6575" stroke-width="2" marker-end="url(#ar3)"/>
+      <line x1="928" y1="64" x2="844" y2="64" stroke="#5b6575" stroke-width="2" marker-end="url(#ar3)"/>
+      <line x1="844" y1="82" x2="928" y2="82" stroke="#5b6575" stroke-width="2" marker-end="url(#ar3)"/>
+      <path d="M1040,108 C1040,140 730,140 730,110" fill="none" stroke="#2f5f9e" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ar3)"/>
+      <text x="885" y="146" text-anchor="middle" fill="#2f5f9e" font-size="13">Map: the pinned place's property, plans and zones</text>
+    </g>
+  </svg>
+  <div class="foot"><span>Pyrmit · status deck</span><span>3</span></div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="kicker">1 · Data</div>
+  <h1>All of Sweden's planning documents, searchable</h1>
+  <div class="grid" style="grid-template-columns: 1.25fr 1fr; gap: 40px; margin-top: 10px;">
+    <div class="grid g3" style="align-content:start">
+      <div class="card"><div class="big">290</div><div class="label">kommuner (all of Sweden), crawled politely: 1 request/s, robots.txt</div></div>
+      <div class="card"><div class="big">89.5k</div><div class="label">PDFs downloaded, 244 GB; 77.8k kept in the corpus</div></div>
+      <div class="card"><div class="big">35k</div><div class="label">kommun web pages (guidance, permits, fees)</div></div>
+      <div class="card"><div class="big">15</div><div class="label">statutes from Riksdagen (PBL, PBF, MB, JB...), one passage per §</div></div>
+      <div class="card"><div class="big">2.39M</div><div class="label">passages embedded for search (exact duplicates removed)</div></div>
+      <div class="card"><div class="big">38.7k</div><div class="label">plans in the registry (279 kommuner); 97k coded rules read from 11.2k of them</div></div>
+    </div>
+    <div>
+      <h2>Are the plans in it? Coverage benchmark</h2>
+      <p class="muted" style="font-size:15px;margin:0 0 10px">Share of the plans a kommun lists as in force that the corpus has
+        (202 plans, 13 kommuner, fetched live)</p>
+      <svg viewBox="0 0 460 300" width="460" height="300" role="img" aria-label="Coverage: 24 % on Oct 22, 78 % on Oct 23, 91 % on Oct 25">
+        <g font-size="15" fill="#1b2433">
+          <line x1="40" y1="250" x2="450" y2="250" stroke="#d9dee5"/>
+          <rect x="70" y="202" width="90" height="48" rx="6" fill="#c9ced6"/><text x="115" y="192" text-anchor="middle" font-weight="700" font-size="22">24 %</text>
+          <rect x="200" y="94" width="90" height="156" rx="6" fill="#7fb8b0"/><text x="245" y="84" text-anchor="middle" font-weight="700" font-size="22">78 %</text>
+          <rect x="330" y="68" width="90" height="182" rx="6" fill="#0f766e"/><text x="375" y="58" text-anchor="middle" font-weight="700" font-size="22">91 %</text>
+          <text x="115" y="272" text-anchor="middle" fill="#5b6575" font-size="13.5">Oct 22</text><text x="115" y="290" text-anchor="middle" fill="#5b6575" font-size="12.5">first crawl</text>
+          <text x="245" y="272" text-anchor="middle" fill="#5b6575" font-size="13.5">Oct 23</text><text x="245" y="290" text-anchor="middle" fill="#5b6575" font-size="12.5">national crawl</text>
+          <text x="375" y="272" text-anchor="middle" fill="#5b6575" font-size="13.5">Oct 25</text><text x="375" y="290" text-anchor="middle" fill="#5b6575" font-size="12.5">plan pages revisited</text>
+        </g>
+      </svg>
+      <p style="font-size:15px;margin:6px 0 0">Still missing: plans only shown in a <b>map application</b> (11 of the 29
+        sampled kommuner) and pages too deep for the last crawl.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Pyrmit · status deck</span><span>4</span></div>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="kicker">2 · Pipeline</div>
+  <h1>From websites to a checked corpus, every night</h1>
+  <svg viewBox="0 0 1152 190" width="1152" height="190" role="img" aria-label="Pipeline steps" style="margin-top:6px">
+    <defs><marker id="ar5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6575"/></marker></defs>
+    <g font-size="15" fill="#1b2433" text-anchor="middle">
+      <g><rect x="0" y="20" width="140" height="92" rx="12" fill="#f3f5f8"/><text x="70" y="52" font-weight="650">Crawl</text><text x="70" y="74" font-size="13" fill="#5b6575">290 sites</text><text x="70" y="93" font-size="13" fill="#5b6575">weekly, ~3 h</text></g>
+      <g><rect x="168" y="20" width="140" height="92" rx="12" fill="#fdf1e3"/><text x="238" y="52" font-weight="650">OCR</text><text x="238" y="74" font-size="13" fill="#5b6575">scanned PDFs</text><text x="238" y="93" font-size="13" fill="#5b6575">GPU, by priority</text></g>
+      <g><rect x="336" y="20" width="140" height="92" rx="12" fill="#f3f5f8"/><text x="406" y="52" font-weight="650">Extract</text><text x="406" y="74" font-size="13" fill="#5b6575">text per document</text><text x="406" y="93" font-size="13" fill="#5b6575">~25 min</text></g>
+      <g><rect x="504" y="20" width="140" height="92" rx="12" fill="#f3f5f8"/><text x="574" y="52" font-weight="650">Filter</text><text x="574" y="74" font-size="13" fill="#5b6575">drop off-topic PDFs</text><text x="574" y="93" font-size="13" fill="#5b6575">rules + model</text></g>
+      <g><rect x="672" y="20" width="140" height="92" rx="12" fill="#f3f5f8"/><text x="742" y="52" font-weight="650">Chunk + embed</text><text x="742" y="74" font-size="13" fill="#5b6575">passages → vectors</text><text x="742" y="93" font-size="13" fill="#5b6575">GPU, new ones only</text></g>
+      <g><rect x="840" y="20" width="140" height="92" rx="12" fill="#f3f5f8"/><text x="910" y="52" font-weight="650">Store + plans</text><text x="910" y="74" font-size="13" fill="#5b6575">search index,</text><text x="910" y="93" font-size="13" fill="#5b6575">plan registry</text></g>
+      <g><rect x="1008" y="20" width="140" height="92" rx="12" fill="#e3f2f0"/><text x="1078" y="52" font-weight="650">Checks</text><text x="1078" y="74" font-size="13" fill="#5b6575">data, tool replay,</text><text x="1078" y="93" font-size="13" fill="#5b6575">coverage</text></g>
+      <line x1="142" y1="66" x2="164" y2="66" stroke="#5b6575" stroke-width="2" marker-end="url(#ar5)"/>
+      <line x1="310" y1="66" x2="332" y2="66" stroke="#5b6575" stroke-width="2" marker-end="url(#ar5)"/>
+      <line x1="478" y1="66" x2="500" y2="66" stroke="#5b6575" stroke-width="2" marker-end="url(#ar5)"/>
+      <line x1="646" y1="66" x2="668" y2="66" stroke="#5b6575" stroke-width="2" marker-end="url(#ar5)"/>
+      <line x1="814" y1="66" x2="836" y2="66" stroke="#5b6575" stroke-width="2" marker-end="url(#ar5)"/>
+      <line x1="982" y1="66" x2="1004" y2="66" stroke="#5b6575" stroke-width="2" marker-end="url(#ar5)"/>
+      <text x="576" y="150" font-size="14" fill="#5b6575">One script runs it: OCR until 07:00, then the rebuild (~3 h this morning, 505k new passages), then the checks; a failed check keeps yesterday's corpus.</text>
+    </g>
+  </svg>
+  <div class="grid g3" style="margin-top:6px">
+    <div class="card">
+      <h2>OCR: old plans become readable</h2>
+      <div class="big">40.5k <small>pages</small></div>
+      <div class="label">11.4k scanned PDFs in 222 kommuner, 10M words. Plan maps and plan texts are done; ~18 h of GPU
+        left for 3.7k lower-priority documents.</div>
+    </div>
+    <div class="card">
+      <h2>Chosen on a benchmark</h2>
+      <svg viewBox="0 0 330 96" width="330" height="96" role="img" aria-label="Words read on real map crops: PP-OCRv6 87 %, EasyOCR 69 %">
+        <g font-size="14" fill="#1b2433">
+          <text x="0" y="22">PP-OCRv6 (chosen)</text><rect x="135" y="8" width="148" height="20" rx="4" fill="#0f766e"/><text x="290" y="23" font-weight="700">87 %</text>
+          <text x="0" y="58">EasyOCR (before)</text><rect x="135" y="44" width="117" height="20" rx="4" fill="#c9ced6"/><text x="259" y="59" font-weight="700">69 %</text>
+          <text x="0" y="90" font-size="12.5" fill="#5b6575">words read on hand-transcribed scans of plan maps</text>
+        </g>
+      </svg>
+    </div>
+    <div class="card">
+      <h2>Checked, not trusted</h2>
+      <ul class="tight" style="margin-top:2px">
+        <li>Data checks after every rebuild</li>
+        <li>1,500 stored agent tool calls replayed</li>
+        <li>Coverage against the kommuner's own plan lists</li>
+        <li>A PDF is dropped only on a near-certain rule or by a second judge</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>Pyrmit · status deck</span><span>5</span></div>
+</section>
+
+<!-- embeddings -->
+<section class="slide">
+  <div class="kicker">2 · Pipeline · search</div>
+  <h1>Search runs on an open embedding model we host ourselves</h1>
+  <div class="grid" style="grid-template-columns: 1.15fr 1fr; gap: 34px; margin-top: 8px;">
+    <div>
+      <svg viewBox="0 0 600 250" width="600" height="250" role="img" aria-label="Where the embedding model runs">
+        <defs><marker id="arE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6575"/></marker></defs>
+        <g font-size="14.5" fill="#1b2433">
+          <text x="0" y="16" font-size="12.5" fill="#5b6575" letter-spacing="1.5">OFFLINE · EVERY NIGHT · GPU</text>
+          <rect x="0" y="28" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="85" y="58" text-anchor="middle" font-weight="650">New passages</text><text x="85" y="80" text-anchor="middle" font-size="12.5" fill="#5b6575">505k this morning</text>
+          <rect x="215" y="28" width="170" height="70" rx="12" fill="#0f766e"/><text x="300" y="58" text-anchor="middle" font-weight="700" fill="#fff">arctic-embed-l-v2</text><text x="300" y="80" text-anchor="middle" font-size="12.5" fill="#d5ece8">GPU, ~60 passages/s</text>
+          <rect x="430" y="28" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="515" y="58" text-anchor="middle" font-weight="650">Vectors</text><text x="515" y="80" text-anchor="middle" font-size="12.5" fill="#5b6575">1,024 numbers each, ~5 GB</text>
+          <line x1="172" y1="63" x2="211" y2="63" stroke="#5b6575" stroke-width="2" marker-end="url(#arE)"/>
+          <line x1="387" y1="63" x2="426" y2="63" stroke="#5b6575" stroke-width="2" marker-end="url(#arE)"/>
+          <text x="0" y="144" font-size="12.5" fill="#5b6575" letter-spacing="1.5">ONLINE · EACH SEARCH · CPU</text>
+          <rect x="0" y="156" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="85" y="186" text-anchor="middle" font-weight="650">Agent's query</text><text x="85" y="208" text-anchor="middle" font-size="12.5" fill="#5b6575">in Swedish</text>
+          <rect x="215" y="156" width="170" height="70" rx="12" fill="#e3f2f0"/><text x="300" y="186" text-anchor="middle" font-weight="700">same model</text><text x="300" y="208" text-anchor="middle" font-size="12.5" fill="#5b6575">CPU (ONNX), 34 ms</text>
+          <rect x="430" y="156" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="515" y="186" text-anchor="middle" font-weight="650">Closest passages</text><text x="515" y="208" text-anchor="middle" font-size="12.5" fill="#5b6575">within the kommun named</text>
+          <line x1="172" y1="191" x2="211" y2="191" stroke="#5b6575" stroke-width="2" marker-end="url(#arE)"/>
+          <line x1="387" y1="191" x2="426" y2="191" stroke="#5b6575" stroke-width="2" marker-end="url(#arE)"/>
+          <line x1="515" y1="100" x2="515" y2="152" stroke="#5b6575" stroke-width="1.6" stroke-dasharray="4 4"/>
+        </g>
+      </svg>
+      <div class="grid g3" style="gap:10px;margin-top:8px">
+        <div class="card" style="padding:12px 14px"><div class="big" style="font-size:28px">0.92</div><div class="label" style="font-size:13.5px">recall@5 on 45 Swedish questions: as good as the best API models, best at rank 1</div></div>
+        <div class="card" style="padding:12px 14px"><div class="big" style="font-size:28px">0.9 GB</div><div class="label" style="font-size:13.5px">RAM on a CPU, same recall as the GPU: the server needs no GPU</div></div>
+        <div class="card" style="padding:12px 14px"><div class="big" style="font-size:28px">$0</div><div class="label" style="font-size:13.5px">open weights (Apache-2.0), 568M parameters, multilingual</div></div>
+      </div>
+    </div>
+    <div>
+      <h2>Or through the LLM gateway?</h2>
+      <p style="font-size:15px;margin:0 0 10px" class="muted">Corpus and queries must use the same model: switching means
+        embedding the whole corpus again, once.</p>
+      <table>
+        <tr><th></th><th>Local (today)</th><th>Via a gateway</th></tr>
+        <tr><td class="k">Model</td><td>arctic-embed-l-v2 (not on OpenRouter)</td><td>bge-m3, multilingual-e5-large or Qwen3-8B on OpenRouter: recall 0.91–0.92, within noise</td></tr>
+        <tr><td class="k">Cost</td><td>free; GPU time</td><td>~$7 to embed the corpus once (~685M tokens at $0.01/M), ~$1 a night after</td></tr>
+        <tr><td class="k">Hosting</td><td>model in the server's RAM; bulk indexing needs a GPU</td><td>nothing to host; the nightly index needs no GPU (only the OCR does)</td></tr>
+        <tr><td class="k">Risk</td><td>none new</td><td>recall to measure again on the full corpus (~$2.5); Neon's gateway only has Qwen3-0.6B (0.81) and English models</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="foot"><span>Pyrmit · status deck · recall from the Oct 9 model evaluation (localrag.eval); prices on OpenRouter</span><span>6</span></div>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="kicker">3 · Agent</div>
+  <h1>An agent that looks things up before it answers</h1>
+  <div class="grid" style="grid-template-columns: 1.1fr 1fr; gap: 36px; margin-top: 8px;">
+    <svg viewBox="0 0 560 410" width="560" height="410" role="img" aria-label="Agent loop">
+      <defs><marker id="ar6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6575"/></marker></defs>
+      <g font-size="15" fill="#1b2433">
+        <rect x="0" y="20" width="170" height="60" rx="12" fill="#f3f5f8"/><text x="85" y="46" text-anchor="middle" font-weight="650">Question</text><text x="85" y="66" text-anchor="middle" font-size="13" fill="#5b6575">+ pinned place</text>
+        <rect x="200" y="10" width="190" height="80" rx="14" fill="#0f766e"/><text x="295" y="44" text-anchor="middle" font-weight="700" fill="#fff">LLM (GPT-6 Luna)</text><text x="295" y="66" text-anchor="middle" font-size="13" fill="#d5ece8">plans, calls tools, decides</text>
+        <line x1="172" y1="50" x2="196" y2="50" stroke="#5b6575" stroke-width="2" marker-end="url(#ar6)"/>
+        <rect x="140" y="140" width="310" height="196" rx="14" fill="#e3f2f0"/>
+        <text x="295" y="166" text-anchor="middle" font-weight="650">Tools on the corpus</text>
+        <g font-size="13.5" fill="#1b2433">
+          <text x="160" y="194">find_kommun · search · grep</text>
+          <text x="160" y="218">list_documents · read</text>
+          <text x="160" y="242">law_section ("PBL 9 kap. 4 §")</text>
+          <text x="160" y="266">plans · plan_rules (registry)</text>
+          <text x="160" y="290">view_map_area · view_pdf_page</text>
+          <text x="160" y="314">ask_user (options, pin the place)</text>
+        </g>
+        <path d="M265,92 L265,136" stroke="#5b6575" stroke-width="2" marker-end="url(#ar6)"/>
+        <path d="M325,136 L325,92" stroke="#5b6575" stroke-width="2" marker-end="url(#ar6)"/>
+        <text x="345" y="120" font-size="12.5" fill="#5b6575">up to 10 turns, tools in parallel</text>
+        <rect x="420" y="20" width="140" height="60" rx="12" fill="#f3f5f8"/><text x="490" y="46" text-anchor="middle" font-weight="650">Answer</text><text x="490" y="66" text-anchor="middle" font-size="13" fill="#5b6575">streamed, cited [n]</text>
+        <line x1="392" y1="50" x2="416" y2="50" stroke="#5b6575" stroke-width="2" marker-end="url(#ar6)"/>
+        <text x="0" y="380" font-size="14" fill="#5b6575">Each [n] opens the passage highlighted in its original PDF;</text>
+        <text x="0" y="400" font-size="14" fill="#5b6575">the "Inspect pipeline" panel shows every model turn and tool call.</text>
+      </g>
+    </svg>
+    <div>
+      <h2>Measured on ~370 benchmark cases</h2>
+      <p class="muted" style="font-size:14.5px;margin:0 0 6px">6 sets: feasibility, real MÖD rulings, plan maps, explain / propose / develop
+        tasks, generated cases, pinned places. Two judges from different model families (agreement κ = 0.89).</p>
+      <svg viewBox="0 0 470 196" width="470" height="196" role="img" aria-label="Key points covered, agent vs plain RAG">
+        <g font-size="14" fill="#1b2433">
+          <text x="0" y="16" font-size="13" fill="#5b6575">Share of the reference key points the answer covers</text>
+          <text x="0" y="52">Explain a rule</text><rect x="150" y="38" width="200" height="16" rx="3" fill="#0f766e"/><text x="356" y="51" font-weight="700">0.69</text><rect x="150" y="58" width="183" height="10" rx="3" fill="#c9ced6"/><text x="339" y="68" font-size="12" fill="#5b6575">0.63</text>
+          <text x="0" y="104">Propose projects</text><rect x="150" y="90" width="154" height="16" rx="3" fill="#0f766e"/><text x="310" y="103" font-weight="700">0.53</text><rect x="150" y="110" width="119" height="10" rx="3" fill="#c9ced6"/><text x="275" y="120" font-size="12" fill="#5b6575">0.41</text>
+          <text x="0" y="156">Develop an idea</text><rect x="150" y="142" width="203" height="16" rx="3" fill="#0f766e"/><text x="359" y="155" font-weight="700">0.70</text><rect x="150" y="162" width="136" height="10" rx="3" fill="#c9ced6"/><text x="292" y="172" font-size="12" fill="#5b6575">0.47</text>
+          <rect x="150" y="184" width="14" height="10" fill="#0f766e"/><text x="170" y="194" font-size="12.5">agent</text>
+          <rect x="230" y="184" width="14" height="10" fill="#c9ced6"/><text x="250" y="194" font-size="12.5">plain RAG (one search, then answer)</text>
+        </g>
+      </svg>
+      <div class="grid g3" style="gap:10px;margin-top:10px">
+        <div class="card" style="padding:12px 14px"><div class="big" style="font-size:30px">~40 s</div><div class="label" style="font-size:13.5px">per answer, first words ~25 s</div></div>
+        <div class="card" style="padding:12px 14px"><div class="big" style="font-size:30px">~$0.01</div><div class="label" style="font-size:13.5px">per answer (LLM tokens)</div></div>
+        <div class="card" style="padding:12px 14px"><div class="big" style="font-size:30px">1.45</div><div class="label" style="font-size:13.5px">unsupported claims per answer: the next target</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>Pyrmit · status deck</span><span>7</span></div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="kicker">4 · Map</div>
+  <h1>Pin a place: the agent knows the property and its rules</h1>
+  <div class="grid" style="grid-template-columns: 1fr 1.05fr; gap: 40px; margin-top: 12px;">
+    <svg viewBox="0 0 520 400" width="520" height="400" role="img" aria-label="Place card built from map layers">
+      <g font-size="15" fill="#1b2433">
+        <rect x="0" y="0" width="520" height="400" rx="16" fill="#e7eef8"/>
+        <rect x="70" y="60" width="170" height="120" fill="#cfe7e3" stroke="#0f766e" stroke-width="2" rx="4"/>
+        <text x="80" y="82" font-size="13" fill="#0f766e" font-weight="650">detaljplan</text>
+        <rect x="250" y="40" width="210" height="150" fill="none" stroke="#9f1239" stroke-width="2" stroke-dasharray="6 4" rx="4"/>
+        <text x="262" y="62" font-size="13" fill="#9f1239" font-weight="650">protected area</text>
+        <circle cx="200" cy="140" r="11" fill="#b45309"/><circle cx="200" cy="140" r="4" fill="#fff"/>
+        <rect x="24" y="222" width="300" height="160" rx="14" fill="#ffffff" stroke="#d9dee5"/>
+        <text x="44" y="250" font-weight="700">Place card</text>
+        <g font-size="13.5"><text x="44" y="276">Property and its addresses</text><text x="44" y="298">Plans, newest first; inside or outside a plan</text>
+          <text x="44" y="320">Protected areas, Natura 2000, national interests</text><text x="44" y="342">Ancient remains (live lookup)</text>
+          <text x="44" y="364">Permits likely needed (fixed rules, no LLM)</text></g>
+      </g>
+    </svg>
+    <div>
+      <div class="grid g2" style="gap:14px">
+        <div class="card"><div class="big">0.79–0.82</div><div class="label">key points covered with a pin, vs <b>0.39</b> with only the address in the question (15 Uppsala places × 3)</div></div>
+        <div class="card"><div class="big">0.3 s</div><div class="label">to build a place card (median), from map-layer snapshots plus live lookups</div></div>
+        <div class="card"><div class="big">328 / 330</div><div class="label">points where the snapshots agree with the providers' own queries</div></div>
+        <div class="card"><div class="big">100 %</div><div class="label">of typed addresses land on the right property, using the kommun's address register</div></div>
+      </div>
+      <p style="font-size:15.5px;margin-top:16px">Pilot: <b>Uppsala</b>, from the kommun's map service: 1,410 plans and their 3,930
+        PDFs now also in the corpus. Next kommuner need <b>NGP</b> (national digital plans) and <b>Lantmäteriet</b>
+        (properties): access requested, not granted yet.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Pyrmit · status deck</span><span>8</span></div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="kicker">What it needs to run</div>
+  <h1>Five services online, one GPU machine offline</h1>
+  <svg viewBox="0 0 1152 520" width="1152" height="520" role="img" aria-label="Architecture to host Pyrmit" style="margin-top:4px">
+    <defs><marker id="ar8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6575"/></marker></defs>
+    <g font-size="15" fill="#1b2433">
+      <text x="0" y="16" font-size="13" fill="#5b6575" letter-spacing="1.5">ONLINE</text>
+      <rect x="0" y="34" width="170" height="80" rx="12" fill="#f3f5f8"/><text x="85" y="68" text-anchor="middle" font-weight="650">Users</text><text x="85" y="90" text-anchor="middle" font-size="13" fill="#5b6575">browser</text>
+      <rect x="220" y="34" width="200" height="80" rx="12" fill="#f3f5f8"/><text x="320" y="64" text-anchor="middle" font-weight="650">Frontend</text><text x="320" y="85" text-anchor="middle" font-size="13" fill="#5b6575">Next.js · Vercel or</text><text x="320" y="102" text-anchor="middle" font-size="13" fill="#5b6575">the same server</text>
+      <rect x="470" y="20" width="270" height="200" rx="14" fill="#e3f2f0"/>
+      <text x="605" y="50" text-anchor="middle" font-weight="700">Backend (Python, FastAPI)</text>
+      <g font-size="13.5" fill="#1b2433"><text x="490" y="80">agent + tools, chat, map cards</text><text x="490" y="104">corpus snapshot on local disk,</text><text x="490" y="124">pulled from object storage (~10 GB)</text><text x="490" y="148">query embeddings on the CPU (ONNX)</text><text x="490" y="172">server: CPU, ~16 GB RAM, ~40 GB disk</text></g>
+      <circle cx="722" cy="204" r="13" fill="#b45309"/><text x="722" y="209" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">$</text>
+      <line x1="172" y1="74" x2="216" y2="74" stroke="#5b6575" stroke-width="2" marker-end="url(#ar8)"/>
+      <line x1="422" y1="74" x2="466" y2="74" stroke="#5b6575" stroke-width="2" marker-end="url(#ar8)"/>
+      <rect x="800" y="0" width="300" height="62" rx="12" fill="#f3f5f8"/><text x="820" y="27" font-weight="650">Postgres (Neon)</text><text x="820" y="48" font-size="13" fill="#5b6575">users, chats, answer traces · branch per PR</text>
+      <rect x="800" y="76" width="300" height="62" rx="12" fill="#fdf1e3"/><text x="820" y="103" font-weight="650">Object storage</text><text x="820" y="124" font-size="13" fill="#5b6575">PDFs 225 GB + corpus snapshots</text>
+      <circle cx="1082" cy="98" r="12" fill="#b45309"/><text x="1082" y="103" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">$</text>
+      <rect x="800" y="152" width="300" height="62" rx="12" fill="#fdf1e3"/><text x="820" y="179" font-weight="650">LLM gateway</text><text x="820" y="200" font-size="13" fill="#5b6575">GPT-6 Luna (answers), MiMo (2nd judge)</text>
+      <circle cx="1082" cy="174" r="12" fill="#b45309"/><text x="1082" y="179" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">$</text>
+      <rect x="800" y="228" width="300" height="62" rx="12" fill="#e7eef8"/><text x="820" y="255" font-weight="650">Public map services (live)</text><text x="820" y="276" font-size="13" fill="#5b6575">kommun GIS, RAÄ, Nominatim · free</text>
+      <line x1="742" y1="36" x2="796" y2="31" stroke="#5b6575" stroke-width="2" marker-end="url(#ar8)"/>
+      <line x1="742" y1="100" x2="796" y2="107" stroke="#5b6575" stroke-width="2" marker-end="url(#ar8)"/>
+      <line x1="742" y1="160" x2="796" y2="183" stroke="#5b6575" stroke-width="2" marker-end="url(#ar8)"/>
+      <line x1="742" y1="212" x2="796" y2="256" stroke="#5b6575" stroke-width="2" marker-end="url(#ar8)"/>
+      <line x1="0" y1="330" x2="1152" y2="330" stroke="#d9dee5" stroke-dasharray="6 6"/>
+      <text x="0" y="360" font-size="13" fill="#5b6575" letter-spacing="1.5">OFFLINE</text>
+      <rect x="0" y="378" width="250" height="100" rx="12" fill="#f3f5f8"/><text x="125" y="408" text-anchor="middle" font-weight="650">Sources</text><text x="125" y="430" text-anchor="middle" font-size="13" fill="#5b6575">290 kommun websites, Riksdagen,</text><text x="125" y="448" text-anchor="middle" font-size="13" fill="#5b6575">Wikidata · NGP, Lantmäteriet</text><text x="125" y="466" text-anchor="middle" font-size="13" fill="#5b6575">(access pending)</text>
+      <rect x="320" y="378" width="420" height="100" rx="14" fill="#e3f2f0"/><text x="530" y="408" text-anchor="middle" font-weight="700">GPU machine: the nightly pipeline</text><text x="530" y="432" text-anchor="middle" font-size="13.5">crawl → OCR → index → checks → snapshot N+1</text><text x="530" y="456" text-anchor="middle" font-size="13" fill="#5b6575">our PC today (8 GB GPU); a rented GPU for peaks</text>
+      <line x1="252" y1="428" x2="316" y2="428" stroke="#5b6575" stroke-width="2" marker-end="url(#ar8)"/>
+      <path d="M742,428 L1132,428 L1132,118 L1104,118" fill="none" stroke="#b45309" stroke-width="2.2" stroke-dasharray="6 4" marker-end="url(#ar8)"/>
+      <text x="800" y="418" font-size="13" fill="#b45309">publishes PDFs + a checked snapshot each night</text>
+    </g>
+  </svg>
+  <div class="foot"><span>Pyrmit · status deck · $ = monthly cost</span><span>9</span></div>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="kicker">Hosting options</div>
+  <h1>Three ways to provide those services</h1>
+  <table style="margin-top:10px">
+    <tr><th style="width:150px"></th><th>A · Best of each (recommended)</th><th>B · Everything on Neon</th><th>C · Managed cloud</th></tr>
+    <tr><td class="k">LLM</td><td>OpenRouter (today)</td><td>Neon AI Gateway</td><td>Vercel AI Gateway (already supported)</td></tr>
+    <tr><td class="k">Files</td><td>Cloudflare R2</td><td>Neon Object Storage</td><td>AWS S3</td></tr>
+    <tr><td class="k">Database</td><td>Neon Postgres (today)</td><td>Neon Postgres</td><td>Neon Postgres</td></tr>
+    <tr><td class="k">Embeddings</td><td>local on the server (CPU), or OpenRouter</td><td>local: Neon's embedding models are weaker for Swedish</td><td>local, or the gateway</td></tr>
+    <tr><td class="k">Backend</td><td>one server (e.g. Hetzner, EU)</td><td>one server: Neon Functions run Node, our backend is Python</td><td>managed containers (Fly, Railway, Cloud Run)</td></tr>
+    <tr><td class="k">Per month</td><td><b>~€20–35</b> + LLM (+ OpenRouter's fee on credits)</td><td><b>~€22–37</b> + LLM at list price</td><td><b>≥ $45</b> (16 GB container, to price) + LLM</td></tr>
+    <tr><td class="k">For</td><td>every model, incl. MiMo (2nd judge, PDF filter); a capped key per person; cost of each call; mature</td><td>one bill; no markup on models; files branch with the database (a PR branch sees its own corpus)</td><td>no server to look after; scales up</td></tr>
+    <tr><td class="k">Against</td><td>four accounts; a server to look after</td><td>GA only since Sep 2026; no MiMo; default caps $20/day and 200k tokens/min; no cost per call</td><td>dearest; S3 charges egress ($0.09/GB); more to configure</td></tr>
+  </table>
+  <p style="font-size:15px;margin-top:14px" class="muted">Files for 225 GB: R2 ~$3.2/month (no egress fee), Neon ~$5.2/month (500 GB egress included). The LLM
+    dominates either way: ~$10 per 1,000 answers. Server prices to check before ordering.</p>
+  <div class="foot"><span>Pyrmit · status deck · Neon prices checked on neon.com on Oct 26, 2026; R2 and S3 from the Oct 9 hosting report; server, container and Vercel prices to check</span><span>10</span></div>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="kicker">How we work</div>
+  <h1>One path for code, one for data, both through staging</h1>
+  <svg viewBox="0 0 1152 330" width="1152" height="330" role="img" aria-label="Code and data workflows" style="margin-top:10px">
+    <defs><marker id="ar10" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6575"/></marker></defs>
+    <g font-size="15" fill="#1b2433" text-anchor="middle">
+      <text x="0" y="18" text-anchor="start" font-size="13" fill="#5b6575" letter-spacing="1.5">CODE · people and coding agents alike</text>
+      <rect x="0" y="34" width="160" height="70" rx="12" fill="#f3f5f8"/><text x="80" y="64" font-weight="650">Linear issue</text><text x="80" y="86" font-size="12.5" fill="#5b6575">every task, also agents'</text>
+      <rect x="190" y="34" width="180" height="70" rx="12" fill="#f3f5f8"/><text x="280" y="64" font-weight="650">Branch + worktree</text><text x="280" y="86" font-size="12.5" fill="#5b6575">own Neon branch, own ports</text>
+      <rect x="400" y="34" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="485" y="64" font-weight="650">Pull request</text><text x="485" y="86" font-size="12.5" fill="#5b6575">CI: lint + backend tests</text>
+      <rect x="600" y="34" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="685" y="64" font-weight="650">Human review</text><text x="685" y="86" font-size="12.5" fill="#5b6575">also for agents' PRs</text>
+      <rect x="800" y="34" width="150" height="70" rx="12" fill="#e7eef8"/><text x="875" y="74" font-weight="650">Staging</text>
+      <rect x="980" y="34" width="170" height="70" rx="12" fill="#0f766e"/><text x="1065" y="74" font-weight="650" fill="#fff">Production</text>
+      <g stroke="#5b6575" stroke-width="2"><line x1="162" y1="69" x2="186" y2="69" marker-end="url(#ar10)"/><line x1="372" y1="69" x2="396" y2="69" marker-end="url(#ar10)"/><line x1="572" y1="69" x2="596" y2="69" marker-end="url(#ar10)"/><line x1="772" y1="69" x2="796" y2="69" marker-end="url(#ar10)"/><line x1="952" y1="69" x2="976" y2="69" marker-end="url(#ar10)"/></g>
+      <text x="0" y="168" text-anchor="start" font-size="13" fill="#5b6575" letter-spacing="1.5">DATA · on the GPU machine, at night</text>
+      <rect x="0" y="184" width="160" height="70" rx="12" fill="#f3f5f8"/><text x="80" y="214" font-weight="650">Crawl</text><text x="80" y="236" font-size="12.5" fill="#5b6575">weekly revisit</text>
+      <rect x="190" y="184" width="180" height="70" rx="12" fill="#fdf1e3"/><text x="280" y="214" font-weight="650">OCR + rebuild</text><text x="280" y="236" font-size="12.5" fill="#5b6575">nightly script</text>
+      <rect x="400" y="184" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="485" y="214" font-weight="650">Free checks</text><text x="485" y="236" font-size="12.5" fill="#5b6575">data, replay, coverage</text>
+      <rect x="600" y="184" width="170" height="70" rx="12" fill="#f3f5f8"/><text x="685" y="214" font-weight="650">Snapshot N+1</text><text x="685" y="236" font-size="12.5" fill="#5b6575">to object storage</text>
+      <rect x="800" y="184" width="150" height="70" rx="12" fill="#e7eef8"/><text x="875" y="214" font-weight="650">Staging</text><text x="875" y="236" font-size="12.5" fill="#5b6575">paid benchmarks</text>
+      <rect x="980" y="184" width="170" height="70" rx="12" fill="#0f766e"/><text x="1065" y="224" font-weight="650" fill="#fff">Production</text>
+      <g stroke="#5b6575" stroke-width="2"><line x1="162" y1="219" x2="186" y2="219" marker-end="url(#ar10)"/><line x1="372" y1="219" x2="396" y2="219" marker-end="url(#ar10)"/><line x1="572" y1="219" x2="596" y2="219" marker-end="url(#ar10)"/><line x1="772" y1="219" x2="796" y2="219" marker-end="url(#ar10)"/><line x1="952" y1="219" x2="976" y2="219" marker-end="url(#ar10)"/></g>
+      <text x="485" y="292" font-size="13.5" fill="#9f1239">a failed check stops the release, not the night</text>
+    </g>
+  </svg>
+  <div class="grid g3" style="margin-top:4px">
+    <div class="card" style="padding:14px 18px"><b>Capped LLM keys</b><div class="label">one per person, agent and environment: a runaway benchmark only spends its own cap</div></div>
+    <div class="card" style="padding:14px 18px"><b>Results in git</b><div class="label">every paid run has a label; its JSON is committed and the reports are generated from it</div></div>
+    <div class="card" style="padding:14px 18px"><b>Shared corpus</b><div class="label">built once, downloaded by everyone; a bug report names its snapshot</div></div>
+  </div>
+  <div class="foot"><span>Pyrmit · status deck</span><span>11</span></div>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="kicker">What is left</div>
+  <h1>Remaining work, by stream</h1>
+  <table style="margin-top:6px">
+    <tr><th style="width:150px">Stream</th><th>Task</th><th>Why</th><th style="width:170px">Effort · cost</th></tr>
+    <tr><td class="k">Client</td><td><b>Talk to the client</b>: who the users are, their real questions, which kommuner first; have them check a sample of our benchmark cases</td><td>we have built without user feedback; the cases are written by us and by models</td><td>a meeting · free</td></tr>
+    <tr><td class="k">Data</td><td><b>Finish the OCR</b> (3.7k lower-priority scans)</td><td>the rest of the scans become searchable</td><td>~18 h GPU · free</td></tr>
+    <tr><td class="k"></td><td><b>Full re-crawl</b>; plans of map-only kommuner from their map services, as for Uppsala</td><td>66 of the 79 plan PDFs still missing sit on pages too deep; 11 of 29 kommuner list plans only in a map</td><td>a night + per kommun · free</td></tr>
+    <tr><td class="k"></td><td><b>NGP and Lantmäteriet</b> once access is granted</td><td>structured plan rules, official plan IDs, a complete list to measure coverage</td><td>after approval · to check</td></tr>
+    <tr><td class="k">Agent</td><td><b>Check each claim</b> against its cited passage before the answer is sent</td><td>1.45 unsupported claims per answer today</td><td>days · ~$2 per test round</td></tr>
+    <tr><td class="k"></td><td><b>Better benchmarks</b>: expert-reviewed references, multi-turn cases, pinned places beyond Uppsala, plan-map zones</td><td>the scores are only as good as the references</td><td>ongoing · ~$2–3 per round</td></tr>
+    <tr><td class="k">Platform</td><td><b>Host it</b> (option A or B), publish corpus snapshots, backend tests in CI, the nightly script versioned</td><td>today the app and the pipeline run on one PC</td><td>~1 week · ~€20–35/month</td></tr>
+  </table>
+  <div class="foot"><span>Pyrmit · status deck</span><span>12</span></div>
+</section>
+
+</body>
+</html>
