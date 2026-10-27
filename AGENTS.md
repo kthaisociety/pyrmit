@@ -4,7 +4,7 @@
 
 Load these only when the task needs them:
 
-- `.claude/skills` -- The project skills, use these first hand. 
+- `max` plugin -- The project skills (`/max:new-ticket` and friends), use these first hand. Enabled by `.claude/settings.json`.
 - `CONTEXT.md` -- domain language: what a detaljplan, chunk, verdict etc. mean and how they connect
 - `docs/pcr/` -- project-wide conventions (stack, model calls, embeddings, answer language). Binding. Read before changing code.
 - `docs/adr/` -- decisions scoped to one part of the codebase. Binding inside their scope.
@@ -173,8 +173,8 @@ Frontend (`frontend/.env`):
 
 ### Team Skills
 
-- `.claude/skills/` -- shared Claude Code skills, copied from the committed state of the Custom-skills repo. Update by re-copying from that repo, not by editing here.
-- `docs/skills-tutorial.html` -- team tutorial for the skills: board, git flow, prompts per skill
+- `.claude/settings.json` -- enables the `max` plugin from the `Maxastrand04/Custom-skills` marketplace. The skills are not in this repo. Change them in Custom-skills, then run `/plugin marketplace update custom-skills`.
+- `docs/skills-tutorial.md` -- link to the skills tutorial on GitHub Pages, plus setup notes
 
 ---
 
