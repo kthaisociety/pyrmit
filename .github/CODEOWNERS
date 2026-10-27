@@ -1,0 +1,8 @@
+# Code owners must approve every PR (ruleset: require code owner review).
+# The last matching pattern wins. Placeholder: replace * with the people who review pyrmit.
+* @kthaisociety/platform-engineers
+
+# Workflows pass the deploy and release app keys to kthaisociety/workflows, so Platform reviews them.
+# Platform also owns this file, so the rule can't be removed without Platform.
+/.github/workflows/ @kthaisociety/platform-engineers
+/.github/CODEOWNERS @kthaisociety/platform-engineers

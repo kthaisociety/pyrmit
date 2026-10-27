@@ -1,0 +1,15 @@
+# The PR title check. PRs are squash-merged, so the title becomes the commit release-please reads.
+# The tests are backend.yml and frontend.yml, which already run on every PR.
+name: pr
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  title:
+    uses: kthaisociety/workflows/.github/workflows/semantic-pr.yml@v0.3.0
+    permissions:
+      pull-requests: read
