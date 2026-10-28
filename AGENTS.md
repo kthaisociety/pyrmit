@@ -173,7 +173,7 @@ Frontend (`frontend/.env`):
 
 ### Team Skills
 
-- `.claude/settings.json` -- enables the `max` plugin from the `Maxastrand04/Custom-skills` marketplace. The skills are not in this repo. Change them in Custom-skills, then run `/plugin marketplace update custom-skills`.
+- `.claude/settings.json` -- enables the `max` plugin from the `release` branch of the `Maxastrand04/Custom-skills` marketplace. The skills are not in this repo. Change them in Custom-skills, merge to `release`, then run `/plugin marketplace update custom-skills`.
 - `docs/skills-tutorial.md` -- link to the skills tutorial on GitHub Pages, plus setup notes
 
 ---

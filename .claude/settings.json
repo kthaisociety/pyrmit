@@ -3,7 +3,8 @@
     "custom-skills": {
       "source": {
         "source": "github",
-        "repo": "Maxastrand04/Custom-skills"
+        "repo": "Maxastrand04/Custom-skills",
+        "ref": "release"
       },
       "autoUpdate": true
     }
