@@ -29,7 +29,7 @@ Load these only when the task needs them:
 | POST   | `/api/auth/signup`                 | Register, returns JWT                     |
 | POST   | `/api/auth/signin`                 | Sign in, returns JWT                      |
 | POST   | `/api/auth/token`                  | OAuth2 password form login, returns JWT   |
-| POST   | `/api/auth/signout`                | Client-side signout, no server revocation |
+| POST   | `/api/auth/signout`                | Revoke the current login session          |
 | GET    | `/api/auth/me`                     | Current user                              |
 | GET    | `/api/sessions`                    | List chat sessions                        |
 | GET    | `/api/sessions/{session_id}`       | Messages in a chat session                |
@@ -50,7 +50,7 @@ Load these only when the task needs them:
 | ------------------ | ------------------------------------------------------------------------ |
 | `users`            | id, name, email, email_verified, image                                   |
 | `accounts`         | id, user_id (FK), provider_id, password (hash)                           |
-| `sessions`         | id, user_id (FK), token, expires_at (not used by auth, see ADR-0001)     |
+| `sessions`         | id (= JWT `sid`), user_id (FK), expires_at; token unused (ADR-0001)      |
 | `chat_sessions`    | id, user_id (FK), title, updated_at                                      |
 | `chat_messages`    | id, session_id (FK), role, content, created_at                           |
 | `document_chunks`  | id, document_id, document_name, chunk_index, content, embedding (3072)  |
@@ -121,7 +121,7 @@ Frontend (`frontend/.env`):
 - `backend/src/models.py` -- SQLAlchemy ORM models
 - `backend/src/schemas.py` -- Pydantic request/response schemas
 - `backend/src/security.py` -- JWT creation/decoding, password hashing
-- `backend/src/dependencies.py` -- `get_current_user` auth dependency (reads bearer token)
+- `backend/src/dependencies.py` -- `get_current_session` checks the bearer JWT and its login session row, `get_current_user` returns its user
 - `backend/src/routers/access_gate.py` -- Access gate unlock
 - `backend/src/routers/auth.py` -- Signup, signin, token, signout, /me, profile, password
 - `backend/src/routers/chat.py` -- Chat and streaming chat endpoints, chat session CRUD

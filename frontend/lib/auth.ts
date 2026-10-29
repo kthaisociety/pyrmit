@@ -41,6 +41,7 @@ function redirectToAccessGate() {
 }
 
 export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+  const tokenSent = getStoredAccessToken();
   const response = await fetch(input, {
     ...init,
     credentials: 'include',
@@ -52,6 +53,19 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
     const data = await clone.json().catch(() => null);
     if (data?.detail === 'Access password required') {
       redirectToAccessGate();
+    } else if (response.status === 401 && typeof window !== 'undefined') {
+      const url = input instanceof Request ? input.url : String(input);
+      const path = new URL(url, window.location.href).pathname.replace(/\/$/, '');
+      if (!['/api/auth/token', '/api/auth/signin', '/api/auth/signup'].includes(path)) {
+        // A late 401 for an old token must not erase a newer login (e.g. from another tab).
+        const currentToken = getStoredAccessToken();
+        if (currentToken === null || currentToken === tokenSent) {
+          clearAccessToken();
+          if (window.location.pathname !== '/auth') {
+            window.location.assign('/auth');
+          }
+        }
+      }
     }
   }
 
