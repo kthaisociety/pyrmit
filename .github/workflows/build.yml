@@ -1,0 +1,94 @@
+# Every push to main: build both images, then deploy to staging the side or sides the commit changed,
+# through kthaisociety/deployments, and wait until they run there. pyrmit is two projects in deployments:
+#   pyrmit-backend  ghcr.io/kthaisociety/pyrmit-backend  (backend/)
+#   pyrmit          ghcr.io/kthaisociety/pyrmit          (frontend/)
+#
+# Both images are built on every push, even when only one side changed. release.yml promotes the image
+# built from the release commit, and a release commit (CHANGELOG.md and the manifest) changes neither
+# folder, so a build filtered by path would leave it with no image to promote. Only the staging deploy
+# follows the diff. The backend deploys first, so a frontend that needs a new API never runs before it.
+#
+# The tests are backend.yml and frontend.yml, required on every PR into main; release.yml waits for this
+# workflow's run of a release commit, so the two stay separate files.
+name: build
+
+on:
+  push:
+    branches: [main]
+  # Deploys both sides: the first deploy of a new project, or a staging reset.
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      backend: ${{ steps.diff.outputs.backend }}
+      frontend: ${{ steps.diff.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      # Squash merges make one commit per push, so HEAD^ is the previous main. A change to this file or to
+      # either Dockerfile's folder counts for its side; this file counts for both.
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          files=$(git diff --name-only HEAD^ HEAD)
+          side() { [ "$EVENT" = workflow_dispatch ] || grep -qE "^($1/|\.github/workflows/build\.yml$)" <<<"$files"; }
+          side backend && echo "backend=true" >> "$GITHUB_OUTPUT" || echo "backend=false" >> "$GITHUB_OUTPUT"
+          side frontend && echo "frontend=true" >> "$GITHUB_OUTPUT" || echo "frontend=false" >> "$GITHUB_OUTPUT"
+
+  build-backend:
+    uses: kthaisociety/workflows/.github/workflows/build.yml@v0.3.0
+    with:
+      context: backend
+      dockerfile: backend/Dockerfile
+      image-name: pyrmit-backend
+    permissions:
+      contents: read
+      packages: write
+
+  build-frontend:
+    uses: kthaisociety/workflows/.github/workflows/build.yml@v0.3.0
+    with:
+      context: frontend
+      dockerfile: frontend/Dockerfile
+      image-name: pyrmit
+    permissions:
+      contents: read
+      packages: write
+
+  deploy-staging-backend:
+    needs: [changes, build-backend]
+    if: needs.changes.outputs.backend == 'true'
+    uses: kthaisociety/workflows/.github/workflows/request-deploy.yml@v0.3.0
+    with:
+      project: pyrmit-backend
+      environment: staging
+      tag: ${{ needs.build-backend.outputs.tag }}
+    secrets:
+      dispatch-app-client-id: ${{ secrets.DISPATCH_APP_CLIENT_ID }}
+      dispatch-app-private-key: ${{ secrets.DISPATCH_APP_PRIVATE_KEY }}
+
+  # After the backend's deploy: skipped when the backend didn't change, never run when it failed.
+  deploy-staging-frontend:
+    needs: [changes, build-frontend, deploy-staging-backend]
+    if: >-
+      ${{ !cancelled()
+      && needs.changes.outputs.frontend == 'true'
+      && needs.build-frontend.result == 'success'
+      && contains(fromJSON('["success", "skipped"]'), needs.deploy-staging-backend.result) }}
+    uses: kthaisociety/workflows/.github/workflows/request-deploy.yml@v0.3.0
+    with:
+      project: pyrmit
+      environment: staging
+      tag: ${{ needs.build-frontend.outputs.tag }}
+    secrets:
+      dispatch-app-client-id: ${{ secrets.DISPATCH_APP_CLIENT_ID }}
+      dispatch-app-private-key: ${{ secrets.DISPATCH_APP_PRIVATE_KEY }}

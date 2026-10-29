@@ -1,0 +1,49 @@
+# Keeps the release PR (next version + CHANGELOG.md) up to date. Merging it, which needs a code owner,
+# releases: tag, GitHub Release, and the release commit's two images tagged X.Y.Z (same digests, no
+# rebuild), then deploys that version to production, backend first.
+name: release
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  release:
+    uses: kthaisociety/workflows/.github/workflows/release.yml@v0.3.0
+    with:
+      build-workflow: build.yml
+      images: pyrmit-backend pyrmit
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+    secrets:
+      release-app-client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+      release-app-private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+  deploy-production-backend:
+    needs: release
+    if: needs.release.outputs.release-created == 'true'
+    uses: kthaisociety/workflows/.github/workflows/request-deploy.yml@v0.3.0
+    with:
+      project: pyrmit-backend
+      environment: production
+      tag: ${{ needs.release.outputs.version }}
+    secrets:
+      dispatch-app-client-id: ${{ secrets.DISPATCH_APP_CLIENT_ID }}
+      dispatch-app-private-key: ${{ secrets.DISPATCH_APP_PRIVATE_KEY }}
+
+  # Only when the backend deploy succeeded: the new frontend may need the new API.
+  deploy-production-frontend:
+    needs: [release, deploy-production-backend]
+    if: needs.release.outputs.release-created == 'true'
+    uses: kthaisociety/workflows/.github/workflows/request-deploy.yml@v0.3.0
+    with:
+      project: pyrmit
+      environment: production
+      tag: ${{ needs.release.outputs.version }}
+    secrets:
+      dispatch-app-client-id: ${{ secrets.DISPATCH_APP_CLIENT_ID }}
+      dispatch-app-private-key: ${{ secrets.DISPATCH_APP_PRIVATE_KEY }}
