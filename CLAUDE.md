@@ -310,8 +310,15 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   outputs come per document through `pdf_files.remote_ocr`. PgStore reopens a connection Neon closed (compute
   suspended after 5 idle minutes). The free plan's 100 CU-h a month are shared with production. PDFs come from
   `corpus.pdf_files` (crawl folder, else downloaded from their URL into the cache: 8/8 plankartor and 4/4 cited
-  passages worked without the crawl folder, 0.2-34 s the first time). The Pipeline / Benchmark views have no data in
-  this mode. Gotcha: `corpus.plans` gives two plan pages without PDFs and with the same name the same `plan_id` (260
+  passages worked without the crawl folder, 0.2-34 s the first time; the source viewer first asks `locate` with
+  `download=false` and shows "Downloading the PDF from <host>…" when `needs_download`). The Pipeline view shows the
+  national corpus's page from `data/agentic/pipeline-national.json` (versioned, ~100 KB) when there is no
+  `check.json`, with a banner saying so; refresh it on the corpus machine after a rebuild with
+  `python -m routers.pipeline --snapshot` (~2.5 min). The agent's prompt says which kommuner the corpus holds
+  (`agent.kommun_scope`: the "all 290 kommuner" line of TOOLS_GUIDE is replaced when the corpus has documents of
+  fewer than 250, from `CorpusTools.corpus_kommuner` = the store summary; before, the demo agent answered "290"), and
+  `find_kommun` says "no documents in this corpus" for a kommun outside it. The statutes are the same in every
+  corpus (national, data/small, demo: 15 laws, 3,651 sections; `corpus.snapshot` always keeps `kind == "law"`). Gotcha: `corpus.plans` gives two plan pages without PDFs and with the same name the same `plan_id` (260
   ids nationally; `plan_rules` gets the first). Gotcha: `requirements.txt` keeps SQLAlchemy < 2.1 (uv.lock 2.0.46):
   2.1 makes `postgresql://` use psycopg 3, which is not installed (a clean install failed on it). End to end
   (2026-11-01, fresh install, `stream_agent`, Kårsta komplementbostadshus question): 24 tool calls, none failed, 59 s,
@@ -707,13 +714,13 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | GET    | `/api/db/chunks`                  | Yes  | Paginated chunks (`table`=law/document, `source` (local: kommun code), `doc_type`, `doc_id`, `q` text filter, `store`); local without a kommun: store order, `total` null with a text filter (not counted) |
 | GET    | `/api/db/documents`               | Yes  | Local disk store: a kommun's documents (`source`=kommun code, `doc_type`, `q` title filter, `scanned`=only the scanned PDFs read by the OCR) by type then title, with chunk counts and a `scanned` flag (an OCR output exists: the store has no OCR column) |
 | POST   | `/api/db/search`                  | Yes  | Retrieval top-k on both pools, no LLM (`store`: neon = pgvector, local = localrag) |
-| GET    | `/api/docs/locate`                | Yes  | Where to open a cited chunk: PDF page + zoom on the passage, or original URL with `#:~:text=` |
+| GET    | `/api/docs/locate`                | Yes  | Where to open a cited chunk: PDF page + zoom on the passage, or original URL with `#:~:text=`; `download=false` answers at once with `needs_download` + `source_host` when the PDF must first come from the kommun's site |
 | GET    | `/api/docs/pdf/{chunk_id}`        | Yes  | The chunk's crawled PDF with the passage highlighted (PyMuPDF annotations) |
 | GET    | `/api/docs/tool-image`            | Yes  | Image an agent tool call looked at (`tool`=view_map_area/view_pdf_page, `input`=the call's JSON arguments), re-rendered for the inspector |
 | GET    | `/api/benchmark/sets`, `/cases`, `/case`, `/image/{id}` | Yes | Benchmark case sets, cases, one case + its past results (from `data/agentic/bench-*.json`), plankarta crop |
 | POST   | `/api/benchmark/run`              | Yes  | Run the agent on a case now (chat settings) and grade it; background job (spends credits) |
 | GET    | `/api/benchmark/run/{job_id}`     | Yes  | Progress (tool calls) and result of that job (polled: a run outlasts the frontend proxy timeout) |
-| GET    | `/api/pipeline`                   | Yes  | Measurements of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency), read from the files the steps write; cached until one changes |
+| GET    | `/api/pipeline`                   | Yes  | Measurements of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency), read from the files the steps write; cached until one changes. Without a corpus (no `check.json`): the national snapshot `data/agentic/pipeline-national.json` with `snapshot: {built}` |
 | GET    | `/api/place/profile?lat=&lon=`    | Yes  | Place profile of a pinned point: property (live), plans, zones, plans in progress, inside/outside detaljplan (no LLM) |
 | GET    | `/api/place/coverage`             | Yes  | Pilot kommuner with a snapshot (code, name, bbox, fetch date), for the map's first view |
 | GET    | `/api/place/search?q=`            | Yes  | Address / place search for the map (street addresses from the pilot kommun's address register, else Nominatim: Sweden only, 1 request/s, pilot kommuner first; cached); 503 when Nominatim is down |
@@ -928,6 +935,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/tests/unit/routers/test_db_browser.py` -- the Database view's source labels (corpus database / disk store /
   memory / unavailable; endpoint without the password); `frontend/tests/unit/components/DatabaseBrowser.test.tsx` --
   the buttons take the backend's source names, generic labels when the route fails
+- `backend/tests/unit/routers/test_pipeline.py` -- the national snapshot without a corpus, live measures with one;
+  `frontend/tests/unit/components/PipelineBrowser.test.tsx` (snapshot banner), `SourceViewer.test.tsx` (the
+  "Downloading the PDF from <host>" status, none for a local PDF); `tests/test_tools.py` also checks `kommun_scope`
 - Gotcha when editing through a shell heredoc: `\\b` in a Python string can arrive as a backspace character (it broke a
   chunker regex silently); write patch scripts to a file, and scan for control characters after shell edits
 

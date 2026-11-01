@@ -31,10 +31,13 @@ interface Location {
   view?: { zoom: number; left: number; top: number } | null; // zoom on the highlighted passage
   url?: string;
   source_url?: string | null;
+  needs_download?: boolean; // asked with download=false: the PDF must first come from the kommun's site
+  source_host?: string | null;
 }
 
-async function locateChunk(chunkId: string): Promise<Location> {
-  const response = await authFetch(`/api/docs/locate?chunk_id=${encodeURIComponent(chunkId)}`);
+async function locateChunk(chunkId: string, download = true): Promise<Location> {
+  const query = new URLSearchParams({ chunk_id: chunkId, ...(download ? {} : { download: 'false' }) });
+  const response = await authFetch(`/api/docs/locate?${query}`);
   if (!response.ok) throw new Error(`locate failed (${response.status})`);
   return response.json();
 }
@@ -56,6 +59,7 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
 }) {
   const [pdf, setPdf] = useState<{ blobUrl: string; url: string; page: number; note: string } | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null); // what the open click is waiting for
   const [error, setError] = useState<string | null>(null);
 
   // The latest click: a slower earlier request (or one for the previous citation) must not replace its result
@@ -79,11 +83,20 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
   const open = async (chunk: CitedChunk) => {
     const mine = ++request.current;
     setLoading(chunk.chunk_id);
+    setStatus(null);
     setError(null);
     try {
-      const location = await locateChunk(chunk.chunk_id);
+      // First ask without downloading: an install without the crawled PDFs (corpus on Neon) fetches the PDF from
+      // the kommun's site, which can take seconds, so the viewer says so before the download starts
+      let location = await locateChunk(chunk.chunk_id, false);
       if (mine !== request.current) return;
+      if (location.needs_download) {
+        setStatus(`Downloading the PDF from ${location.source_host ?? "the kommun's website"} (first time only, then kept)…`);
+        location = await locateChunk(chunk.chunk_id);
+        if (mine !== request.current) return;
+      }
       if (location.type === 'pdf' && location.pdf_url) {
+        setStatus('Opening the PDF…');
         // Fetched with the auth header, shown from a blob URL: the browser's PDF viewer opens it at #page
         const file = await authFetch(location.pdf_url);
         if (!file.ok) throw new Error(`PDF failed (${file.status})`);
@@ -110,7 +123,10 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
     } catch (exc) {
       if (mine === request.current) setError(exc instanceof Error ? exc.message : String(exc));
     } finally {
-      if (mine === request.current) setLoading(null);
+      if (mine === request.current) {
+        setLoading(null);
+        setStatus(null);
+      }
     }
   };
 
@@ -161,6 +177,9 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
                   >
                     <ExternalLink size={12} /> On the kommun&apos;s website
                   </a>
+                )}
+                {loading === chunk.chunk_id && status && (
+                  <p role="status" className="text-xs text-zinc-500 dark:text-zinc-400">{status}</p>
                 )}
               </div>
             ))}

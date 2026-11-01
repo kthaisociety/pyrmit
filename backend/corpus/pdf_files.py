@@ -72,6 +72,15 @@ def ocr_path(doc_id: str | None) -> Path | None:
     return cached
 
 
+def needs_download(doc_id: str | None, url: str | None) -> bool:
+    """Opening this crawled PDF downloads it first (neither in the crawl folder nor in the cache, and it has a URL)."""
+    parts = split_doc_id(doc_id)
+    if parts is None or not url:
+        return False
+    code, pdf_id = parts
+    return not (WEB_DIR / code / "pdf" / f"{pdf_id}.pdf").exists() and not (CACHE_DIR / code / f"{pdf_id}.pdf").exists()
+
+
 def pdf_path(doc_id: str | None, url: str | None) -> Path | None:
     """Local file of a crawled PDF: the crawl folder's copy, else the cached download of `url` (fetched now when
     missing). None when the doc_id is not a crawled PDF's or the download fails (site down, link moved)."""

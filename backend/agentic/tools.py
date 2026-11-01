@@ -145,6 +145,9 @@ class _MemoryCorpus:
                 counts[doc["doc_type"]] += 1
         return dict(counts)
 
+    def kommun_codes(self) -> list[str]:
+        return sorted({doc["kommun_code"] for doc in self.docs.values() if doc.get("kommun_code")})
+
     def grep(self, regex: re.Pattern, scope: str, codes: set[str], limit: int, doc_types: list[str] | None = None,
              title_contains: str | None = None) -> tuple[int, list[tuple[dict, re.Match]]]:
         total, hits = 0, []
@@ -233,6 +236,10 @@ class _DiskCorpus:
             f"SELECT doc_type, COUNT(DISTINCT doc_id) FROM chunks WHERE kind IN {LOCAL_KINDS} AND kommun_code = ? "
             "GROUP BY doc_type", (code,))}
 
+    def kommun_codes(self) -> list[str]:
+        # From the store's summary (cached: summary.json next to the disk store, in memory for the corpus database)
+        return sorted({row["kommun_code"] for row in self.store.summary() if row["kommun_code"]})
+
     def grep(self, regex: re.Pattern, scope: str, codes: set[str], limit: int, doc_types: list[str] | None = None,
              title_contains: str | None = None) -> tuple[int, list[tuple[dict, re.Match]]]:
         # Each branch on the (kind, kommun_code) index: "kind != 'law'" or "kind = 'law' OR kommun_code IN" scanned
@@ -275,6 +282,14 @@ class CorpusTools:
         self.corpus = _DiskCorpus(retriever.store) if hasattr(retriever, "store") else _MemoryCorpus(retriever.chunks)
         self.municipalities = json.loads(MUNICIPALITIES_PATH.read_text(encoding="utf-8"))
         self._plan_registry: dict[str, list[dict]] | None = None
+        self._kommuner: list[str] | None = None
+
+    def corpus_kommuner(self) -> list[str]:
+        """Codes of the kommuner the corpus has documents of: (almost) all 290 in the national corpus, a few in a
+        snapshot such as the Neon demo (the gazetteer still knows all 290)."""
+        if getattr(self, "_kommuner", None) is None:
+            self._kommuner = self.corpus.kommun_codes()
+        return self._kommuner
 
     def get_chunk(self, chunk_id: str) -> dict | None:
         """A chunk by id; a truncated id (8-15 hex characters, the model sometimes drops some) is resolved
@@ -334,8 +349,10 @@ class CorpusTools:
         for code in codes:
             kommun = next((m for m in self.municipalities if m["code"] == code), None)
             by_type = self.corpus.doc_type_counts(code)
+            held = (f"{sum(by_type.values())} documents in the corpus: {by_type}" if by_type else
+                    "no documents in this corpus (only the statutes apply to it here)")
             lines.append(f"{kommun_label(code)} – {kommun['county'] if kommun else ''}, website "
-                         f"{kommun['website'] if kommun else '?'}; {sum(by_type.values())} documents in the corpus: {by_type}")
+                         f"{kommun['website'] if kommun else '?'}; {held}")
         return ToolResult("\n".join(lines))
 
     @staticmethod

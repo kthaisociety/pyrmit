@@ -14,7 +14,7 @@ in the OCR text of each page (page only, no highlight).
 import json
 import re
 from functools import lru_cache
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
@@ -140,10 +140,17 @@ def _text_fragment(url: str, text: str) -> str:
 
 
 @router.get("/docs/locate")
-def locate(chunk_id: str = Query(...), _user: models.User = Depends(get_current_user)):
+def locate(chunk_id: str = Query(...), download: bool = True, _user: models.User = Depends(get_current_user)):
+    """download=false: answer at once with needs_download when the PDF must first come from the kommun's site
+    (an install without the crawl folder), so the viewer can say so before asking again."""
     chunk = _chunk(chunk_id)
     base = {"chunk_id": chunk_id, "title": chunk.get("title"), "kommun": chunk.get("kommun"),
             "section": chunk.get("section"), "source_url": chunk.get("url")}
+    if not download:
+        from corpus.pdf_files import needs_download
+
+        if needs_download(chunk.get("doc_id"), chunk.get("url")):
+            return {**base, "type": "pdf", "needs_download": True, "source_host": urlparse(chunk["url"]).hostname}
     path, ocr = _pdf_path(chunk)
     if path is not None:
         page = _pdf_page(chunk_id)

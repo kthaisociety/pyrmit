@@ -17,6 +17,7 @@ from typing import Callable
 
 from agentic.tools import TOOL_SCHEMAS, CorpusTools, image_message, run_tool
 from llm import get_openai_client, resolve_model_name
+from localrag.gazetteer import kommun_label
 
 DEFAULT_MODEL = "openai/gpt-6-luna"
 
@@ -110,6 +111,24 @@ Completeness: the user will act on this answer, so before writing go through you
 IMAGE_REMOVED = "\n(Image removed after the turn it was shown in: use what you noted from it.)"
 
 SYSTEM_PROMPT = f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{MODES_GUIDE}\n\n{ANSWER_FORMAT}"
+
+# The corpus line of TOOLS_GUIDE about the kommuner: true of the national corpus only. On a snapshot (data/small's
+# few kommuner, the Neon demo's three) the agent answered "all 290 kommuner" from it; kommun_scope replaces it
+NATIONAL_SCOPE = ("- The websites of all 290 kommuner (pages about bygglov, avlopp, taxor, planbesked, översiktsplan, "
+                  "detaljplaner) and PDFs linked from them (planbeskrivningar, plankartor, översiktsplaner, taxor). "
+                  "Coverage is uneven: a document may be missing.")
+assert NATIONAL_SCOPE in TOOLS_GUIDE
+
+
+def kommun_scope(tools: CorpusTools) -> str:
+    """NATIONAL_SCOPE when the corpus holds (almost) every kommun, else the kommuner it does hold."""
+    codes = tools.corpus_kommuner() if hasattr(tools, "corpus_kommuner") else None  # tests run without tools
+    if codes is None or len(codes) >= 250:
+        return NATIONAL_SCOPE
+    return (f"- The websites of {len(codes)} kommuner only: {', '.join(kommun_label(code) for code in codes)} (pages "
+            "about bygglov, avlopp, taxor, planbesked, översiktsplan, detaljplaner, and the PDFs linked from them). "
+            "This corpus has no document of any other kommun: say so when asked about one (the statutes apply "
+            "everywhere).")
 
 
 @dataclass
@@ -210,7 +229,7 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
     schemas = ([schema for schema in TOOL_SCHEMAS if schema["name"] not in disabled] + [ANSWER_READY_TOOL]
                + ([ASK_USER_TOOL] if allow_ask else []))
     note = f"\n\nNot available in this session: {', '.join(sorted(disabled))}." if disabled else ""
-    instructions = SYSTEM_PROMPT + note
+    instructions = SYSTEM_PROMPT.replace(NATIONAL_SCOPE, kommun_scope(tools)) + note
     # An image goes with the next model call only (re-sending every image each turn multiplied the input tokens):
     # `fresh` = attached, not sent yet; `shown` = sent once, replaced by text before the following call
     fresh: list[int] = []
