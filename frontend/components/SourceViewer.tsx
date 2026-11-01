@@ -42,6 +42,14 @@ async function locateChunk(chunkId: string, download = true): Promise<Location> 
   return response.json();
 }
 
+// A crawled PDF, or a web page / statute with its address. The 7 "legacy:" documents of the early prototype (963
+// Vallentuna chunks, in every corpus) were added by hand without their file or URL: nothing to open
+// open (citations saved by older versions carry no doc_id: the backend decides)
+function hasOriginal(chunk: CitedChunk): boolean {
+  if (chunk.doc_id === undefined) return true;
+  return !chunk.doc_id.startsWith('legacy:') && (chunk.doc_id.startsWith('pdf:') || Boolean(chunk.url));
+}
+
 // A web page or statute in a new tab, scrolled to the chunk's wording (Chrome text fragment)
 export async function openPageAtChunk(chunkId: string): Promise<void> {
   const location = await locateChunk(chunkId);
@@ -132,7 +140,6 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
 
   useEffect(() => {
     if (autoOpen && citation.chunks.length > 0) open(citation.chunks[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [citation, autoOpen]);
 
   return (
@@ -158,15 +165,22 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
             {citation.chunks.map((chunk) => (
               <div key={chunk.chunk_id} className="space-y-1.5">
                 <ChunkCard source={chunk.source} chunkIndex={chunk.chunk_index} content={chunk.content} defaultOpen={!pdf} />
-                <button
-                  onClick={() => open(chunk)}
-                  disabled={loading !== null}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1 text-xs text-zinc-600 hover:border-zinc-400 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
-                >
-                  {loading === chunk.chunk_id ? <Loader2 size={12} className="animate-spin" /> :
-                    chunk.doc_id?.startsWith('pdf:') ? <FileText size={12} /> : <ExternalLink size={12} />}
-                  {chunk.doc_id?.startsWith('pdf:') ? 'Open the PDF at this passage' : 'Open the original at this passage'}
-                </button>
+                {hasOriginal(chunk) ? (
+                  // Only this button waits: another chunk can still be opened (the latest click wins)
+                  <button
+                    onClick={() => open(chunk)}
+                    disabled={loading === chunk.chunk_id}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1 text-xs text-zinc-600 hover:border-zinc-400 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+                  >
+                    {loading === chunk.chunk_id ? <Loader2 size={12} className="animate-spin" /> :
+                      chunk.doc_id?.startsWith('pdf:') ? <FileText size={12} /> : <ExternalLink size={12} />}
+                    {chunk.doc_id?.startsWith('pdf:') ? 'Open the PDF at this passage' : 'Open the original at this passage'}
+                  </button>
+                ) : (
+                  <p className="text-xs italic text-zinc-500 dark:text-zinc-400">
+                    No original kept: this document was added by hand before the crawl, without its file or web address.
+                  </p>
+                )}
                 {chunk.url && chunk.doc_id?.startsWith('pdf:') && (
                   <a
                     href={chunk.url}

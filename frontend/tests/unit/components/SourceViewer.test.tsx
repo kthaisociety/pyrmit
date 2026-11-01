@@ -44,6 +44,34 @@ describe('SourceViewer', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
+  it('offers no open button for a document kept without its original', async () => {
+    /** The early prototype's "legacy:" documents have no file or URL: a button would only end in an error. */
+    const legacy: Citation = {
+      n: 2,
+      label: 'Vallentuna – Översiktsplan 2040',
+      chunks: [
+        { chunk_id: 'l1', source: 'Översiktsplan 2040', chunk_index: 0, content: 'Vision', doc_id: 'legacy:2040vision', url: null },
+        { chunk_id: 's1', source: 'PBL', chunk_index: 1, content: '4 §', doc_id: 'law:pbl', url: 'https://data.riksdagen.se/a' },
+      ],
+    };
+    render(<SourceViewer citation={legacy} onClose={vi.fn()} />);
+
+    expect(screen.getByText(/No original kept/)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Open the/ })).toHaveLength(1); // the statute only
+  });
+
+  it('keeps the other buttons usable while one document opens', async () => {
+    server.use(http.get('*/api/docs/locate', () => new Promise(() => {}))); // never answers
+    const two: Citation = { ...citation, chunks: [citation.chunks[0], { ...citation.chunks[0], chunk_id: 'c2' }] };
+    render(<SourceViewer citation={two} onClose={vi.fn()} />);
+
+    const [first, second] = screen.getAllByRole('button', { name: /Open the PDF at this passage/ });
+    await userEvent.click(first);
+
+    expect(first).toBeDisabled();
+    expect(second).toBeEnabled();
+  });
+
   it('opens a PDF already on this machine without a download message', async () => {
     /** The crawl folder or the cache has it: one locate call, straight to the page. */
     const asked: string[] = [];

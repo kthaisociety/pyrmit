@@ -978,7 +978,10 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   (`localrag.service._row`). The 7 "legacy:" PoC documents have no original
 - `frontend/lib/corpus.ts` -- document type names / hints and number formatting shared by the Database and Pipeline views
 - `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)
-- `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage
+- `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage.
+  No open button for the 7 `legacy:` documents of the early prototype (963 Vallentuna chunks, in every corpus, added
+  by hand without file or URL, no crawled twin: kept for their content), a note instead; only the clicked button
+  waits (the latest click wins)
 - `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
 - `frontend/components/place/` -- `PlacePanel` (map panel beside the chat, opened by the pin button in the message
   bar: full-height map, the card as a glass sheet with a grabber, Apple Maps style; system font; controls styled in
