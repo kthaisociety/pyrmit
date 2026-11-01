@@ -38,14 +38,11 @@ def _chunk(chunk_id: str) -> dict:
 
 
 def _pdf_path(chunk: dict):
-    from corpus.common import WEB_DIR
+    """(PDF file, OCR output) of a crawled PDF's chunk, each None when missing; the PDF is downloaded from its
+    original URL when this install has no crawl folder (corpus.pdf_files)."""
+    from corpus.pdf_files import ocr_path, pdf_path
 
-    match = re.fullmatch(r"pdf:(\d{4}):(\w+)", chunk.get("doc_id") or "")
-    if not match:
-        return None, None
-    path = WEB_DIR / match.group(1) / "pdf" / f"{match.group(2)}.pdf"
-    ocr = WEB_DIR / match.group(1) / "ocr" / f"{match.group(2)}.json"
-    return (path if path.exists() else None), (ocr if ocr.exists() else None)
+    return pdf_path(chunk.get("doc_id"), chunk.get("url")), ocr_path(chunk.get("doc_id"))
 
 
 def _phrases(text: str) -> list[str]:

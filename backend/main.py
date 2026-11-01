@@ -72,6 +72,19 @@ def _preload_local_corpus() -> None:
         logger.error("Preloading the local corpus failed", exc_info=True)
 
 
+def _open_corpus_database() -> None:
+    """LOCAL_RAG_STORE=neon: open the corpus database before serving. It writes the small files this install lacks
+    (gazetteer, plan registry, place snapshots), which the map caches on its first request (a few seconds)."""
+    from localrag.service import get_retriever, local_backend_enabled
+
+    if os.getenv("LOCAL_RAG_STORE", "disk").strip() == "neon" and local_backend_enabled():
+        try:
+            get_retriever()
+        except Exception:
+            logger.error("Opening the corpus database failed", exc_info=True)
+
+
+_open_corpus_database()
 threading.Thread(target=_preload_local_corpus, name="preload-local-corpus", daemon=True).start()
 
 

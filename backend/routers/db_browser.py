@@ -1,10 +1,13 @@
 """
 Read-only browser over the RAG chunks: the pgvector tables (law_chunks, document_chunks) or,
-with store=local, the offline corpus used by RETRIEVAL_BACKEND=local (loaded by localrag.service).
-User/auth tables are intentionally not exposed.
+with store=local, the agent's corpus used by RETRIEVAL_BACKEND=local (loaded by localrag.service): the disk store,
+or the corpus database with LOCAL_RAG_STORE=neon. /api/db/sources says which. User/auth tables are intentionally not
+exposed.
 """
 
+import os
 from collections import Counter, defaultdict
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
@@ -40,6 +43,40 @@ def _table_overview(db: Session, model, source_col) -> schemas.ChunkTableOvervie
         with_embedding=with_embedding,
         sources=[schemas.SourceCount(name=name or "unknown", count=count) for name, count in sources],
     )
+
+
+def database_label(url: str | None) -> str:
+    """The Neon endpoint and database of a connection URL ("ep-quiet-lake-123456/neondb"), never its password."""
+    if not url:
+        return "not set"
+    parsed = urlparse(url)
+    return f"{(parsed.hostname or '?').split('.')[0].removesuffix('-pooler')}/{parsed.path.lstrip('/')}"
+
+
+def local_source() -> schemas.DbSource:
+    """Where the agent's corpus comes from: the corpus database, the disk store or chunks held in memory."""
+    from localrag.gazetteer import kommun_label
+    from localrag.service import get_retriever
+
+    try:
+        retriever = get_retriever()
+    except Exception as error:  # the Database view still shows the pgvector tables
+        return schemas.DbSource(name="Agent corpus", detail=f"not available: {error}")
+    store = getattr(retriever, "store", None)
+    if hasattr(store, "meta"):  # localrag.pg_store.PgStore
+        meta = store.meta
+        kommuner = ", ".join(kommun_label(code) for code in meta.get("kommuner", []))
+        return schemas.DbSource(
+            name="Agent corpus · Neon",
+            detail=f"corpus database {database_label(store.url)}: {meta['chunks']:,} chunks of {kommuner} and the "
+                   f"statutes, {meta['model']} vectors, queries embedded with {retriever.model}")
+    if store is not None:  # localrag.store.DiskStore
+        from corpus.common import BACKEND_DIR
+
+        folder = store.dir.relative_to(BACKEND_DIR) if store.dir.is_relative_to(BACKEND_DIR) else store.dir
+        return schemas.DbSource(name="Agent corpus · disk",
+                                detail=f"disk store {folder.as_posix()} (SQLite + vectors, {retriever.model})")
+    return schemas.DbSource(name="Agent corpus · memory", detail=f"chunks.jsonl held in RAM ({retriever.model})")
 
 
 def _local_store():
@@ -155,9 +192,12 @@ def _local_page(table: str, source: str | None, doc_type: str | None, q: str | N
 
 def _scanned_doc_ids(code: str) -> set[str]:
     """doc_ids of the kommun's scanned PDFs whose text comes from the OCR: corpus.ocr writes an output for scans only
-    (the store has no OCR column)."""
+    (the store has no OCR column; the corpus database lists its OCR outputs)."""
     from corpus.common import WEB_DIR
 
+    store = _local_store()
+    if hasattr(store, "ocr_doc_ids"):
+        return store.ocr_doc_ids(code)
     folder = WEB_DIR / code / "ocr"
     return {f"pdf:{code}:{path.stem}" for path in folder.glob("*.json")} if folder.is_dir() else set()
 
@@ -232,6 +272,17 @@ def _store_page(store, table: str, source: str | None, doc_type: str | None, q: 
     else:
         total = store.query(f"SELECT COUNT(*) FROM chunks WHERE {condition}", tuple(params))[0][0]
     return schemas.ChunkPage(total=total, has_more=len(rows) > limit, offset=offset, limit=limit, items=items)
+
+
+@router.get("/db/sources", response_model=schemas.DbSources)
+def sources(_user: models.User = Depends(get_current_user)):
+    """What each store of the Database view reads, for its buttons."""
+    return schemas.DbSources(
+        neon=schemas.DbSource(name="pgvector tables",
+                              detail=f"law_chunks / document_chunks in {database_label(os.getenv('DATABASE_URL'))} "
+                                     "(DATABASE_URL; the RAG path with RETRIEVAL_BACKEND=pgvector)"),
+        local=local_source(),
+    )
 
 
 @router.get("/db/overview", response_model=schemas.DbOverview)

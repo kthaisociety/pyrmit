@@ -234,6 +234,16 @@ class DbOverview(BaseModel):
     document: ChunkTableOverview
 
 
+class DbSource(BaseModel):
+    name: str    # the Database view's button
+    detail: str  # where the rows come from (database endpoint, store folder, model)
+
+
+class DbSources(BaseModel):
+    neon: DbSource   # the pgvector RAG tables (law_chunks / document_chunks) of DATABASE_URL
+    local: DbSource  # the agent's corpus: disk store, corpus database (LOCAL_RAG_STORE=neon) or in memory
+
+
 class ChunkRow(BaseModel):
     id: str
     source: str

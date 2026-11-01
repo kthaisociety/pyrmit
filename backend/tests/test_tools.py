@@ -142,7 +142,9 @@ def test_view_map_area_on_a_scan(memory_tools, tmp_path, monkeypatch):
 
     import pymupdf
 
-    monkeypatch.setattr(T, "WEB_DIR", tmp_path)
+    from corpus import pdf_files
+
+    monkeypatch.setattr(pdf_files, "WEB_DIR", tmp_path)
     (tmp_path / "0115" / "pdf").mkdir(parents=True)
     (tmp_path / "0115" / "ocr").mkdir()
     pdf = pymupdf.open()

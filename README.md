@@ -22,6 +22,37 @@ Architecture, data flow and every module are described in [`CLAUDE.md`](CLAUDE.m
 
 ---
 
+## Try it without the data (corpus hosted on Neon)
+
+The Neon `demo` branch holds a corpus of three kommuner and the statutes: Uppsala (with the map: plan layers, property lookup), Vallentuna, Stockholm (few plans) and the 15 laws. The app queries it directly and embeds the questions through OpenRouter: no GPU, no model and no corpus to download. Only questions about these three kommuner find their documents.
+
+Requirements: Python 3.13 + [uv](https://docs.astral.sh/uv/), [Bun](https://bun.sh/), and the `.env.demo` a maintainer sends you (database URLs, OpenRouter key), saved as `backend/.env`. Never commit it: the repository is public.
+
+```bash
+git clone https://github.com/kthaisociety/pyrmit.git && cd pyrmit/backend
+uv venv --python 3.13
+uv pip install -r requirements.txt bm25s PyStemmer pymupdf trafilatura "httpx[http2]" truststore lxml
+cd ../frontend && bun install
+```
+
+`backend/.env`:
+
+```properties
+CHAT_MODE=agent
+RETRIEVAL_BACKEND=local
+LOCAL_RAG_STORE=neon
+LOCAL_RAG_MODEL=or-bge-m3              # questions embedded through OpenRouter, same vectors as the stored ones
+LLM_PROVIDER=openrouter
+OPENROUTER_KEY=...                     # agent model + query embeddings, about $0.01 per answer
+DATABASE_URL=postgresql://...          # Neon demo branch: users, chats and the corpus
+CORPUS_DATABASE_URL=postgresql://...   # the same URL
+JWT_SECRET_KEY=...                     # any long random string
+```
+
+Run the backend and the frontend as in [Run](#run) below, open <http://localhost:3000> and sign up. At startup the backend writes the few files it reads from disk (gazetteer, plan registry, Uppsala's map layers, about 25 MB) into `backend/data/`; a cited PDF is downloaded from the kommun's site the first time it is opened, then kept in `backend/data/cache/pdf/`.
+
+---
+
 ## Quick start (with the shared data)
 
 ### Requirements

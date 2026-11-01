@@ -8,7 +8,9 @@ agents' debug rows, so chat.py and the pipeline inspector work unchanged.
     LOCAL_RAG_DENSE_QUERY=sv         # which query the dense model embeds: en | sv | both
     LOCAL_RAG_RERANKER=              # e.g. BAAI/bge-reranker-v2-m3 (in-memory store only)
     LOCAL_RAG_STORE=disk             # disk: SQLite + memmap built by `python -m localrag.store`; memory: load
-                                     # chunks.jsonl in RAM (needed for the compound BM25 analyzer / reranker)
+                                     # chunks.jsonl in RAM (needed for the compound BM25 analyzer / reranker);
+                                     # neon: the corpus database at CORPUS_DATABASE_URL (localrag.pg_store), no
+                                     # local data (LOCAL_RAG_MODEL=or-bge-m3: queries embedded through OpenRouter)
 
 Defaults follow localrag/eval.py (45 questions): the Swedish query beats the English one by
 ~25 points of recall@5; neither BM25 fusion nor the reranker improved on dense-sv.
@@ -57,6 +59,13 @@ def get_retriever():
     with _lock:
         if _retriever is None:
             model = os.getenv("LOCAL_RAG_MODEL", "st-arctic-l-v2").strip()
+            if os.getenv("LOCAL_RAG_STORE", "disk").strip() == "neon":
+                from localrag.pg_store import PgRetriever
+
+                _retriever = PgRetriever(model, os.environ["CORPUS_DATABASE_URL"])
+                logger.info("Local retrieval: corpus database (%s chunks of %s, queries with %s)",
+                            _retriever.store.meta["chunks"], _retriever.store.meta["model"], model)
+                return _retriever
             from localrag.store import DiskRetriever, store_dir
 
             # Disk store (SQLite + memmap, `python -m localrag.store`): a few hundred MB of RAM instead of GBs

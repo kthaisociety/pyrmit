@@ -9,18 +9,24 @@ import SourceViewer, { CitedChunk, Citation, openPageAtChunk } from '@/component
 
 type TableName = 'law' | 'document';
 type Tab = TableName | 'search';
-// neon: pgvector tables used by RETRIEVAL_BACKEND=pgvector; local: offline corpus (RETRIEVAL_BACKEND=local)
+// neon: pgvector tables used by RETRIEVAL_BACKEND=pgvector; local: the agent's corpus (RETRIEVAL_BACKEND=local), from
+// the disk store or the corpus database (LOCAL_RAG_STORE=neon). /api/db/sources names the real source of each.
 type Store = 'neon' | 'local';
 
 const STORE_LABELS: Record<Store, { name: string; law: string; document: string; note: string }> = {
-  neon: { name: 'Neon (pgvector)', law: 'law_chunks', document: 'document_chunks', note: 'RAG chunk tables' },
+  neon: { name: 'pgvector tables', law: 'law_chunks', document: 'document_chunks', note: 'RAG chunk tables' },
   local: {
-    name: 'Local corpus',
+    name: 'Agent corpus',
     law: 'Laws (Riksdagen)',
     document: 'Kommun pages & PDFs',
-    note: 'disk store data/index/store/<model> (SQLite + vectors)',
+    note: 'the corpus the agent searches',
   },
 };
+
+interface StoreSource {
+  name: string; // button label
+  detail: string; // database endpoint or store folder, model
+}
 
 interface TypeCount {
   doc_type: string;
@@ -712,8 +718,17 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
   const [loadedStore, setLoadedStore] = useState<Store | null>(null);
   const [error, setError] = useState('');
   const [viewing, setViewing] = useState<Citation | null>(null);
+  const [sources, setSources] = useState<Partial<Record<Store, StoreSource>>>({});
   const labels = STORE_LABELS[store];
   const currentOverview = loadedStore === store ? overview : null;
+
+  useEffect(() => {
+    // The fixed labels stay when the backend cannot say (older backend, request failed)
+    authFetch('/api/db/sources')
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data: Partial<Record<Store, StoreSource>>) => setSources(data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     authFetch(`/api/db/overview?store=${store}`)
@@ -739,11 +754,14 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-lg font-semibold">Database</h1>
-        <span className="text-xs text-zinc-500">read-only · {labels.note}</span>
-        <div className="ml-auto flex rounded-lg border border-zinc-300 p-0.5 text-xs dark:border-zinc-700">
+        <span className="min-w-0 truncate text-xs text-zinc-500" title={sources[store]?.detail ?? labels.note}>
+          read-only · {sources[store]?.detail ?? labels.note}
+        </span>
+        <div className="ml-auto flex shrink-0 rounded-lg border border-zinc-300 p-0.5 text-xs dark:border-zinc-700">
           {(Object.keys(STORE_LABELS) as Store[]).map((key) => (
             <button
               key={key}
+              title={sources[key]?.detail}
               onClick={() => setStore(key)}
               className={`rounded-md px-3 py-1 transition-colors ${
                 store === key
@@ -751,7 +769,7 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
                   : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
               }`}
             >
-              {STORE_LABELS[key].name}
+              {sources[key]?.name ?? STORE_LABELS[key].name}
             </button>
           ))}
         </div>
