@@ -51,7 +51,7 @@ def test_fetch_reads_a_wfs_layer_the_service_cannot_page_in_one_request(tmp_path
 
 def test_fetch_takes_the_boundary_from_an_administrative_result(tmp_path):
     """Nominatim may list the kommun's polygon as a town's administrative boundary and the municipality as a point."""
-    results = [{"addresstype": "town", "class": "boundary", "type": "administrative", "name": "Nacka kommun",
+    results = [{"addresstype": "town", "category": "boundary", "type": "administrative", "name": "Nacka kommun",
                 "geojson": NACKA_BOUNDARY},
                {"addresstype": "municipality", "name": "Nacka kommun",
                 "geojson": {"type": "Point", "coordinates": [18.1, 59.3]}}]

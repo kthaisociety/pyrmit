@@ -67,7 +67,8 @@ def kommun_boundary(client: httpx.Client, code: str, name: str | None = None) ->
 def _is_kommun_boundary(result: dict, name: str) -> bool:
     """A Nominatim result with the kommun's polygon: the municipality itself, or its administrative boundary
     relation (listed as a town or city for some kommuner, the municipality result then being a point)."""
-    kind = result.get("addresstype") == "municipality" or (result.get("class") == "boundary"
+    category = result.get("category") or result.get("class")  # jsonv2 says "category", v1 "class"
+    kind = result.get("addresstype") == "municipality" or (category == "boundary"
                                                             and result.get("type") == "administrative")
     label = str(result.get("name") or result.get("display_name") or "")
     named = not label or label.lower().startswith(name.lower())
