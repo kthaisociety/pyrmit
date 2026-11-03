@@ -11,13 +11,31 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from dependencies import get_current_user
-from place.plan_layers import COVERAGE_REPORT, PLAN_KEY, fetch_plan_layer, fetch_registry
+from place.plan_layers import (
+    COVERAGE_REPORT,
+    PLAN_KEY,
+    fetch_plan_layer,
+    fetch_registry,
+)
 from place.profile import build_profile
-from place.registry import SURVEY_PATH, PlanSource, build_registry, load_registry, save_registry
+from place.registry import (
+    SURVEY_PATH,
+    PlanSource,
+    build_registry,
+    load_registry,
+    save_registry,
+)
 from place.sources import today
 from place.store import PlaceStore
 from routers import place as place_router
-from tests.unit.place.snapshot import PIN, fake_property, no_remains, registry, square, write_snapshot
+from tests.unit.place.snapshot import (
+    PIN,
+    fake_property,
+    no_remains,
+    registry,
+    square,
+    write_snapshot,
+)
 
 # --- fakes ------------------------------------------------------------------------------------------------------
 
@@ -41,10 +59,10 @@ NACKA_FEATURES = [
 
 
 def source(**fields) -> PlanSource:
-    base = dict(code="0182", name="Nacka", status="A", service="arcgis",
-                url="https://karta.nacka.se/arcgis/rest/services/Plan/MapServer/3", layer="Gällande detaljplaner",
-                akt_fields=("aktbeteckning",), url_fields=("url",), name_fields=("plannamn",),
-                date_fields=("lagakraft",), type_fields=("plantyp",), survey_count=3)
+    base = {"code": "0182", "name": "Nacka", "status": "A", "service": "arcgis",
+            "url": "https://karta.nacka.se/arcgis/rest/services/Plan/MapServer/3", "layer": "Gällande detaljplaner",
+            "akt_fields": ("aktbeteckning",), "url_fields": ("url",), "name_fields": ("plannamn",),
+            "date_fields": ("lagakraft",), "type_fields": ("plantyp",), "survey_count": 3}
     return PlanSource(**(base | fields))
 
 

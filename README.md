@@ -81,6 +81,8 @@ Tests: `cd frontend && bun run test` (Vitest with a fake backend, no server need
 
 Map (the place card beside the chat): `cd backend && python -m place.fetch --kommun 0380` copies Uppsala's plans, land-use zones, protected areas and national interests into `backend/data/geo/` (about 10 s, open data); restart the backend afterwards. Without it the map says every place is "not covered yet".
 
+Other kommuner: `python -m place.plan_layers` copies the plan layer of every kommun in `backend/place/plan_sources.json` (180 kommuner with an open ArcGIS or WFS layer, from the survey in `docs/research/kommun-planlager.md`) into `backend/data/geo/<code>/` and writes `backend/data/geo/plan_coverage.md`, one line per kommun: fetched or not and why, polygons against the survey's count, share with an aktbeteckning and with a document link. `--kommun 0182` takes some of them. A pin there gives the kommun and the plans at the point, no property or zones. `python -m place.registry` rebuilds the registry from the survey, keeping the base patterns and licences edited into it by hand.
+
 Lookup benchmark (no model calls): `python -m place.bench candidates --kommun 0380` proposes places covering the hard cases (`place/cases_draft_0380.jsonl`); check each by hand, fill in its `expected` layers and `checked`, set `locked` to the date and move it to `place/cases.jsonl`; then `python -m place.bench run --label <name>` scores the lookup per layer (`data/agentic/place-bench-*.json`) and `python -m place.bench compare <a> <b>` compares two runs.
 
 Place evaluation (report: `reports/place_eval_report.md`):

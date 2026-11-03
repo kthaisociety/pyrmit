@@ -29,7 +29,7 @@ from place.store import GEO_DIR
 
 logger = logging.getLogger(__name__)
 
-PLAN_KEY = "_plan"                  # the block plan_properties adds to a snapshot feature's properties
+PLAN_KEY = "_plan"                  # the block with the normalised plan in a snapshot feature's properties
 LAYER_ID = "plans"                  # the snapshot file and manifest key, as for the pilot kommuner
 LAYER_TITLE = "Gällande detaljplaner"
 MIN_SHARE_OF_SURVEY = 0.5           # fewer polygons than this share of the survey's count flags the fetch
@@ -252,7 +252,15 @@ def _write(out: Path, boundary: dict, boundary_date: str, features: list[dict], 
     (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _fetch(client: httpx.Client, source: PlanSource, out: Path, row: dict) -> None:
+def _shares(plans: list[dict]) -> dict:
+    """The coverage row's shares and dropped links over the PLAN_KEY blocks of a snapshot."""
+    return {"dropped_links": sum(plan["dropped_links"] for plan in plans),
+            "ref_share": sum(1 for plan in plans if plan["ref"]) / len(plans),
+            "link_share": sum(1 for plan in plans if plan["page"] or plan["documents"]) / len(plans)}
+
+
+def _snapshot(client: httpx.Client, source: PlanSource, out: Path, row: dict) -> None:
+    """Fetch, normalise and write the source's layer, filling in `row`; nothing written when the row gets a reason."""
     boundary, boundary_date = _boundary(client, source, out)
     raw = (fetch_arcgis(client, _arcgis_layer(source), None) if source.service == "arcgis"
            else _fetch_wfs(client, source))
@@ -263,10 +271,7 @@ def _fetch(client: httpx.Client, source: PlanSource, out: Path, row: dict) -> No
         return
     for item in features:
         item["properties"][PLAN_KEY] = _plan_properties(source, item["properties"])
-    plans = [item["properties"][PLAN_KEY] for item in features]
-    row["dropped_links"] = sum(plan["dropped_links"] for plan in plans)
-    row["ref_share"] = sum(1 for plan in plans if plan["ref"]) / len(plans)
-    row["link_share"] = sum(1 for plan in plans if plan["page"] or plan["documents"]) / len(plans)
+    row.update(_shares([item["properties"][PLAN_KEY] for item in features]))
     _write(out, boundary, boundary_date, features, source, row)
     row["fetched"] = True
 
@@ -301,7 +306,7 @@ def fetch_plan_layer(source: PlanSource, *, client: httpx.Client | None = None, 
     http = client or new_client()
     started = time.time()
     try:
-        _fetch(http, source, Path(out_dir) / source.code, row)
+        _snapshot(http, source, Path(out_dir) / source.code, row)
     except (httpx.HTTPError, ValueError, RuntimeError, KeyError, TypeError) as exc:
         row["reason"] = f"{type(exc).__name__}: {exc}"[:REASON_LENGTH]
     finally:

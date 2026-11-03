@@ -118,10 +118,20 @@ The hand-checked answer for one property: its plans, zones, protections, remains
 _Avoid_: ground truth, gold labels
 
 **Pilot kommun**:
-A kommun the map covers, because its layers have a snapshot (Uppsala for now). Anywhere else the place is "not covered yet".
+A kommun whose every layer has a snapshot: plans, land-use zones, plans in progress and the national layers, with the property looked up live (Uppsala for now).
+
+**Plan source**:
+One kommun's open plan layer as the registry (`backend/place/plan_sources.json`) describes it: the service, the layer and the attributes that carry the aktbeteckning, the document links, the plan name, the date and the plan type, plus the base pattern for links that are bare file names and the licence. Built from the survey of all 290 kommuner in `docs/research/`.
+_Avoid_: pilot (a plan source has no other layers), endpoint
+
+**Plan-layer kommun**:
+A kommun covered by its plan source alone: a pin there gives the kommun and the detaljplaner at the point, with no property, land-use zones or plans in progress.
 
 **Snapshot**:
-A dated local copy of a pilot kommun's area layers, fetched with `python -m place.fetch`. The property is looked up live instead.
+A dated local copy of a kommun's area layers: every layer of a pilot kommun (`python -m place.fetch`), or the plan layer of a plan-layer kommun (`python -m place.plan_layers`). A kommun with a snapshot is covered; anywhere else the place is "not covered yet".
+
+**Coverage report**:
+One line per plan source after a fetch run: fetched or not and why, the polygons kept against the survey's count, and the shares of plans with an aktbeteckning and with a link.
 
 ## Relationships
 
@@ -133,4 +143,5 @@ A dated local copy of a pilot kommun's area layers, fetched with `python -m plac
 - The **Orchestrator** combines both agents' results into a **Verdict**, which becomes the **Feasibility analysis** saved as an assistant **Chat message**.
 - The **Access gate** sits in front of everything, including sign-in.
 - A **Pin** in a **Pilot kommun** gives a **Property** (looked up live) and a **Place profile** (from the **Snapshot**): its **Detaljplaner**, **Land-use zones**, **Plans in progress**, **Protected areas** and **National interests**, plus the **Ancient remains** on it (looked up live). The **Likely permits** follow from that profile. The **Place card** shows all of it.
+- A **Pin** in a **Plan-layer kommun** gives a **Place profile** with the **Detaljplaner** at the point from the kommun's **Snapshot**, each with its aktbeteckning, page and document links and licence, and nothing else. The **Plan source** says how the **Snapshot** was read; the **Coverage report** says how well.
 - A question asked with a **Pin** is answered from its **Place profile**, and the answer keeps that **Pin**: reopening the **Chat session** brings back its **Place chip**.

@@ -136,9 +136,8 @@ def load_registry(path: Path = REGISTRY_PATH) -> dict[str, PlanSource]:
     """The registry file as {kommun code: PlanSource}, in file order. Raises FileNotFoundError when `path` is
     missing."""
     tuple_fields = {field.name for field in fields(PlanSource) if get_origin(field.type) is tuple}
-    sources = []
-    for entry in json.loads(Path(path).read_text(encoding="utf-8")):
-        sources.append(PlanSource(**{key: tuple(value) if key in tuple_fields else value for key, value in entry.items()}))
+    sources = [PlanSource(**{key: tuple(value) if key in tuple_fields else value for key, value in entry.items()})
+               for entry in json.loads(Path(path).read_text(encoding="utf-8"))]
     return {source.code: source for source in sources}
 
 

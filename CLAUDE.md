@@ -530,8 +530,18 @@ rerunning `agentic.rejudge` continues. A run that sits a long time before its fi
    entries go before the manifest's done line, which `corpus.crawl --revisit` needs last (until 2026-10-25 they were
    appended after it, so the revisit skipped Uppsala); a plan whose page a later `crawl --force` dropped from the
    manifest is recorded again. Run it after a crawl of 0380, not during (both rewrite the manifest)
+   python -m place.plan_layers [--kommun <code>]  -> data/geo/<code>/ for every kommun in place/plan_sources.json
+   (the registry: 180 kommuner with an open ArcGIS or WFS plan layer, built from docs/research/kommun-planlager.csv by
+   `python -m place.registry`, hand-edited for base patterns of bare file-name links and licences, ADR-0006): the
+   boundary from Nominatim, the whole plan layer clipped to it (a shared server's other kommuner fall out), each
+   feature with the raw attributes plus `_plan` {ref, name, date, type, page, documents, dropped_links} normalised at
+   write time (ADR-0005: bare file names through the base pattern, HTML anchors unwrapped, UNC / drive / file: paths
+   dropped and counted). A kommun that fails, returns no polygon or under half the survey's count (not for shared
+   servers) gets no snapshot and a reason; data/geo/plan_coverage.md has one line per kommun
 2. The chat's map panel (components/place/) -> GET /api/place/profile -> place.profile.build_profile:
-   kommun from the snapshot boundaries, the property live from Uppsala's layer 51 (place.live, cached per point),
+   kommun from the snapshot boundaries (a plan-layer kommun: the plans at the point from `_plan`, property
+   "not_covered", sections "not_covered", a note when no plan was found since the layer is not known to be complete),
+   the property live from Uppsala's layer 51 (place.live, cached per point),
    features that contain the pin or cover >= 2 % of the property, plans newest first matched to the corpus registry by
    name, "outside" detaljplan only with a complete plan layer (else "unknown"); the national layers by the same rule;
    ancient remains live from RAÄ (WMS GetFeatureInfo, buffer = half the image over a square whose inscribed circle
@@ -670,7 +680,7 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | GET    | `/api/benchmark/run/{job_id}`     | Yes  | Progress (tool calls) and result of that job (polled: a run outlasts the frontend proxy timeout) |
 | GET    | `/api/pipeline`                   | Yes  | Measurements of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency), read from the files the steps write; cached until one changes |
 | GET    | `/api/place/profile?lat=&lon=`    | Yes  | Place profile of a pinned point: property (live), plans, zones, plans in progress, inside/outside detaljplan (no LLM) |
-| GET    | `/api/place/coverage`             | Yes  | Pilot kommuner with a snapshot (code, name, bbox, fetch date), for the map's first view |
+| GET    | `/api/place/coverage`             | Yes  | Every kommun with a snapshot, pilot or plan-layer (code, name, bbox, fetch date), for the map's first view |
 | GET    | `/api/place/search?q=`            | Yes  | Address / place search for the map (street addresses from the pilot kommun's address register, else Nominatim: Sweden only, 1 request/s, pilot kommuner first; cached); 503 when Nominatim is down |
 
 All routes are additionally behind the access gate when it is enabled.
@@ -803,7 +813,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   (indexed; the kommun name and a sort over every row took 17-30 s per page)
 - `backend/routers/docs.py` -- Open a cited chunk in its original document (PDF page + highlight, or URL text fragment)
 - `backend/place/` -- place lookups for the map pin: `sources.py` (layers, attribute mapping, pilot kommuner),
-  `fetch.py` (snapshot CLI), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property and
+  `fetch.py` (snapshot CLI), `registry.py` (`PlanSource`, the plan source registry `plan_sources.json` built from the
+  survey), `plan_layers.py` (plan-layer snapshots for the registry kommuner, link normalisation, the coverage
+  report), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property and
   ancient remains at a point), `profile.py` (`build_profile`), `permits.py` (`likely_permits`), `context.py` (the
   place as text for the agent, `compact_profile`, `question_with_place`: what the agent is sent, used by the chat and
   the answer benchmark), `geocode.py` (`search_places`: the kommun's address register first, then Nominatim;

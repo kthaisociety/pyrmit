@@ -177,8 +177,8 @@ def _plan_layer_profile(lat: float, lon: float, code: str, store: PlaceStore) ->
                                       "licence": meta.get("licence"), "geometry": mapping(geometry),
                                       "corpus_plan_id": None, "provisions_indexed": False}
         for props, geometry in store.features(code, plan_layers.LAYER_ID, point)])
-    notes = [NOT_A_DECISION, f"Only {name} kommun's plan layer is checked here: no property, land-use zones or plans "
-                             "in progress."]
+    notes = [NOT_A_DECISION, (f"Only {name} kommun's plan layer is checked here: no property, land-use zones or plans "
+                              "in progress.")]
     if not plans:
         notes.append(f"No plan was found in {name} kommun's plan layer at this point. The layer is not known to hold "
                      "every plan in force, so an older plan may still apply.")
