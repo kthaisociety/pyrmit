@@ -1,5 +1,5 @@
-"""Acceptance tests of #53: match plans in force to their documents in the document store. One file for the ticket,
-folded into the module test files by unit-test-ticket. No real store (PCR-0011): fake documents and snapshots."""
+"""place.plan_links: the aktbeteckning normaliser, the three match levels, the link table, the fetch list and the
+report, on the fake Nacka and Uppsala snapshots with fake store documents (PCR-0011)."""
 
 import json
 
@@ -16,21 +16,14 @@ from place.plan_links import (
     normalise_akt,
     run,
 )
-from place.profile import build_profile
 from place.sources import today
-from place.store import PlaceStore
 from tests.unit.place.plan_layer import (
-    IN_NACKA,
     NACKA_FEATURES,
     fake_services,
     source,
     with_link,
 )
 from tests.unit.place.snapshot import (
-    PIN,
-    fake_property,
-    no_remains,
-    registry,
     write_snapshot,
 )
 
@@ -219,35 +212,3 @@ def test_loading_the_store_keeps_detaljplan_documents_by_kommun(tmp_path):
     path.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows), encoding="utf-8")
     assert {code: [d["doc_id"] for d in docs] for code, docs in load_documents(path).items()} == {
         "0182": ["pdf:0182:a1"], "0120": ["page:0120:b2"]}
-
-
-# --- the place profile ------------------------------------------------------------------------------------------
-
-def profile_at(geo_dir, at):
-    return build_profile(*at, store=PlaceStore(geo_dir), property_at=fake_property, plan_registry=registry,
-                         ancient_remains_at=no_remains)
-
-
-def test_plan_rows_carry_the_matched_document_ids(tmp_path):
-    """After a run, a plan at the pin carries the ids of its matched documents and the level that matched them."""
-    geo_dir = nacka_snapshot(tmp_path)
-    run(["0182"], lambda: {"0182": [document("pdf:0182:a1", url=KVARNHOLMEN_PDF)]}, geo_dir=geo_dir)
-    newer, older = profile_at(geo_dir, IN_NACKA)["plans"]
-    assert (newer["document_ids"], newer["document_match"]) == (["pdf:0182:a1"], "link")
-    assert (older["document_ids"], older["document_match"]) == ([], None)
-
-
-def test_plan_rows_say_no_document_is_matched_before_a_run(tmp_path):
-    """Before any run a plan row says no document is matched yet."""
-    newer = profile_at(nacka_snapshot(tmp_path), IN_NACKA)["plans"][0]
-    assert (newer["document_ids"], newer["document_match"]) == ([], None)
-
-
-def test_uppsala_plan_rows_carry_matched_document_ids(tmp_path):
-    """Uppsala's plan rows carry their matched documents too."""
-    write_snapshot(tmp_path)
-    uppsala = [document("page:0380:h8", code="0380", kommun="Uppsala",
-                        url="https://www.uppsala.se/detaljplan/?aktbeteckning=0380-P2002/5")]
-    run(["0380"], lambda: {"0380": uppsala}, geo_dir=tmp_path)
-    atle = next(p for p in profile_at(tmp_path, PIN)["plans"] if p["ref"] == "0380-P2002/5")
-    assert (atle["document_ids"], atle["document_match"]) == (["page:0380:h8"], "link")
