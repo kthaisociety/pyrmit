@@ -538,9 +538,18 @@ rerunning `agentic.rejudge` continues. A run that sits a long time before its fi
    write time (ADR-0005: bare file names through the base pattern, HTML anchors unwrapped, UNC / drive / file: paths
    dropped and counted). A kommun that fails, returns no polygon or under half the survey's count (not for shared
    servers) gets no snapshot and a reason; data/geo/plan_coverage.md has one line per kommun
+   python -m place.plan_links [--kommun <code>]  -> data/geo/<code>/plan_links.jsonl (ADR-0007): every plan polygon of
+   every snapshot matched to the store's detaljplan documents (data/corpus/documents.jsonl, read once; missing =
+   nothing written), three levels per polygon, first hit wins: link (polygon page / document link = document url;
+   a pilot kommun also through plan_pages.json), akt (`normalise_akt`: kommun prefix dropped, "-" / "." as "/", so
+   0380-P 2015/12 = P2015-12; found in the text of the same kommun's documents only), name (title = plan name, marked
+   review). Unmatched polygons -> data/geo/plan_fetch_list.json by kommun ("no public link" when the links were
+   internal paths); data/geo/plan_match_report.md counts levels, unmatched and the store's unclaimed share. The
+   first run (2026-11-03, 17 kommuner): 109 of 17,960 polygons, the store holds few detaljplan documents per kommun
 2. The chat's map panel (components/place/) -> GET /api/place/profile -> place.profile.build_profile:
    kommun from the snapshot boundaries (a plan-layer kommun: the plans at the point from `_plan`, property
-   "not_covered", sections "not_covered", a note when no plan was found since the layer is not known to be complete),
+   "not_covered", sections "not_covered", a note when no plan was found since the layer is not known to be complete;
+   every plan row carries `document_ids` / `document_match` from the link table, [] / None before a match run),
    the property live from Uppsala's layer 51 (place.live, cached per point),
    features that contain the pin or cover >= 2 % of the property, plans newest first matched to the corpus registry by
    name, "outside" detaljplan only with a complete plan layer (else "unknown"); the national layers by the same rule;
@@ -815,7 +824,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/place/` -- place lookups for the map pin: `sources.py` (layers, attribute mapping, pilot kommuner),
   `fetch.py` (snapshot CLI), `registry.py` (`PlanSource`, the plan source registry `plan_sources.json` built from the
   survey), `plan_layers.py` (plan-layer snapshots for the registry kommuner, link normalisation, the coverage
-  report), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property and
+  report), `plan_links.py` (`normalise_akt`, `polygon_key`, `match_kommun` / `run`: the plan-document link table,
+  fetch list and match report), `store.py` (`PlaceStore`, snapshot format, STRtree per layer, `plan_links`),
+  `live.py` (property and
   ancient remains at a point), `profile.py` (`build_profile`), `permits.py` (`likely_permits`), `context.py` (the
   place as text for the agent, `compact_profile`, `question_with_place`: what the agent is sent, used by the chat and
   the answer benchmark), `geocode.py` (`search_places`: the kommun's address register first, then Nominatim;

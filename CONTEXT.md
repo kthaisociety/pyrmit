@@ -130,6 +130,16 @@ A kommun covered by its plan source alone: a pin there gives the kommun and the 
 **Snapshot**:
 A dated local copy of a kommun's area layers: every layer of a pilot kommun (`python -m place.fetch`), or the plan layer of a plan-layer kommun (`python -m place.plan_layers`). A kommun with a snapshot is covered; anywhere else the place is "not covered yet".
 
+**Plan-document link**:
+A row of the link table (`data/geo/<code>/plan_links.jsonl`): one plan polygon matched to one document of the document store, with the match level that produced it and the date. A plan at the pin carries its matched documents' ids, or says no document is matched yet.
+_Avoid_: corpus match (the registry match by name that `corpus_plan_id` records)
+
+**Match level**:
+How a polygon found its document, tried in order and stopped at the first hit: link (the polygon's document link is the document's address), akt (the normalised aktbeteckning appears in the document's text, same kommun only) or name (kommun and plan name agree; marked for review).
+
+**Fetch list**:
+The links of every polygon no document matched, grouped by kommun (`data/geo/plan_fetch_list.json`), for the scraper to pick up next. A polygon whose links were internal paths is listed as "no public link" with its aktbeteckning.
+
 **Coverage report**:
 One line per plan source after a fetch run: fetched or not and why, the polygons kept against the survey's count, and the shares of plans with an aktbeteckning and with a link.
 
@@ -144,4 +154,5 @@ One line per plan source after a fetch run: fetched or not and why, the polygons
 - The **Access gate** sits in front of everything, including sign-in.
 - A **Pin** in a **Pilot kommun** gives a **Property** (looked up live) and a **Place profile** (from the **Snapshot**): its **Detaljplaner**, **Land-use zones**, **Plans in progress**, **Protected areas** and **National interests**, plus the **Ancient remains** on it (looked up live). The **Likely permits** follow from that profile. The **Place card** shows all of it.
 - A **Pin** in a **Plan-layer kommun** gives a **Place profile** with the **Detaljplaner** at the point from the kommun's **Snapshot**, each with its aktbeteckning, page and document links and licence, and nothing else. The **Plan source** says how the **Snapshot** was read; the **Coverage report** says how well.
+- Every **Detaljplan** polygon in a **Snapshot** is matched to its documents in the document store by **Match level**, giving **Plan-document links** that the **Place profile** carries; the polygons without one go to the **Fetch list**.
 - A question asked with a **Pin** is answered from its **Place profile**, and the answer keeps that **Pin**: reopening the **Chat session** brings back its **Place chip**.

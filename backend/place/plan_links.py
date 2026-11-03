@@ -21,8 +21,8 @@ from urllib.parse import urlsplit
 
 from corpus.common import DOCUMENTS_PATH
 from place import plan_layers
+from place.sources import PILOTS, layer_by_id, today
 from place.sources import feature as pilot_feature
-from place.sources import layer_by_id, today
 from place.store import GEO_DIR, PlaceStore
 
 LINKS_FILE = "plan_links.jsonl"
@@ -83,9 +83,11 @@ def load_documents(path: Path = DOCUMENTS_PATH) -> dict[str, list[dict]]:
 # --- the polygons and the keys ----------------------------------------------------------------------------------
 
 def _polygons(code: str, geo_dir: Path) -> list[dict]:
-    """The snapshot's plans as {"ref", "name", "url", "page", "documents", "dropped_links"}, in file order."""
+    """The snapshot's plans as {"ref", "name", "url", "page", "documents", "dropped_links"}, in file order. A pilot
+    kommun's page is the one its document link leads to (plan_pages.json, place.plan_documents) when known."""
     path = geo_dir / code / f"{plan_layers.LAYER_ID}.geojson"
-    layer = layer_by_id(code, plan_layers.LAYER_ID) if code in _pilot_codes() else None
+    layer = layer_by_id(code, plan_layers.LAYER_ID) if code in PILOTS else None
+    pages = PlaceStore(geo_dir).plan_pages(code) if layer else {}
     polygons = []
     for item in json.loads(path.read_text(encoding="utf-8"))["features"]:
         props = item.get("properties") or {}
@@ -96,14 +98,11 @@ def _polygons(code: str, geo_dir: Path) -> list[dict]:
                              "dropped_links": (props.get(plan_layers.PLAN_KEY) or {}).get("dropped_links", 0)})
         else:
             row = pilot_feature(layer, props)
-            polygons.append({"ref": row["ref"], "name": row["name"], "url": row["url"], "page": row["url"],
-                             "documents": [], "dropped_links": 0})
+            polygons.append({"ref": row["ref"], "name": row["name"], "url": row["url"],
+                             "page": pages.get(row["ref"]) or row["url"],
+                             "documents": [row["url"]] if pages.get(row["ref"]) and row["url"] else [],
+                             "dropped_links": 0})
     return polygons
-
-
-def _pilot_codes() -> set[str]:
-    from place.sources import PILOTS
-    return set(PILOTS)
 
 
 def _url_key(url: str | None) -> str | None:
@@ -242,9 +241,8 @@ def _share(value: float | None) -> str:
 def match_report(rows: list[dict]) -> str:
     """The report rows of match_kommun as Markdown: a heading with the date, then one table row per kommun: code,
     polygons, matched at each level, unmatched, store documents, share unclaimed."""
-    lines = [f"# Plan documents matched, {today()}", "",
-             f"{sum(row['polygons'] - row['unmatched'] for row in rows)} of {sum(row['polygons'] for row in rows)} "
-             f"polygons matched in {len(rows)} kommuner.", "",
+    matched, polygons = sum(row["polygons"] - row["unmatched"] for row in rows), sum(row["polygons"] for row in rows)
+    lines = [f"# Plan documents matched, {today()}", "", f"{matched} of {polygons} polygons matched in {len(rows)} kommuner.", "",
              "| Kod | Polygons | Link | Akt | Name (review) | Unmatched | Documents | Unclaimed |",
              "|---|---|---|---|---|---|---|---|"]
     for row in rows:

@@ -19,8 +19,20 @@ from place.plan_links import (
 from place.profile import build_profile
 from place.sources import today
 from place.store import PlaceStore
-from tests.unit.place.plan_layer import IN_NACKA, NACKA_FEATURES, NEWER, fake_services, source, with_link
-from tests.unit.place.snapshot import PIN, fake_property, no_remains, registry, write_snapshot
+from tests.unit.place.plan_layer import (
+    IN_NACKA,
+    NACKA_FEATURES,
+    fake_services,
+    source,
+    with_link,
+)
+from tests.unit.place.snapshot import (
+    PIN,
+    fake_property,
+    no_remains,
+    registry,
+    write_snapshot,
+)
 
 KVARNHOLMEN_PDF = "http://infobank.nacka.se/ext/planer/kvarnholmen.pdf"
 
@@ -171,6 +183,15 @@ def test_the_run_covers_every_kommun_with_a_snapshot(tmp_path):
                         url="https://www.uppsala.se/detaljplan/?aktbeteckning=0380-P2002/5")]
     rows = run(["0182", "0380"], lambda: {"0182": [], "0380": uppsala}, geo_dir=geo_dir)
     assert [(row["code"], row["link"]) for row in rows] == [("0182", 0), ("0380", 1)]
+
+
+def test_uppsala_polygons_match_the_page_their_document_link_leads_to(tmp_path):
+    """A pilot kommun's document link redirects to the plan's page; the page plan_pages.json recorded matches."""
+    write_snapshot(tmp_path)
+    page = "https://www.uppsala.se/bygga-och-bo/detaljplaner/1991-2000/del-av-atle/"
+    (tmp_path / "0380" / "plan_pages.json").write_text(json.dumps({"0380-P2002/5": page}), encoding="utf-8")
+    result = match_kommun("0380", [document("page:0380:h8", code="0380", kommun="Uppsala", url=page)], geo_dir=tmp_path)
+    assert links_of(result, "0380-P2002/5") == [("page:0380:h8", "link", False)]
 
 
 def test_an_unreachable_store_stops_the_run_with_nothing_written(tmp_path):

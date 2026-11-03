@@ -14,8 +14,8 @@ from shapely.geometry import Point, mapping, shape
 from shapely.validation import make_valid
 
 from place import live, plan_layers
-from place.plan_links import polygon_key
 from place.permits import likely_permits
+from place.plan_links import polygon_key
 from place.sources import (
     ANCIENT_REMAINS,
     METRES_PER_DEGREE_LAT,
