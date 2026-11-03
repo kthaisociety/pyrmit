@@ -33,12 +33,14 @@ class _Layer:
 
 
 class PlaceStore:
-    """The snapshots of every pilot kommun under `root`, read on first use.
+    """The snapshots of every kommun under `root` (the pilot kommuner of place.fetch and the kommuner of
+    place.plan_layers), read on first use.
 
     Snapshot format, one folder per kommun code:
     - `manifest.json`: {"kommun": {"code", "name", "fetched", "source", "licence"}, "layers": {<layer id>:
       {"title", "provider", "licence", "count", "fetched", "complete", ...}}}. Layer ids are those of
-      `place.sources`; "complete" (plans only) means the layer holds every plan in force.
+      `place.sources` (a plan-layer kommun has "plans" only); "complete" (plans only) means the layer holds every
+      plan in force.
     - `kommun.geojson`: one Feature, the kommun boundary.
     - `<layer id>.geojson`: a FeatureCollection in WGS84 with the provider's raw attributes.
     - `plan_pages.json` (optional, place.plan_documents): {aktbeteckning: the plan's page url}.
@@ -64,7 +66,7 @@ class PlaceStore:
             return self._manifests
 
     def kommuner(self) -> list[dict]:
-        """The pilot kommuner that have a snapshot: [{"code", "name", "bbox": [west, south, east, north],
+        """Every kommun that has a snapshot, pilot or not: [{"code", "name", "bbox": [west, south, east, north],
         "fetched"}], in code order."""
         return [{"code": code, "name": manifest["kommun"]["name"], "bbox": list(self._boundaries[code].bounds),
                  "fetched": manifest["kommun"].get("fetched")}

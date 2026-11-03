@@ -50,9 +50,11 @@ def get_json(client: httpx.Client, url: str, params: dict):
             time.sleep(RETRY_DELAY_S)
 
 
-def kommun_boundary(client: httpx.Client, code: str) -> dict:
-    """The kommun's boundary from OpenStreetMap (one Nominatim request), as a GeoJSON geometry."""
-    name = PILOTS[code]["name"]
+def kommun_boundary(client: httpx.Client, code: str, name: str | None = None) -> dict:
+    """The kommun's boundary from OpenStreetMap (one Nominatim request), as a GeoJSON geometry. `name` is the
+    kommun's name, looked up in PILOTS when not given (KeyError for a kommun that is neither). Raises RuntimeError
+    when Nominatim has no municipality boundary for it."""
+    name = name or PILOTS[code]["name"]
     results = get_json(client, f"{NOMINATIM}/search", {
         "q": f"{name} kommun", "countrycodes": "se", "polygon_geojson": 1, "polygon_threshold": 0.0005,
         "format": "jsonv2", "limit": 5})

@@ -26,6 +26,9 @@ export interface PlaceFeature {
   fetched: string;
   geometry: GeoJSON.Geometry;
   share?: number; // zones: fraction of the property covered
+  page?: string | null; // plans: the plan's page link
+  documents?: string[]; // plans: absolute links to the plan documents, in the layer's order
+  licence?: string; // plans: the layer's licence ("unknown" when it states none)
   corpus_plan_id?: string | null;
   provisions_indexed?: boolean;
 }

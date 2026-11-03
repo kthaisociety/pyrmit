@@ -181,17 +181,22 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
     -> plan records of data/corpus/plans.jsonl) and `ancient_remains_at` (GeoJSON geometry -> register features,
     see place.live) default to the snapshots, the live property service, the corpus registry and Riksantikvarieämbetet.
 
+    A point is covered when it lies in a kommun with a snapshot: a pilot kommun (place.sources.PILOTS, with
+    property, zones, pending plans and the national layers) or a kommun whose plan layer place.plan_layers
+    snapshotted (plans only: no property lookup, so the plans are those at the point).
+
     Returns:
     - "point": {"lat", "lon"}
-    - "kommun": {"code", "name"} of the pilot kommun the point lies in, or None
-    - "covered": True when the point lies in a pilot kommun with a snapshot
+    - "kommun": {"code", "name"} of the kommun the point lies in, or None
+    - "covered": True when the point lies in a kommun with a snapshot
     - "property": {"designation", "geometry", "source", "fetched"}, or None
     - "property_status": "found", "none" (no property at the point: a street, park or water), "unavailable"
-      (the property service failed) or "not_covered"
-    - "detaljplan": "inside", "outside" or "unknown". "outside" only when the kommun's plan layer is complete;
-      with an incomplete layer and no plan found it is "unknown"
+      (the property service failed) or "not_covered" (outside the snapshots, or a plan-layer kommun)
+    - "detaljplan": "inside", "outside" or "unknown". "outside" only when the kommun's plan layer is complete
+      (Uppsala); with an incomplete layer and no plan found it is "unknown", and a plan-layer kommun then adds a
+      note that no plan was found in the kommun's layer
     - "plans": plans in force, tillägg and områdesbestämmelser covering the property (or the point when there is
-      no property), newest laga kraft date first
+      no property), newest laga kraft date first, every polygon that covers the point listed
     - "zones": land-use zones (användning) on the property
     - "pending_plans": plans in progress covering the property (not binding)
     - "protected_areas": protected areas covering the property (naturreservat, biotopskyddsområde, ...): type,
@@ -212,15 +217,19 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
     - "notes": user-facing caveats, the first one NOT_A_DECISION
 
     Every row of plans, zones, pending_plans, protected_areas, natura2000, national_interests and ancient_remains
-    is a feature of `place.sources.feature` plus "source" (provider),
-    "fetched" (snapshot date) and "geometry" (GeoJSON). Plans also carry "corpus_plan_id" (the matching plan of
-    the corpus registry, or None) and "provisions_indexed" (True when that plan has provisions); zones carry
+    is a feature of `place.sources.feature` (`place.plan_layers.feature` in a plan-layer kommun) plus "source"
+    (provider), "fetched" (snapshot date) and "geometry" (GeoJSON). Plans also carry "page" (the plan's page link,
+    or None), "documents" (absolute document links, [] when the layer has none), "licence" (the layer's),
+    "corpus_plan_id" (the matching plan of the corpus registry, or None) and "provisions_indexed" (True when that
+    plan has provisions); zones carry
     "share", the fraction of the property they cover (1.0 without a property). A feature counts when it contains
     the pin or covers at least 2 % of the property, so neighbours that only touch its boundary are left out.
 
-    Outside the pilot kommuner, kommun is None, covered False, property_status "not_covered", detaljplan
-    "unknown", the lists are empty, every section_status is "not_covered" and there are no permits. Raises
-    ValueError when lat or lon is not a coordinate."""
+    In a plan-layer kommun, property is None, zones, pending_plans and the sections are empty with every
+    section_status "not_covered", layers holds the plan layer, and the permits are those of the plans found.
+    Outside every snapshot, kommun is None, covered False, property_status "not_covered", detaljplan "unknown",
+    the lists are empty, every section_status is "not_covered" and there are no permits. Raises ValueError when
+    lat or lon is not a coordinate."""
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):  # also rejects NaN
         raise ValueError(f"Not a coordinate: lat={lat}, lon={lon}")
     store = store or default_store()
