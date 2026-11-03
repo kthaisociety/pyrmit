@@ -38,15 +38,19 @@ def source(**fields) -> PlanSource:
     return PlanSource(**(base | fields))
 
 
-def fake_services(features=NACKA_FEATURES, *, fail_host: str | None = None, boundary=NACKA_BOUNDARY):
-    """Nominatim (every kommun gets `boundary`), an ArcGIS layer and a WFS type, both serving `features`."""
+def fake_services(features=NACKA_FEATURES, *, fail_host: str | None = None, boundary=NACKA_BOUNDARY,
+                  nominatim: list[dict] | None = None, paged: bool = True):
+    """Nominatim (every kommun gets `boundary`, or the `nominatim` results), an ArcGIS layer and a WFS type, both
+    serving `features`; a WFS that is not `paged` answers 400 to a request with startIndex."""
     def handler(request: httpx.Request) -> httpx.Response:
         url = str(request.url)
         if "nominatim" in url:
-            return httpx.Response(200, json=[{"addresstype": "municipality", "name": request.url.params["q"],
-                                              "geojson": boundary}])
+            return httpx.Response(200, json=nominatim or [
+                {"addresstype": "municipality", "name": request.url.params["q"], "geojson": boundary}])
         if fail_host and fail_host in url:
             return httpx.Response(500)
+        if not paged and "startIndex" in request.url.params:
+            return httpx.Response(400, text="Cannot do natural order without a primary key")
         if "/query" in url:
             if request.url.params.get("returnIdsOnly") == "true":
                 return httpx.Response(200, json={"objectIds": [p["OBJECTID"] for _, p in features]})

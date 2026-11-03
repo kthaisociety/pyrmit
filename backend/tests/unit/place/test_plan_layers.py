@@ -8,6 +8,7 @@ import pytest
 from place.plan_layers import COVERAGE_REPORT, fetch_plan_layer, fetch_registry
 from place.sources import today
 from tests.unit.place.plan_layer import (
+    NACKA_BOUNDARY,
     NACKA_FEATURES,
     OUTSIDE_NACKA,
     fake_services,
@@ -38,6 +39,23 @@ def test_fetch_reads_a_wfs_layer_with_the_endpoints_own_parameters(tmp_path):
                      url="https://karta.haninge.se/services/karta/ows?SERVICE=WFS&VERSION=1.1.0&REQUEST=GetFeature"
                          "&TYPENAME=planersutbredning&OUTPUTFORMAT=GeoJSON")
     row = fetch_plan_layer(haninge, client=fake_services(), out_dir=tmp_path)
+    assert (row["fetched"], row["count"]) == (True, 3)
+
+
+def test_fetch_reads_a_wfs_layer_the_service_cannot_page_in_one_request(tmp_path):
+    """A WFS type that answers 400 to a paged request (a GeoServer view without primary key) is read unpaged."""
+    view = source(service="wfs", url="https://karta.nacka.se/geoserver/ows", layer="nacka:vy_planer")
+    row = fetch_plan_layer(view, client=fake_services(paged=False), out_dir=tmp_path)
+    assert (row["fetched"], row["count"]) == (True, 3)
+
+
+def test_fetch_takes_the_boundary_from_an_administrative_result(tmp_path):
+    """Nominatim may list the kommun's polygon as a town's administrative boundary and the municipality as a point."""
+    results = [{"addresstype": "town", "class": "boundary", "type": "administrative", "name": "Nacka kommun",
+                "geojson": NACKA_BOUNDARY},
+               {"addresstype": "municipality", "name": "Nacka kommun",
+                "geojson": {"type": "Point", "coordinates": [18.1, 59.3]}}]
+    row = fetch_plan_layer(source(), client=fake_services(nominatim=results), out_dir=tmp_path)
     assert (row["fetched"], row["count"]) == (True, 3)
 
 

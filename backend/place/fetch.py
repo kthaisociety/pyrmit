@@ -59,10 +59,19 @@ def kommun_boundary(client: httpx.Client, code: str, name: str | None = None) ->
         "q": f"{name} kommun", "countrycodes": "se", "polygon_geojson": 1, "polygon_threshold": 0.0005,
         "format": "jsonv2", "limit": 5})
     for result in results:
-        if result.get("addresstype") == "municipality" and result.get("geojson", {}).get("type") in (
-                "Polygon", "MultiPolygon"):
+        if _is_kommun_boundary(result, name):
             return result["geojson"]
     raise RuntimeError(f"No municipality boundary for {name} kommun in Nominatim")
+
+
+def _is_kommun_boundary(result: dict, name: str) -> bool:
+    """A Nominatim result with the kommun's polygon: the municipality itself, or its administrative boundary
+    relation (listed as a town or city for some kommuner, the municipality result then being a point)."""
+    kind = result.get("addresstype") == "municipality" or (result.get("class") == "boundary"
+                                                            and result.get("type") == "administrative")
+    label = str(result.get("name") or result.get("display_name") or "")
+    named = not label or label.lower().startswith(name.lower())
+    return kind and named and result.get("geojson", {}).get("type") in ("Polygon", "MultiPolygon")
 
 
 def fetch_arcgis(client: httpx.Client, layer: Layer, envelope: tuple | None) -> list[dict]:

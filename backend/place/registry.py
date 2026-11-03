@@ -31,9 +31,11 @@ SURVEY_LIST_SEPARATOR = "|"
 
 # The attribute names the kommuner use, matched case-insensitively, after the survey's own for the same thing
 USUAL_AKT_FIELDS = ("aktbeteckning", "aktbet", "aktbet_lok", "lmakt", "akt", "planbeteckning", "planbet", "plannr",
-                    "plan_nr", "planid", "plan_id", "externid", "dp_aktnummer", "dp_akt", "dp_plannummer",
-                    "dp_planid", "idnr")
-USUAL_NAME_FIELDS = ("plannamn", "plnamn", "planname", "plan_namn", "dp_plannamn", "namn", "name", "beskr",
+                    "plannummer", "plan_nr", "dpnr", "planid", "plan_id", "externid", "dp_aktnummer", "dp_akt",
+                    "dp_plannummer", "dp_planid", "idnr")
+USUAL_URL_FIELDS = ("planhandlingar", "dp_planhandlingar", "plankarta", "url", "urldokument", "url_pdf", "lank",
+                    "länk", "link", "dokument", "pdf")
+USUAL_NAME_FIELDS = ("plannamn", "plnamn", "planname", "plan_namn", "dp_plannamn", "dpnamn", "namn", "name", "beskr",
                      "beskrivning", "rubrik", "titel", "title")
 USUAL_DATE_FIELDS = ("lagakraftdatum", "laga_kraft_datum", "laga_kraft", "lagakraft", "lagakraft_datum",
                      "legallybindingdate", "ldat", "dp_laga_kraft_datum", "laga_kraft_d", "antagandedatum",
@@ -97,7 +99,7 @@ def _source(row: dict, shared_hosts: set[str], previous: dict[str, PlanSource]) 
         code=row["kod"], name=row["kommun"], status=row["status"], service=row["endpoint_kind"],
         url=row["endpoint_url"], layer=layer,
         akt_fields=_or_usual(_survey_list(row["akt_fields"]), USUAL_AKT_FIELDS),
-        url_fields=_survey_list(row["url_fields"]),
+        url_fields=_or_usual(_survey_list(row["url_fields"]), USUAL_URL_FIELDS),
         name_fields=USUAL_NAME_FIELDS,
         date_fields=_or_usual(_laga_kraft_first(_survey_list(row["date_fields"])), USUAL_DATE_FIELDS),
         type_fields=USUAL_TYPE_FIELDS,
@@ -111,8 +113,8 @@ def build_registry(survey: Path = SURVEY_PATH, previous: Path | None = REGISTRY_
     """The plan sources of the survey's status A and B rows whose endpoint is ArcGIS or WFS, in kommun code order,
     the pilot kommuner (place.sources.PILOTS) left out. Each carries the survey's endpoint, layer (a WFS type name
     without the " (title)" the survey appends), aktbeteckning, link and date attributes (laga kraft attributes
-    first; the usual aktbeteckning and date names where the survey found none), the survey's count and note, and
-    the usual attribute names for the plan name and type. `shared` is
+    first; the usual aktbeteckning, link and date names where the survey found none), the survey's count and note,
+    and the usual attribute names for the plan name and type. `shared` is
     True when the survey lists the endpoint's host for more than one kommun. The licence is "unknown" and base_url
     None unless `previous`, an earlier registry file, holds a value for the kommun: an operator's edits survive a
     rebuild. Raises FileNotFoundError when `survey` is missing."""

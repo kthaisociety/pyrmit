@@ -140,19 +140,30 @@ def _arcgis_layer(source: PlanSource) -> Layer:
                  service="arcgis", url=base, layer_id=int(layer_id))
 
 
+def _collection(data, url: str, output_format: str) -> list[dict]:
+    if not isinstance(data, dict) or "features" not in data:
+        raise ValueError(f"{url}: no GeoJSON for outputFormat {output_format}")
+    return data["features"] or []
+
+
 def _wfs_pages(client: httpx.Client, url: str, params: dict, version: str, output_format: str) -> list[dict]:
-    """Every feature of the type, page by page. ValueError when the service does not answer with GeoJSON."""
+    """Every feature of the type, page by page; in one request when the service cannot page (GeoServer answers 400
+    to startIndex on a view without a primary key). ValueError when the service does not answer with GeoJSON."""
     page_key = "count" if version.startswith("2") else "maxFeatures"
+    params = {**params, "outputFormat": output_format, "srsName": "EPSG:4326"}
     features, seen = [], set()
     for start in range(0, WFS_MAX_FEATURES, WFS_PAGE):
-        data = get_json(client, url, {**params, "outputFormat": output_format, "srsName": "EPSG:4326",
-                                      page_key: WFS_PAGE, "startIndex": start})
-        if not isinstance(data, dict) or "features" not in data:
-            raise ValueError(f"{url}: no GeoJSON for outputFormat {output_format}")
-        page = [f for f in data["features"] or [] if f.get("id") not in seen or f.get("id") is None]
-        seen.update(f.get("id") for f in page)
-        features += page
-        if len(data["features"] or []) < WFS_PAGE or not page:
+        try:
+            page = _collection(get_json(client, url, {**params, page_key: WFS_PAGE, "startIndex": start}), url,
+                               output_format)
+        except httpx.HTTPStatusError as exc:
+            if start or exc.response.status_code != httpx.codes.BAD_REQUEST:
+                raise
+            return _collection(get_json(client, url, params), url, output_format)
+        new = [f for f in page if f.get("id") is None or f.get("id") not in seen]
+        seen.update(f.get("id") for f in new)
+        features += new
+        if len(page) < WFS_PAGE or not new:
             break
     return features
 
