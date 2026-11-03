@@ -13,7 +13,7 @@ from shapely.errors import GEOSException
 from shapely.geometry import Point, mapping, shape
 from shapely.validation import make_valid
 
-from place import live
+from place import live, plan_layers
 from place.permits import likely_permits
 from place.sources import (
     ANCIENT_REMAINS,
@@ -162,6 +162,38 @@ def _corpus_match(key: str, plans_by_key: dict[str, dict], page: str | None = No
             "provisions_indexed": bool(match and match.get("provisions"))}
 
 
+def _by_date_newest_first(rows: list[dict]) -> list[dict]:
+    return sorted(rows, key=lambda row: row["date"] or "", reverse=True)
+
+
+def _plan_layer_profile(lat: float, lon: float, code: str, store: PlaceStore) -> dict:
+    """The profile of a point in a kommun whose plan layer place.plan_layers snapshotted: the plans at the point
+    from that layer, nothing else looked up."""
+    name = next(kommun["name"] for kommun in store.kommuner() if kommun["code"] == code)
+    meta = next((layer for layer in store.layers(code) if layer["id"] == plan_layers.LAYER_ID), {})
+    point = Point(lon, lat)
+    plans = _by_date_newest_first([
+        plan_layers.feature(props) | {"source": meta.get("provider"), "fetched": meta.get("fetched"),
+                                      "licence": meta.get("licence"), "geometry": mapping(geometry),
+                                      "corpus_plan_id": None, "provisions_indexed": False}
+        for props, geometry in store.features(code, plan_layers.LAYER_ID, point)])
+    notes = [NOT_A_DECISION, f"Only {name} kommun's plan layer is checked here: no property, land-use zones or plans "
+                             "in progress."]
+    if not plans:
+        notes.append(f"No plan was found in {name} kommun's plan layer at this point. The layer is not known to hold "
+                     "every plan in force, so an older plan may still apply.")
+    profile = {"point": {"lat": lat, "lon": lon}, "kommun": {"code": code, "name": name}, "covered": True,
+               "property": None, "property_status": "not_covered",
+               "detaljplan": "inside" if plans else "unknown", "plans": plans, "zones": [], "pending_plans": [],
+               **{section: [] for section in SECTIONS}, "strandskydd": dict(STRANDSKYDD),
+               "section_status": dict.fromkeys(SECTIONS, "not_covered"),
+               "layers": [{"id": plan_layers.LAYER_ID, "title": meta.get("title"), "provider": meta.get("provider"),
+                           "licence": meta.get("licence"), "fetched": meta.get("fetched"),
+                           "status": meta.get("status", "unavailable")}],
+               "notes": notes}
+    return profile | {"permits": likely_permits(profile)}
+
+
 def _layer_rows(store: PlaceStore, code: str, layer: Layer, meta: dict, point, area) -> list[dict]:
     rows = []
     for props, geometry in store.features(code, layer.id, area):
@@ -234,8 +266,10 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
         raise ValueError(f"Not a coordinate: lat={lat}, lon={lon}")
     store = store or default_store()
     code = store.kommun_at(lon, lat)
-    if code is None or code not in PILOTS:
+    if code is None:
         return _not_covered(lat, lon)
+    if code not in PILOTS:
+        return _plan_layer_profile(lat, lon, code, store)
 
     kommun = PILOTS[code]["name"]
     found, property_status = _property(code, lon, lat, property_at or live.property_at)
@@ -259,10 +293,10 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
         if plan.get("page"):
             plans_by_page.setdefault(plan["page"]["url"], plan)
     pages = store.plan_pages(code)
-    plans = [_without_share(row) | _corpus_match(_plan_key(row["name"], kommun), plans_by_key, pages.get(row["ref"]),
-                                                 plans_by_page)
-             for kind in PLAN_KINDS for row in rows.get(kind, [])]
-    plans.sort(key=lambda row: row["date"] or "", reverse=True)
+    plans = _by_date_newest_first([
+        _without_share(row) | {"page": row["url"], "documents": [], "licence": meta.get(row["layer"], {}).get("licence")}
+        | _corpus_match(_plan_key(row["name"], kommun), plans_by_key, pages.get(row["ref"]), plans_by_page)
+        for kind in PLAN_KINDS for row in rows.get(kind, [])])
 
     remains, remains_entry = _ancient_remains(ancient_remains_at or live.ancient_remains_at,
                                               area if found else _around_pin(point, lat))

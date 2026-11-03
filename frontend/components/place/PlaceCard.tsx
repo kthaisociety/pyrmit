@@ -109,6 +109,27 @@ function Section({ title, status = 'ok', count, children }: {
   );
 }
 
+/** The file name a document link ends in, decoded, for the link's text. */
+function fileName(url: string): string {
+  const name = url.split('?')[0].split('#')[0].split('/').pop() ?? url;
+  try {
+    return decodeURIComponent(name) || url;
+  } catch {
+    return name || url;
+  }
+}
+
+function PlanLinks({ plan }: { plan: PlaceFeature }) {
+  const documents = plan.documents ?? [];
+  if (documents.length === 0) return plan.url ? <DocLink href={plan.url}>Plan documents</DocLink> : null;
+  return (
+    <>
+      {plan.page && <DocLink href={plan.page}>Plan page</DocLink>}
+      {documents.map((doc) => <DocLink key={doc} href={doc}>{fileName(doc)}</DocLink>)}
+    </>
+  );
+}
+
 function PlanRow({ plan }: { plan: PlaceFeature }) {
   return (
     <Row kind="plan">
@@ -124,7 +145,7 @@ function PlanRow({ plan }: { plan: PlaceFeature }) {
       <Meta>
         {plan.date && <span>{`Laga kraft ${plan.date}`}</span>}
         <span>{plan.provisions_indexed ? 'Provisions in the corpus' : 'Provisions not indexed'}</span>
-        {plan.url && <DocLink href={plan.url}>Plan documents</DocLink>}
+        <PlanLinks plan={plan} />
       </Meta>
       <SourceLine row={plan} />
     </Row>
