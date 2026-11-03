@@ -14,6 +14,7 @@ from shapely.geometry import Point, mapping, shape
 from shapely.validation import make_valid
 
 from place import live, plan_layers
+from place.plan_links import polygon_key
 from place.permits import likely_permits
 from place.sources import (
     ANCIENT_REMAINS,
@@ -166,17 +167,27 @@ def _by_date_newest_first(rows: list[dict]) -> list[dict]:
     return sorted(rows, key=lambda row: row["date"] or "", reverse=True)
 
 
+def _with_documents(rows: list[dict], links: dict[str, list[dict]]) -> list[dict]:
+    """The plan rows with the document store's matched documents (place.plan_links), none when no link exists."""
+    out = []
+    for row in rows:
+        matched = links.get(polygon_key(row) or "", [])
+        out.append(row | {"document_ids": [link["doc_id"] for link in matched],
+                          "document_match": matched[0]["level"] if matched else None})
+    return out
+
+
 def _plan_layer_profile(lat: float, lon: float, code: str, store: PlaceStore) -> dict:
     """The profile of a point in a kommun whose plan layer place.plan_layers snapshotted: the plans at the point
     from that layer, nothing else looked up."""
     name = next(kommun["name"] for kommun in store.kommuner() if kommun["code"] == code)
     meta = next((layer for layer in store.layers(code) if layer["id"] == plan_layers.LAYER_ID), {})
     point = Point(lon, lat)
-    plans = _by_date_newest_first([
+    plans = _with_documents(_by_date_newest_first([
         plan_layers.feature(props) | {"source": meta.get("provider"), "fetched": meta.get("fetched"),
                                       "licence": meta.get("licence"), "geometry": mapping(geometry),
                                       "corpus_plan_id": None, "provisions_indexed": False}
-        for props, geometry in store.features(code, plan_layers.LAYER_ID, point)])
+        for props, geometry in store.features(code, plan_layers.LAYER_ID, point)]), store.plan_links(code))
     notes = [NOT_A_DECISION, (f"Only {name} kommun's plan layer is checked here: no property, land-use zones or plans "
                               "in progress.")]
     if not plans:
@@ -295,10 +306,10 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
         if plan.get("page"):
             plans_by_page.setdefault(plan["page"]["url"], plan)
     pages = store.plan_pages(code)
-    plans = _by_date_newest_first([
+    plans = _with_documents(_by_date_newest_first([
         _without_share(row) | {"page": row["url"], "documents": [], "licence": meta.get(row["layer"], {}).get("licence")}
         | _corpus_match(_plan_key(row["name"], kommun), plans_by_key, pages.get(row["ref"]), plans_by_page)
-        for kind in PLAN_KINDS for row in rows.get(kind, [])])
+        for kind in PLAN_KINDS for row in rows.get(kind, [])]), store.plan_links(code))
 
     remains, remains_entry = _ancient_remains(ancient_remains_at or live.ancient_remains_at,
                                               area if found else _around_pin(point, lat))

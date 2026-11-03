@@ -110,7 +110,15 @@ class PlaceStore:
     def plan_links(self, code: str) -> dict[str, list[dict]]:
         """The kommun's matched documents by polygon key (place.plan_links.polygon_key): {key: [{"doc_id", "level",
         "review"}, ...]}, read from plan_links.jsonl written by place.plan_links, or {} before it has run."""
-        raise NotImplementedError
+        path = self.root / code / "plan_links.jsonl"
+        links: dict[str, list[dict]] = {}
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    row = json.loads(line)
+                    links.setdefault(row["key"], []).append({"doc_id": row["doc_id"], "level": row["level"],
+                                                             "review": row.get("review", False)})
+        return links
 
     def features(self, code: str, layer_id: str, geometry) -> list[tuple[dict, object]]:
         """(raw properties, shapely geometry) of the layer's features that intersect `geometry` (a shapely
