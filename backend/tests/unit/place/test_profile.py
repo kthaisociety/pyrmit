@@ -7,6 +7,8 @@ import pytest
 
 from place.live import PlaceSourceUnavailable
 from place.profile import NOT_A_DECISION, build_profile
+from place.sources import today
+from tests.unit.place.plan_layer import IN_NACKA, NO_PLAN_IN_NACKA, nacka_store
 from tests.unit.place.snapshot import (
     EMPTY_LOT,
     FETCHED,
@@ -183,3 +185,49 @@ def test_lists_the_layers_consulted_with_their_status(tmp_path):
     status = {layer["id"]: layer["status"] for layer in profile(store)["layers"]}
     assert status["plans"] == "ok"
     assert status["plans_pending"] == "unavailable"
+
+
+# --- a kommun with an open plan layer (#52) ---------------------------------------------------------------------
+
+def test_a_pin_in_a_plan_layer_kommun_names_it_and_lists_every_plan_at_the_point_newest_first(tmp_path):
+    """A pin in a kommun with a plan snapshot names the kommun and lists every plan whose polygon covers the point,
+    newest first."""
+    result = profile(nacka_store(tmp_path), at=IN_NACKA)
+    assert result["kommun"] == {"code": "0182", "name": "Nacka"} and result["covered"] is True
+    assert [p["ref"] for p in result["plans"]] == ["0182-P2015/3", "0182-P1988/12"]
+    assert result["detaljplan"] == "inside"
+
+
+def test_a_plan_layer_row_carries_its_keys(tmp_path):
+    """Each plan row has its aktbeteckning, name, date, page link, absolute document links, licence and snapshot date."""
+    newer, older = profile(nacka_store(tmp_path), at=IN_NACKA)["plans"]
+    assert (newer["ref"], newer["name"], newer["date"], newer["type"]) == ("0182-P2015/3", "Kvarnholmen etapp 4",
+                                                                         "2015-06-01", "Detaljplan")
+    assert (newer["page"], newer["documents"]) == (None, ["http://infobank.nacka.se/ext/planer/kvarnholmen.pdf"])
+    assert newer["url"] == "http://infobank.nacka.se/ext/planer/kvarnholmen.pdf"
+    assert (newer["licence"], newer["source"], newer["fetched"]) == ("unknown", "Nacka kommun", today())
+    assert (older["date"], older["page"], older["documents"]) == ("1988-03-09", "https://www.nacka.se/planer/sicklaon/", [])
+    assert older["url"] == "https://www.nacka.se/planer/sicklaon/"
+
+
+def test_a_plan_layer_kommun_has_no_property_lookup(tmp_path):
+    """Outside Uppsala there is no property: the plans are those at the point and the property is not covered."""
+    result = profile(nacka_store(tmp_path), at=IN_NACKA)
+    assert (result["property"], result["property_status"]) == (None, "not_covered")
+    assert (result["zones"], result["pending_plans"]) == ([], [])
+
+
+def test_no_plan_in_a_plan_layer_kommun_says_none_was_found_not_outside(tmp_path):
+    """Where the layer is not known to hold every plan, a point without a plan is not 'outside': the profile says
+    no plan was found in the kommun's layer."""
+    result = profile(nacka_store(tmp_path), at=NO_PLAN_IN_NACKA)
+    assert result["detaljplan"] == "unknown"
+    assert any("no plan was found" in note.lower() and "Nacka" in note for note in result["notes"])
+
+
+def test_uppsala_plan_rows_carry_page_documents_and_licence(store):
+    """Uppsala's plan rows carry the new keys too: the page is the document link, the documents are none."""
+    atle = next(p for p in profile(store)["plans"] if p["ref"] == "0380-P2002/5")
+    assert atle["page"] == "https://www.uppsala.se/detaljplan/?aktbeteckning=0380-P2002/5"
+    assert atle["documents"] == []
+    assert atle["licence"] == "open data"

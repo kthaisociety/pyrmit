@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from dependencies import get_current_user
 from place.live import PlaceSourceUnavailable
 from routers import place as place_router
+from tests.unit.place.plan_layer import nacka_store
 from tests.unit.place.snapshot import (
     FETCHED,
     PIN,
@@ -58,6 +59,16 @@ def test_coverage_endpoint_lists_pilot_kommuner(client):
     assert uppsala["code"] == "0380"
     assert uppsala["bbox"] == pytest.approx([17.5, 59.7, 17.9, 60.0])
     assert uppsala["fetched"] == FETCHED
+
+
+def test_coverage_endpoint_lists_every_kommun_with_a_snapshot(tmp_path):
+    """GET /api/place/coverage names Nacka beside Uppsala once Nacka's plan layer has a snapshot."""
+    app = FastAPI()
+    app.include_router(place_router.router, prefix="/api")
+    store = nacka_store(tmp_path)
+    app.dependency_overrides[place_router.get_place_store] = lambda: store
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id="u1")
+    assert [k["code"] for k in TestClient(app).get("/api/place/coverage").json()] == ["0182", "0380"]
 
 
 # --- the constraints (#36) ---------------------------------------------------------------------------------------------------
