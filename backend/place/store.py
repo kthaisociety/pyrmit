@@ -44,6 +44,7 @@ class PlaceStore:
     - `kommun.geojson`: one Feature, the kommun boundary.
     - `<layer id>.geojson`: a FeatureCollection in WGS84 with the provider's raw attributes.
     - `plan_pages.json` (optional, place.plan_documents): {aktbeteckning: the plan's page url}.
+    - `plan_links.jsonl` (optional, place.plan_links): one row per plan polygon and matched document.
 
     A layer listed in the manifest without its file is reported as unavailable, never as empty."""
 
@@ -105,6 +106,11 @@ class PlaceStore:
         """{aktbeteckning: the plan's page url} written by place.plan_documents, or {} before it has run."""
         path = self.root / code / "plan_pages.json"
         return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+    def plan_links(self, code: str) -> dict[str, list[dict]]:
+        """The kommun's matched documents by polygon key (place.plan_links.polygon_key): {key: [{"doc_id", "level",
+        "review"}, ...]}, read from plan_links.jsonl written by place.plan_links, or {} before it has run."""
+        raise NotImplementedError
 
     def features(self, code: str, layer_id: str, geometry) -> list[tuple[dict, object]]:
         """(raw properties, shapely geometry) of the layer's features that intersect `geometry` (a shapely

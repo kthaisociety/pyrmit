@@ -252,8 +252,10 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
     is a feature of `place.sources.feature` (`place.plan_layers.feature` in a plan-layer kommun) plus "source"
     (provider), "fetched" (snapshot date) and "geometry" (GeoJSON). Plans also carry "page" (the plan's page link,
     or None), "documents" (absolute document links, [] when the layer has none), "licence" (the layer's),
-    "corpus_plan_id" (the matching plan of the corpus registry, or None) and "provisions_indexed" (True when that
-    plan has provisions); zones carry
+    "document_ids" (the document store's documents place.plan_links matched to the polygon, [] when none is matched
+    yet), "document_match" (the level that matched them: "link", "akt" or "name", None when no document is matched
+    yet), "corpus_plan_id" (the matching plan of the corpus registry, or None) and "provisions_indexed" (True when
+    that plan has provisions); zones carry
     "share", the fraction of the property they cover (1.0 without a property). A feature counts when it contains
     the pin or covers at least 2 % of the property, so neighbours that only touch its boundary are left out.
 

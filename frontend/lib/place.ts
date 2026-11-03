@@ -29,6 +29,8 @@ export interface PlaceFeature {
   page?: string | null; // plans: the plan's page link
   documents?: string[]; // plans: absolute links to the plan documents, in the layer's order
   licence?: string; // plans: the layer's licence ("unknown" when it states none)
+  document_ids?: string[]; // plans: the document store's documents matched to the polygon ([]: none yet)
+  document_match?: 'link' | 'akt' | 'name' | null; // plans: the level that matched them (null: none yet)
   corpus_plan_id?: string | null;
   provisions_indexed?: boolean;
 }
