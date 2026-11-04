@@ -41,7 +41,7 @@ jobs:
     if: needs.release.outputs.release-created == 'true'
     uses: kthaisociety/workflows/.github/workflows/request-deploy.yml@v0.3.0
     with:
-      project: pyrmit
+      project: pyrmit-frontend
       environment: production
       tag: ${{ needs.release.outputs.version }}
     secrets:

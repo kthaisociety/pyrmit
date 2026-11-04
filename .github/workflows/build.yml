@@ -1,7 +1,7 @@
 # Every push to main: build both images, then deploy to staging the side or sides the commit changed,
 # through kthaisociety/deployments, and wait until they run there. pyrmit is two projects in deployments:
 #   pyrmit-backend  ghcr.io/kthaisociety/pyrmit-backend  (backend/)
-#   pyrmit          ghcr.io/kthaisociety/pyrmit          (frontend/)
+#   pyrmit-frontend ghcr.io/kthaisociety/pyrmit          (frontend/)
 #
 # Both images are built on every push, even when only one side changed. release.yml promotes the image
 # built from the release commit, and a release commit (CHANGELOG.md and the manifest) changes neither
@@ -86,7 +86,7 @@ jobs:
       && contains(fromJSON('["success", "skipped"]'), needs.deploy-staging-backend.result) }}
     uses: kthaisociety/workflows/.github/workflows/request-deploy.yml@v0.3.0
     with:
-      project: pyrmit
+      project: pyrmit-frontend
       environment: staging
       tag: ${{ needs.build-frontend.outputs.tag }}
     secrets:
