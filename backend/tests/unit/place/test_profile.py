@@ -2,15 +2,34 @@
 when there is no property, no coverage or no answer."""
 
 import json
+import time
 
 import pytest
 
 from place.live import PlaceSourceUnavailable
 from place.plan_layers import fetch_plan_layer
 from place.plan_links import run as match_plans
-from place.profile import NOT_A_DECISION, build_profile
+from place.plan_links import run_hosted
+from place.profile import (
+    NOT_A_DECISION,
+    CorpusUnavailable,
+    build_profile,
+    hosted_documents,
+)
 from place.sources import today
 from place.store import PlaceStore
+from tests.unit.place.hosted import (
+    ATLE,
+    DESCRIPTION_ID,
+    MAP_ID,
+    STADSPLAN,
+    STADSPLAN_ID,
+    DownCorpus,
+    FakeCorpus,
+    hosted_snapshot,
+    lookup,
+    plans_of,
+)
 from tests.unit.place.plan_layer import (
     IN_NACKA,
     NO_PLAN_IN_NACKA,
@@ -34,7 +53,8 @@ from tests.unit.place.snapshot import (
 def profile(store, at=PIN, **kwargs):
     return build_profile(*at, store=store, property_at=kwargs.pop("property_at", fake_property),
                          plan_registry=kwargs.pop("plan_registry", registry),
-                         ancient_remains_at=kwargs.pop("ancient_remains_at", no_remains), **kwargs)
+                         ancient_remains_at=kwargs.pop("ancient_remains_at", no_remains),
+                         corpus_documents=kwargs.pop("corpus_documents", lambda doc_ids: {}), **kwargs)
 
 
 # --- the property and its plans ---------------------------------------------------------------------------------
@@ -279,3 +299,130 @@ def test_uppsala_plan_rows_carry_matched_document_ids(tmp_path):
     match_plans(["0380"], lambda: {"0380": uppsala}, geo_dir=tmp_path)
     atle = next(p for p in profile(PlaceStore(tmp_path))["plans"] if p["ref"] == "0380-P2002/5")
     assert (atle["document_ids"], atle["document_match"]) == (["page:0380:h8"], "link")
+
+
+@pytest.fixture
+def geo(tmp_path):
+    return hosted_snapshot(tmp_path)
+
+
+def pinned(geo, corpus_documents=lookup):
+    return profile(PlaceStore(geo), corpus_documents=corpus_documents)
+
+
+def plan_row(result, ref):
+    return next(plan for plan in result["plans"] if plan["ref"] == ref)
+
+
+# --- the place profile ------------------------------------------------------------------------------------------
+
+def test_plan_row_lists_its_documents_with_role_title_and_address(geo):
+    """A pin on a plan with documents lists each with its role, title and address."""
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+    atle = plan_row(pinned(geo), ATLE)
+    assert atle["text_status"] == "read"
+    assert {"doc_id": MAP_ID, "role": "plankarta", "title": "Plankarta (PDF, 3 MB)",
+            "url": "https://www.uppsala.se/atle/plankarta.pdf"} in atle["corpus_documents"]
+
+
+def test_plan_maps_come_first(geo):
+    """A plan's documents are listed plan map first, then plan description."""
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+    assert [document["role"] for document in plan_row(pinned(geo), ATLE)["corpus_documents"]] == ["plankarta", "planbeskrivning"]
+
+
+def test_several_plans_each_list_their_own_documents(geo):
+    """A point covered by several plans lists each with its own documents."""
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+    profile = pinned(geo)
+    assert {document["doc_id"] for document in plan_row(profile, ATLE)["corpus_documents"]} == {MAP_ID, DESCRIPTION_ID}
+    assert [document["doc_id"] for document in plan_row(profile, STADSPLAN)["corpus_documents"]] == [STADSPLAN_ID]
+
+
+def test_plan_without_documents_has_no_text_and_keeps_its_link(geo):
+    """A plan with no document shows no text read, with its link to the kommun."""
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+    addition = plan_row(pinned(geo), "0380-P2012/9")
+    assert (addition["text_status"], addition["corpus_documents"]) == ("none", [])
+    assert addition["url"]
+
+
+def test_unreachable_corpus_keeps_the_plan_rows_without_documents(geo):
+    """The corpus being down leaves the plan rows in place, without documents, marked unavailable."""
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+
+    def down(doc_ids):
+        raise CorpusUnavailable("down")
+
+    atle = plan_row(pinned(geo, down), ATLE)
+    assert (atle["text_status"], atle["corpus_documents"]) == ("unavailable", [])
+
+
+def test_unreachable_corpus_adds_a_note(geo):
+    """The profile says the plan documents could not be read."""
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+
+    def down(doc_ids):
+        raise CorpusUnavailable("down")
+
+    assert any("plan documents" in note.lower() for note in pinned(geo, down)["notes"])
+
+
+def test_no_lookup_for_plans_without_links(geo):
+    """A pin with no matched documents never asks the corpus."""
+    def refuse(doc_ids):
+        raise AssertionError("asked the corpus")
+
+    assert all(plan["text_status"] == "none" for plan in pinned(geo, refuse)["plans"])
+
+
+def test_a_linked_document_gone_from_the_corpus_is_left_out(geo):
+    """A link whose document the corpus no longer holds is not listed."""
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+    atle = plan_row(pinned(geo, lambda doc_ids: {}), ATLE)
+    assert (atle["text_status"], atle["corpus_documents"]) == ("none", [])
+
+
+class FakeRetriever:
+    def __init__(self, store):
+        self.store = store
+
+
+def serve_corpus(monkeypatch, store):
+    monkeypatch.setenv("RETRIEVAL_BACKEND", "local")
+    monkeypatch.setattr("localrag.service.get_retriever", lambda: FakeRetriever(store))
+
+
+def test_hosted_documents_gives_title_and_address_of_those_the_corpus_holds(monkeypatch):
+    """The corpus's title and address come back by document id; an id it does not hold is left out."""
+    serve_corpus(monkeypatch, FakeCorpus())
+    assert hosted_documents([MAP_ID, "pdf:0380:gone"]) == {
+        MAP_ID: {"title": "Plankarta (PDF, 3 MB)", "url": "https://www.uppsala.se/atle/plankarta.pdf"}}
+
+
+def test_hosted_documents_without_a_local_corpus_raises(monkeypatch):
+    """An app on the pgvector backend has no corpus to read from."""
+    serve_corpus(monkeypatch, FakeCorpus())
+    monkeypatch.delenv("RETRIEVAL_BACKEND")
+    with pytest.raises(CorpusUnavailable):
+        hosted_documents([MAP_ID])
+
+
+def test_hosted_documents_with_an_unreachable_corpus_raises(monkeypatch):
+    """A driver error comes out as CorpusUnavailable."""
+    serve_corpus(monkeypatch, DownCorpus())
+    with pytest.raises(CorpusUnavailable):
+        hosted_documents([MAP_ID])
+
+
+def test_hosted_documents_gives_up_on_a_corpus_that_does_not_answer(monkeypatch):
+    """A corpus still silent after the wait raises instead of holding the pin."""
+    class Silent:
+        def query(self, sql, params=()):
+            time.sleep(0.2)
+            return []
+
+    serve_corpus(monkeypatch, Silent())
+    monkeypatch.setattr("place.profile.CORPUS_LOOKUP_SECONDS", 0.01)
+    with pytest.raises(CorpusUnavailable):
+        hosted_documents([MAP_ID])

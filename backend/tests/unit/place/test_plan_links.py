@@ -11,13 +11,33 @@ from place.plan_links import (
     FETCH_LIST,
     LINKS_FILE,
     MATCH_REPORT,
+    NO_LINK,
+    NOT_IN_CORPUS,
+    NOT_IN_REGISTRY,
+    TEXT_REPORT,
     DocumentStoreUnavailable,
     load_documents,
+    load_hosted_documents,
     match_kommun,
     normalise_akt,
     run,
+    run_hosted,
+    text_report,
 )
 from place.sources import today
+from tests.unit.place.hosted import (
+    ATLE,
+    CHUNKS,
+    DESCRIPTION_ID,
+    MAP_ID,
+    PAGE,
+    PLANS,
+    STADSPLAN_ID,
+    DownCorpus,
+    FakeCorpus,
+    hosted_snapshot,
+    plans_of,
+)
 from tests.unit.place.plan_layer import (
     NACKA_FEATURES,
     fake_services,
@@ -236,3 +256,121 @@ def test_loading_the_store_keeps_detaljplan_documents_by_kommun(tmp_path):
     path.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows), encoding="utf-8")
     assert {code: [d["doc_id"] for d in docs] for code, docs in load_documents(path).items()} == {
         "0182": ["pdf:0182:a1"], "0120": ["page:0120:b2"]}
+
+
+@pytest.fixture
+def geo(tmp_path):
+    return hosted_snapshot(tmp_path)
+
+
+def link_rows(geo):
+    text = (geo / "0380" / LINKS_FILE).read_text(encoding="utf-8")
+    return [json.loads(line) for line in text.splitlines()]
+
+
+# --- against the hosted corpus: its documents ------------------------------------------------------------------------------
+
+def test_hosted_documents_are_the_kommuns_pdfs_with_role_and_plan_page():
+    """A document comes back under its kommun with the role and plan page the registry gives it; web pages are left out."""
+    documents = load_hosted_documents(["0380"], FakeCorpus(), plans_of)["0380"]
+    description = next(document for document in documents if document["doc_id"] == DESCRIPTION_ID)
+    assert (description["role"], description["plan_pages"]) == ("planbeskrivning", [PAGE.format("atle")])
+    assert {document["doc_id"] for document in documents} == {MAP_ID, DESCRIPTION_ID, STADSPLAN_ID, "pdf:0380:lost"}
+
+
+def test_hosted_document_in_no_plan_has_no_role():
+    """A document no registry plan holds has no role and no plan page."""
+    documents = load_hosted_documents(["0380"], FakeCorpus(), plans_of)["0380"]
+    lost = next(document for document in documents if document["doc_id"] == "pdf:0380:lost")
+    assert (lost["role"], lost["plan_pages"]) == (None, [])
+
+
+def test_unreachable_hosted_corpus_raises():
+    """A corpus that cannot be read raises DocumentStoreUnavailable."""
+    with pytest.raises(DocumentStoreUnavailable):
+        load_hosted_documents(["0380"], DownCorpus(), plans_of)
+
+
+# --- against the hosted corpus: the match --------------------------------------------------------------------------------------------------
+
+def test_polygon_links_to_the_documents_of_its_plan_page(geo):
+    """A polygon whose page is a registry plan's page is linked to that plan's documents at the link level."""
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+    atle = {row["doc_id"]: row["level"] for row in link_rows(geo) if row["ref"] == ATLE}
+    assert atle == {MAP_ID: "link", DESCRIPTION_ID: "link"}
+
+
+def test_a_plan_addition_links_to_the_documents_of_its_plan_page(geo):
+    """A tillägg's polygon is linked to its plan's documents like a plan's."""
+    (geo / "0380" / "plan_pages.json").write_text(json.dumps({"0380-P2012/9": PAGE.format("atle")}), encoding="utf-8")
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+    assert {row["doc_id"] for row in link_rows(geo) if row["ref"] == "0380-P2012/9"} == {MAP_ID, DESCRIPTION_ID}
+
+
+def test_a_document_of_another_plan_is_not_hit_on_a_mention(geo):
+    """A document the registry places under another plan's page is not linked for naming an aktbeteckning."""
+    mention = (STADSPLAN_ID, 1, "pdf", "detaljplan", "0380", "Stadsplan (PDF)", "https://www.uppsala.se/k/stadsplan.pdf",
+               "Ersätter 0380-P2010/1")
+    run_hosted("0380", FakeCorpus([*CHUNKS, mention]), plans_of, geo_dir=geo)
+    assert not [row for row in link_rows(geo) if row["ref"] == "0380-P2010/1"]
+
+
+def test_a_document_in_no_plan_is_hit_on_its_aktbeteckning(geo):
+    """A document the registry places under no plan page is linked when its front names the aktbeteckning."""
+    own = ("pdf:0380:own", 0, "pdf", "detaljplan", "0380", "Plankarta", "https://www.uppsala.se/z/plankarta.pdf", "0380-P2010/1")
+    run_hosted("0380", FakeCorpus([*CHUNKS, own]), plans_of, geo_dir=geo)
+    assert [(row["doc_id"], row["level"]) for row in link_rows(geo) if row["ref"] == "0380-P2010/1"] == [("pdf:0380:own", "akt")]
+
+
+def test_link_rows_carry_the_documents_role(geo):
+    """Each link row says the document's role."""
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+    assert {row["doc_id"]: row["role"] for row in link_rows(geo) if row["ref"] == ATLE} == {
+        MAP_ID: "plankarta", DESCRIPTION_ID: "planbeskrivning"}
+
+
+def test_hosted_run_leaves_the_national_files_alone(geo):
+    """A run for one kommun does not write the national fetch list or match report."""
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+    assert not (geo / FETCH_LIST).exists() and not (geo / MATCH_REPORT).exists()
+
+
+def test_unreachable_corpus_stops_the_run_with_nothing_written(geo):
+    """The corpus being down keeps the earlier link table and writes no report."""
+    (geo / "0380" / LINKS_FILE).write_text('{"key": "earlier"}\n', encoding="utf-8")
+    with pytest.raises(DocumentStoreUnavailable):
+        run_hosted("0380", DownCorpus(), plans_of, geo_dir=geo)
+    assert (geo / "0380" / LINKS_FILE).read_text(encoding="utf-8") == '{"key": "earlier"}\n'
+    assert not (geo / "0380" / TEXT_REPORT).exists()
+
+
+# --- against the hosted corpus: the report -------------------------------------------------------------------------------------------------
+
+def test_report_states_the_share_of_polygons_with_text(geo):
+    """The report says how many of the kommun's polygons have documents."""
+    row = run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+    report = (geo / "0380" / TEXT_REPORT).read_text(encoding="utf-8")
+    assert f"{row['polygons'] - row['unmatched']} of {row['polygons']} polygons" in report
+
+
+def test_report_says_a_plan_page_is_missing_from_the_registry(geo):
+    """A polygon whose page no registry plan has is listed with that reason."""
+    documents = load_hosted_documents(["0380"], FakeCorpus(), plans_of)["0380"]
+    without_it = [plan for plan in PLANS if plan["name"] != "Grannplanen"]
+    report = text_report("0380", match_kommun("0380", documents, geo_dir=geo), without_it)
+    assert any("0380-P2010/1" in line and NOT_IN_REGISTRY in line for line in report.splitlines())
+
+
+def test_report_says_a_plans_documents_are_not_in_the_corpus(geo):
+    """A polygon whose registry plan has no document in the corpus is listed with that reason."""
+    documents = load_hosted_documents(["0380"], FakeCorpus(), plans_of)["0380"]
+    report = text_report("0380", match_kommun("0380", documents, geo_dir=geo), plans_of("0380"))
+    assert any("0380-P2010/1" in line and NOT_IN_CORPUS in line for line in report.splitlines())
+
+
+def test_report_says_a_polygon_has_no_link(geo):
+    """A polygon without any link is listed with that reason."""
+    result = {"code": "0380", "links": [], "report": {"polygons": 1, "link": 0, "akt": 0, "name": 0, "unmatched": 1},
+              "fetch": [{"key": "0380-P1/1", "ref": "0380-P1/1", "name": "Utan länk", "links": [], "reason": None}]}
+    report = text_report("0380", result, PLANS)
+    assert any("0380-P1/1" in line and NO_LINK in line for line in report.splitlines())
