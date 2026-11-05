@@ -32,6 +32,11 @@ def get_property_lookup() -> Callable[[str, float, float], dict | None]:
     return live.property_at
 
 
+def get_corpus_documents() -> Callable[[list[str]], dict[str, dict]]:
+    """The lookup of the plan documents in the corpus (overridden in tests)."""
+    return profile.hosted_documents
+
+
 def get_ancient_remains_lookup() -> Callable[[dict], list[dict]]:
     """The live ancient-remains lookup (overridden in tests)."""
     return live.ancient_remains_at
@@ -58,11 +63,12 @@ def place_profile(lat: Annotated[float, Query(ge=-90, le=90)], lon: Annotated[fl
                   property_at: Annotated[Callable, Depends(get_property_lookup)],
                   plan_registry: Annotated[Callable, Depends(get_plan_registry)],
                   ancient_remains_at: Annotated[Callable, Depends(get_ancient_remains_lookup)],
+                  corpus_documents: Annotated[Callable, Depends(get_corpus_documents)],
                   user: Annotated[models.User, Depends(get_current_user)]) -> dict:
     """The place profile of the point (see build_profile). 422 when lat or lon is missing or out of range."""
     try:
         return profile.build_profile(lat, lon, store=store, property_at=property_at, plan_registry=plan_registry,
-                                     ancient_remains_at=ancient_remains_at)
+                                     ancient_remains_at=ancient_remains_at, corpus_documents=corpus_documents)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

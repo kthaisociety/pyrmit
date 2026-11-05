@@ -31,8 +31,18 @@ export interface PlaceFeature {
   licence?: string; // plans: the layer's licence ("unknown" when it states none)
   document_ids?: string[]; // plans: the document store's documents matched to the polygon ([]: none yet)
   document_match?: 'link' | 'akt' | 'name' | null; // plans: the level that matched them (null: none yet)
+  corpus_documents?: PlanDocument[]; // plans: those of them in the corpus, plan maps first
+  text_status?: 'read' | 'none' | 'unavailable'; // plans: unavailable when the corpus could not be reached
   corpus_plan_id?: string | null;
   provisions_indexed?: boolean;
+}
+
+// A plan's document in the corpus, with its role in the plan (plankarta, planbeskrivning, ...; null when unknown)
+export interface PlanDocument {
+  doc_id: string;
+  role: string | null;
+  title: string | null;
+  url: string | null;
 }
 
 export interface PlaceLayer {

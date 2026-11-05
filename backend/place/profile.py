@@ -167,6 +167,17 @@ def _by_date_newest_first(rows: list[dict]) -> list[dict]:
     return sorted(rows, key=lambda row: row["date"] or "", reverse=True)
 
 
+class CorpusUnavailable(RuntimeError):
+    """The corpus the plan documents are read from cannot be reached."""
+
+
+def hosted_documents(doc_ids: list[str]) -> dict[str, dict]:
+    """{doc_id: {"title", "url"}} of the documents in the corpus the app serves from (LOCAL_RAG_STORE), those it does
+    not hold left out. Waits at most CORPUS_LOOKUP_SECONDS. Raises CorpusUnavailable when the corpus cannot be reached
+    in that time, or when the app has no local corpus."""
+    raise NotImplementedError
+
+
 def _with_documents(rows: list[dict], links: dict[str, list[dict]]) -> list[dict]:
     """The plan rows with the document store's matched documents (place.plan_links), none when no link exists."""
     out = []
@@ -217,6 +228,7 @@ def _layer_rows(store: PlaceStore, code: str, layer: Layer, meta: dict, point, a
 
 
 def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
+                  corpus_documents: Callable[[list[str]], dict[str, dict]] | None = None,
                   property_at: Callable[[str, float, float], dict | None] | None = None,
                   plan_registry: Callable[[str], list[dict]] | None = None,
                   ancient_remains_at: Callable[[dict], list[dict]] | None = None) -> dict:
@@ -265,8 +277,11 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
     or None), "documents" (absolute document links, [] when the layer has none), "licence" (the layer's),
     "document_ids" (the document store's documents place.plan_links matched to the polygon, [] when none is matched
     yet), "document_match" (the level that matched them: "link", "akt" or "name", None when no document is matched
-    yet), "corpus_plan_id" (the matching plan of the corpus registry, or None) and "provisions_indexed" (True when
-    that plan has provisions); zones carry
+    yet), "corpus_documents" (those of them in the corpus: [{"doc_id", "role" (the plan registry's, or None), "title",
+    "url"}], plan maps first, then plan descriptions, then the rest), "text_status" ("read" when corpus_documents has
+    any; "none" when it has none; "unavailable" when the polygon has matched documents but the corpus could not be
+    reached, which also adds a note), "corpus_plan_id" (the matching plan of the corpus registry, or None) and
+    "provisions_indexed" (True when that plan has provisions); zones carry
     "share", the fraction of the property they cover (1.0 without a property). A feature counts when it contains
     the pin or covers at least 2 % of the property, so neighbours that only touch its boundary are left out.
 

@@ -118,7 +118,7 @@ class PlaceStore:
 
     def plan_links(self, code: str) -> dict[str, list[dict]]:
         """The kommun's matched documents by polygon key (place.plan_links.polygon_key): {key: [{"doc_id", "level",
-        "review"}, ...]}, read from plan_links.jsonl written by place.plan_links, or {} before it has run."""
+        "review", "role" (the plan registry's role of the document, None when unknown)}, ...]}, read from plan_links.jsonl written by place.plan_links, or {} before it has run."""
         path = self.root / code / "plan_links.jsonl"
         links: dict[str, list[dict]] = {}
         if path.exists():

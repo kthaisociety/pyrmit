@@ -28,8 +28,13 @@ from place.store import GEO_DIR, PlaceStore
 LINKS_FILE = "plan_links.jsonl"
 FETCH_LIST = "plan_fetch_list.json"
 MATCH_REPORT = "plan_match_report.md"
+TEXT_REPORT = "plan_text_report.md"  # beside a kommun's snapshot: the polygons with and without text in the corpus
 LEVELS = ("link", "akt", "name")
 NO_PUBLIC_LINK = "no public link"
+# Why a polygon has no documents in the hosted corpus, for the text report
+NO_LINK = "the polygon has no link"
+NOT_IN_REGISTRY = "its plan page is not in the plan registry"
+NOT_IN_CORPUS = "its plan has no documents in the hosted corpus"
 DOCUMENT_TYPE = "detaljplan"
 # How far into a document's text an aktbeteckning says the document is about that plan, about its first page. Further
 # in it is most often a mention: a new plan's description lists the plans it replaces and the plans around it
@@ -81,6 +86,16 @@ def load_documents(path: Path = DOCUMENTS_PATH) -> dict[str, list[dict]]:
     except (OSError, ValueError) as exc:
         raise DocumentStoreUnavailable(f"The document store {path} cannot be read: {exc}") from exc
     return by_kommun
+
+
+def load_hosted_documents(codes: list[str], store, plans: Callable[[str], list[dict]]) -> dict[str, list[dict]]:
+    """The hosted corpus's detaljplan PDFs of the kommuner in `codes`, by kommun code, in load_documents' shape: {"doc_id",
+    "kommun_code", "title", "url", "text" (the document's first chunks)} plus "plan_pages" (the page urls of the
+    registry plans holding the document, [] when none) and "role" (the registry's role, "plankarta",
+    "planbeskrivning", ..., None for a document in no plan). `store` answers query(sql, params) on the chunks view
+    (localrag.pg_store.PgStore); `plans` gives a kommun's registry plans. Raises DocumentStoreUnavailable when the
+    store cannot be read."""
+    raise NotImplementedError
 
 
 # --- the polygons and the keys ----------------------------------------------------------------------------------
@@ -279,8 +294,26 @@ def run(codes: list[str], documents: Callable[[], dict[str, list[dict]]] = load_
     return rows
 
 
+def text_report(code: str, result: dict, plans: list[dict]) -> str:
+    """The text report of one kommun as Markdown, from match_kommun's `result`: the share of polygons with documents
+    in the hosted corpus, the counts per match level, and a table of the polygons without documents (aktbeteckning,
+    name, reason: NO_LINK when the polygon has no link, NOT_IN_REGISTRY when no plan of `plans` has its page,
+    NOT_IN_CORPUS when one has but none of its documents is in the corpus)."""
+    raise NotImplementedError
+
+
+def run_hosted(code: str, store, plans: Callable[[str], list[dict]], *, geo_dir: Path = GEO_DIR) -> dict:
+    """Match one kommun's polygons against the hosted corpus: a polygon's page or document link hits a document when it
+    equals the document's address or the page of a registry plan holding it, then the akt and name levels as in
+    match_kommun. Writes `geo_dir`/<code>/LINKS_FILE, each row also carrying the document's "role", and
+    `geo_dir`/<code>/TEXT_REPORT; the national fetch list and match report are left alone. Returns match_kommun's
+    report row. A DocumentStoreUnavailable stops the run with nothing written."""
+    raise NotImplementedError
+
+
 def main() -> None:
-    """CLI: --kommun <code> (repeatable, default every kommun with a snapshot)."""
+    """CLI: --kommun <code> (repeatable, default every kommun with a snapshot); --hosted matches against the hosted
+    corpus at CORPUS_DATABASE_URL (one or more --kommun required)."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--kommun", action="append", help="kommun code (default: every kommun with a snapshot)")
     args = parser.parse_args()
