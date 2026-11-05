@@ -9,6 +9,9 @@ Conditions, per case:
   vague     (cases with "vague") the question without any place and no pin: the agent should ask where
   conflict  (cases with "conflict_with") pinned at this case's place while the question names the other case's
             address: the agent should ask which place is meant
+  general   (cases with "question_general") a general question and no pin: answered from the corpus, with an offer to
+            pin for an exact answer
+  general_pin  the same general question with the pin: answered generally, without bringing in the plan
 
 Scores per answer:
   points      reference key points covered, 0-2 each (judge), reported as 0-1 (pin and address only)
@@ -17,9 +20,9 @@ Scores per answer:
   wrong_place statements about the place that contradict the reference (judge)
   unsupported specific rules / facts in neither the reference, the place data shown nor the cited sources (judge)
   asks        whether the answer asks which place it is about (judge); right when it matches the condition
-              (expected for vague and conflict, not for pin; with an address, asking to pin it is the hint's advice
-              when the agent cannot place it, so it is counted, not scored)
-  seconds, first token, cost, tool calls
+              (expected for address, vague and conflict, not for pin, general and general_pin)
+  offers_pin  whether the answer offers to pin a place for an exact answer (judge)
+  seconds, first token, cost, tool calls, searches (calls of the tools that look for documents)
 
 The judge defaults to another model family than the agent (MiMo v2.6 Flash); `rejudge` adds a second judge's grades
 to a result file, so a difference counts only when both judges see it.
@@ -28,6 +31,7 @@ to a result file, so a difference counts only when both judges see it.
     python -m place.bench_answers run --repeats 3 --workers 3            # -> data/agentic/place-answers-<time>.json
     python -m place.bench_answers rejudge <result.json> --judge-model openai/gpt-6-luna
     python -m place.bench_answers summary <result.json>
+    python -m place.bench_answers compare <before.json> <after.json>
 """
 
 import argparse
@@ -347,6 +351,12 @@ def rejudge(path: Path, judge_model: str, cases: list[dict], *, bench: AnswerBen
     result.setdefault("summaries", {})[judge_model] = summarise(result["rows"], judge_model)
     _save(Path(path), result)
     return result
+
+
+def compare(before: dict, after: dict) -> dict:
+    """Two result files side by side, each under its own judge: {condition: {metric: {"before", "after"}}} for the
+    conditions both have and the metrics of summarise. A metric a file did not record is None on its side."""
+    raise NotImplementedError
 
 
 def _print_summary(summary: dict) -> None:

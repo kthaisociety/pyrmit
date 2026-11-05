@@ -51,6 +51,8 @@ How to work:
    question (mode). Do not keep searching for marginal details; say what is unknown instead. You will then write the
    final answer."""
 
+PIN_GUIDE = ""  # what counts as a specific question, and what a pin changes: #58
+
 MODES = ("verdict", "explain", "propose", "develop")
 
 MODES_GUIDE = """Kinds of questions (the mode of answer_ready; a question can mix them: pick the main one):
@@ -110,7 +112,7 @@ Completeness: the user will act on this answer, so before writing go through you
 
 IMAGE_REMOVED = "\n(Image removed after the turn it was shown in: use what you noted from it.)"
 
-SYSTEM_PROMPT = f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{MODES_GUIDE}\n\n{ANSWER_FORMAT}"
+SYSTEM_PROMPT = f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{PIN_GUIDE}\n\n{MODES_GUIDE}\n\n{ANSWER_FORMAT}"
 
 # The corpus line of TOOLS_GUIDE about the kommuner: true of the national corpus only. On a snapshot (data/small's
 # few kommuner, the Neon demo's three) the agent answered "all 290 kommuner" from it; kommun_scope replaces it

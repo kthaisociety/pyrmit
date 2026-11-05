@@ -22,6 +22,7 @@ from localrag.index import chunk_text
 logger = logging.getLogger(__name__)
 SNIPPET = 350
 READ_LIMIT = 9000
+PLAN_READ_LIMIT = 20000  # characters of one read_plan call: a plan's map and description in one go, about 5k tokens
 
 # Short names the model is likely to use -> words of the statute title
 LAW_ALIASES = {
@@ -513,6 +514,20 @@ class CorpusTools:
                               f"'13 §' (laws without chapters).{hint}")
         return ToolResult("\n\n".join(f"[c:{c['chunk_id']}] {chunk_text(c)}" for c in hits), [c["chunk_id"] for c in hits])
 
+    def read_plan(self, doc_ids, section: str | None = None, start: int = 0) -> ToolResult:
+        """The documents of a plan as one text in reading order: `doc_ids` in the order given (a list, one id or a
+        comma-separated string, written as read accepts them), each document's chunks in chunk order, every chunk
+        tagged [c:<id>] with its position in what is being read. At most PLAN_READ_LIMIT characters per call, never
+        less than one chunk; when more remains the text ends with the call that continues from position `start`, so
+        repeating it reads every chunk once. `section`: only the chunks whose heading contains these words
+        (case-insensitive). Without `section` each document's headings are listed first.
+
+        Reads the corpus store only: no local file, snapshot, link table or plan registry, so it works on an install
+        that has nothing but the hosted corpus (ADR-0010). An id the corpus does not hold is named in the text and
+        skipped. Errors, as ToolResult.error: bad_args (no ids, or `start` past the end), unknown_id (no id is in the
+        corpus), not_found (no heading contains `section`; the text lists the headings there are)."""
+        raise NotImplementedError
+
     def _plans(self) -> dict[str, list[dict]]:
         """The plan registry (corpus.plans), by kommun code; loaded on first use."""
         if self._plan_registry is None:
@@ -750,6 +765,12 @@ TOOL_SCHEMAS = [
      "parameters": {"type": "object", "properties": {
          "kommun": {"type": "string"}, "query": {"type": "string", "description": "words of the plan / area name"},
          "status": {"type": "string"}}, "required": ["kommun"]}},
+    {"type": "function", "name": "read_plan",
+     "description": "Read the documents of a plan the pinned place lists, in reading order, whole or one section: no search needed to find them. Pass doc_ids as the pinned place lists them; for an amendment (tillägg), also those of the plan it amends. Repeat the call it ends with to read on.",
+     "parameters": {"type": "object", "properties": {
+         "doc_ids": {"type": "array", "items": {"type": "string"}, "description": "the documents, in the order listed"},
+         "section": {"type": "string", "description": "only the chunks whose heading contains these words"},
+         "start": {"type": "integer", "description": "position to continue from"}}, "required": ["doc_ids"]}},
     {"type": "function", "name": "plan_rules",
      "description": "The planbestämmelser of a plan (from plans): building area, heights, storeys, plot size, prickmark, ancillary buildings, genomförandetid..., each citeable. topic filter: building_area, height, storeys, plot_size, no_building, ancillary, roof, implementation, use, shoreline, noise, design.",
      "parameters": {"type": "object", "properties": {"plan_id": {"type": "string"}, "topic": {"type": "string"}},
@@ -773,6 +794,7 @@ def run_tool(tools: CorpusTools, name: str, arguments: dict) -> ToolResult:
         "find_kommun": tools.find_kommun, "search": tools.search, "grep": tools.grep,
         "list_documents": tools.list_documents, "read": tools.read, "law_section": tools.law_section,
         "view_pdf_page": tools.view_pdf_page, "plans": tools.plans, "plan_rules": tools.plan_rules,
+        "read_plan": tools.read_plan,
         "view_map_area": tools.view_map_area,
     }
     if name not in handlers:

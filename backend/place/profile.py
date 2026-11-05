@@ -325,7 +325,10 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
     yet), "corpus_documents" (those of them in the corpus: [{"doc_id", "role" (the plan registry's, or None), "title",
     "url"}], plan maps first, then plan descriptions, then the rest), "text_status" ("read" when corpus_documents has
     any; "none" when it has none; "unavailable" when the polygon has matched documents but the corpus could not be
-    reached, which also adds a note), "corpus_plan_id" (the matching plan of the corpus registry, or None) and
+    reached, which also adds a note), "read_with" (the plans to read together with this one: [{"ref",
+    "corpus_documents"}], [] when none. An amendment (kind "plan_addition") reads with the plans its layer row names,
+    at the point or not, else with the older plans of kind "plan" at the point; any other plan reads with those its row
+    names that are also at the point, so a plan naming an amendment elsewhere does not bring it in), "corpus_plan_id" (the matching plan of the corpus registry, or None) and
     "provisions_indexed" (True when that plan has provisions); zones carry
     "share", the fraction of the property they cover (1.0 without a property). A feature counts when it contains
     the pin or covers at least 2 % of the property, so neighbours that only touch its boundary are left out.
