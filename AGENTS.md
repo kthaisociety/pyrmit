@@ -11,6 +11,56 @@ Load these only when the task needs them:
 
 ---
 
+## Project Overview
+
+Pyrmit is a Swedish legal RAG (Retrieval-Augmented Generation) chat assistant focused on Swedish land law and urban planning regulations (*fastighetsrätt*, *Plan- och bygglagen*). Planning documents (detaljplaner as PDF) are OCR-processed (Mistral), chunked, and embedded into a PostgreSQL+pgvector database alongside chunked Swedish law texts. The chat translates the user's question to English, retrieves relevant law and document chunks, and calls an OpenAI model (directly or via Vercel AI Gateway) to answer **in English**, quoting Swedish source text verbatim. When a question contains both a location and a number of units, a multi-agent feasibility analysis runs instead of plain RAG.
+
+---
+
+## System Topology
+
+```
+User (browser)
+    |
+    | fetch('/api/...') with Authorization: Bearer <JWT> (token kept in localStorage)
+    v
+Next.js Frontend (frontend/ -- port 3000)
+    |
+    | next.config.js rewrite: /api/* -> API_PROXY_TARGET (default http://localhost:8000)
+    v
+FastAPI Backend (backend/ -- port 8000)
+    |
+    |--- Access-gate middleware (main.py + dev_access.py) -- global password, cookie
+    |--- Access gate router (/api/access-gate/unlock)
+    |--- Auth router   (/api/auth/*)      -- signup, signin, token, signout, me, password
+    |--- Chat router   (/api/chat, /api/chat/stream, /api/sessions/*, /api/history)
+    |--- Chunks router (/api/chunks/*)    -- ingest detaljplan PDF/markdown, ingest data folder
+    |--- Agents router (/api/analyze)     -- multi-agent feasibility analysis
+    |--- DB browser    (/api/db/*)        -- read-only browse/search of law_chunks & document_chunks
+    |
+    |--- Agents (agents/)
+    |       |--- BaseRAGAgent: embed (direct OpenAI) + pgvector cosine search + LLM call
+    |       |--- LawAgent -> law_chunks, DocumentAgent -> document_chunks
+    |       |--- Orchestrator: runs both in parallel, rule-based feasibility verdict
+    |
+    |--- Chunking pipeline (chunking/ + ocr/)
+    |       |--- PDF -> Mistral OCR -> Markdown
+    |       |--- Markdown/TXT -> DetaljplanChunker / LawChunker
+    |       |--- OpenAI text-embedding-3-large (3072-dim)
+    |       |--- PushDB (psycopg2 on DATABASE_URL) -> document_chunks / law_chunks
+    |
+    |--- Observability (observability.py) -- optional Langfuse tracing of LLM calls & retrieval
+    |
+    v
+PostgreSQL + pgvector (hosted on Neon; DATABASE_URL in backend/.env)
+    Tables: users, accounts, sessions (login sessions, ADR-0001), chat_sessions, chat_messages,
+            document_chunks (Vector 3072), law_chunks (Vector 3072)
+```
+
+Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded with `backend/src/db/init.sql`), but the backend talks to whatever `DATABASE_URL` points at — normally Neon, so the local container sits unused.
+
+---
+
 ## Package Map
 
 | Name       | Location          | Type                 | Purpose                                                      |
@@ -22,6 +72,34 @@ Load these only when the task needs them:
 | `agentic`  | `backend/src/agentic/` | Python              | Tool-calling agent over the corpus (`CHAT_MODE=agent`), case benchmarks, reports |
 | `place`    | `backend/src/place/` | Python               | Place lookup for the map pin: snapshots, plan source registry, plan-document links, live property and ancient remains, likely permits, address search, evaluations |
 | `corpus`   | `backend/src/corpus/` | Python (CLI)         | Offline corpus: Wikidata kommuner, Riksdagen laws, kommun website crawl, OCR, text extraction, PDF filter, chunking, plan registry, checks |
+
+---
+
+## State Ownership
+
+| Concern                        | Owner          | Key File(s)                                                       |
+| ------------------------------ | -------------- | ----------------------------------------------------------------- |
+| Access gate (global password)  | Backend        | `backend/src/dev_access.py`, `backend/src/routers/access_gate.py`, `backend/src/main.py` |
+| User auth (JWT)                | Backend        | `backend/src/routers/auth.py`, `backend/src/security.py`, `backend/src/dependencies.py` |
+| Auth token storage             | Frontend       | `frontend/lib/auth.ts` (localStorage, `authFetch`)                |
+| Chat session & message history | Backend (DB)   | `backend/src/routers/chat.py`, `backend/src/models.py`                    |
+| Query translation / parsing    | Backend        | `backend/src/routers/chat.py`, `backend/src/agents/parsers.py`            |
+| Embedding provider / model     | Backend        | `backend/src/embeddings.py` (`EMBEDDING_*` env, used by query + ingest; `EMBEDDING_RUNTIME` GPU/ONNX choice) |
+| Embedding generation (query)   | Backend        | `backend/src/agents/base.py` (`_embed`)                               |
+| Embedding generation (ingest)  | Backend        | `backend/src/chunking/ingest_pipeline.py`                             |
+| RAG retrieval                  | Backend        | `backend/src/agents/base.py` (`_retrieve*` methods)                   |
+| Feasibility verdict            | Backend        | `backend/src/agents/orchestrator.py`                                  |
+| Document chunking (detaljplan) | Backend        | `backend/src/chunking/chunk_detaljplan.py`                            |
+| Law chunking                   | Backend        | `backend/src/chunking/chunk_laws.py`                                  |
+| DB push (ingestion)            | Backend        | `backend/src/db/push_db.py`                                           |
+| DB models (SQLAlchemy ORM)     | Backend        | `backend/src/models.py`                                               |
+| LLM client / model selection   | Backend        | `backend/src/llm.py` (`LLM_PROVIDER`), `backend/src/observability.py`, `backend/src/agents/base.py` (`LLM_MODEL`) |
+| Embedding benchmark            | Backend        | `backend/src/benchmark/`                                              |
+| Chat UI / session switching    | Frontend       | `frontend/components/Chat.tsx`, `frontend/components/Sidebar.tsx` |
+| Pipeline inspector / DB browser UI | Frontend   | `frontend/components/PipelineTrace.tsx`, `frontend/components/DatabaseBrowser.tsx` |
+| Auth & access-gate pages       | Frontend       | `frontend/app/(protected)/auth/`, `frontend/app/dev-access/`      |
+
+---
 
 ---
 
@@ -59,6 +137,7 @@ Load these only when the task needs them:
 | GET    | `/api/benchmark/sets`, `/cases`, `/case`, `/image/{id}` | Benchmark case sets, cases, one case + its past results (`data/agentic/bench-*.json`), plankarta crop |
 | POST   | `/api/benchmark/run`               | Run the agent on a case now (chat settings) and grade it; background job (spends credits) |
 | GET    | `/api/benchmark/run/{job_id}`      | Progress and result of that job (polled) |
+| GET    | `/api/pipeline`                    | Measures of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency) read from the files the steps write; cached until one changes. Without a corpus: the national snapshot `data/agentic/pipeline-national.json` |
 | GET    | `/api/place/profile?lat=&lon=`     | Place profile of a pinned point: property (live), plans with their documents, zones, plans in progress, inside / outside detaljplan (no model call, ADR-0003) |
 | GET    | `/api/place/coverage`              | Every kommun with a snapshot, pilot or plan-layer (code, name, bbox, fetch date), for the map's first view |
 | GET    | `/api/place/review/coverage`       | Every registry kommun and snapshot as a GeoJSON outline: covered, polygons, matched, fetch date, why not (review mode) |
@@ -113,6 +192,29 @@ curl -X POST http://localhost:8000/api/chunks/ingest-detaljplan \
   -H "Content-Type: application/json" \
   -d '{"input_path": "path/to/plan.pdf"}'
 ```
+
+### Run the app on this machine
+
+The app configuration (agent chat, local corpus, GPT-6 Luna) is in `backend/.env` with the secrets, so no
+command-line overrides are needed. Don't blank `ACCESS_GATE_PASSWORD` or override `.env` values when starting it
+for the user. Needs the GPU and `backend/data/` (local store, `corpus/plans.jsonl`).
+
+```bash
+# 0. Nothing already running? (a stale backend on :8000 or frontend on :3000 makes the new one fail)
+#    PowerShell: Get-CimInstance Win32_Process | ? { $_.CommandLine -match 'uvicorn main:app|next' } | select ProcessId, CommandLine
+# 1. Backend (background shell), from backend/ -- use the venv python, not `uv run` (re-syncs the venv)
+cd backend && .venv/Scripts/python.exe -m uvicorn main:app --app-dir src --port 8000 > backend.log 2>&1
+#    ready when http://localhost:8000/docs answers; the corpus store and embedding model preload in a
+#    background thread (~30-60 s) -- the first chat waits for it
+# 2. Frontend (background shell), from frontend/
+cd frontend && bun run dev                         # hot reload
+#    or: bun run build && bun run start            # lighter; rebuild after any frontend change
+# 3. http://localhost:3000 -> access-gate password (from backend/.env, the user types it) -> sign in
+```
+
+Check: `curl -s localhost:8000/docs -o /dev/null -w "%{http_code}"` -> 200 (or 401 with the gate on: still up).
+Logs: `backend.log` (startup errors: missing key, store not found, CUDA). Stopping a background shell does not
+kill the Python/Node children on Windows: stop them with `Stop-Process` before restarting.
 
 ### Environment Variables
 
@@ -172,6 +274,9 @@ Frontend (`frontend/.env`):
 - `backend/src/routers/docs.py` -- opens a cited chunk in its original document (PDF page + highlight, or URL text fragment; the PDF comes from `corpus.pdf_files`); chunks come from the agent's corpus tools
 - `backend/src/routers/benchmark.py` -- Benchmark view API: case sets, past results parsed from the result file names, in-memory run jobs (lost on restart)
 - `backend/src/routers/place.py` -- `/api/place/*`
+- `backend/src/routers/pipeline.py` -- Pipeline view API, written for a reader without the project's context: six steps (collect, filter, read/OCR, index, plan registry, search tools), each with what it does, how it is measured, a status, tiles and detail sections, from `data/corpus/check.json`, the manifests, `data/agentic/coverage-*.json` / `replay-*.json`, the PDF filter decisions, `data/eval/ocr-*.json` and the latest `localrag.eval` file; cached until a source file changes; `python -m routers.pipeline --snapshot` refreshes the national snapshot
+- `backend/src/benchmark/` -- the early retrieval-only embedding benchmark on the pgvector tables: `export_corpus.py`, `models.toml`, `questions.jsonl`, `generate_questions.py`, `run.py` (hit@k / recall@5 / MRR; vectors cached in `src/benchmark/cache/`, results in `src/benchmark/results/`). Its frozen corpus `src/benchmark/data/corpus.jsonl` (gitignored) also holds the 7 `legacy:` documents `corpus.extract` keeps
+- `reports/` -- the benchmark, technical, hosting and place-evaluation reports (generated into `../pyrmit_doc/` by `agentic.report`, `agentic.report_technical`, `place.report`: copy them here after regenerating) and the hand-written architecture report and status deck (HTML, printed to PDF with headless Chrome)
 - `backend/src/place/` -- `sources.py` (layers, attribute mapping, pilot kommuner), `fetch.py` (snapshot CLI), `registry.py` (`plan_sources.json`, built from the survey in `docs/research/`), `plan_layers.py`, `plan_links.py`, `review.py` (review mode, ADR-0008), `store.py` (`PlaceStore`, STRtree per layer), `live.py`, `profile.py` (`build_profile`), `permits.py`, `context.py` (the place as text for the agent), `geocode.py`, `check_sources.py` / `check_search.py` / `bench_answers.py` / `bench.py` / `report.py` (the evaluation, see Place Lookup)
 - `backend/src/localrag/` -- `analyzer.py` (Swedish BM25 tokens), `gazetteer.py`, `index.py` (VectorStore), `store.py` (disk store), `retriever.py` (`LocalRetriever`), `service.py` (chat integration), `eval.py` + `questions.jsonl`, `rewrite_queries.py`, `models.toml`, `pg_store.py` (the hosted corpus: loader + `PgStore` / `PgRetriever`). Never `pip install` a package that depends on torch without the CUDA index
 - `backend/src/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat integration, `CitationNumberer`), `run.py` (CLI), `bench.py` + `cases*.jsonl`, `cases_from_caselaw.py`, `cases_from_corpus.py`, `cases_from_plans.py`, `rejudge.py`, `grounding.py`, `health.py`, `replay.py`, `coverage.py`, `report.py` / `report_technical.py` (PDF reports)
@@ -183,16 +288,58 @@ Frontend (`frontend/.env`):
 
 ### Frontend (TypeScript / Next.js)
 
-- `frontend/app/(protected)/page.tsx` -- Main page: layout with Sidebar + Chat
-- `frontend/app/(protected)/auth/page.tsx` -- Login / signup page
-- `frontend/app/dev-access/` -- Access gate form
-- `frontend/lib/auth.ts` -- Auth helpers, `authFetch`
-- `frontend/components/Chat.tsx` -- message list, SSE stream consumption, session history; a new chat is announced to the sidebar on the `session_id` event; opening another chat aborts the local stream only, and history messages with status `streaming` are fetched again every 2 s until done; the "Process" timeline (one line per step or tool call) until the answer text starts; then "Inspect pipeline" and a clickable Sources list
-- `frontend/components/PipelineTrace.tsx` -- the "Inspect pipeline" panel: a totals line (time, tokens, cost), then one collapsible step per stage with its API calls
-- `frontend/components/ChunkCard.tsx` -- expandable chunk card; `frontend/components/CitedMarkdown.tsx` -- answer markdown with `[n]` citation chips
-- `frontend/components/` also holds the map panel (`place/`), the source viewer and the Benchmark, Pipeline and Database views; each needs backend routes that the port of v2 brings piece by piece (epic #61)
-- `frontend/components/Sidebar.tsx` -- Session list, new chat button, user info + logout
-- `frontend/components/Settings.tsx` -- User settings
+- `frontend/next.config.js` -- `/api/*` rewrite to the backend
+- `frontend/lib/auth.ts` -- Token storage (localStorage), `authFetch`, access-gate redirect
+- `frontend/lib/dev-access.ts`, `frontend/lib/access-gate-server.ts` -- Access-gate cookie helpers
+- `frontend/app/(protected)/page.tsx` -- Main page: Sidebar + Chat
+- `frontend/app/(protected)/auth/page.tsx` -- Login / signup
+- `frontend/app/(protected)/layout.tsx` -- Server-side guard: redirects to `/dev-access` without the access-gate cookie
+- `frontend/app/dev-access/` -- Access-gate password page
+- `frontend/components/Chat.tsx` -- Message list, SSE stream consumption, session history fetch; a new chat is announced
+  to the sidebar on the `session_id` event; opening another chat aborts the local stream only, and history
+  messages with status "streaming" are re-fetched every 2 s until done; "Process" timeline (`LiveProgress`): one line
+  per step / tool call (tool, its query or arguments, result summary, duration), the last 3 ("Show all" expands), shown
+  only until the answer text starts (rebuilt from the saved trace for an answer still generating, `stepsFromTrace`); once finished, "Inspect pipeline" and a clickable "Sources" list (retrieved chunks per source, from `pipeline` events) below the answer
+- `frontend/components/PipelineTrace.tsx` -- "Inspect pipeline" panel rendering `pipeline` events (live or from saved `trace`): a totals line (time, tokens, cost) then one collapsible step per stage (Understand, Retrieve, Agents, Verdict, Answer) with a one-line summary, and the stage's API calls nested inside (assigned by call kind/name in `stepOf`). An expanded `view_map_area` / `view_pdf_page` tool call shows the image the agent looked at: traces store no images (tool records carry `tool` + `image`), `ToolImage` re-renders them from the call's arguments via `/api/docs/tool-image` (older traces: tool taken from the call name)
+- `frontend/components/DatabaseBrowser.tsx` -- Database view with a store toggle, the buttons named by `/api/db/sources`
+  ("pgvector tables" = law_chunks / document_chunks of DATABASE_URL; "Agent corpus · disk / · Neon / · memory" = what
+  the agent searches; the source detail in the header and as tooltip, generic labels when the route fails): stats,
+  chunk browsing, search playground (store keys `neon` / `local` in the API). Local kommun documents: kommun select (documents and scanned PDFs per kommun), document-type chips,
+  "Only scanned PDFs" (OCR) checkbox, then the kommun's documents by type (`DocumentList`, click one for its chunks;
+  scans carry an OCR badge); without a kommun, chunks in store order. Every local
+  chunk (browse and search) links to its original (`SourceLinks`): crawled PDF opened at the passage in the
+  `SourceViewer` panel (`autoOpen`, n = 0: no citation number) plus the PDF's URL on the kommun site, web page /
+  statute in a new tab at the passage (`openPageAtChunk`); a document's "Open the PDF" lists its chunks beside it.
+  `/api/db/chunks` rows carry `url`, local `/api/db/search` matches `chunk_id` / `doc_id` / `kind` / `url`
+  (`localrag.service._row`). The 7 "legacy:" PoC documents have no original
+- `frontend/lib/corpus.ts` -- document type names / hints and number formatting shared by the Database and Pipeline views
+- `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)
+- `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage.
+  No open button for the 7 `legacy:` documents of the early prototype (963 Vallentuna chunks, in every corpus, added
+  by hand without file or URL, no crawled twin: kept for their content), a note instead; only the clicked button
+  waits (the latest click wins)
+- `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
+- `frontend/components/place/` -- `PlacePanel` (map panel beside the chat, opened by the pin button in the message
+  bar: full-height map, the card as a glass sheet with a grabber, Apple Maps style; system font; controls styled in
+  `globals.css` under `.place-map`; the review mode's switch, fetches and legend, ADR-0009), `PlaceMap` (MapLibre 6 +
+  OpenFreeMap Positron, outlines per kind, the review layers, `bottomInset` keeps the view centred above the sheet,
+  attribution required by ODbL / OpenMapTiles / OpenFreeMap kept small; draws props and fetches nothing),
+  `PlaceCard` (iOS-style grouped sections with icon tiles; "None found" vs "could not be reached"), `PlaceSearch`
+  (floating search, Enter only; a match becomes a grey proposed pin with "Pin here"), `PlaceChip` (the chat's pinned
+  place above the input), `glass.ts` (the shared glass style); `frontend/lib/place.ts` -- types
+  and `fetchPlaceProfile` / `fetchPlaceCoverage`
+- `frontend/components/BenchmarkBrowser.tsx` -- Benchmark view (sidebar, above Database): browse the case sets, a case's
+  reference (verdicts, key points, evidence, source, map crop) and past results, and "Test with the agent" (run + judge)
+- `frontend/components/PipelineBrowser.tsx` -- Pipeline view (sidebar, below Benchmark), progressive: an introduction,
+  a strip of the six steps (key number + status, click to open), one card per step (status, tiles; opened: what it does,
+  how it is measured, collapsible detail sections), a glossary
+- `frontend/components/Sidebar.tsx` -- Session list, new chat, Benchmark / Pipeline / Database / Settings buttons, user info
+- `frontend/components/Settings.tsx` -- Profile / password settings
+- `frontend/tests/` -- Vitest suite copied from dev: `unit/` mirrors `components/` and `lib/` (reference tests
+  `lib/auth.test.ts`, `components/Sidebar.test.tsx`, the rest `it.todo`), `mocks/handlers.ts` is the shared MSW fake
+  backend (override with `server.use(...)`), and `setup.ts` fails any test whose request has no handler.
+  `tests/acceptance.test.ts` exists only on an issue's branch. The Dockerfile installs with Bun from `bun.lock`
+  (PCR-0009; there is no `package-lock.json`)
 
 ### Agents (Multi-Agent RAG)
 
@@ -230,6 +377,30 @@ Frontend (`frontend/.env`):
 
 ---
 
+## Document Ingestion (Detaljplan PDF)
+
+```
+1. POST /api/chunks/ingest-detaljplan { input_path, output_path?, document_name, document_id, ... }  (auth required)
+   or POST /api/chunks/ingest-data-folder { data_dir, markdown_output_dir, ... } for a whole folder
+2. backend/chunking/ingest_pipeline.py:
+   a. ensure_markdown_source: if PDF -> Mistral OCR -> .md saved to data/ocr_markdown/
+   b. DetaljplanChunker splits markdown into semantic chunks
+   c. embed_texts_batch: OpenAI text-embedding-3-large (batched, 3072-dim)
+   d. PushDB.push_chunks -> document_chunks (psycopg2, DATABASE_URL)
+3. Returns { inserted, deleted } counts
+```
+
+## Law Ingestion (Static TXT files)
+
+```
+1. Run backend/chunking/ingest_laws.py (CLI only, no API endpoint)
+2. LawChunker splits law TXT by chapter (kap.) / section (§)
+3. Embed with OpenAI text-embedding-3-large
+4. PushDB.push_law_chunks -> law_chunks
+```
+
+---
+
 ## Chat Request
 
 The frontend uses `POST /api/chat/stream` (SSE); `POST /api/chat` runs the same logic without streaming.
@@ -245,6 +416,28 @@ The frontend uses `POST /api/chat/stream` (SSE); `POST /api/chat` runs the same 
 `pipeline` events (`{type: "pipeline", stage, data}`) feed the inspector: `translation`, `intent`, `retrieval` (matched chunks with source, distance, content), `agent_output`, `verdict`, and `call` (one per model, embedding or search call: model, prompts, output, token usage incl. reasoning tokens and the OpenRouter cost, duration), captured by a `CallRecorder` passed to the agents. They are saved in `chat_messages.trace` (~20-60 KB per answer), so a reopened conversation keeps its inspector and sources.
 
 Gotchas: a location the regex misses ("for Vallentuna": only in / at / i / på / vid count) silently takes the general RAG path; the units regex misses "apartment(s)", which the rewrite makes of "lägenheter".
+
+---
+
+## Auth Flow
+
+```
+1. POST /api/auth/signup -> creates User + Account (credentials, hashed password) and a login session row -> returns JWT
+2. POST /api/auth/signin (JSON) or /api/auth/token (OAuth2 form) -> verifies password, adds a login session row -> returns JWT
+3. Frontend stores the JWT in localStorage and sends it as Authorization: Bearer
+4. get_current_session decodes the JWT (HS256, JWT_SECRET_KEY, sub = "user:<id>", sid = the session row) and checks
+   that the row exists and has not expired; get_current_user returns its user
+5. POST /api/auth/signout -> deletes the current login's session row, so its token stops working (ADR-0001);
+   the frontend clears the token, and only on a 401 if no newer login replaced it
+```
+
+`ACCESS_TOKEN_EXPIRE_MINUTES` (default 10080, 7 days) sets both the JWT expiry and the session row's `expires_at`.
+
+## Access Gate
+
+When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend request except `/api/access-gate/unlock` and OPTIONS returns 401 `"Access password required"` unless it carries the `dev_access_granted` cookie or an `x-access-gate-password` header. The frontend's `authFetch` redirects to `/dev-access` on that response.
+
+---
 
 ---
 
@@ -791,11 +984,17 @@ moved (KTHAIS -> Projekt) made Turbopack panic ("Next.js package not found"): de
 > If a bug occurs, you should always be able to answer:
 > **"Is this a data/retrieval bug (backend) or a display/UX bug (frontend)?"**
 
-- **Auth bugs**: Missing/expired bearer token, 401s -> investigate `backend/src/routers/auth.py`, `backend/src/security.py`, `backend/src/dependencies.py`. Redirects to the access gate -> `backend/src/routers/access_gate.py`, `frontend/lib/`
-- **RAG quality bugs**: open "Inspect pipeline" on the answer (rewritten query, route, retrieved chunks with distances); then `backend/src/agents/base.py`, the embedding model, chunk sizes. `_embed` returns None on failure (e.g. a missing key for `EMBEDDING_PROVIDER`) and retrieval then silently returns nothing
-- **Ingestion bugs**: Chunks not appearing in DB -> investigate `backend/src/chunking/ingest_pipeline.py`, `backend/src/db/push_db.py`
-- **Chat bugs**: Wrong answer, missing context -> investigate `backend/src/routers/chat.py` prompt construction and retrieval call
-- **Frontend bugs**: UI not updating, session not switching, auth redirect loop -> investigate `frontend/components/`
+- **Access gate**: 401 "Access password required" -> `backend/src/dev_access.py`, cookie settings, `frontend/lib/auth.ts`
+- **Auth bugs**: 401 "Could not validate credentials" -> expired/missing JWT, `JWT_SECRET_KEY`, `backend/src/security.py`, `backend/src/dependencies.py`
+- **Wrong answer style** (generic RAG vs feasibility verdict): check the translated query and `parse_query` output (logged in observations as `parsed_location` / `parsed_units`)
+- **RAG quality bugs**: open the "Pipeline inspector" on the answer (rewritten query, route, retrieved chunks + distances), or try queries in the Database view's semantic search; also retrieval logs/Langfuse (source, chunk_index, distance, preview) -> `backend/src/agents/base.py`, chunk sizes, embeddings
+- **Law chunk metadata**: `law_chunks.chapter` / `section` drift (e.g. PBL 4 kap. 21 § stored as chapter 7 or 13) and lettered sections (`31 b §`) are merged into neighbours -> `backend/src/chunking/chunk_laws.py`; don't filter on them
+- **No retrieval at all**: `_embed` returns None on failure (e.g. missing key for `EMBEDDING_PROVIDER`) and retrieval silently returns nothing
+- **Odd feasibility verdict**: rules in `Orchestrator._determine_feasibility`; non-numeric `max_units_allowed` ("varies") yields UNCERTAIN
+- **Ingestion bugs**: `backend/src/chunking/ingest_pipeline.py`, `backend/src/db/push_db.py`, `DATABASE_URL`, `MISTRAL_API_KEY`
+- **Frontend bugs**: UI not updating, session not switching, redirect loops -> `frontend/components/`, `frontend/lib/auth.ts`
+
+---
 
 ---
 
