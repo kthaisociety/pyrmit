@@ -4,12 +4,26 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect, useRef, useState } from 'react';
 import type { GeoJSONSource, Map as MapLibreMap, MapMouseEvent, Marker } from 'maplibre-gl';
 
-import type { Pin } from '@/lib/place';
+import type { BBox, Pin, ReviewCoverage, ReviewPlans } from '@/lib/place';
 
 export interface PlaceOutline {
   id: string;
   kind: 'property' | 'plan' | 'zone';
   geometry: GeoJSON.Geometry;
+}
+
+// What the map shows; reported after every move, so the panel can fetch what the view needs
+export interface MapView {
+  bbox: BBox;
+  zoom: number;
+}
+
+// The review mode's layers, fetched by the panel (ADR-0009): the kommuner coloured by coverage, and the plans in view
+// coloured by match level (link, akt, name, none). A click on a plan shows its aktbeteckning, name and match level
+// instead of moving the pin.
+export interface ReviewLayers {
+  coverage: ReviewCoverage | null;
+  plans: ReviewPlans | null;
 }
 
 export interface PlaceMapProps {
@@ -18,7 +32,9 @@ export interface PlaceMapProps {
   bounds?: [number, number, number, number] | null; // west, south, east, north: first view
   bottomInset?: number; // share of the map's height covered from below (the place card): the view centres above it
   proposal?: Pin | null; // a proposed pin (from the search), shown apart from the pin until the user confirms it
+  review?: ReviewLayers | null; // the review mode's layers; null (the default) draws none and the map is as before
   onMapClick: (pin: Pin) => void;
+  onViewChange?: (view: MapView) => void; // the view once the map is up and after every move
 }
 
 // OpenFreeMap: OpenStreetMap vector tiles, free and keyless; Positron is the light, quiet style

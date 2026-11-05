@@ -18,6 +18,10 @@ export interface PlacePanelProps {
 
 type Lookup = { pin: Pin; profile: PlaceProfile | null; error: string | null };
 
+// The zoom from which the review mode fetches the plans in view (about a kommun's size, see ADR-0008); below it the
+// map shows the kommuner coloured by coverage only
+export const REVIEW_PLANS_ZOOM = 10;
+
 // The system font (SF Pro on Apple devices), as in Apple Maps
 const SYSTEM_FONT = '[font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif]';
 

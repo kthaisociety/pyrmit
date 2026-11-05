@@ -110,6 +110,54 @@ export async function fetchPlaceCoverage(): Promise<PlaceCoverage[]> {
   return getJson<PlaceCoverage[]>('/api/place/coverage');
 }
 
+// --- the review mode: which kommuner have plan polygons and which polygons have a document ---------------------
+
+// One kommun of the coverage view (GET /api/place/review/coverage), registry kommuner and pilots alike
+export interface CoverageProperties {
+  code: string;
+  name: string;
+  covered: boolean; // the kommun has a plans snapshot
+  polygons: number; // plans in the snapshot (0 when not covered)
+  matched: number; // of them with at least one matched document
+  fetched: string | null; // snapshot date
+  reason: string | null; // when not covered: why the last fetch failed, or "not fetched yet"
+}
+
+// The kommun outlines; geometry is null for a kommun whose boundary was never fetched
+export type ReviewCoverage = GeoJSON.FeatureCollection<GeoJSON.Geometry | null, CoverageProperties>;
+
+export type MatchLevel = 'link' | 'akt' | 'name';
+
+// One plan polygon of a map view (GET /api/place/review/plans)
+export interface ReviewPlanProperties {
+  code: string; // kommun code
+  kommun: string;
+  ref: string | null; // aktbeteckning
+  name: string | null;
+  date: string | null;
+  match: MatchLevel | null; // the level its documents matched at, null when none is matched
+}
+
+export interface ReviewPlans extends GeoJSON.FeatureCollection<GeoJSON.Geometry, ReviewPlanProperties> {
+  truncated: boolean; // more polygons met the view than the backend serves at once: zoom in
+}
+
+export type BBox = [number, number, number, number]; // west, south, east, north
+
+/** Every kommun's outline with whether it has plan polygons. Throws an Error with the backend's message on failure. */
+export async function fetchReviewCoverage(): Promise<ReviewCoverage> {
+  throw new Error('not implemented');
+}
+
+/**
+ * The plan polygons in the box with their match level. Throws an Error with the backend's message when the box is
+ * refused (wider than a kommun, or malformed) or the lookup fails.
+ */
+export async function fetchPlansInView(bbox: BBox): Promise<ReviewPlans> {
+  void bbox;
+  throw new Error('not implemented');
+}
+
 // The place a chat is about: the pin and the label its chip shows (sent with each question, ADR-0004)
 export interface PinnedPlace extends Pin {
   label: string | null;

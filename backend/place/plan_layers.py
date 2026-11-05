@@ -34,6 +34,7 @@ LAYER_ID = "plans"                  # the snapshot file and manifest key, as for
 LAYER_TITLE = "Gällande detaljplaner"
 MIN_SHARE_OF_SURVEY = 0.5           # fewer polygons than this share of the survey's count flags the fetch
 COVERAGE_REPORT = "plan_coverage.md"
+COVERAGE_ROWS = "plan_coverage.json"  # the coverage rows of every run so far, by kommun code, the report's source
 BOUNDARY_SOURCE = "OpenStreetMap via Nominatim"
 BOUNDARY_LICENCE = "ODbL"
 
@@ -310,7 +311,9 @@ def fetch_plan_layer(source: PlanSource, *, client: httpx.Client | None = None, 
 
     No snapshot is written, and an earlier one is left as it is, when the service fails, answers with no polygon,
     or with fewer than MIN_SHARE_OF_SURVEY of the survey's count for a source that is not shared; the row then
-    carries the reason. A failing service never raises."""
+    carries the reason. The boundary is kept whatever happens to the layer: `kommun.geojson` is written as soon as
+    it is fetched, so a kommun whose layer failed has its outline for the coverage map and the next run. A failing
+    service never raises."""
     row = {"code": source.code, "name": source.name, "fetched": False, "reason": None, "count": 0,
            "survey_count": source.survey_count, "ref_share": None, "link_share": None, "dropped_links": 0,
            "date": today()}
@@ -330,8 +333,11 @@ def fetch_plan_layer(source: PlanSource, *, client: httpx.Client | None = None, 
 
 def fetch_registry(sources: Iterable[PlanSource], *, client: httpx.Client | None = None,
                    out_dir: Path = GEO_DIR) -> list[dict]:
-    """fetch_plan_layer for every source, in the order given, going on after a kommun that fails, then
-    coverage_report of the rows written to `out_dir`/COVERAGE_REPORT. Returns the coverage rows."""
+    """fetch_plan_layer for every source, in the order given, going on after a kommun that fails. The rows are then
+    merged into `out_dir`/COVERAGE_ROWS (load_coverage: a kommun's row replaces its earlier one, the other kommuner's
+    rows stay), and coverage_report of every row in that file, in kommun code order, is written to
+    `out_dir`/COVERAGE_REPORT, so a run of some kommuner updates their lines in a report that still covers all.
+    Returns this run's coverage rows."""
     http = client or new_client()
     try:
         rows = [fetch_plan_layer(source, client=http, out_dir=out_dir) for source in sources]
@@ -341,6 +347,12 @@ def fetch_registry(sources: Iterable[PlanSource], *, client: httpx.Client | None
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     (Path(out_dir) / COVERAGE_REPORT).write_text(coverage_report(rows), encoding="utf-8")
     return rows
+
+
+def load_coverage(out_dir: Path = GEO_DIR) -> dict[str, dict]:
+    """The coverage rows of every run so far, {kommun code: the row fetch_plan_layer returned last for it}, read from
+    `out_dir`/COVERAGE_ROWS; {} before any run."""
+    raise NotImplementedError
 
 
 def _share(value: float | None) -> str:

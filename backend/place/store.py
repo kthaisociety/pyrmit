@@ -73,6 +73,13 @@ class PlaceStore:
                  "fetched": manifest["kommun"].get("fetched")}
                 for code, manifest in self._kommun_manifests().items()]
 
+    def outline(self, code: str) -> dict | None:
+        """The kommun boundary as a GeoJSON geometry, read from `<code>/kommun.geojson`: present for a kommun with a
+        snapshot and for one whose plan-layer fetch failed after its boundary was fetched (place.plan_layers keeps
+        it). None when no boundary was ever written. A kommun with only an outline is not covered: kommun_at and
+        kommuner leave it out."""
+        raise NotImplementedError
+
     def kommun_at(self, lon: float, lat: float) -> str | None:
         """Code of the pilot kommun whose boundary contains the point, or None outside every snapshot."""
         point = Point(lon, lat)
