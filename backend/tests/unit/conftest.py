@@ -5,7 +5,15 @@ from sqlalchemy.orm import Session
 
 import models
 import schemas
+from place.profile import build_profile
 from routers import auth
+from tests.unit.place.snapshot import (
+    fake_property,
+    registry,
+    remains_at,
+    write_national_snapshot,
+    write_snapshot,
+)
 
 # In-memory SQLite stands in for Postgres (PCR-0011). Only tables without pgvector columns work here.
 AUTH_TABLES = (models.User, models.Account, models.Session, models.ChatSession, models.ChatMessage)
@@ -68,3 +76,22 @@ def fake_municipalities(tmp_path, monkeypatch):
     yield
     gazetteer._patterns.cache_clear()
     gazetteer._names_by_code.cache_clear()
+
+
+# The place module's fake Uppsala snapshot (tests/unit/place/snapshot.py)
+
+@pytest.fixture
+def store(tmp_path):
+    """The fake Uppsala snapshot in a temp folder."""
+    return write_snapshot(tmp_path)
+
+
+@pytest.fixture
+def profile_of(tmp_path):
+    """The place profile of the fake Kungsängen 7:8 (national layers and remains included)."""
+    store = write_national_snapshot(tmp_path)
+
+    def build(lat, lon):
+        return build_profile(lat, lon, store=store, property_at=fake_property, plan_registry=registry,
+                             ancient_remains_at=remains_at)
+    return build
