@@ -59,6 +59,37 @@ BATCH = 2000
 CANDIDATE_DF = 0.10  # bm25_top: candidate chunks come from the stems in under 10 % of the chunks
 GEO_DIR =BACKEND_DIR / "data" / "geo"  # place.store.GEO_DIR (not imported: shapely for a path)
 SYNC_STAMP = "neon_sync.json"
+STORAGE_LIMIT_MB = 1000  # the free plan's storage per project; a files load stops short of it
+FILES_BUILT = "files_built"  # corpus_meta key: when load_files last ran (the sync refreshes its files on a change)
+
+
+class StorageLimitError(RuntimeError):
+    """A files load that would pass the storage limit: `needed_mb` is the database size after the load, `limit_mb`
+    the limit it refused. Nothing was written."""
+
+    def __init__(self, needed_mb: float, limit_mb: float):
+        super().__init__(f"The load needs {needed_mb:.0f} MB of the database's {limit_mb:.0f} MB: nothing written")
+        self.needed_mb, self.limit_mb = needed_mb, limit_mb
+
+
+def snapshot_files(kommuner: list[str] | None = None) -> dict[str, Path]:
+    """The snapshot files on disk of every kommun with a snapshot (a manifest.json in data/geo/<code>/), by their
+    corpus_files path ("geo/<code>/<file>"), in path order. `kommuner` restricts to those codes; a code without a
+    snapshot is skipped, so a wrong code gives no files rather than an error."""
+    raise NotImplementedError
+
+
+def load_files(store, kommuner: list[str] | None = None, limit_mb: float = STORAGE_LIMIT_MB) -> dict:
+    """Add or replace the snapshots of snapshot_files(kommuner) in corpus_files (gzip), without rebuilding the
+    corpus: the chunks, the plan registry, the gazetteer and every other kommun's files stay as they are. `store`
+    is a PgStore (anything with execute(sql, params)). Sets corpus_meta FILES_BUILT to now, so an install's sync
+    writes the new snapshots (sync_files).
+
+    Returns {"files": the files written, "kommuner": their codes, "mb": the gzip bytes written in MB,
+    "database_mb": the database size after the load}. Raises StorageLimitError, with nothing written, when the
+    database would pass `limit_mb` after the load (its size now, plus the files' gzip size, minus the rows they
+    replace)."""
+    raise NotImplementedError
 CHUNKS_SCHEMA = """
 DROP TABLE IF EXISTS corpus_chunks, corpus_places CASCADE;
 CREATE EXTENSION IF NOT EXISTS vector;
