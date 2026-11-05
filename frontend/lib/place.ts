@@ -33,6 +33,7 @@ export interface PlaceFeature {
   document_match?: 'link' | 'akt' | 'name' | null; // plans: the level that matched them (null: none yet)
   corpus_documents?: PlanDocument[]; // plans: those of them in the corpus, plan maps first
   text_status?: 'read' | 'none' | 'unavailable'; // plans: unavailable when the corpus could not be reached
+  read_with?: { ref: string; corpus_documents: PlanDocument[] }[]; // plans: read together with these (amendments)
   corpus_plan_id?: string | null;
   provisions_indexed?: boolean;
 }

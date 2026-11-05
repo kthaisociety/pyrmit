@@ -88,7 +88,7 @@ def profile_at(store, corpus_documents=documents):
 
 
 def line_of(text, ref):
-    return next(line for line in text.splitlines() if f" {ref} " in line and line.startswith("- "))
+    return next(line for line in text.splitlines() if line.startswith("- ") and f' {ref} "' in line)
 
 
 def row_of(profile, ref):
@@ -166,7 +166,7 @@ def test_the_statement_reads_an_amendment_together_with_the_plan_it_amends(tmp_p
     """The amendment's read call carries its own documents, then those of the plan it amends."""
     text = place_context(profile_at(snapshot(tmp_path, addition_note=f"Gäller tillsammans med {ATLE}")))
     addition = line_of(text, TILLAGG)
-    assert f"read together with {ATLE}" in addition.lower()
+    assert f"Read together with {ATLE}" in addition
     assert f"read_plan(doc_ids=['{ADDITION}', '{MAP}', '{DESCRIPTION}'])" in addition
 
 

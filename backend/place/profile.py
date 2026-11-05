@@ -207,12 +207,31 @@ def hosted_documents(doc_ids: list[str]) -> dict[str, dict]:
         raise CorpusUnavailable(type(exc).__name__) from exc
 
 
+def _read_with(row: dict, rows: list[dict]) -> list[str]:
+    """The aktbeteckningar of the plans to read `row` with, of `rows` at the point: see build_profile's "read_with"."""
+    others = [other for other in rows if other is not row and other.get("ref")]
+    named = [ref for ref in row.get("named_plans") or [] if ref != row.get("ref")]
+    if row["kind"] != "plan_addition":
+        return [ref for ref in named if any(other["ref"] == ref for other in others)]
+    return named or [other["ref"] for other in others
+                     if other["kind"] == "plan" and (other["date"] or "") < (row["date"] or "9999")]
+
+
+def _documents_of(matched: list[dict], found: dict[str, dict]) -> list[dict]:
+    """The linked documents the corpus holds, plan maps first."""
+    return sorted(({"doc_id": link["doc_id"], "role": link.get("role"), **found[link["doc_id"]]}
+                   for link in matched if link["doc_id"] in found),
+                  key=lambda document: ROLE_ORDER.get(document["role"], len(ROLE_ORDER)))
+
+
 def _with_documents(rows: list[dict], links: dict[str, list[dict]],
                     corpus_documents: Callable[[list[str]], dict[str, dict]]) -> tuple[list[dict], list[str]]:
     """The plan rows with their documents (place.plan_links) as the corpus holds them, and the notes that go with them:
     one when the corpus could not be reached, which leaves the rows without documents."""
     matched_of = [links.get(polygon_key(row) or "", []) for row in rows]
-    doc_ids = sorted({link["doc_id"] for matched in matched_of for link in matched})
+    read_with_of = [_read_with(row, rows) for row in rows]
+    doc_ids = sorted({link["doc_id"] for matched in matched_of for link in matched}
+                     | {link["doc_id"] for refs in read_with_of for ref in refs for link in links.get(ref, [])})
     found, unavailable = {}, False
     if doc_ids:
         try:
@@ -220,14 +239,14 @@ def _with_documents(rows: list[dict], links: dict[str, list[dict]],
         except CorpusUnavailable:
             unavailable = True
     out = []
-    for row, matched in zip(rows, matched_of, strict=True):
-        documents = sorted(({"doc_id": link["doc_id"], "role": link.get("role"), **found[link["doc_id"]]}
-                            for link in matched if link["doc_id"] in found),
-                           key=lambda document: ROLE_ORDER.get(document["role"], len(ROLE_ORDER)))
+    for row, matched, read_with in zip(rows, matched_of, read_with_of, strict=True):
+        documents = _documents_of(matched, found)
         status = "read" if documents else "unavailable" if unavailable and matched else "none"
         out.append(row | {"document_ids": [link["doc_id"] for link in matched],
                           "document_match": matched[0]["level"] if matched else None,
-                          "corpus_documents": documents, "text_status": status})
+                          "corpus_documents": documents, "text_status": status,
+                          "read_with": [{"ref": ref, "corpus_documents": _documents_of(links.get(ref, []), found)}
+                                        for ref in read_with]})
     return out, [DOCUMENTS_UNAVAILABLE] if unavailable else []
 
 

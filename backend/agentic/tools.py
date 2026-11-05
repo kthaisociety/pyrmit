@@ -98,6 +98,15 @@ def parse_doc_types(value) -> list[str] | None:
     return list(dict.fromkeys(types)) or None
 
 
+def _headings(documents: dict[str, list[dict]]) -> str:
+    """The headings of each document, in reading order: what read_plan's section can ask for."""
+    lines = []
+    for doc_id, chunks in documents.items():
+        headings = list(dict.fromkeys(chunk["section"] for chunk in chunks if chunk.get("section")))
+        lines.append(f"Headings of {doc_id}: {'; '.join(headings) if headings else 'none'}")
+    return "\n".join(lines)
+
+
 def _label_key(text: str) -> str:
     """A printed label as OCR may read it: '5.125' / '5,125' / '5;125' for the property number '5:125'."""
     text = text.strip(" .,;()[]").lower()
@@ -132,6 +141,9 @@ class _MemoryCorpus:
 
     def doc_chunk_ids(self, doc_id: str) -> list[str]:
         return self.doc_ids.get(doc_id, [])
+
+    def doc_chunks(self, doc_id: str) -> list[dict]:
+        return [self.chunks[chunk_id] for chunk_id in self.doc_ids.get(doc_id, [])]
 
     def documents(self, codes: set[str], doc_types: list[str] | None, title_contains: str | None) -> list[dict]:
         docs = [dict(d, chunks=len(self.doc_ids[d["doc_id"]])) for d in self.docs.values()
@@ -212,6 +224,11 @@ class _DiskCorpus:
     def doc_chunk_ids(self, doc_id: str) -> list[str]:
         return [r[0] for r in self.store.query(
             "SELECT chunk_id FROM chunks WHERE doc_id = ? ORDER BY CAST(chunk_index AS INTEGER)", (doc_id,))]
+
+    def doc_chunks(self, doc_id: str) -> list[dict]:
+        # One query for the whole document: a query per chunk is a round trip each to the hosted corpus
+        return [self.store._chunk(row) for row in self.store.query(
+            "SELECT * FROM chunks WHERE doc_id = ? ORDER BY CAST(chunk_index AS INTEGER)", (doc_id,))]
 
     @staticmethod
     def _filters(doc_types: list[str] | None, title_contains: str | None) -> tuple[str, list]:
@@ -526,7 +543,44 @@ class CorpusTools:
         that has nothing but the hosted corpus (ADR-0010). An id the corpus does not hold is named in the text and
         skipped. Errors, as ToolResult.error: bad_args (no ids, or `start` past the end), unknown_id (no id is in the
         corpus), not_found (no heading contains `section`; the text lists the headings there are)."""
-        raise NotImplementedError
+        written = [doc_ids] if isinstance(doc_ids, str) else list(doc_ids or [])
+        ids = list(dict.fromkeys(self._doc_id(part) for item in written for part in str(item).split(",") if part.strip()))
+        if not ids:
+            return _failed("bad_args", "read_plan needs doc_ids, as the pinned place lists them.")
+        documents = {doc_id: chunks for doc_id in ids if (chunks := self.corpus.doc_chunks(doc_id))}
+        if not documents:
+            return _failed("unknown_id", f"Not in the corpus: {', '.join(ids)}.")
+        words = (section or "").strip().lower()
+        wanted = [chunk for chunks in documents.values() for chunk in chunks
+                  if not words or words in (chunk.get("section") or "").lower()]
+        if not wanted:
+            return _failed("not_found", f"No heading contains '{section}'. {_headings(documents)}")
+        start = max(0, int(start or 0))
+        if start >= len(wanted):
+            return _failed("bad_args", f"{len(wanted)} chunks to read (positions 0-{len(wanted) - 1}); start {start} is "
+                                       "past the end.")
+        missing = [doc_id for doc_id in ids if doc_id not in documents]
+        parts = [f"Not in the corpus, skipped: {', '.join(missing)}."] if missing else []
+        if not words and start == 0:
+            parts.append(_headings(documents))
+        shown, size, current = [], 0, None
+        for position, chunk in enumerate(wanted[start:], start=start):
+            text = chunk_text(chunk)
+            if shown and size + len(text) > PLAN_READ_LIMIT:
+                break
+            if chunk["doc_id"] != current:
+                current = chunk["doc_id"]
+                url = f", url {chunk['url']}" if chunk.get("url") else ""
+                parts.append(f"=== {chunk.get('title')} ({current}{url})")
+            heading = f" | {chunk['section']}" if chunk.get("section") else ""
+            parts.append(f"--- [c:{chunk['chunk_id']}] position {position}/{len(wanted)}{heading}\n{text}")
+            shown.append(chunk["chunk_id"])
+            size += len(text)
+        following = start + len(shown)
+        if following < len(wanted):
+            within = f", section={section!r}" if words else ""
+            parts.append(f"More to read: read_plan(doc_ids={list(documents)}{within}, start={following})")
+        return ToolResult("\n".join(parts), shown)
 
     def _plans(self) -> dict[str, list[dict]]:
         """The plan registry (corpus.plans), by kommun code; loaded on first use."""

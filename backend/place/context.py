@@ -6,13 +6,14 @@ from collections.abc import Callable
 
 from place.sources import PILOTS
 
-NO_PIN_HINT = ("(No place is pinned on the map. If the answer depends on one specific property and the place is "
-               "unclear, ask with ask_user and offer_pin.)")
+NO_PIN_HINT = ("(No place is pinned on the map. A question about one specific place needs a pin: ask with ask_user and "
+               "offer_pin before any search. Answer a general question with the search tools and offer to pin a place "
+               "for an exact answer.)")
 
 OPENING = ("[Place pinned by the user on the map. This is the place the question is about: do not ask where it is, "
            "and do not call find_kommun: the kommun and its code are given below. "
            "If the question names a different place than this one, ask the user which one they mean before "
-           "answering.]")
+           "answering. A general question, which does not turn on this place, is answered generally.]")
 CLOSING = ("[End of the pinned place. The user's question follows. If it names an address, property or place that is "
            "not this pinned one (compare with the property and its addresses above), ask which place the user means "
            "with ask_user, the pinned place and the named one as options, before answering, unless the "
@@ -28,17 +29,39 @@ STATUTES = ("[Statute text of the sections the likely permits cite, from the cor
 # "MB 7 kap. 7 §", "MB 7 kap. 21-22 §", "MB 7 kap. 28 a §", "3 kap. 6 § MB": a law, a chapter and its sections
 _SECTION_REF = re.compile(r"(?:(?P<before>[A-ZÅÄÖ]{2,4})\s+)?(?P<chapter>\d+)\s*kap\.\s*(?P<first>\d+)(?:\s*(?P<letter>[a-z])\b)?"
                           r"(?:\s*-\s*(?P<last>\d+))?\s*§(?:\s+(?P<after>[A-ZÅÄÖ]{2,4}))?")
+PLAN_TYPES = {"plan_addition": "Tillägg", "area_regulations": "Områdesbestämmelser"}  # any other plan: "Detaljplan"
 DETALJPLAN = {"inside": "inside a detaljplan", "outside": "outside any detaljplan (the kommun's plan map is complete)",
               "unknown": "no digital detaljplan found, an older plan may apply (ask the kommun)"}
 UNAVAILABLE = "not checked (the source could not be reached)"
 
 
+def _documents(documents: list[dict]) -> str:
+    return "; ".join(f"{document['role'] or document['title']} {document['doc_id']}" for document in documents)
+
+
 def _plan(plan: dict) -> str:
-    kind = {"plan_addition": "Tillägg ", "area_regulations": "Områdesbestämmelser "}.get(plan["kind"], "")
-    provisions = (f"provisions in the corpus: plan_rules('{plan['corpus_plan_id']}')" if plan.get("provisions_indexed")
-                  else "provisions not indexed")
-    documents = f"; documents: {plan['url']}" if plan.get("url") else ""
-    return f"- {kind}{plan['ref']} \"{plan['name']}\", laga kraft {plan['date'] or 'unknown'} ({provisions}){documents}"
+    """One plan at the pin: its type, name and date, then its documents and the call that reads them (with those of the
+    plans it is read together with), or that its text is not read and the kommun's link."""
+    kind = PLAN_TYPES.get(plan["kind"], "Detaljplan")
+    line = f"- {kind} {plan['ref']} \"{plan['name']}\", laga kraft {plan['date'] or 'unknown'}."
+    documents = plan.get("corpus_documents") or []
+    read_with = plan.get("read_with") or []
+    if documents:
+        line += f" Documents: {_documents(documents)}."
+    else:
+        link = plan.get("url") or plan.get("page")
+        line += f" Text not read; the kommun's page: {link}." if link else " Text not read; no link to it is known."
+    if read_with:
+        named = ", ".join(other["ref"] if other["corpus_documents"] else f"{other['ref']} (text not read)"
+                          for other in read_with)
+        line += f" Read together with {named}"
+        line += "." if not any(other["corpus_documents"] for other in read_with) else ""
+    doc_ids = [document["doc_id"] for source in (plan, *read_with) for document in source.get("corpus_documents") or []]
+    if doc_ids:
+        line += f"{':' if read_with and line[-1] != '.' else ''} read_plan(doc_ids={doc_ids})."
+    if plan.get("provisions_indexed"):
+        line += f" Provisions: plan_rules('{plan['corpus_plan_id']}')."
+    return line
 
 
 def _zone(zone: dict) -> str:

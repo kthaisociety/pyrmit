@@ -12,6 +12,7 @@ open ArcGIS service); NATIONAL layers are clipped to each pilot kommun. Checked 
   GetFeatureInfo)
 """
 
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
@@ -156,8 +157,13 @@ def iso_date(value) -> str | None:
     return text[:10]
 
 
+# In a plan row's "Ovrigt": "Gäller tillsammans med 0380-P99/22 och 03-89:387"
+_AKTBETECKNING = re.compile(r"(?<![\w/-])\d{2,4}-[\w/:.-]*\w")
+
+
 def feature(layer: Layer, props: dict) -> dict:
-    """Profile feature from a layer's raw attributes."""
+    """Profile feature from a layer's raw attributes. A plan also carries "named_plans": the aktbeteckningar its row
+    says it is read together with."""
     out = {"layer": layer.id, "kind": layer.kind, "layer_title": layer.title, "name": None, "ref": None,
            "type": None, "date": None, "status": None, "authority": None, "law": layer.law, "text": None,
            "url": None, "note": layer.note}
@@ -165,7 +171,8 @@ def feature(layer: Layer, props: dict) -> dict:
         out.update(name=first_value(props, "Plannamn"), ref=first_value(props, "Aktbeteckning"),
                    type=first_value(props, "Plantyp"), date=iso_date(first_value(props, "LagaKraftDatum")),
                    url=first_value(props, "UrlDokument"), text=first_value(props, "AdminBestammelser", "Ovrigt"),
-                   note=first_value(props, "Kommentar") or layer.note)
+                   note=first_value(props, "Kommentar") or layer.note,
+                   named_plans=_AKTBETECKNING.findall(first_value(props, "Ovrigt") or ""))
     elif layer.kind == "plan_pending":
         out.update(name=first_value(props, "Name"), ref=first_value(props, "DiarieNummer"), status=first_value(props, "Status"),
                    text=first_value(props, "HUVUDSAKLIGT_SYFTE", "HandelseBeskrivning"))
