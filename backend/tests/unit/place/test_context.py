@@ -1,14 +1,28 @@
 """place.context: the pinned place written out for the agent, and the compact profile kept in the trace."""
 
+import pytest
+
 from place.context import (
     ANSWERED,
     CLOSING,
+    NO_PIN_HINT,
     compact_profile,
     permit_sections,
     place_context,
     question_with_place,
 )
-from tests.unit.place.snapshot import PIN
+from place.profile import CorpusUnavailable, build_profile
+from tests.unit.place.hosted import (
+    ATLE,
+    DESCRIPTION_ID,
+    ELSEWHERE,
+    MAP_ID,
+    TILLAGG,
+    TILLAGG_ID,
+    amended_snapshot,
+    every_document,
+)
+from tests.unit.place.snapshot import PIN, fake_property, no_remains
 
 
 def test_the_place_context_says_this_is_the_place_of_the_question(profile_of):
@@ -113,3 +127,100 @@ def test_an_answer_to_the_agents_question_says_so_right_before_it(profile_of):
         sent = question_with_place("Use Södermalm instead", profile, answered=True)
         assert sent.endswith(ANSWERED + "\n\nUse Södermalm instead")
     assert "pinned place" in ANSWERED and "do not ask" in ANSWERED.lower()
+
+
+# --- the plans at the pin ---------------------------------------------------------------------------------------------
+
+PAGE = "https://www.uppsala.se/detaljplan/?aktbeteckning="
+
+
+def statement(store, corpus_documents=every_document):
+    return place_context(build_profile(*PIN, store=store, corpus_documents=corpus_documents, property_at=fake_property,
+                                       plan_registry=lambda code: [], ancient_remains_at=no_remains))
+
+
+def line_of(text, ref):
+    return next(line for line in text.splitlines() if line.startswith("- ") and f' {ref} "' in line)
+
+
+def no_documents(doc_ids):
+    return {}
+
+
+def corpus_down(doc_ids):
+    raise CorpusUnavailable("down")
+
+
+@pytest.mark.parametrize("words", ["Detaljplan 0380-P2002/5", "Tillägg 0380-P2012/9", "Detaljplan 0380-P1990/3"])
+def test_the_statement_gives_every_plan_its_type(tmp_path, words):
+    assert words in statement(amended_snapshot(tmp_path))
+
+
+@pytest.mark.parametrize("words", ["2002-01-09", f"plankarta {MAP_ID}", f"planbeskrivning {DESCRIPTION_ID}"])
+def test_the_statement_gives_a_plan_its_date_and_documents(tmp_path, words):
+    assert words in line_of(statement(amended_snapshot(tmp_path)), ATLE)
+
+
+def test_the_statement_says_how_to_read_a_plan(tmp_path):
+    """A plan with documents is stated with the call that reads them, plan map first."""
+    assert f"read_plan(doc_ids=['{MAP_ID}', '{DESCRIPTION_ID}'])" in line_of(statement(amended_snapshot(tmp_path)), ATLE)
+
+
+@pytest.mark.parametrize("corpus_documents", [no_documents, corpus_down])
+@pytest.mark.parametrize("words", ["Del av Atle", "Text not read", f"{PAGE}{ATLE}"])
+def test_a_plan_without_text_is_named_as_not_read_with_the_kommuns_link(tmp_path, corpus_documents, words):
+    """No document in the corpus, or a corpus out of reach: the plan is named, not read, with the kommun's link."""
+    assert words in line_of(statement(amended_snapshot(tmp_path), corpus_documents), ATLE)
+
+
+def test_a_plan_without_text_is_given_no_call_that_reads_it(tmp_path):
+    assert "read_plan" not in line_of(statement(amended_snapshot(tmp_path), no_documents), ATLE)
+
+
+def test_an_install_without_a_link_table_states_the_plans_as_not_read(tmp_path):
+    """Before the link table has reached this install the plans are stated as not read, without a failure."""
+    assert "Text not read" in line_of(statement(amended_snapshot(tmp_path, links=False)), ATLE)
+
+
+def test_a_plan_without_a_link_says_so():
+    profile_plan = {"kind": "plan", "ref": "0380-1", "name": "Gammal", "date": None, "url": None}
+    profile = {"point": {"lat": 59.8, "lon": 17.6}, "covered": True, "kommun": {"code": "0380", "name": "Uppsala"},
+               "property": None, "property_status": "none", "detaljplan": "inside", "plans": [profile_plan], "zones": [],
+               "pending_plans": [], "protected_areas": [], "natura2000": [], "national_interests": [], "ancient_remains": [],
+               "section_status": dict.fromkeys(("protected_areas", "natura2000", "national_interests", "ancient_remains"), "ok"),
+               "strandskydd": {"reason": "", "note": ""}, "permits": [], "notes": []}
+    assert "no link to it is known" in line_of(place_context(profile), "0380-1")
+
+
+def test_an_amendment_is_read_together_with_the_plan_it_amends(tmp_path):
+    """The amendment's line says which plan it goes with."""
+    text = statement(amended_snapshot(tmp_path, addition_note=f"Gäller tillsammans med {ATLE}"))
+    assert f"Read together with {ATLE}" in line_of(text, TILLAGG)
+
+
+def test_the_call_for_an_amendment_reads_it_and_then_the_plan_it_amends(tmp_path):
+    text = statement(amended_snapshot(tmp_path, addition_note=f"Gäller tillsammans med {ATLE}"))
+    assert f"read_plan(doc_ids=['{TILLAGG_ID}', '{MAP_ID}', '{DESCRIPTION_ID}'])" in line_of(text, TILLAGG)
+
+
+def test_a_named_plan_without_text_is_stated_as_not_read_on_the_amendment(tmp_path):
+    text = statement(amended_snapshot(tmp_path, addition_note="Gäller tillsammans med 03-89:387"))
+    assert "03-89:387 (text not read)" in line_of(text, TILLAGG)
+
+
+def test_a_plan_named_by_an_amendment_may_lie_outside_the_pin(tmp_path):
+    text = statement(amended_snapshot(tmp_path, addition_note=f"Läses tillsammans med {ELSEWHERE}"))
+    assert f"Read together with {ELSEWHERE}" in line_of(text, TILLAGG)
+
+
+# --- a question without a pin, and a general question ------------------------------------------------------------------
+
+@pytest.mark.parametrize("words", ["offer_pin", "before any search", "general question"])
+def test_the_no_pin_hint_asks_for_a_pin_on_a_specific_question(words):
+    """Without a pin a specific question gets a request for one before any search, a general one an offer."""
+    assert words in NO_PIN_HINT
+
+
+def test_a_pinned_general_question_is_told_to_stay_general(tmp_path):
+    """The pinned block leaves room for a general question."""
+    assert "general question" in statement(amended_snapshot(tmp_path)).lower()

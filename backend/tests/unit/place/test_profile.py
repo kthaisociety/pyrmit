@@ -21,11 +21,16 @@ from place.store import PlaceStore
 from tests.unit.place.hosted import (
     ATLE,
     DESCRIPTION_ID,
+    ELSEWHERE,
+    ELSEWHERE_ID,
     MAP_ID,
     STADSPLAN,
     STADSPLAN_ID,
+    TILLAGG,
     DownCorpus,
     FakeCorpus,
+    amended_snapshot,
+    every_document,
     hosted_snapshot,
     lookup,
     plans_of,
@@ -426,3 +431,49 @@ def test_hosted_documents_gives_up_on_a_corpus_that_does_not_answer(monkeypatch)
     monkeypatch.setattr("place.profile.CORPUS_LOOKUP_SECONDS", 0.01)
     with pytest.raises(CorpusUnavailable):
         hosted_documents([MAP_ID])
+
+
+# --- the plans to read together ------------------------------------------------------------------------------------------
+
+def read_with(store, ref):
+    found = build_profile(*PIN, store=store, corpus_documents=every_document, property_at=fake_property,
+                          plan_registry=lambda code: [], ancient_remains_at=no_remains)
+    return next(row for row in found["plans"] if row["ref"] == ref)["read_with"]
+
+
+def refs_of(store, ref):
+    return [plan["ref"] for plan in read_with(store, ref)]
+
+
+def test_an_amendment_reads_with_the_plan_its_row_names(tmp_path):
+    assert refs_of(amended_snapshot(tmp_path, addition_note=f"Gäller tillsammans med {ATLE}"), TILLAGG) == [ATLE]
+
+
+def test_an_amendment_reads_with_a_named_plan_that_is_not_at_the_pin(tmp_path):
+    store = amended_snapshot(tmp_path, addition_note=f"Läses tillsammans med {ELSEWHERE}")
+    assert refs_of(store, TILLAGG) == [ELSEWHERE]
+
+
+def test_a_named_plan_away_from_the_pin_brings_its_documents(tmp_path):
+    store = amended_snapshot(tmp_path, addition_note=f"Läses tillsammans med {ELSEWHERE}")
+    assert [document["doc_id"] for document in read_with(store, TILLAGG)[0]["corpus_documents"]] == [ELSEWHERE_ID]
+
+
+def test_an_amendment_that_names_no_plan_reads_with_the_older_plans_at_the_pin(tmp_path):
+    """Without a named plan it reads with the older plans at the pin, newest first."""
+    assert refs_of(amended_snapshot(tmp_path), TILLAGG) == [ATLE, STADSPLAN]
+
+
+def test_a_plan_naming_an_amendment_elsewhere_does_not_bring_it_in(tmp_path):
+    """A plan reads only with the plans it names that are also at the pin."""
+    store = amended_snapshot(tmp_path, plan_note=f"Gäller tillsammans med {ELSEWHERE}, {TILLAGG}")
+    assert refs_of(store, ATLE) == [TILLAGG]
+
+
+def test_a_plan_that_names_nothing_reads_alone(tmp_path):
+    assert read_with(amended_snapshot(tmp_path), ATLE) == []
+
+
+def test_a_row_naming_itself_does_not_read_with_itself(tmp_path):
+    store = amended_snapshot(tmp_path, addition_note=f"Se {TILLAGG}")
+    assert TILLAGG not in refs_of(store, TILLAGG)

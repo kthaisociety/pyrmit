@@ -4,12 +4,16 @@ place.plan_links and place.profile. A SQLite chunks table instead of a real data
 import json
 import sqlite3
 
-from tests.unit.place.snapshot import write_snapshot
+from place.store import PlaceStore
+from tests.unit.place.snapshot import LAYERS, collection, plan, square, write_snapshot
 
 PAGE = "https://www.uppsala.se/detaljplaner/{}/"
 ATLE = "0380-P2002/5"
 STADSPLAN = "0380-P1990/3"
+TILLAGG = "0380-P2012/9"
+ELSEWHERE = "0380-P1980/1"       # a plan whose polygon misses the pin
 MAP_ID, DESCRIPTION_ID, STADSPLAN_ID = "pdf:0380:map", "pdf:0380:description", "pdf:0380:stadsplan"
+TILLAGG_ID, ELSEWHERE_ID = "pdf:0380:tillagg", "pdf:0380:elsewhere"
 CHUNKS = [
     (MAP_ID, 0, "pdf", "detaljplan", "0380", "Plankarta (PDF, 3 MB)", "https://www.uppsala.se/atle/plankarta.pdf", "Karta"),
     (DESCRIPTION_ID, 0, "pdf", "detaljplan", "0380", "Planbeskrivning (PDF)", "https://www.uppsala.se/atle/beskrivning.pdf",
@@ -66,3 +70,29 @@ def hosted_snapshot(root):
 def lookup(doc_ids):
     return {row["doc_id"]: {"title": row["title"], "url": row["url"]} for row in FakeCorpus().query(
         f"SELECT DISTINCT doc_id, title, url FROM chunks WHERE doc_id IN ({','.join('?' * len(doc_ids))})", doc_ids)}
+
+
+def amended_snapshot(root, addition_note=None, plan_note=None, links=True):
+    """Uppsala's fake snapshot with documents linked to its plans. At the pin: the stadsplan (1990), Atle (2002, with
+    `plan_note`) and the tillägg (2012, with `addition_note`), as a row's "Ovrigt". `links=False`: no link table."""
+    layers = {**LAYERS,
+              "plans": collection(
+                  (square(17.635, 59.845, 17.650, 59.855), plan(STADSPLAN, "Stadsplan för Kungsängen", "19900312")),
+                  (square(17.6405, 59.8495, 17.6430, 59.8515), {**plan(ATLE, "Del av Atle", "20020109"), "Ovrigt": plan_note}),
+                  (square(17.70, 59.90, 17.71, 59.91), plan(ELSEWHERE, "Annan plan", "19800101"))),
+              "plan_additions": collection(
+                  (square(17.639, 59.849, 17.643, 59.852),
+                   {**plan(TILLAGG, "Tillägg till stadsplan", "20120601"), "Ovrigt": addition_note}))}
+    write_snapshot(root, layers=layers)
+    if links:
+        linked = {ATLE: [(MAP_ID, "plankarta"), (DESCRIPTION_ID, "planbeskrivning")], STADSPLAN: [(STADSPLAN_ID, "plankarta")],
+                  TILLAGG: [(TILLAGG_ID, "plankarta")], ELSEWHERE: [(ELSEWHERE_ID, "plankarta")]}
+        rows = [{"key": ref, "ref": ref, "doc_id": doc_id, "level": "link", "review": False, "role": role, "date": "2026-11-05"}
+                for ref, documents in linked.items() for doc_id, role in documents]
+        (root / "0380" / "plan_links.jsonl").write_text("\n".join(json.dumps(row) for row in rows), encoding="utf-8")
+    return PlaceStore(root)
+
+
+def every_document(doc_ids):
+    """A corpus that holds every document it is asked for."""
+    return {doc_id: {"title": doc_id, "url": f"https://www.uppsala.se/{doc_id}.pdf"} for doc_id in doc_ids}
