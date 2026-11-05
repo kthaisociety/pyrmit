@@ -8,8 +8,6 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 # Stub packages that are only available inside Docker / the full backend environment.
 # This lets the agent logic be tested without sqlalchemy/openai/pgvector installed.
 _STUBS = [
@@ -51,10 +49,9 @@ class TestExtractJson(unittest.TestCase):
         result = BaseRAGAgent._extract_json(text)
         self.assertEqual(result["status"], "ok")
 
-    @pytest.mark.xfail(strict=True, reason="Known failure, see issue #26")
-    def test_invalid_json_raises(self):
-        with self.assertRaises(json.JSONDecodeError):
-            BaseRAGAgent._extract_json("not json at all")
+    def test_invalid_json_returns_empty(self):
+        # The agents turn {} into their fallback result (test_fallback_on_bad_json)
+        self.assertEqual(BaseRAGAgent._extract_json("not json at all"), {})
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +243,6 @@ class TestLawAgentQuery(unittest.TestCase):
         self.assertEqual(result["max_units_allowed"], 20)
         self.assertAlmostEqual(result["confidence"], 0.85)
 
-    @pytest.mark.xfail(strict=True, reason="Known failure, see issue #26")
     def test_fallback_on_bad_json(self):
         agent = self._make_agent()
         with patch.object(agent, "_retrieve", return_value=[]):
@@ -289,7 +285,6 @@ class TestDocumentAgentQuery(unittest.TestCase):
         self.assertEqual(result["approval_rate"], "75%")
         self.assertEqual(len(result["similar_cases"]), 1)
 
-    @pytest.mark.xfail(strict=True, reason="Known failure, see issue #26")
     def test_fallback_on_bad_json(self):
         agent = self._make_agent()
         with patch.object(agent, "_retrieve", return_value=[]):

@@ -6,6 +6,7 @@ Eliminates duplicated embedding, retrieval, LLM-call, and JSON-parsing logic.
 import json
 import logging
 import re
+import time
 from typing import Any
 
 from openai import OpenAI
@@ -13,11 +14,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import select
 
 import os
+from embeddings import get_embedder
 from llm import get_response_output_text, resolve_model_name
-from observability import create_chat_completion, create_embedding
+from pipeline_trace import CallRecorder, recorded_chat_completion
 
-OPENAI_EMBEDDING_MODEL = "openai/text-embedding-3-large"
-OPENAI_CHAT_MODEL = (
+# LLM_MODEL overrides the chat model (e.g. "anthropic/claude-sonnet-5.5" with LLM_PROVIDER=openrouter)
+OPENAI_CHAT_MODEL = os.getenv("LLM_MODEL", "").strip() or (
     "openai/gpt-5.4-mini"
     if os.getenv("APP_ENV", "development").strip().lower() == "production"
     else "openai/gpt-5.4-nano"
@@ -31,46 +33,45 @@ _TRANSLATION_INSTRUCTION = (
 
 logger = logging.getLogger(__name__)
 
-_direct_openai_client: OpenAI | None = None
-
-
-def _get_direct_openai_client() -> OpenAI:
-    # Embeddings go straight to OpenAI regardless of AI_GATEWAY_API_KEY: the
-    # Gateway's free tier doesn't offer embedding models, so chat completions
-    # can stay on the Gateway while embeddings use a funded OpenAI key.
-    global _direct_openai_client
-    if _direct_openai_client is None:
-        api_key = os.getenv("OPENAI_API_KEY", "").strip()
-        if not api_key:
-            raise RuntimeError("OPENAI_API_KEY is required for embeddings")
-        _direct_openai_client = OpenAI(api_key=api_key)
-    return _direct_openai_client
-
 
 class BaseRAGAgent:
     """Base class providing shared embedding, retrieval, LLM, and JSON utilities."""
 
     _source_label_column: str = ""
 
-    def __init__(self, db: Session, openai_client: OpenAI, model_class, label: str):
+    def __init__(
+        self,
+        db: Session,
+        openai_client: OpenAI,
+        model_class,
+        label: str,
+        recorder: CallRecorder | None = None,
+    ):
         self.db = db
         self.client = openai_client
         self.model_class = model_class
         self.label = label
+        self.recorder = recorder
 
     def _embed(self, text: str) -> list[float] | None:
         # Embeddings can be unavailable independently of chat completions (e.g. a
-        # Vercel AI Gateway free-tier account that only allows certain chat models).
-        # Degrade to no-retrieval instead of failing the whole request.
+        # missing key for the embedding provider). Degrade to no-retrieval instead
+        # of failing the whole request.
+        embedder = get_embedder()
+        started = time.perf_counter()
+        call = {"kind": "embedding", "name": f"{self.label}: embed query", "model": embedder.config.label, "input": text}
         try:
-            return create_embedding(
-                _get_direct_openai_client(),
-                model=OPENAI_EMBEDDING_MODEL.removeprefix("openai/"),
-                input=text,
-            ).data[0].embedding
-        except Exception:
+            embedding = embedder.embed_query(text)
+        except Exception as exc:
             logger.warning("Embedding call failed; continuing without retrieval", exc_info=True)
+            if self.recorder is not None:
+                self.recorder.record(**call, error=str(exc), duration_ms=round((time.perf_counter() - started) * 1000))
             return None
+        if self.recorder is not None:
+            self.recorder.record(
+                **call, dimensions=len(embedding), duration_ms=round((time.perf_counter() - started) * 1000)
+            )
+        return embedding
 
     def _retrieve(self, query: str, k: int = 5) -> list[str]:
         embedding = self._embed(query)
@@ -109,8 +110,20 @@ class BaseRAGAgent:
             .order_by(distance_col)
             .limit(k)
         )
+        started = time.perf_counter()
+        results = self.db.execute(stmt).fetchall()
+        if self.recorder is not None:
+            self.recorder.record(
+                kind="db",
+                name=f"{self.label}: vector search",
+                table=self.model_class.__tablename__,
+                k=k,
+                matches=len(results),
+                query="ORDER BY embedding <=> :query_embedding (cosine distance) LIMIT :k",
+                duration_ms=round((time.perf_counter() - started) * 1000),
+            )
         rows = []
-        for content, source, chunk_index, distance in self.db.execute(stmt).fetchall():
+        for content, source, chunk_index, distance in results:
             rows.append(
                 {
                     "source": source or "unknown",
@@ -121,6 +134,11 @@ class BaseRAGAgent:
                 }
             )
         return rows
+
+    @staticmethod
+    def _trace_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Debug rows without the preview, for the frontend pipeline inspector."""
+        return [{key: value for key, value in row.items() if key != "preview"} for row in rows]
 
     def _log_retrieval(self, query: str, rows: list[dict[str, Any]]) -> None:
         logger.info("%s retrieval query=%r matches=%d", self.label, query, len(rows))
@@ -136,8 +154,10 @@ class BaseRAGAgent:
             )
 
     def _call_llm(self, system_prompt: str, user_prompt: str) -> str:
-        completion = create_chat_completion(
+        completion = recorded_chat_completion(
+            self.recorder,
             self.client,
+            name=f"{self.label}: analysis",
             model=resolve_model_name(OPENAI_CHAT_MODEL),
             instructions=system_prompt,
             input=user_prompt,

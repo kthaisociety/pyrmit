@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Settings, MessageSquare, Trash2, Check, X, Pencil } from 'lucide-react';
+import { Plus, Settings, MessageSquare, Trash2, Check, X, Pencil, Database, FlaskConical, Gauge } from 'lucide-react';
+import SidebarToggle from '@/components/SidebarToggle';
 import { authFetch } from '@/lib/auth';
 
 interface ChatSession {
@@ -23,9 +24,13 @@ interface SidebarProps {
   refreshTrigger: number;
   user: User | null;
   onOpenSettings: () => void;
+  onOpenDatabase: () => void;
+  onOpenBenchmark: () => void;
+  onOpenPipeline: () => void;
+  onClose?: () => void; // the menu button: hides the sidebar
 }
 
-export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, refreshTrigger, user, onOpenSettings }: SidebarProps) {
+export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, refreshTrigger, user, onOpenSettings, onOpenDatabase, onOpenBenchmark, onOpenPipeline, onClose }: SidebarProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -92,10 +97,11 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
 
   return (
     <aside className="w-[260px] bg-zinc-50 dark:bg-black border-r border-zinc-200 dark:border-zinc-800 flex flex-col flex-shrink-0">
-      <div className="p-3">
+      <div className="flex items-center gap-1 p-3">
+        {onClose && <SidebarToggle open onClick={onClose} />}
         <button
           onClick={onNewChat}
-          className="w-full flex items-center gap-2 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-sm font-medium shadow-sm"
+          className="flex-1 flex items-center gap-2 px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors text-sm font-medium shadow-sm"
         >
           <Plus size={16} />
           <span>New Chat</span>
@@ -204,6 +210,27 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
             <p className="text-xs text-zinc-500 truncate">{user?.email}</p>
           </div>
         </div>
+        <button
+          onClick={onOpenBenchmark}
+          className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-900 rounded-lg transition-colors text-zinc-700 dark:text-zinc-300"
+        >
+          <FlaskConical size={16} />
+          <span>Benchmark</span>
+        </button>
+        <button
+          onClick={onOpenPipeline}
+          className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-900 rounded-lg transition-colors text-zinc-700 dark:text-zinc-300"
+        >
+          <Gauge size={16} />
+          <span>Pipeline</span>
+        </button>
+        <button
+          onClick={onOpenDatabase}
+          className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-900 rounded-lg transition-colors text-zinc-700 dark:text-zinc-300"
+        >
+          <Database size={16} />
+          <span>Database</span>
+        </button>
         <button
           onClick={onOpenSettings}
           className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-900 rounded-lg transition-colors text-zinc-700 dark:text-zinc-300"

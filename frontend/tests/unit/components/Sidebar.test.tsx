@@ -16,6 +16,9 @@ function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> = {}) {
     refreshTrigger: 0,
     user: { id: 'u1', name: 'anna', email: 'anna@example.com' },
     onOpenSettings: vi.fn(),
+    onOpenDatabase: vi.fn(),
+    onOpenBenchmark: vi.fn(),
+    onOpenPipeline: vi.fn(),
     ...overrides,
   };
   render(<Sidebar {...props} />);
@@ -23,6 +26,16 @@ function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> = {}) {
 }
 
 describe('Sidebar', () => {
+  it('closes from its menu button', async () => {
+    /** The menu button at the top hides the sidebar. */
+    const onClose = vi.fn();
+    renderSidebar({ onClose });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close sidebar' }));
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it('lists the sessions from the backend, with a fallback title for untitled ones', async () => {
     renderSidebar();
 
@@ -69,6 +82,24 @@ describe('Sidebar', () => {
 
     expect(screen.getByText('A')).toBeInTheDocument();
     expect(screen.getByText('anna@example.com')).toBeInTheDocument();
+    await screen.findByText('Bygglov Storgatan 3');
+  });
+
+  it('opens the Database view from the sidebar', async () => {
+    const props = renderSidebar();
+
+    await userEvent.click(screen.getByRole('button', { name: /Database/ }));
+
+    expect(props.onOpenDatabase).toHaveBeenCalled();
+    await screen.findByText('Bygglov Storgatan 3');
+  });
+
+  it('opens the Benchmark view from the sidebar', async () => {
+    const props = renderSidebar();
+
+    await userEvent.click(screen.getByRole('button', { name: /Benchmark/ }));
+
+    expect(props.onOpenBenchmark).toHaveBeenCalled();
     await screen.findByText('Bygglov Storgatan 3');
   });
 });

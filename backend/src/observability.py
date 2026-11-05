@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Any
 
-from llm import VERCEL_AI_GATEWAY_BASE_URL
+from llm import chat_client_settings
 
 logger = logging.getLogger(__name__)
 
@@ -39,13 +39,8 @@ def _strip_langfuse_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_openai_client():
-    api_key = os.getenv("AI_GATEWAY_API_KEY") or os.getenv("OPENAI_API_KEY")
-    if api_key:
-        _openai_client.api_key = api_key
-
-    base_url = os.getenv("OPENAI_BASE_URL")
-    if os.getenv("AI_GATEWAY_API_KEY"):
-        base_url = VERCEL_AI_GATEWAY_BASE_URL
+    api_key, base_url = chat_client_settings()
+    _openai_client.api_key = api_key
     if base_url:
         # Setting base_url on an already-constructed client bypasses the SDK's
         # own trailing-slash normalization (which only runs in OpenAI.__init__),
@@ -90,11 +85,19 @@ def propagate_trace_attributes(*, user_id: str | None = None, session_id: str | 
         yield
 
 
+def reasoning_effort(name: str) -> str:
+    """LLM_REASONING_EFFORT for answers/analyses; LLM_REWRITE_REASONING_EFFORT (default low) for query rewrites,
+    which only need to be fast."""
+    if any(word in name.lower() for word in ("rewrite", "translation")):
+        return os.getenv("LLM_REWRITE_REASONING_EFFORT", "low").strip() if os.getenv("LLM_REASONING_EFFORT") else ""
+    return os.getenv("LLM_REASONING_EFFORT", "").strip()
+
+
 def create_chat_completion(client: Any, **kwargs):
     if hasattr(client, "responses"):
+        effort = reasoning_effort(str(kwargs.get("name", "")))
+        if effort and "reasoning" not in kwargs:
+            kwargs["reasoning"] = {"effort": effort}
         return client.responses.create(**_strip_langfuse_kwargs(kwargs))
     return client.chat.completions.create(**_strip_langfuse_kwargs(kwargs))
 
-
-def create_embedding(client: Any, **kwargs):
-    return client.embeddings.create(**_strip_langfuse_kwargs(kwargs))

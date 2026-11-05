@@ -1,6 +1,10 @@
 import json
 import logging
 import os
+import queue
+import re
+import threading
+import time
 import uuid
 from typing import Generator
 
@@ -14,7 +18,7 @@ from agents.document_agent import DocumentAgent
 from agents.law_agent import LawAgent
 from agents.orchestrator import Orchestrator
 from agents.parsers import format_response, parse_query
-from db.database import get_db
+from db.database import SessionLocal, get_db
 from dependencies import get_current_user
 from llm import (
     build_responses_input,
@@ -22,12 +26,24 @@ from llm import (
     resolve_model_name,
 )
 import models
-from observability import create_chat_completion, get_openai_client, propagate_trace_attributes, start_observation
+from observability import (
+    create_chat_completion,
+    get_openai_client,
+    propagate_trace_attributes,
+    reasoning_effort,
+    start_observation,
+)
+from pipeline_trace import CallRecorder, recorded_chat_completion, response_usage
 import schemas
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+# Chunks per pool (laws / documents) given to the answer model; the local eval reaches ~0.93 recall at 10
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "10"))
+SSE_HEARTBEAT_S = 10  # idle stream -> keep-alive comment, well under proxy idle timeouts
 
 
 def _get_user_session(session_id: str, user_id: str, db: Session) -> models.ChatSession:
@@ -40,15 +56,20 @@ def _get_user_session(session_id: str, user_id: str, db: Session) -> models.Chat
     return session
 
 
-def _format_sources(sources: list[str]) -> str:
+def _format_sources(sources: list[str], numbered: bool = False) -> str:
+    """The source list appended to the answer; numbered ("- [1] label") when the answer cites [n]."""
     if not sources:
         return ""
-    items = "\n".join(f"- {s}" for s in sources)
+    items = "\n".join(f"- [{i}] {s}" if numbered else f"- {s}" for i, s in enumerate(sources, start=1))
     return f"\n\n---\n**Sources**\n{items}"
 
 
 def _sse(event: dict) -> str:
-    return f"data: {json.dumps(event)}\n\n"
+    return f"data: {json.dumps(event, default=str)}\n\n"
+
+
+def _agent_output_for_trace(output: dict) -> dict:
+    return {key: value for key, value in output.items() if key not in {"retrieval", "sources"}}
 
 
 def _response_input_with_user_prompt(
@@ -208,13 +229,13 @@ Latest User Message: {original_content}"""
                 document_agent = DocumentAgent(db, client)
                 embedding = law_agent._embed(translated_content)
 
-                law_debug_rows = law_agent._retrieve_debug_rows_from_embedding(embedding, k=5)
-                doc_debug_rows = document_agent._retrieve_debug_rows_from_embedding(embedding, k=5)
+                law_debug_rows = law_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
+                doc_debug_rows = document_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
                 law_agent._log_retrieval(translated_content, law_debug_rows)
                 document_agent._log_retrieval(translated_content, doc_debug_rows)
 
-                law_results = law_agent._retrieve_with_meta_from_embedding(embedding, k=5)
-                doc_results = document_agent._retrieve_with_meta_from_embedding(embedding, k=5)
+                law_results = law_agent._retrieve_with_meta_from_embedding(embedding, k=RAG_TOP_K)
+                doc_results = document_agent._retrieve_with_meta_from_embedding(embedding, k=RAG_TOP_K)
                 all_chunks = [c for c, _ in law_results] + [c for c, _ in doc_results]
                 sources = list(dict.fromkeys(
                     [label for _, label in law_results] + [label for _, label in doc_results]
@@ -300,6 +321,7 @@ def chat_stream(
         db: Session = Depends(get_db),
         user: models.User = Depends(get_current_user),
 ):
+    """The chat's streamed answer (SSE)."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
@@ -324,12 +346,17 @@ def chat_stream(
     user_message = models.ChatMessage(role=last_message.role, content=last_message.content, session_id=session_id)
     db.add(user_message)
     db.commit()
+    # The answer is in the history from the start: it is filled while generating, even if the user leaves
+    assistant_message = models.ChatMessage(role="assistant", content="", session_id=session_id, status="streaming")
+    db.add(assistant_message)
+    db.commit()
+    assistant_id = assistant_message.id
 
     # Capture for use inside generator
     messages_snapshot = list(request.messages)
     original_content = last_message.content
 
-    def generate() -> Generator[str, None, None]:
+    def generate(db: Session) -> Generator[str, None, None]:
         with start_observation(
                 "chat.stream",
                 input={"last_message": original_content},
@@ -339,6 +366,19 @@ def chat_stream(
             session_id=session_id,
         ):
             accumulated = ""
+            # Pipeline inspector: every event is streamed live and saved with the answer
+            recorder = CallRecorder()
+            trace: list[dict] = []
+
+            def emit(stage: str, **data) -> str:
+                event = {"stage": stage, "data": data}
+                trace.append(event)
+                return _sse({"type": "pipeline", **event})
+
+            def emit_calls() -> Generator[str, None, None]:
+                for call in recorder.drain():
+                    yield emit("call", **call)
+
             yield ": connected\n\n"
 
             if is_new_session:
@@ -368,17 +408,26 @@ def chat_stream(
                     )
 
                 try:
-                    tr = create_chat_completion(
+                    tr = recorded_chat_completion(
+                        recorder,
                         client,
+                        name="Query rewrite / translation",
                         model=resolve_model_name(OPENAI_CHAT_MODEL),
                         input=context_prompt,
                         temperature=0,
-                        name="chat.stream.translation"
                     )
                     translated = get_response_output_text(tr).strip() or original_content
                 except Exception:
                     logger.warning("Translation failed, using original", exc_info=True)
                     translated = original_content
+
+                yield from emit_calls()
+                yield emit(
+                    "translation",
+                    original=original_content,
+                    translated=translated,
+                    used_history=len(messages_snapshot) > 1,
+                )
 
                 # ── Step 2: parse intent ───────────────────────────────────────
                 yield _sse({"type": "thinking", "label": "Parsing intent"})
@@ -388,18 +437,27 @@ def chat_stream(
                 project_type = parsed.get("project_type") or "residential"
 
                 stream_obs.update(metadata={"location": location, "units": units, "translated": translated})
+                yield emit(
+                    "intent",
+                    location=location,
+                    units=units,
+                    project_type=project_type,
+                    route="feasibility" if location and units else "general_rag",
+                )
 
                 if not location or not units:
                     # ── General RAG path ───────────────────────────────────────
+                    law_agent = LawAgent(db, client, recorder)
+                    document_agent = DocumentAgent(db, client, recorder)
                     yield _sse({"type": "tool_call", "name": "embed_query", "input": translated})
-                    law_agent = LawAgent(db, client)
-                    document_agent = DocumentAgent(db, client)
                     embedding = law_agent._embed(translated)
-                    yield _sse({"type": "tool_result", "name": "embed_query", "result": "Embedding computed"})
+                    embedding_ok = embedding is not None
+                    yield _sse({"type": "tool_result", "name": "embed_query",
+                                "result": "Embedding computed" if embedding_ok else "Embedding failed"})
 
-                    yield _sse({"type": "tool_call", "name": "retrieve_law_chunks", "input": f"k=5"})
-                    law_debug_rows = law_agent._retrieve_debug_rows_from_embedding(embedding, k=5)
-                    doc_debug_rows = document_agent._retrieve_debug_rows_from_embedding(embedding, k=5)
+                    yield _sse({"type": "tool_call", "name": "retrieve_law_chunks", "input": f"k={RAG_TOP_K}"})
+                    law_debug_rows = law_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
+                    doc_debug_rows = document_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
 
                     law_agent._log_retrieval(translated, law_debug_rows)
                     document_agent._log_retrieval(translated, doc_debug_rows)
@@ -428,12 +486,12 @@ def chat_stream(
                     ):
                         pass
 
-                    law_results = law_agent._retrieve_with_meta_from_embedding(embedding, k=5)
+                    law_results = [(row["content"], row["source"]) for row in law_debug_rows]
                     yield _sse(
                         {"type": "tool_result", "name": "retrieve_law_chunks", "result": f"{len(law_results)} chunks"})
 
-                    yield _sse({"type": "tool_call", "name": "retrieve_document_chunks", "input": f"k=5"})
-                    doc_results = document_agent._retrieve_with_meta_from_embedding(embedding, k=5)
+                    yield _sse({"type": "tool_call", "name": "retrieve_document_chunks", "input": f"k={RAG_TOP_K}"})
+                    doc_results = [(row["content"], row["source"]) for row in doc_debug_rows]
                     yield _sse({"type": "tool_result", "name": "retrieve_document_chunks",
                                 "result": f"{len(doc_results)} chunks"})
 
@@ -441,6 +499,22 @@ def chat_stream(
                     sources = list(dict.fromkeys(
                         [label for _, label in law_results] + [label for _, label in doc_results]
                     ))
+
+                    yield from emit_calls()
+                    yield emit(
+                        "retrieval",
+                        agent="law",
+                        query=translated,
+                        embedding_ok=embedding_ok,
+                        matches=law_agent._trace_rows(law_debug_rows),
+                    )
+                    yield emit(
+                        "retrieval",
+                        agent="document",
+                        query=translated,
+                        embedding_ok=embedding_ok,
+                        matches=document_agent._trace_rows(doc_debug_rows),
+                    )
 
                     with start_observation(
                             "chat.general_rag_retrieval",
@@ -471,10 +545,9 @@ def chat_stream(
                     else:
                         context = "\n\n".join(f"Source {i + 1}:\n{c}" for i, c in enumerate(all_chunks))
                         yield _sse({"type": "thinking", "label": "Composing answer"})
-                        stream = create_chat_completion(
-                            client,
-                            model=resolve_model_name(OPENAI_CHAT_MODEL),
-                            instructions=(
+                        answer_request = {
+                            "model": resolve_model_name(OPENAI_CHAT_MODEL),
+                            "instructions": (
                                 "You are a Swedish land law and urban planning expert. "
                                 "Answer in English based on the provided Swedish legal sources. "
                                 "When quoting Swedish source text directly, use this format:\n"
@@ -482,11 +555,17 @@ def chat_stream(
                                 "> **Original (Swedish):** [exact Swedish text]\n"
                                 "Use markdown formatting for clarity."
                             ),
-                            input=_response_input_with_user_prompt(
+                            "input": _response_input_with_user_prompt(
                                 messages_snapshot,
                                 f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated}",
                             ),
-                            temperature=0,
+                            "temperature": 0,
+                        }
+                        started = time.perf_counter()
+                        usage = None
+                        stream = create_chat_completion(
+                            client,
+                            **answer_request,
                             stream=True,
                             name="chat.stream.rag_answer"
                         )
@@ -494,10 +573,23 @@ def chat_stream(
                             if event.type == "response.output_text.delta" and event.delta:
                                 accumulated += event.delta
                                 yield _sse({"type": event.type, "delta": event.delta})
+                            elif event.type == "response.completed":
+                                usage = response_usage(event.response)
                             elif event.type == "response.failed":
                                 raise RuntimeError("Model response failed")
                             elif event.type == "error":
                                 raise RuntimeError(event.message)
+
+                        recorder.record(
+                            kind="llm",
+                            name="Answer generation (streamed)",
+                            **answer_request,
+                            reasoning_effort=reasoning_effort("chat.stream.rag_answer") or None,
+                            output=accumulated,
+                            usage=usage,
+                            duration_ms=round((time.perf_counter() - started) * 1000),
+                        )
+                        yield from emit_calls()
 
                         suffix = _format_sources(sources)
                         if suffix:
@@ -508,8 +600,8 @@ def chat_stream(
                     # ── Multi-agent feasibility path ───────────────────────────
                     yield _sse({"type": "tool_call", "name": "law_agent",
                                 "input": f"location={location}, units={units}, type={project_type}"})
-                    law_agent = LawAgent(db, client)
-                    document_agent = DocumentAgent(db, client)
+                    law_agent = LawAgent(db, client, recorder)
+                    document_agent = DocumentAgent(db, client, recorder)
                     orchestrator = Orchestrator(law_agent, document_agent)
 
                     yield _sse({"type": "tool_call", "name": "document_agent", "input": f"location={location}"})
@@ -518,6 +610,24 @@ def chat_stream(
                                 "result": f"confidence={result.get('confidence', '?')}%"})
                     yield _sse({"type": "tool_result", "name": "document_agent",
                                 "result": result.get("feasibility", "unknown")})
+
+                    yield from emit_calls()
+                    for agent_name, output in result.get("agent_outputs", {}).items():
+                        retrieval = output.get("retrieval", {})
+                        yield emit(
+                            "retrieval",
+                            agent=agent_name,
+                            query=retrieval.get("query"),
+                            embedding_ok=None,
+                            matches=retrieval.get("matches", []),
+                        )
+                        yield emit("agent_output", agent=agent_name, output=_agent_output_for_trace(output))
+                    yield emit(
+                        "verdict",
+                        feasibility=result.get("feasibility"),
+                        confidence=result.get("confidence"),
+                        summary=result.get("summary"),
+                    )
 
                     yield _sse({"type": "thinking", "label": "Formatting analysis"})
                     full_text = format_response(result) + _format_sources(result.get("sources", []))
@@ -534,17 +644,79 @@ def chat_stream(
                 yield _sse({"type": "error", "message": str(e)})
                 return
 
-            # Persist assistant message
-            ai_message = models.ChatMessage(role="assistant", content=accumulated, session_id=session_id)
-            db.add(ai_message)
-            db.commit()
-
+            # The background worker below persists the message from the streamed events
             stream_obs.update(output={"length": len(accumulated)})
             yield _sse({"type": "response.completed"})
             yield _sse({"type": "done", "session_id": session_id})
 
+    events: queue.Queue[str | None] = queue.Queue()
+
+    def run_in_background() -> None:
+        """Generate the answer whatever happens to the HTTP connection (tab closed, other chat opened), and keep
+        the assistant message up to date in the DB: partial text every 2 s, final text + trace + status at the end."""
+        worker_db = SessionLocal()
+        content, trace, status, last_save = "", [], "streaming", time.monotonic()
+
+        def save(final_status: str | None = None) -> None:
+            message = worker_db.get(models.ChatMessage, assistant_id)
+            if message is not None:
+                message.content = content
+                message.trace = json.loads(json.dumps(trace, default=str))
+                message.status = final_status or "streaming"
+                worker_db.commit()
+
+        try:
+            for chunk in generate(worker_db):
+                events.put(chunk)
+                if not chunk.startswith("data: "):
+                    continue
+                event = json.loads(chunk[len("data: "):])
+                kind = event.get("type")
+                if kind == "response.output_text.delta":
+                    content += event.get("delta") or ""
+                elif kind == "token":
+                    content += event.get("token") or ""
+                elif kind == "pipeline":
+                    trace.append({"stage": event.get("stage"), "data": event.get("data")})
+                elif kind == "error":
+                    status = "error"
+                    content = content or f"Error: {event.get('message')}"
+                elif kind == "done":
+                    status = "done"
+                if time.monotonic() - last_save > 2:
+                    save()
+                    last_save = time.monotonic()
+        except Exception as exc:
+            logger.error("Background answer generation failed", exc_info=True)
+            status = "error"
+            content = content or f"Error: {exc}"
+            events.put(_sse({"type": "error", "message": str(exc)}))
+        finally:
+            try:
+                save(status if status != "streaming" else "error")
+            except Exception:
+                logger.error("Could not save the assistant message", exc_info=True)
+            worker_db.close()
+            events.put(None)
+
+    threading.Thread(target=run_in_background, name=f"chat-{assistant_id}", daemon=True).start()
+
+    def relay() -> Generator[str, None, None]:
+        # If the client disconnects, this generator just stops; the worker keeps going
+        while True:
+            try:
+                chunk = events.get(timeout=SSE_HEARTBEAT_S)
+            except queue.Empty:
+                # A comment line: proxies drop idle streams (the Next.js dev rewrite after 30 s), and an
+                # agent turn or the corpus preload can send nothing for longer than that
+                yield ": keep-alive\n\n"
+                continue
+            if chunk is None:
+                return
+            yield chunk
+
     return StreamingResponse(
-        generate(),
+        relay(),
         media_type="text/event-stream",
         headers={
             "X-Accel-Buffering": "no",
