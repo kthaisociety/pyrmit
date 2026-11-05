@@ -542,10 +542,10 @@ rerunning `agentic.rejudge` continues. A run that sits a long time before its fi
    every snapshot matched to the store's detaljplan documents (data/corpus/documents.jsonl, read once; missing =
    nothing written), three levels per polygon, first hit wins: link (polygon page / document link = document url;
    a pilot kommun also through plan_pages.json), akt (`normalise_akt`: kommun prefix dropped, "-" / "." as "/", so
-   0380-P 2015/12 = P2015-12; found in the text of the same kommun's documents only), name (title = plan name, marked
+   0380-P 2015/12 = P2015-12; found in the title, file name or first 3,000 characters of the same kommun's documents only), name (title = plan name, marked
    review). Unmatched polygons -> data/geo/plan_fetch_list.json by kommun ("no public link" when the links were
    internal paths); data/geo/plan_match_report.md counts levels, unmatched and the store's unclaimed share. The
-   first run (2026-11-03, 17 kommuner): 109 of 17,960 polygons, the store holds few detaljplan documents per kommun
+   run of 2026-11-05 (17 kommuner, the local store only): 97 of 17,960 polygons, that store holds few detaljplan documents per kommun
 2. The chat's map panel (components/place/) -> GET /api/place/profile -> place.profile.build_profile:
    kommun from the snapshot boundaries (a plan-layer kommun: the plans at the point from `_plan`, property
    "not_covered", sections "not_covered", a note when no plan was found since the layer is not known to be complete;

@@ -7,6 +7,7 @@ import pytest
 
 from place.plan_layers import fetch_plan_layer
 from place.plan_links import (
+    AKT_FRONT_CHARS,
     FETCH_LIST,
     LINKS_FILE,
     MATCH_REPORT,
@@ -81,6 +82,29 @@ def test_akt_level_matches_on_the_aktbeteckning_in_the_text(tmp_path):
     text = "Planbeskrivning\nAktbeteckning: 0182-P 2015/3\nDetaljplanen vann laga kraft 2015-06-01."
     result = match_kommun("0182", [document("pdf:0182:c3", text=text)], geo_dir=nacka_snapshot(tmp_path))
     assert links_of(result, "0182-P2015/3") == [("pdf:0182:c3", "akt", False)]
+
+
+def test_akt_level_ignores_an_aktbeteckning_past_the_front_of_the_text(tmp_path):
+    """A new plan's description naming the plan it replaces, deep in its text, is not that plan's document."""
+    text = "Planbeskrivning\n" + "x" * AKT_FRONT_CHARS + "\nPlanen ersätter detaljplan 0182-P2015/3."
+    result = match_kommun("0182", [document("pdf:0182:c5", text=text)], geo_dir=nacka_snapshot(tmp_path))
+    assert links_of(result, "0182-P2015/3") == []
+    assert "0182-P2015/3" in [item["ref"] for item in result["fetch"]]
+
+
+def test_akt_level_matches_on_the_aktbeteckning_in_the_title(tmp_path):
+    """A document titled with the aktbeteckning is linked, wherever its text names it."""
+    documents = [document("pdf:0182:c6", title="Gällande plankarta 0182-P2015/3 (PDF, 1 MB)")]
+    result = match_kommun("0182", documents, geo_dir=nacka_snapshot(tmp_path))
+    assert links_of(result, "0182-P2015/3") == [("pdf:0182:c6", "akt", False)]
+
+
+@pytest.mark.parametrize("file_name", ["0182-P2015-3.pdf", "0182-P%202015-3.pdf", "0182k-p2015-3.pdf"])
+def test_akt_level_matches_on_the_aktbeteckning_in_the_file_name(tmp_path, file_name):
+    """A document whose file name holds the aktbeteckning, encoded or in lower case, is linked."""
+    documents = [document("pdf:0182:c7", url=f"https://www.nacka.se/planer/{file_name}")]
+    result = match_kommun("0182", documents, geo_dir=nacka_snapshot(tmp_path))
+    assert links_of(result, "0182-P2015/3") == [("pdf:0182:c7", "akt", False)]
 
 
 def test_name_level_match_is_marked_for_review(tmp_path):

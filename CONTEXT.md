@@ -135,7 +135,7 @@ A row of the link table (`data/geo/<code>/plan_links.jsonl`): one plan polygon m
 _Avoid_: corpus match (the registry match by name that `corpus_plan_id` records)
 
 **Match level**:
-How a polygon found its document, tried in order and stopped at the first hit: link (the polygon's document link is the document's address), akt (the normalised aktbeteckning appears in the document's text, same kommun only) or name (kommun and plan name agree; marked for review).
+How a polygon found its document, tried in order and stopped at the first hit: link (the polygon's document link is the document's address), akt (the normalised aktbeteckning appears in the document's title, file name or first page of text, same kommun only; further in it is only a mention, such as a plan the document replaces) or name (kommun and plan name agree; marked for review).
 
 **Fetch list**:
 The links of every polygon no document matched, grouped by kommun (`data/geo/plan_fetch_list.json`), for the scraper to pick up next. A polygon whose links were internal paths is listed as "no public link" with its aktbeteckning.

@@ -8,8 +8,8 @@ detaljplan documents corpus.extract wrote), so a pin leads to the text of the pl
 -> data/geo/<code>/plan_links.jsonl (the link table), data/geo/plan_fetch_list.json (the links of the polygons no
 document matched, for the scraper) and data/geo/plan_match_report.md (one line per kommun). Three match levels per
 polygon, tried in order, the first with a hit wins: LINK (a polygon link equals a document's address), AKT (the
-normalised aktbeteckning equals one read from a document's text of the same kommun) and NAME (the kommun and the
-plan name agree, marked for review). Restart the backend after a run.
+normalised aktbeteckning equals one read from the title, the file name or the front of the text of a document of the
+same kommun) and NAME (the kommun and the plan name agree, marked for review). Restart the backend after a run.
 """
 
 import argparse
@@ -17,7 +17,7 @@ import json
 import re
 from collections.abc import Callable
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 from corpus.common import DOCUMENTS_PATH
 from place import plan_layers
@@ -31,6 +31,9 @@ MATCH_REPORT = "plan_match_report.md"
 LEVELS = ("link", "akt", "name")
 NO_PUBLIC_LINK = "no public link"
 DOCUMENT_TYPE = "detaljplan"
+# How far into a document's text an aktbeteckning says the document is about that plan, about its first page. Further
+# in it is most often a mention: a new plan's description lists the plans it replaces and the plans around it
+AKT_FRONT_CHARS = 3000
 
 KOMMUN_PREFIX = re.compile(r"^\d{4}K?-")
 # An aktbeteckning in running text: with its kommun prefix ("0182K-93/62", "0182-P 2015/3", "2280-DP-193") or a
@@ -133,6 +136,14 @@ def _akt_keys_in(text: str, code: str) -> set[str]:
     return keys
 
 
+def _own_akt_keys(document: dict, code: str) -> set[str]:
+    """The aktbeteckningar a document presents as its own: in its title, its file name (read in upper case, as file
+    names are often lower case) or the first AKT_FRONT_CHARS of its text. One named further in is only a mention."""
+    file_name = unquote(urlsplit(str(document.get("url") or "")).path.rstrip("/").rsplit("/", 1)[-1]).upper()
+    places = (document.get("title"), file_name, (document.get("text") or "")[:AKT_FRONT_CHARS])
+    return set().union(*(_akt_keys_in(place, code) for place in places))
+
+
 def _links_of(polygon: dict) -> list[str]:
     return [link for link in [polygon["page"], *polygon["documents"]] if link]
 
@@ -150,7 +161,7 @@ class _Index:
             url = _url_key(document.get("url"))
             if url:
                 self.by_url.setdefault(url, []).append(document)
-            for key in _akt_keys_in(document.get("text") or "", code):
+            for key in _own_akt_keys(document, code):
                 self.by_akt.setdefault(key, []).append(document)
             name = _name_key(document.get("title"), kommun)
             if name:
@@ -195,7 +206,7 @@ def match_kommun(code: str, documents: list[dict], *, geo_dir: Path = GEO_DIR) -
     Per polygon the levels run in order and stop at the first with a hit; every document hitting at that level is
     linked, and a document may be linked from several polygons. "link": a polygon's page or document link equals a
     document's url (scheme, trailing slash and case of the host ignored). "akt": the polygon's normalised
-    aktbeteckning equals one found in a document's text. "name": the polygon's name and a document's title agree
+    aktbeteckning equals one in a document's title, file name or first AKT_FRONT_CHARS of text. "name": the polygon's name and a document's title agree
     once "Detaljplan för", the kommun suffix, case and punctuation are dropped; such a link carries "review" True.
 
     Returns {"code", "links": [{"key" (polygon_key), "ref", "doc_id", "level", "review", "date"}], "fetch":
