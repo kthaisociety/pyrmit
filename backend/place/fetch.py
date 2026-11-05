@@ -51,16 +51,20 @@ def get_json(client: httpx.Client, url: str, params: dict):
 
 
 def kommun_boundary(client: httpx.Client, code: str, name: str | None = None) -> dict:
-    """The kommun's boundary from OpenStreetMap (one Nominatim request), as a GeoJSON geometry. `name` is the
-    kommun's name, looked up in PILOTS when not given (KeyError for a kommun that is neither). Raises RuntimeError
-    when Nominatim has no municipality boundary for it."""
+    """The kommun's boundary from OpenStreetMap, as a GeoJSON geometry. `name` is the kommun's name, looked up in
+    PILOTS when not given (KeyError for a kommun that is neither). Nominatim is asked for "<name> kommun" and, when
+    that finds no boundary, for the genitive "<name>s kommun": OpenStreetMap names Boxholm "Boxholms kommun" and the
+    plain name then finds only the town. Raises RuntimeError when neither has a municipality boundary."""
     name = name or PILOTS[code]["name"]
-    results = get_json(client, f"{NOMINATIM}/search", {
-        "q": f"{name} kommun", "countrycodes": "se", "polygon_geojson": 1, "polygon_threshold": 0.0005,
-        "format": "jsonv2", "limit": 5})
-    for result in results:
-        if _is_kommun_boundary(result, name):
-            return result["geojson"]
+    for attempt, query in enumerate((f"{name} kommun", f"{name}s kommun")):
+        if attempt:
+            time.sleep(RETRY_DELAY_S)  # Nominatim allows one request a second
+        results = get_json(client, f"{NOMINATIM}/search", {
+            "q": query, "countrycodes": "se", "polygon_geojson": 1, "polygon_threshold": 0.0005,
+            "format": "jsonv2", "limit": 5})
+        for result in results:
+            if _is_kommun_boundary(result, name):
+                return result["geojson"]
     raise RuntimeError(f"No municipality boundary for {name} kommun in Nominatim")
 
 

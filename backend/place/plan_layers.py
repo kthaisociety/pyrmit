@@ -20,6 +20,7 @@ from pathlib import Path
 from urllib.parse import parse_qsl, quote, urljoin, urlsplit, urlunsplit
 
 import httpx
+from shapely.errors import ShapelyError
 from shapely.geometry import shape
 
 from place.fetch import fetch_arcgis, get_json, kommun_boundary, new_client
@@ -53,6 +54,7 @@ OTHER_SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*:", re.IGNORECASE)
 HREF = re.compile(r"""href\s*=\s*["']([^"']+)["']""", re.IGNORECASE)
 LINK_SEPARATORS = re.compile(r"[\s;,|]+")
 REASON_LENGTH = 200
+MIN_SECONDS_PER_KOMMUN = 1.0        # a kommun without a boundary asks Nominatim, which allows one request a second
 
 
 # --- links --------------------------------------------------------------------------------------------------------
@@ -197,9 +199,10 @@ def _swap_axes(coordinates):
 
 
 def _first_position(coordinates):
-    while not isinstance(coordinates[0], (int, float)):
+    """The first position of nested coordinates, or None when they hold none."""
+    while coordinates and not isinstance(coordinates[0], (int, float)):
         coordinates = coordinates[0]
-    return coordinates
+    return coordinates or None
 
 
 def _in_wgs84(geometries: list[dict]) -> list[dict]:
@@ -219,7 +222,8 @@ def _in_wgs84(geometries: list[dict]) -> list[dict]:
 def _polygons(raw: list[dict], boundary) -> list[dict]:
     """The features with a polygon that meets the kommun boundary, as plain GeoJSON features."""
     with_geometry = [item for item in raw if item.get("geometry")
-                     and item["geometry"].get("type") in ("Polygon", "MultiPolygon")]
+                     and item["geometry"].get("type") in ("Polygon", "MultiPolygon")
+                     and _first_position(item["geometry"].get("coordinates"))]
     geometries = _in_wgs84([item["geometry"] for item in with_geometry])
     return [{"type": "Feature", "geometry": geometry, "properties": item.get("properties") or {}}
             for item, geometry in zip(with_geometry, geometries) if shape(geometry).intersects(boundary)]
@@ -325,7 +329,8 @@ def fetch_plan_layer(source: PlanSource, *, client: httpx.Client | None = None, 
     started = time.time()
     try:
         _snapshot(http, source, Path(out_dir) / source.code, row)
-    except (httpx.HTTPError, ValueError, RuntimeError, KeyError, TypeError) as exc:
+    except (httpx.HTTPError, httpx.InvalidURL, ValueError, RuntimeError, KeyError, TypeError, IndexError,
+            AttributeError, ShapelyError) as exc:
         row["reason"] = f"{type(exc).__name__}: {exc}"[:REASON_LENGTH]
     finally:
         if client is None:
@@ -337,24 +342,33 @@ def fetch_plan_layer(source: PlanSource, *, client: httpx.Client | None = None, 
 
 def fetch_registry(sources: Iterable[PlanSource], *, client: httpx.Client | None = None,
                    out_dir: Path = GEO_DIR) -> list[dict]:
-    """fetch_plan_layer for every source, in the order given, going on after a kommun that fails. The rows are then
-    merged into `out_dir`/COVERAGE_ROWS (load_coverage: a kommun's row replaces its earlier one, the other kommuner's
-    rows stay), and coverage_report of every row in that file, in kommun code order, is written to
-    `out_dir`/COVERAGE_REPORT, so a run of some kommuner updates their lines in a report that still covers all.
-    Returns this run's coverage rows."""
+    """fetch_plan_layer for every source, in the order given, going on after a kommun that fails. As each kommun
+    finishes its row is merged into `out_dir`/COVERAGE_ROWS (load_coverage: a kommun's row replaces its earlier one,
+    the other kommuner's rows stay), and coverage_report of every row in that file, in kommun code order, is written
+    to `out_dir`/COVERAGE_REPORT, so a run of some kommuner updates their lines in a report that still covers all,
+    and a run that dies keeps what it did. Returns this run's coverage rows."""
     http = client or new_client()
+    Path(out_dir).mkdir(parents=True, exist_ok=True)
+    rows = []
     try:
-        rows = [fetch_plan_layer(source, client=http, out_dir=out_dir) for source in sources]
+        for source in sources:
+            started = time.monotonic()
+            rows.append(fetch_plan_layer(source, client=http, out_dir=out_dir))
+            _record(rows[-1], out_dir)
+            time.sleep(max(0.0, MIN_SECONDS_PER_KOMMUN - (time.monotonic() - started)))
     finally:
         if client is None:
             http.close()
-    Path(out_dir).mkdir(parents=True, exist_ok=True)
-    merged = load_coverage(out_dir) | {row["code"]: row for row in rows}
+    return rows
+
+
+def _record(row: dict, out_dir: Path) -> None:
+    """Merge one kommun's row into the rows file and rewrite the report, so a run that dies keeps what it did."""
+    merged = load_coverage(out_dir) | {row["code"]: row}
     (Path(out_dir) / COVERAGE_ROWS).write_text(json.dumps(merged, ensure_ascii=False, indent=1) + "\n",
                                                encoding="utf-8")
     (Path(out_dir) / COVERAGE_REPORT).write_text(coverage_report([merged[code] for code in sorted(merged)]),
                                                  encoding="utf-8")
-    return rows
 
 
 def load_coverage(out_dir: Path = GEO_DIR) -> dict[str, dict]:

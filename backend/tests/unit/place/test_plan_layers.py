@@ -3,9 +3,10 @@ report, against the fake services of tests.unit.place.plan_layer."""
 
 import json
 
+import httpx
 import pytest
 
-from place.plan_layers import COVERAGE_REPORT, fetch_plan_layer, fetch_registry
+from place.plan_layers import COVERAGE_REPORT, fetch_plan_layer, fetch_registry, load_coverage
 from place.sources import today
 from tests.unit.place.plan_layer import (
     NACKA_BOUNDARY,
@@ -151,3 +152,46 @@ def test_the_coverage_report_has_a_line_per_kommun(tmp_path):
     assert [line.split("|")[1].strip() for line in lines] == ["0120", "0182"]
     assert "Värmdö" in lines[0] and "500" in lines[0]
     assert "Nacka" in lines[1] and "| 3 |" in lines[1]
+
+
+def test_a_polygon_without_coordinates_is_left_out(tmp_path):
+    """A service may answer a polygon with an empty coordinate list: that polygon goes, the kommun is still fetched."""
+    empty = ({"type": "Polygon", "coordinates": []}, {"OBJECTID": 4, "aktbeteckning": "0182-P1", "plannamn": "Tom",
+                                                     "lagakraft": None, "plantyp": None, "url": None})
+    row = fetch_plan_layer(source(survey_count=None), client=fake_services(NACKA_FEATURES + [empty]), out_dir=tmp_path)
+    assert (row["fetched"], row["count"]) == (True, 3)
+
+
+def test_a_polygon_with_only_empty_rings_is_left_out(tmp_path):
+    """Empty rings count as no coordinates too."""
+    empty = ({"type": "MultiPolygon", "coordinates": [[[]]]}, {"OBJECTID": 4, "aktbeteckning": "0182-P1",
+                                                               "plannamn": "Tom", "lagakraft": None, "plantyp": None,
+                                                               "url": None})
+    row = fetch_plan_layer(source(survey_count=None), client=fake_services([empty] + NACKA_FEATURES), out_dir=tmp_path)
+    assert (row["fetched"], row["count"]) == (True, 3)
+
+
+def test_an_unusable_answer_is_recorded_as_the_kommuns_reason(tmp_path):
+    """A polygon the geometry library cannot read fails that kommun with a reason, never the run."""
+    broken = ({"type": "Polygon", "coordinates": [[[18.1], [18.2]]]}, {"OBJECTID": 4, "aktbeteckning": "0182-P1",
+                                                                       "plannamn": "Trasig", "lagakraft": None,
+                                                                       "plantyp": None, "url": None})
+    rows = fetch_registry([source()], client=fake_services(NACKA_FEATURES + [broken]), out_dir=tmp_path)
+    assert rows[0]["fetched"] is False
+    assert rows[0]["reason"]
+
+
+def test_a_run_cut_short_keeps_the_rows_of_the_kommuner_it_finished(tmp_path):
+    """The coverage rows are written as each kommun finishes, so a run that dies keeps what it did."""
+    varmdo = source(code="0120", name="Värmdö", url="https://karta.varmdo.se/arcgis/rest/services/P/MapServer/1")
+    services = fake_services()
+
+    def stop_at_varmdo(request):
+        if "varmdo" in str(request.url) or "V%C3%A4rmd%C3%B6" in str(request.url):
+            raise KeyboardInterrupt
+        return services._transport.handle_request(request)
+
+    client = httpx.Client(transport=httpx.MockTransport(stop_at_varmdo))
+    with pytest.raises(KeyboardInterrupt):
+        fetch_registry([source(), varmdo], client=client, out_dir=tmp_path)
+    assert list(load_coverage(tmp_path)) == ["0182"]
