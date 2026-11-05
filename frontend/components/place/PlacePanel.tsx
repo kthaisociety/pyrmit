@@ -218,21 +218,6 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
 
       <div className="absolute left-3 right-14 top-3 z-20 space-y-1.5">
         <PlaceSearch onPropose={setProposal} />
-        <button
-          type="button"
-          onClick={() => setReviewOn((on) => !on)}
-          aria-label="Review plan coverage"
-          aria-pressed={reviewOn}
-          className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium transition-transform duration-100 active:scale-95 ${
-            reviewOn ? 'bg-blue-500 text-white shadow-sm' : `text-zinc-700 dark:text-zinc-200 ${GLASS}`
-          }`}
-        >
-          <Layers size={13} aria-hidden /> Review
-        </button>
-        {reviewOn && (
-          <ReviewCard coverage={coverage} plans={plans} zoomedIn={plansBox !== null}
-                      error={coverageError ?? (plansBox ? plansError : null)} />
-        )}
         {proposal && (
           <ProposalCard
             proposal={proposal}
@@ -244,6 +229,26 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
           />
         )}
       </div>
+
+      {reviewOn && (
+        <div className={`absolute left-3 right-14 z-10 ${proposal ? 'top-[112px]' : 'top-[84px]'}`}>
+          <ReviewCard coverage={coverage} plans={plans} zoomedIn={plansBox !== null}
+                      error={coverageError ?? (plansBox ? plansError : null)} />
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setReviewOn((on) => !on)}
+        aria-label="Review plan coverage"
+        aria-pressed={reviewOn}
+        title="Review plan coverage"
+        className={`absolute right-3 top-[132px] z-10 grid size-8 place-items-center rounded-full transition-transform duration-100 active:scale-90 ${
+          reviewOn ? 'bg-blue-500 text-white shadow-sm' : `text-zinc-600 dark:text-zinc-300 ${GLASS}`
+        }`}
+      >
+        <Layers size={15} aria-hidden />
+      </button>
 
       <button
         type="button"

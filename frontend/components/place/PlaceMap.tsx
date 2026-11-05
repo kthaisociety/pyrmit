@@ -267,6 +267,8 @@ export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, propo
     if (!ready || !map) return;
     (map.getSource(REVIEW_KOMMUNER) as GeoJSONSource | undefined)?.setData(withGeometry(review?.coverage ?? null));
     (map.getSource(REVIEW_PLANS) as GeoJSONSource | undefined)?.setData(review?.plans ?? EMPTY);
+    // A kommun's fill under the plans would tint their match colours: zoomed in, only its outline stays
+    map.setLayoutProperty(`${REVIEW_KOMMUNER}-fill`, 'visibility', review?.plans ? 'none' : 'visible');
     if (!review) popupRef.current?.remove();
   }, [ready, review]);
 
