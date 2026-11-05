@@ -8,11 +8,13 @@ import pytest
 
 from place.plan_layers import (
     COVERAGE_REPORT,
+    COVERAGE_ROWS,
     fetch_plan_layer,
     fetch_registry,
     load_coverage,
 )
 from place.sources import today
+from place.store import PlaceStore
 from tests.unit.place.plan_layer import (
     NACKA_BOUNDARY,
     NACKA_FEATURES,
@@ -209,3 +211,61 @@ def test_a_run_cut_short_keeps_the_rows_of_the_kommuner_it_finished(tmp_path):
     with pytest.raises(KeyboardInterrupt):
         fetch_registry([source(), varmdo], client=client, out_dir=tmp_path)
     assert list(load_coverage(tmp_path)) == ["0182"]
+
+
+VARMDO = source(code="0120", name="Värmdö", url="https://karta.varmdo.se/arcgis/rest/services/P/MapServer/1")
+
+
+def test_a_failed_fetch_keeps_the_kommun_outline(tmp_path):
+    """The boundary is on disk once fetched, even when the layer then fails, so the next run reuses it."""
+    fetch_plan_layer(VARMDO, client=fake_services(fail_host="varmdo"), out_dir=tmp_path)
+    assert PlaceStore(tmp_path).outline("0120") is not None
+
+
+def test_a_failed_fetch_writes_no_manifest(tmp_path):
+    """A kommun whose layer failed has its boundary and nothing that would make it a snapshot."""
+    fetch_plan_layer(VARMDO, client=fake_services(fail_host="varmdo"), out_dir=tmp_path)
+    assert not (tmp_path / "0120" / "manifest.json").exists()
+
+
+def test_an_outline_alone_does_not_cover_the_kommun(tmp_path):
+    """A kommun with only a boundary file (its layer failed) is not a snapshot: a pin there is not covered."""
+    fetch_plan_layer(VARMDO, client=fake_services(fail_host="varmdo"), out_dir=tmp_path)
+    assert PlaceStore(tmp_path).kommun_at(18.16, 59.31) is None
+
+
+def merged_runs(tmp_path):
+    """A run where Värmdö failed and Nacka did not, then a run of Värmdö alone that succeeds."""
+    fetch_registry([VARMDO, source()], client=fake_services(fail_host="varmdo"), out_dir=tmp_path)
+    fetch_registry([VARMDO], client=fake_services(), out_dir=tmp_path)
+
+
+def test_fetch_merges_the_coverage_rows_of_earlier_runs(tmp_path):
+    """A run of some kommuner replaces their rows and keeps the others'."""
+    merged_runs(tmp_path)
+    rows = load_coverage(tmp_path)
+    assert [(code, row["fetched"]) for code, row in sorted(rows.items())] == [("0120", True), ("0182", True)]
+
+
+def test_the_report_covers_every_kommun_of_every_run(tmp_path):
+    """After a run of some kommuner the report still has every kommun's line."""
+    merged_runs(tmp_path)
+    report = (tmp_path / COVERAGE_REPORT).read_text(encoding="utf-8")
+    assert "2 of 2 kommuner fetched" in report and "| 0182 | Nacka | yes |" in report
+
+
+def test_coverage_rows_are_empty_before_any_run(tmp_path):
+    """No run yet is no rows, not an error."""
+    assert load_coverage(tmp_path) == {}
+
+
+def test_the_coverage_rows_are_what_the_fetch_returned(tmp_path):
+    """The rows file holds the fetch's own rows, keyed by code."""
+    rows = fetch_registry([source()], client=fake_services(), out_dir=tmp_path)
+    assert load_coverage(tmp_path) == {"0182": rows[0]}
+
+
+def test_the_coverage_rows_live_in_their_own_file(tmp_path):
+    """The rows are a JSON file beside the report, for the review map to read."""
+    fetch_registry([source()], client=fake_services(), out_dir=tmp_path)
+    assert json.loads((tmp_path / COVERAGE_ROWS).read_text(encoding="utf-8"))["0182"]["name"] == "Nacka"
