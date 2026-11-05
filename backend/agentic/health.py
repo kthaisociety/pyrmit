@@ -14,7 +14,7 @@ import json
 from collections import Counter, defaultdict
 
 # Failure rate above which a tool is flagged (searches and listings that find nothing are normal answers)
-THRESHOLDS = {"read": 0.05, "law_section": 0.15, "plan_rules": 0.10, "view_map_area": 0.40, "view_pdf_page": 0.10}
+THRESHOLDS = {"read": 0.05, "read_plan": 0.05, "law_section": 0.15, "plan_rules": 0.10, "view_map_area": 0.40, "view_pdf_page": 0.10}
 DEFAULT_THRESHOLD = 0.25
 # Steps recorded before the `error` field (2026-10-22): a read / law_section / plan_rules without chunks failed
 _NEEDS_CHUNKS = {"read", "law_section", "plan_rules"}

@@ -4,6 +4,8 @@ The map's place lookups (no LLM, see place/):
 - GET /api/place/profile?lat=..&lon=..  -> the place profile of a pinned point (place.profile.build_profile)
 - GET /api/place/coverage               -> the pilot kommuner with a snapshot, for the map's first view
 - GET /api/place/search?q=..            -> Swedish addresses and place names for the map's search (Nominatim)
+- GET /api/place/review/coverage        -> every kommun's outline, coloured by whether it has plan polygons
+- GET /api/place/review/plans?bbox=..   -> the plan polygons in a map view, with their document match level
 """
 
 from collections.abc import Callable
@@ -13,7 +15,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 import models
 from dependencies import get_current_user
-from place import geocode, live, profile
+from place import geocode, live, profile, registry, review
+from place.registry import PlanSource
 from place.store import PlaceStore
 
 router = APIRouter()
@@ -27,6 +30,11 @@ def get_place_store() -> PlaceStore:
 def get_property_lookup() -> Callable[[str, float, float], dict | None]:
     """The live property lookup (overridden in tests)."""
     return live.property_at
+
+
+def get_corpus_documents() -> Callable[[list[str]], dict[str, dict]]:
+    """The lookup of the plan documents in the corpus (overridden in tests)."""
+    return profile.hosted_documents
 
 
 def get_ancient_remains_lookup() -> Callable[[dict], list[dict]]:
@@ -44,17 +52,23 @@ def get_plan_registry() -> Callable[[str], list[dict]]:
     return profile.corpus_plans
 
 
+def get_plan_sources() -> dict[str, PlanSource]:
+    """The plan source registry, place/plan_sources.json (overridden in tests)."""
+    return registry.load_registry()
+
+
 @router.get("/place/profile")
 def place_profile(lat: Annotated[float, Query(ge=-90, le=90)], lon: Annotated[float, Query(ge=-180, le=180)],
                   store: Annotated[PlaceStore, Depends(get_place_store)],
                   property_at: Annotated[Callable, Depends(get_property_lookup)],
                   plan_registry: Annotated[Callable, Depends(get_plan_registry)],
                   ancient_remains_at: Annotated[Callable, Depends(get_ancient_remains_lookup)],
+                  corpus_documents: Annotated[Callable, Depends(get_corpus_documents)],
                   user: Annotated[models.User, Depends(get_current_user)]) -> dict:
     """The place profile of the point (see build_profile). 422 when lat or lon is missing or out of range."""
     try:
         return profile.build_profile(lat, lon, store=store, property_at=property_at, plan_registry=plan_registry,
-                                     ancient_remains_at=ancient_remains_at)
+                                     ancient_remains_at=ancient_remains_at, corpus_documents=corpus_documents)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -64,6 +78,30 @@ def place_coverage(store: Annotated[PlaceStore, Depends(get_place_store)],
                    user: Annotated[models.User, Depends(get_current_user)]) -> list[dict]:
     """The pilot kommuner with a snapshot: [{"code", "name", "bbox", "fetched"}]."""
     return store.kommuner()
+
+
+@router.get("/place/review/coverage")
+def review_coverage(store: Annotated[PlaceStore, Depends(get_place_store)],
+                    sources: Annotated[dict[str, PlanSource], Depends(get_plan_sources)],
+                    user: Annotated[models.User, Depends(get_current_user)]) -> dict:
+    """place.review.coverage of the registry's kommuner and the snapshots: a FeatureCollection, one feature per
+    kommun, for the map's review mode."""
+    return review.coverage(store, sources.values())
+
+
+@router.get("/place/review/plans")
+def review_plans(bbox: Annotated[str, Query(description="west,south,east,north in WGS84")],
+                 store: Annotated[PlaceStore, Depends(get_place_store)],
+                 user: Annotated[models.User, Depends(get_current_user)]) -> dict:
+    """place.review.plans_in_view of the box `bbox` ("west,south,east,north"): a FeatureCollection with "truncated".
+    422 with a message when the box is not four numbers, is malformed or is wider than place.review.MAX_SPAN."""
+    try:
+        bounds = tuple(float(part) for part in bbox.split(","))
+        if len(bounds) != 4:
+            raise ValueError("The box must be four numbers: west,south,east,north.")
+        return review.plans_in_view(store, bounds)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/place/search")

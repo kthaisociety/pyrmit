@@ -5,7 +5,7 @@ import json
 import httpx
 import pytest
 
-from place.fetch import fetch_kommun
+from place.fetch import fetch_kommun, kommun_boundary
 from tests.unit.place.snapshot import square
 
 
@@ -65,3 +65,49 @@ def test_fetch_refuses_a_kommun_that_is_not_a_pilot(tmp_path):
     """Only pilot kommuner can be fetched."""
     with pytest.raises(KeyError):
         fetch_kommun("0115", client=fake_services(), out_dir=tmp_path)
+
+
+def boundary_client(answers: dict[str, list[dict]], asked: list[str] | None = None) -> httpx.Client:
+    """A fake Nominatim answering each query from `answers`, nothing for any other."""
+    def handler(request: httpx.Request) -> httpx.Response:
+        query = request.url.params["q"]
+        if asked is not None:
+            asked.append(query)
+        return httpx.Response(200, json=answers.get(query, []))
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+BOXHOLM_TOWN = {"name": "Boxholm", "addresstype": "town", "category": "place", "type": "town",
+                "geojson": {"type": "Point", "coordinates": [15.05, 58.2]}}
+BOXHOLM = {"name": "Boxholms kommun", "addresstype": "municipality", "category": "boundary", "type": "administrative",
+           "geojson": square(14.9, 58.0, 15.3, 58.3)}
+
+
+def test_boundary_is_found_under_the_kommuns_genitive_name(monkeypatch):
+    """Boxholm is "Boxholms kommun" in OpenStreetMap: when the plain name finds only the town, the genitive is asked."""
+    monkeypatch.setattr("place.fetch.RETRY_DELAY_S", 0)
+    client = boundary_client({"Boxholm kommun": [BOXHOLM_TOWN], "Boxholms kommun": [BOXHOLM]})
+    assert kommun_boundary(client, "0560", "Boxholm") == BOXHOLM["geojson"]
+
+
+def test_boundary_asks_once_when_the_plain_name_finds_it(monkeypatch):
+    """A kommun found under its plain name costs one Nominatim request."""
+    monkeypatch.setattr("place.fetch.RETRY_DELAY_S", 0)
+    asked: list[str] = []
+    named = BOXHOLM | {"name": "Nacka kommun"}
+    assert kommun_boundary(boundary_client({"Nacka kommun": [named]}, asked), "0182", "Nacka") == named["geojson"]
+    assert asked == ["Nacka kommun"]
+
+
+def test_boundary_raises_when_neither_name_finds_it(monkeypatch):
+    """Only a town under both names is no boundary."""
+    monkeypatch.setattr("place.fetch.RETRY_DELAY_S", 0)
+    with pytest.raises(RuntimeError, match="No municipality boundary"):
+        kommun_boundary(boundary_client({"Boxholm kommun": [BOXHOLM_TOWN]}), "0560", "Boxholm")
+
+
+def test_boundary_of_a_kommun_with_an_irregular_name(monkeypatch):
+    """Falun is "Falu kommun" in OpenStreetMap, which neither the name nor its genitive finds."""
+    monkeypatch.setattr("place.fetch.RETRY_DELAY_S", 0)
+    falu = BOXHOLM | {"name": "Falu kommun"}
+    assert kommun_boundary(boundary_client({"Falu kommun": [falu]}), "2080", "Falun") == falu["geojson"]

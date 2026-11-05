@@ -1,5 +1,5 @@
 // Place profiles the fake backend serves (GET /api/place/profile), shaped like backend/place/profile.py.
-import type { PlaceFeature, PlaceProfile } from '@/lib/place';
+import type { PlaceFeature, PlaceProfile, ReviewCoverage, ReviewPlans } from '@/lib/place';
 
 const square = (west: number, south: number, east: number, north: number): GeoJSON.Polygon => ({
   type: 'Polygon',
@@ -114,3 +114,33 @@ export const notCovered: PlaceProfile = {
 };
 
 export const propertyUnavailable: PlaceProfile = { ...kungsangen, property: null, property_status: 'unavailable' };
+
+// --- the review mode (GET /api/place/review/*), shaped like backend/place/review.py ---------------------------------
+
+export const reviewCoverage: ReviewCoverage = {
+  type: 'FeatureCollection',
+  features: [
+    { type: 'Feature', geometry: null,
+      properties: { code: '0120', name: 'Värmdö', covered: false, polygons: 0, matched: 0, fetched: null,
+                    reason: 'not fetched yet' } },
+    { type: 'Feature', geometry: square(18.0, 59.25, 18.4, 59.4),
+      properties: { code: '0182', name: 'Nacka', covered: true, polygons: 3, matched: 1, fetched: '2026-11-05',
+                    reason: null } },
+    { type: 'Feature', geometry: square(17.5, 59.7, 17.9, 60.0),
+      properties: { code: '0380', name: 'Uppsala', covered: true, polygons: 3, matched: 0, fetched: '2026-10-25',
+                    reason: null } },
+  ],
+};
+
+export const reviewPlans: ReviewPlans = {
+  type: 'FeatureCollection',
+  truncated: false,
+  features: [
+    { type: 'Feature', geometry: square(18.15, 59.3, 18.17, 59.32),
+      properties: { code: '0182', kommun: 'Nacka', ref: '0182-P2015/3', name: 'Kvarnholmen etapp 4',
+                    date: '2015-06-01', match: 'link' } },
+    { type: 'Feature', geometry: square(18.1, 59.28, 18.2, 59.35),
+      properties: { code: '0182', kommun: 'Nacka', ref: '0182-P1988/12', name: 'Sicklaön', date: '1988-03-09',
+                    match: null } },
+  ],
+};

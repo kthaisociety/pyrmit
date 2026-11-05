@@ -4,6 +4,7 @@ import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import PlaceCard from '@/components/place/PlaceCard';
+import type { PlaceFeature, PlaceProfile } from '@/lib/place';
 
 import { kaboOutside, kungsangen, nothingAround, notCovered, propertyUnavailable, street } from '../../../mocks/place';
 
@@ -131,6 +132,36 @@ function rows(name: string) {
   return within(screen.getByRole('list', { name })).getAllByRole('listitem');
 }
 
+const DOCUMENTS = ['https://infobank.nacka.se/ext/planer/93_62.pdf', 'https://infobank.nacka.se/ext/planer/Planbeskrivning%2093_62.pdf'];
+
+/** A pin in Nacka, a kommun with an open plan layer and no property lookup: one plan at the point. */
+function nacka(fields: Partial<PlaceProfile['plans'][number]>): PlaceProfile {
+  const plan = { ...kungsangen.plans[2], ref: '0182-P93/62', name: 'Sicklaön 13:3', source: 'Nacka kommun',
+                 url: DOCUMENTS[0], page: null, documents: DOCUMENTS, licence: 'unknown', ...fields };
+  return { ...kungsangen, kommun: { code: '0182', name: 'Nacka' }, property: null, property_status: 'not_covered',
+           plans: [plan], zones: [], pending_plans: [] };
+}
+
+describe('plan rows of a kommun with an open plan layer', () => {
+  it('lists each document link of a plan by its file name', () => {
+    /** A plan with document links shows one link per document, named by the file, instead of "Plan documents". */
+    card(nacka({}));
+    const [row] = within(screen.getByRole('list', { name: 'Detaljplaner' })).getAllByRole('listitem');
+    expect(within(row).getByRole('link', { name: '93_62.pdf' })).toHaveAttribute('href', DOCUMENTS[0]);
+    expect(within(row).getByRole('link', { name: 'Planbeskrivning 93_62.pdf' })).toHaveAttribute('href', DOCUMENTS[1]);
+    expect(within(row).queryByRole('link', { name: /plan documents/i })).toBeNull();
+  });
+
+  it('links the plan page beside its documents', () => {
+    /** A plan that has a page as well as documents links the page as "Plan page". */
+    const page = 'https://www.nacka.se/planer/sicklaon-13-3/';
+    card(nacka({ page, url: page }));
+    const [row] = within(screen.getByRole('list', { name: 'Detaljplaner' })).getAllByRole('listitem');
+    expect(within(row).getByRole('link', { name: 'Plan page' })).toHaveAttribute('href', page);
+    expect(within(row).getByRole('link', { name: '93_62.pdf' })).toBeInTheDocument();
+  });
+});
+
 describe('place card constraints', () => {
   it('lists the protected areas with type, name, authority, date and a link to the decision', () => {
     /** Each protected area shows its type, name, deciding authority, decision date and decision link. */
@@ -223,5 +254,62 @@ describe('place card constraints', () => {
     expect(rows('Natura 2000')[0]).toHaveTextContent('Naturvårdsverket · 2026-10-25');
     expect(rows('National interests')[0]).toHaveTextContent('Boverket (sammanställning) · 2026-10-25');
     expect(rows('Ancient remains')[0]).toHaveTextContent('Riksantikvarieämbetet · 2026-10-25');
+  });
+});
+
+const MAP = { doc_id: 'pdf:0380:map', role: 'plankarta', title: 'Plankarta (PDF, 3 MB)', url: 'https://www.uppsala.se/atle/plankarta.pdf' };
+const DESCRIPTION = { doc_id: 'pdf:0380:text', role: 'planbeskrivning', title: 'Planbeskrivning (PDF)', url: 'https://www.uppsala.se/atle/beskrivning.pdf' };
+
+function withPlans(...changes: Partial<PlaceFeature>[]): PlaceProfile {
+  return { ...kungsangen, plans: changes.map((change, i) => ({ ...kungsangen.plans[i], ...change })) };
+}
+
+function planRows(profile: PlaceProfile) {
+  render(createElement(PlaceCard, { profile }));
+  return within(screen.getByRole('list', { name: 'Detaljplaner' })).getAllByRole('listitem');
+}
+
+describe('plan documents on the place card', () => {
+  it('lists a plan map with its role and a link', () => {
+    /** A plan with documents links each by its role: the plan map. */
+    const [row] = planRows(withPlans({ text_status: 'read', corpus_documents: [MAP, DESCRIPTION] }));
+    expect(within(row).getByRole('link', { name: /plan map/i })).toHaveAttribute('href', MAP.url);
+  });
+
+  it('lists a plan description with its role and a link', () => {
+    /** A plan with documents links each by its role: the plan description. */
+    const [row] = planRows(withPlans({ text_status: 'read', corpus_documents: [MAP, DESCRIPTION] }));
+    expect(within(row).getByRole('link', { name: /plan description/i })).toHaveAttribute('href', DESCRIPTION.url);
+  });
+
+  it('says a plan without documents has no text read', () => {
+    /** A plan with no document says so and does not claim to have text. */
+    const [row] = planRows(withPlans({ text_status: 'none', corpus_documents: [] }));
+    expect(within(row).getByText(/no text read/i)).toBeInTheDocument();
+  });
+
+  it('keeps the link to the kommun on a plan without documents', () => {
+    /** A plan with no document keeps its link to the kommun. */
+    const plan = kungsangen.plans[0];
+    const [row] = planRows(withPlans({ text_status: 'none', corpus_documents: [], documents: [], url: plan.url }));
+    expect(within(row).getByRole('link', { name: /documents/i })).toHaveAttribute('href', plan.url);
+  });
+
+  it('gives each of several plans its own documents', () => {
+    /** A point covered by several plans lists each with its own documents. */
+    const rows = planRows(withPlans(
+      { text_status: 'read', corpus_documents: [MAP] },
+      { text_status: 'read', corpus_documents: [DESCRIPTION] },
+    ));
+    expect(within(rows[0]).getByRole('link', { name: /plan map/i })).toBeInTheDocument();
+    expect(within(rows[0]).queryByRole('link', { name: /plan description/i })).toBeNull();
+    expect(within(rows[1]).getByRole('link', { name: /plan description/i })).toBeInTheDocument();
+  });
+
+  it('says the documents could not be read when the corpus is down, not that there is no text', () => {
+    /** The corpus being unreachable keeps the row and tells it apart from a plan without text. */
+    const [row] = planRows(withPlans({ text_status: 'unavailable', corpus_documents: [] }));
+    expect(within(row).getByText(/documents could not be read/i)).toBeInTheDocument();
+    expect(within(row).queryByText(/no text read/i)).toBeNull();
   });
 });

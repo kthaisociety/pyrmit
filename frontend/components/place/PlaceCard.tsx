@@ -109,6 +109,48 @@ function Section({ title, status = 'ok', count, children }: {
   );
 }
 
+/** The file name a document link ends in, decoded, for the link's text. */
+function fileName(url: string): string {
+  const name = url.split('?')[0].split('#')[0].split('/').pop() ?? url;
+  try {
+    return decodeURIComponent(name) || url;
+  } catch {
+    return name || url;
+  }
+}
+
+function PlanLinks({ plan }: { plan: PlaceFeature }) {
+  const documents = plan.documents ?? [];
+  if (documents.length === 0) return plan.url ? <DocLink href={plan.url}>Plan documents</DocLink> : null;
+  return (
+    <>
+      {plan.page && <DocLink href={plan.page}>Plan page</DocLink>}
+      {documents.map((doc) => <DocLink key={doc} href={doc}>{fileName(doc)}</DocLink>)}
+    </>
+  );
+}
+
+// A document's role as the card names it; a role without a name goes by the document's title
+const ROLE_LABEL: Record<string, string> = {
+  plankarta: 'Plan map',
+  planbeskrivning: 'Plan description',
+  granskningsutlåtande: 'Review statement',
+  samrådsredogörelse: 'Consultation report',
+  utredning: 'Investigation',
+  illustration: 'Illustration',
+};
+
+function PlanText({ plan }: { plan: PlaceFeature }) {
+  if (plan.text_status === 'none') return <span>No text read</span>;
+  if (plan.text_status === 'unavailable') return <span>Documents could not be read</span>;
+  return (plan.corpus_documents ?? []).map((document) => {
+    const label = (document.role && ROLE_LABEL[document.role]) || document.title || 'Document';
+    return document.url
+      ? <DocLink key={document.doc_id} href={document.url}>{label}</DocLink>
+      : <span key={document.doc_id}>{label}</span>;
+  });
+}
+
 function PlanRow({ plan }: { plan: PlaceFeature }) {
   return (
     <Row kind="plan">
@@ -124,7 +166,8 @@ function PlanRow({ plan }: { plan: PlaceFeature }) {
       <Meta>
         {plan.date && <span>{`Laga kraft ${plan.date}`}</span>}
         <span>{plan.provisions_indexed ? 'Provisions in the corpus' : 'Provisions not indexed'}</span>
-        {plan.url && <DocLink href={plan.url}>Plan documents</DocLink>}
+        <PlanText plan={plan} />
+        <PlanLinks plan={plan} />
       </Meta>
       <SourceLine row={plan} />
     </Row>

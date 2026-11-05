@@ -33,15 +33,18 @@ class _Layer:
 
 
 class PlaceStore:
-    """The snapshots of every pilot kommun under `root`, read on first use.
+    """The snapshots of every kommun under `root` (the pilot kommuner of place.fetch and the kommuner of
+    place.plan_layers), read on first use.
 
     Snapshot format, one folder per kommun code:
     - `manifest.json`: {"kommun": {"code", "name", "fetched", "source", "licence"}, "layers": {<layer id>:
       {"title", "provider", "licence", "count", "fetched", "complete", ...}}}. Layer ids are those of
-      `place.sources`; "complete" (plans only) means the layer holds every plan in force.
+      `place.sources` (a plan-layer kommun has "plans" only); "complete" (plans only) means the layer holds every
+      plan in force.
     - `kommun.geojson`: one Feature, the kommun boundary.
     - `<layer id>.geojson`: a FeatureCollection in WGS84 with the provider's raw attributes.
     - `plan_pages.json` (optional, place.plan_documents): {aktbeteckning: the plan's page url}.
+    - `plan_links.jsonl` (optional, place.plan_links): one row per plan polygon and matched document.
 
     A layer listed in the manifest without its file is reported as unavailable, never as empty."""
 
@@ -64,11 +67,19 @@ class PlaceStore:
             return self._manifests
 
     def kommuner(self) -> list[dict]:
-        """The pilot kommuner that have a snapshot: [{"code", "name", "bbox": [west, south, east, north],
+        """Every kommun that has a snapshot, pilot or not: [{"code", "name", "bbox": [west, south, east, north],
         "fetched"}], in code order."""
         return [{"code": code, "name": manifest["kommun"]["name"], "bbox": list(self._boundaries[code].bounds),
                  "fetched": manifest["kommun"].get("fetched")}
                 for code, manifest in self._kommun_manifests().items()]
+
+    def outline(self, code: str) -> dict | None:
+        """The kommun boundary as a GeoJSON geometry, read from `<code>/kommun.geojson`: present for a kommun with a
+        snapshot and for one whose plan-layer fetch failed after its boundary was fetched (place.plan_layers keeps
+        it). None when no boundary was ever written. A kommun with only an outline is not covered: kommun_at and
+        kommuner leave it out."""
+        path = self.root / code / "kommun.geojson"
+        return json.loads(path.read_text(encoding="utf-8"))["geometry"] if path.exists() else None
 
     def kommun_at(self, lon: float, lat: float) -> str | None:
         """Code of the pilot kommun whose boundary contains the point, or None outside every snapshot."""
@@ -78,11 +89,12 @@ class PlaceStore:
 
     def layers(self, code: str) -> list[dict]:
         """The kommun's layers from its manifest: [{"id", "title", "provider", "licence", "fetched", "complete",
-        "status"}], status "ok" when the snapshot file exists, else "unavailable"."""
+        "count" (features in the snapshot, None when the manifest does not say), "status"}], status "ok" when the
+        snapshot file exists, else "unavailable"."""
         entries = self._kommun_manifests()[code]["layers"]
         return [{"id": layer_id, "title": entry.get("title"), "provider": entry.get("provider"),
                  "licence": entry.get("licence"), "fetched": entry.get("fetched"),
-                 "complete": bool(entry.get("complete")),
+                 "complete": bool(entry.get("complete")), "count": entry.get("count"),
                  "status": "ok" if self._path(code, layer_id).exists() else "unavailable"}
                 for layer_id, entry in entries.items()]
 
@@ -103,6 +115,20 @@ class PlaceStore:
         """{aktbeteckning: the plan's page url} written by place.plan_documents, or {} before it has run."""
         path = self.root / code / "plan_pages.json"
         return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+
+    def plan_links(self, code: str) -> dict[str, list[dict]]:
+        """The kommun's matched documents by polygon key (place.plan_links.polygon_key): {key: [{"doc_id", "level",
+        "review", "role" (the plan registry's role of the document, None when unknown)}, ...]}, read from plan_links.jsonl written by place.plan_links, or {} before it has run."""
+        path = self.root / code / "plan_links.jsonl"
+        links: dict[str, list[dict]] = {}
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    row = json.loads(line)
+                    links.setdefault(row["key"], []).append({"doc_id": row["doc_id"], "level": row["level"],
+                                                             "review": row.get("review", False),
+                                                             "role": row.get("role")})
+        return links
 
     def features(self, code: str, layer_id: str, geometry) -> list[tuple[dict, object]]:
         """(raw properties, shapely geometry) of the layer's features that intersect `geometry` (a shapely

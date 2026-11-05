@@ -357,7 +357,8 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
 `agentic/agent.py` runs a Responses-API tool loop (default `openai/gpt-6-luna` via OpenRouter) with tools from
 `agentic/tools.py` (`CorpusTools` over `_DiskCorpus` (SQLite) or `_MemoryCorpus`): `find_kommun`, `search` (hybrid
 dense + BM25 "stem"), `grep`, `list_documents`, `read`, `law_section` ("PBL", "9 kap. 4 §"), `plans` / `plan_rules`
-(plan registry from `data/corpus/plans.jsonl`, loaded on first use), `view_map_area` (zoomed crop of a text-layer
+(plan registry from `data/corpus/plans.jsonl`, loaded on first use), `read_plan` (the documents the pinned place lists, in
+reading order, whole or by heading, from the corpus only: ADR-0010; `PIN_GUIDE` says when), `view_map_area` (zoomed crop of a text-layer
 plankarta around a printed label such as a property number "5:125", plus the codes printed in that area with their
 meaning from the registry; search/word coordinates are unrotated, rendering uses `rect * page.rotation_matrix`),
 `view_pdf_page` (whole page image sent to the model), plus `answer_ready(mode)`: the agent classifies the question
@@ -581,8 +582,36 @@ rerunning `agentic.rejudge` continues. A run that sits a long time before its fi
    entries go before the manifest's done line, which `corpus.crawl --revisit` needs last (until 2026-10-25 they were
    appended after it, so the revisit skipped Uppsala); a plan whose page a later `crawl --force` dropped from the
    manifest is recorded again. Run it after a crawl of 0380, not during (both rewrite the manifest)
+   python -m place.plan_layers [--kommun <code>]  -> data/geo/<code>/ for every kommun in place/plan_sources.json
+   (the registry: 180 kommuner with an open ArcGIS or WFS plan layer, built from docs/research/kommun-planlager.csv by
+   `python -m place.registry`, hand-edited for base patterns of bare file-name links and licences, ADR-0006): the
+   boundary from Nominatim, the whole plan layer clipped to it (a shared server's other kommuner fall out), each
+   feature with the raw attributes plus `_plan` {ref, name, date, type, page, documents, dropped_links} normalised at
+   write time (ADR-0005: bare file names through the base pattern, HTML anchors unwrapped, UNC / drive / file: paths
+   dropped and counted). A kommun that fails, returns no polygon or under half the survey's count (not for shared
+   servers) gets no snapshot and a reason, and keeps its boundary; each row is merged into data/geo/plan_coverage.json
+   as its kommun finishes and data/geo/plan_coverage.md has one line per kommun of every run so far
+   python -m place.plan_links [--kommun <code>]  -> data/geo/<code>/plan_links.jsonl (ADR-0007): every plan polygon of
+   every snapshot matched to the store's detaljplan documents (data/corpus/documents.jsonl, read once; missing =
+   nothing written), three levels per polygon, first hit wins: link (polygon page / document link = document url;
+   a pilot kommun also through plan_pages.json), akt (`normalise_akt`: kommun prefix dropped, "-" / "." as "/", so
+   0380-P 2015/12 = P2015-12; found in the title, file name or first 3,000 characters of the same kommun's documents only), name (title = plan name, marked
+   review). Unmatched polygons -> data/geo/plan_fetch_list.json by kommun ("no public link" when the links were
+   internal paths); data/geo/plan_match_report.md counts levels, unmatched and the store's unclaimed share. The
+   run of 2026-11-05 (the 146 of 180 registry kommuner fetched plus Uppsala, the local store only): 258 of 66,569 polygons, that store holds few detaljplan documents per kommun
+   python -m place.plan_links --kommun 0380 --hosted  -> the same link table from the hosted corpus's PDFs (the store at
+   CORPUS_DATABASE_URL), a polygon also hitting the documents of the registry plan with its page, and a document the
+   registry places under a plan page not hit at the akt or name level (a mention); a pilot kommun's additions and area
+   regulations are matched too. Writes data/geo/<code>/plan_text_report.md, not the national fetch list or report;
+   unreachable = nothing written. The run of 2026-11-05 for Uppsala: 1,268 of 1,417 polygons have documents (1,247
+   link, 21 akt; 1,234 of the 1,377 in the plans layer), 148 with a page outside the registry, 1 with no document
 2. The chat's map panel (components/place/) -> GET /api/place/profile -> place.profile.build_profile:
-   kommun from the snapshot boundaries, the property live from Uppsala's layer 51 (place.live, cached per point),
+   kommun from the snapshot boundaries (a plan-layer kommun: the plans at the point from `_plan`, property
+   "not_covered", sections "not_covered", a note when no plan was found since the layer is not known to be complete;
+   every plan row carries `document_ids` / `document_match` from the link table, [] / None before a match run, and
+   `corpus_documents` (role, title, address, read from the corpus at the pin, at most 8 s) with `text_status`: read,
+   none, or unavailable when the corpus cannot be reached, which also adds a note),
+   the property live from Uppsala's layer 51 (place.live, cached per point),
    features that contain the pin or cover >= 2 % of the property, plans newest first matched to the corpus registry by
    name, "outside" detaljplan only with a complete plan layer (else "unknown"); the national layers by the same rule;
    ancient remains live from RAÄ (WMS GetFeatureInfo, buffer = half the image over a square whose inscribed circle
@@ -722,7 +751,9 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | GET    | `/api/benchmark/run/{job_id}`     | Yes  | Progress (tool calls) and result of that job (polled: a run outlasts the frontend proxy timeout) |
 | GET    | `/api/pipeline`                   | Yes  | Measurements of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency), read from the files the steps write; cached until one changes. Without a corpus (no `check.json`): the national snapshot `data/agentic/pipeline-national.json` with `snapshot: {built}` |
 | GET    | `/api/place/profile?lat=&lon=`    | Yes  | Place profile of a pinned point: property (live), plans, zones, plans in progress, inside/outside detaljplan (no LLM) |
-| GET    | `/api/place/coverage`             | Yes  | Pilot kommuner with a snapshot (code, name, bbox, fetch date), for the map's first view |
+| GET    | `/api/place/coverage`             | Yes  | Every kommun with a snapshot, pilot or plan-layer (code, name, bbox, fetch date), for the map's first view |
+| GET    | `/api/place/review/coverage`      | Yes  | Every registry kommun and snapshot as a GeoJSON outline: covered, polygons, matched, fetch date, why not (the map's review mode) |
+| GET    | `/api/place/review/plans?bbox=`   | Yes  | The plan polygons in a box of at most 2° by 1°, at most 4,000, with their match level and `truncated`; 422 for a wider or malformed box (ADR-0008) |
 | GET    | `/api/place/search?q=`            | Yes  | Address / place search for the map (street addresses from the pilot kommun's address register, else Nominatim: Sweden only, 1 request/s, pilot kommuner first; cached); 503 when Nominatim is down |
 
 All routes are additionally behind the access gate when it is enabled.
@@ -860,7 +891,13 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/routers/docs.py` -- Open a cited chunk in its original document (PDF page + highlight, or URL text fragment;
   the PDF comes from `corpus.pdf_files`: crawl folder, else downloaded from its URL into the cache)
 - `backend/place/` -- place lookups for the map pin: `sources.py` (layers, attribute mapping, pilot kommuner),
-  `fetch.py` (snapshot CLI), `store.py` (`PlaceStore`, snapshot format, STRtree per layer), `live.py` (property and
+  `fetch.py` (snapshot CLI), `registry.py` (`PlanSource`, the plan source registry `plan_sources.json` built from the
+  survey), `plan_layers.py` (plan-layer snapshots for the registry kommuner, link normalisation, the coverage
+  report), `plan_links.py` (`normalise_akt`, `polygon_key`, `match_kommun` / `run`: the plan-document link table,
+  fetch list and match report; `load_hosted_documents` / `run_hosted` / `text_report`: the same against the hosted
+  corpus), `review.py` (`coverage`, `plans_in_view`: the map's review mode, by viewport,
+  ADR-0008), `store.py` (`PlaceStore`, snapshot format, STRtree per layer, `plan_links`, `outline`),
+  `live.py` (property and
   ancient remains at a point), `profile.py` (`build_profile`), `permits.py` (`likely_permits`), `context.py` (the
   place as text for the agent, `compact_profile`, `question_with_place`: what the agent is sent, used by the chat and
   the answer benchmark), `geocode.py` (`search_places`: the kommun's address register first, then Nominatim;
@@ -985,8 +1022,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
 - `frontend/components/place/` -- `PlacePanel` (map panel beside the chat, opened by the pin button in the message
   bar: full-height map, the card as a glass sheet with a grabber, Apple Maps style; system font; controls styled in
-  `globals.css` under `.place-map`), `PlaceMap` (MapLibre 6 + OpenFreeMap Positron, outlines per kind, `bottomInset`
-  keeps the view centred above the sheet, attribution required by ODbL / OpenMapTiles / OpenFreeMap kept small),
+  `globals.css` under `.place-map`; the review mode's switch, fetches and legend, ADR-0009), `PlaceMap` (MapLibre 6 +
+  OpenFreeMap Positron, outlines per kind, the review layers, `bottomInset` keeps the view centred above the sheet,
+  attribution required by ODbL / OpenMapTiles / OpenFreeMap kept small; draws props and fetches nothing),
   `PlaceCard` (iOS-style grouped sections with icon tiles; "None found" vs "could not be reached"), `PlaceSearch`
   (floating search, Enter only; a match becomes a grey proposed pin with "Pin here"), `PlaceChip` (the chat's pinned
   place above the input), `glass.ts` (the shared glass style); `frontend/lib/place.ts` -- types

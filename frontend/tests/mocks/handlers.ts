@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-import { kaboOutside, kungsangen } from './place';
+import { kaboOutside, kungsangen, reviewCoverage, reviewPlans } from './place';
 
 // Default fake backend shared by every test. Override per test with server.use(...).
 export const handlers = [
@@ -13,6 +13,8 @@ export const handlers = [
   http.get('*/api/place/coverage', () =>
     HttpResponse.json([{ code: '0380', name: 'Uppsala', bbox: [17.5, 59.7, 17.9, 60.0], fetched: '2026-10-25' }]),
   ),
+  http.get('*/api/place/review/coverage', () => HttpResponse.json(reviewCoverage)),
+  http.get('*/api/place/review/plans', () => HttpResponse.json(reviewPlans)),
   http.get('*/api/sessions', () =>
     HttpResponse.json([
       { id: 's1', title: 'Bygglov Storgatan 3', created_at: '2026-10-01T10:00:00Z' },

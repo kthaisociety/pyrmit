@@ -59,6 +59,61 @@ BATCH = 2000
 CANDIDATE_DF = 0.10  # bm25_top: candidate chunks come from the stems in under 10 % of the chunks
 GEO_DIR =BACKEND_DIR / "data" / "geo"  # place.store.GEO_DIR (not imported: shapely for a path)
 SYNC_STAMP = "neon_sync.json"
+STORAGE_LIMIT_MB = 1000  # the free plan's storage per project; a files load stops short of it
+FILES_BUILT = "files_built"  # corpus_meta key: when load_files last ran (the sync refreshes its files on a change)
+UPSERT_FILE = "INSERT INTO corpus_files VALUES (%s, %s) ON CONFLICT (path) DO UPDATE SET data = EXCLUDED.data"  # bytes -> bytea
+
+
+class StorageLimitError(RuntimeError):
+    """A files load that would pass the storage limit: `needed_mb` is the database size after the load, `limit_mb`
+    the limit it refused. Nothing was written."""
+
+    def __init__(self, needed_mb: float, limit_mb: float):
+        super().__init__(f"The load needs {needed_mb:.0f} MB of the database's {limit_mb:.0f} MB: nothing written")
+        self.needed_mb, self.limit_mb = needed_mb, limit_mb
+
+
+def snapshot_files(kommuner: list[str] | None = None) -> dict[str, Path]:
+    """The snapshot files on disk of every kommun with a snapshot (a manifest.json in data/geo/<code>/), by their
+    corpus_files path ("geo/<code>/<file>"), in path order. `kommuner` restricts to those codes; a code without a
+    snapshot is skipped, so a wrong code gives no files rather than an error."""
+    codes = sorted(kommuner) if kommuner is not None else sorted(path.name for path in GEO_DIR.iterdir() if path.is_dir())
+    files = {}
+    for code in codes:
+        if (GEO_DIR / code / "manifest.json").is_file():
+            files.update({f"geo/{code}/{path.name}": path for path in sorted((GEO_DIR / code).iterdir()) if path.is_file()})
+    return files
+
+
+def load_files(store, kommuner: list[str] | None = None, limit_mb: float = STORAGE_LIMIT_MB) -> dict:
+    """Add or replace the snapshots of snapshot_files(kommuner) in corpus_files (gzip), without rebuilding the
+    corpus: the chunks, the plan registry, the gazetteer and every other kommun's files stay as they are. `store`
+    is a PgStore (anything with execute(sql, params)). Sets corpus_meta FILES_BUILT to now, so an install's sync
+    writes the new snapshots (sync_files).
+
+    Returns {"files": the files written, "kommuner": their codes, "mb": the gzip bytes written in MB,
+    "database_mb": the database size after the load}. Raises StorageLimitError, with nothing written, when the
+    database would pass `limit_mb` after the load (its size now, plus the files' gzip size, minus the rows they
+    replace)."""
+    files = snapshot_files(kommuner)
+    packed = {path: gzip.compress(file.read_bytes(), 6) for path, file in files.items()}
+    size = store.execute("SELECT pg_database_size(current_database())")[0][0]
+    replaced = sum(length for _, length in store.execute(
+        "SELECT path, octet_length(data) FROM corpus_files WHERE path = ANY(%s)", (list(packed),)))
+    needed_mb = (size + sum(len(data) for data in packed.values()) - replaced) / 1e6
+    if needed_mb > limit_mb:
+        raise StorageLimitError(needed_mb, limit_mb)
+    for path, data in packed.items():
+        store.execute(UPSERT_FILE, (path, data))
+    built = datetime.now(UTC).isoformat(timespec="seconds")
+    store.execute("INSERT INTO corpus_meta VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                  (FILES_BUILT, json.dumps(built)))
+    if isinstance(getattr(store, "meta", None), dict):
+        store.meta[FILES_BUILT] = built
+    return {"files": len(packed), "kommuner": sorted({path.split("/")[1] for path in packed}),
+            "mb": round(sum(len(data) for data in packed.values()) / 1e6, 1),
+            "database_mb": round(store.execute("SELECT pg_database_size(current_database())")[0][0] / 1e6, 1)}
+
 CHUNKS_SCHEMA = """
 DROP TABLE IF EXISTS corpus_chunks, corpus_places CASCADE;
 CREATE EXTENSION IF NOT EXISTS vector;
@@ -69,9 +124,9 @@ CREATE TABLE corpus_chunks (
 CREATE TABLE corpus_places (word text NOT NULL, kommun_code text NOT NULL, count integer NOT NULL);
 """
 EXTRAS_SCHEMA = """
-DROP TABLE IF EXISTS corpus_plans, corpus_ocr, corpus_files, corpus_terms, corpus_meta;
+DROP TABLE IF EXISTS corpus_plans, corpus_ocr, corpus_terms, corpus_meta;
 CREATE TABLE corpus_ocr (doc_id text PRIMARY KEY, data bytea NOT NULL);
-CREATE TABLE corpus_files (path text PRIMARY KEY, data bytea NOT NULL);
+CREATE TABLE IF NOT EXISTS corpus_files (path text PRIMARY KEY, data bytea NOT NULL);  -- kept: load_files' snapshots
 ALTER TABLE corpus_ocr ALTER COLUMN data SET STORAGE EXTERNAL;  -- already gzip: no second compression
 ALTER TABLE corpus_files ALTER COLUMN data SET STORAGE EXTERNAL;
 CREATE TABLE corpus_meta (key text PRIMARY KEY, value jsonb NOT NULL);
@@ -132,12 +187,8 @@ def _load_chunks(cursor, lite: sqlite3.Connection, vectors: np.ndarray, total: i
 
 def _small_files(kommuner: list[str]) -> dict[str, Path]:
     """Files the app reads from disk, by their corpus_files path: gazetteer, plan registry, the kommuner's place
-    snapshots (place.fetch + place.plan_documents)."""
-    files = {"corpus/municipalities.json": MUNICIPALITIES_PATH, "corpus/plans.jsonl": PLANS_PATH}
-    for code in kommuner:
-        if (GEO_DIR / code).is_dir():
-            files.update({f"geo/{code}/{path.name}": path for path in sorted((GEO_DIR / code).iterdir()) if path.is_file()})
-    return files
+    snapshots (snapshot_files)."""
+    return {"corpus/municipalities.json": MUNICIPALITIES_PATH, "corpus/plans.jsonl": PLANS_PATH, **snapshot_files(kommuner)}
 
 
 def load(model: str, url: str, skip_chunks: bool = False) -> dict:
@@ -165,7 +216,7 @@ def load(model: str, url: str, skip_chunks: bool = False) -> dict:
     kommuner = sorted(r[0] for r in lite.execute("SELECT DISTINCT kommun_code FROM chunks WHERE kommun_code IS NOT NULL"))
     files = _small_files(kommuner)
     for name, path in files.items():
-        cursor.execute("INSERT INTO corpus_files VALUES (%s, %s)", (name, psycopg2.Binary(gzip.compress(path.read_bytes(), 6))))
+        cursor.execute(UPSERT_FILE, (name, gzip.compress(path.read_bytes(), 6)))
     ocr = 0
     for (doc_id,) in lite.execute("SELECT DISTINCT doc_id FROM chunks WHERE kind = 'pdf'"):
         path = pdf_files.ocr_path(doc_id)
@@ -359,14 +410,15 @@ def _sync_target(path: str) -> Path:
 
 def sync_files(store: PgStore) -> list[str]:
     """Write the small files the app reads from disk (gazetteer, plan registry, place snapshots) from corpus_files
-    when this install lacks them, or when the sync wrote them for an older build. A file the sync did not write is
-    never overwritten: a machine with the full corpus keeps its own."""
+    when this install lacks them, or when the sync wrote them for an older build or an older files load (corpus_meta
+    FILES_BUILT, load_files). A file the sync did not write is never overwritten: a machine with the full corpus
+    keeps its own."""
     stamp_path = DATA_ROOT / SYNC_STAMP
     try:
         stamp = json.loads(stamp_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         stamp = {"built": None, "files": []}
-    ours, built = set(stamp["files"]), store.meta["built"]
+    ours, built = set(stamp["files"]), f"{store.meta['built']} {store.meta.get(FILES_BUILT, '')}".strip()
     todo = [path for (path,) in store.execute("SELECT path FROM corpus_files")
             if not _sync_target(path).exists() or (path in ours and stamp["built"] != built)]
     if todo:
@@ -407,14 +459,28 @@ class PgRetriever(DiskRetriever):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Copy a disk store, the small files and OCR outputs to Postgres")
-    parser.add_argument("--model", required=True, help="disk store to copy (localrag.store), e.g. st-bge-m3")
+    parser = argparse.ArgumentParser(description="Copy a disk store, the small files and OCR outputs to Postgres; or "
+                                                 "with --files, the kommuner's place snapshots alone")
+    parser.add_argument("--model", help="disk store to copy (localrag.store), e.g. st-bge-m3")
     parser.add_argument("--skip-chunks", action="store_true", help="keep the chunks already loaded, redo the rest")
+    parser.add_argument("--files", action="store_true", help="add or replace the place snapshots (data/geo), nothing else")
+    parser.add_argument("--kommun", action="append", help="with --files: these kommun codes only (default: every snapshot)")
+    parser.add_argument("--limit-mb", type=float, default=STORAGE_LIMIT_MB, help="with --files: the database's storage limit")
     args = parser.parse_args()
     url = os.getenv("CORPUS_DATABASE_URL")
     if not url:
         parser.error("set CORPUS_DATABASE_URL to the target database (e.g. the Neon demo branch)")
-    load(args.model, url, args.skip_chunks)
+    if args.files:
+        try:
+            result = load_files(PgStore(url), args.kommun, args.limit_mb)
+        except StorageLimitError as error:
+            raise SystemExit(str(error)) from None
+        print(f"Loaded {result['files']} files of {len(result['kommuner'])} kommuner ({result['mb']} MB gzip): "
+              f"database {result['database_mb']} MB")
+    elif args.model:
+        load(args.model, url, args.skip_chunks)
+    else:
+        parser.error("give --model (the whole corpus) or --files (the place snapshots)")
 
 
 if __name__ == "__main__":

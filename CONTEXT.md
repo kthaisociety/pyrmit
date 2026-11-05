@@ -118,10 +118,45 @@ The hand-checked answer for one property: its plans, zones, protections, remains
 _Avoid_: ground truth, gold labels
 
 **Pilot kommun**:
-A kommun the map covers, because its layers have a snapshot (Uppsala for now). Anywhere else the place is "not covered yet".
+A kommun whose every layer has a snapshot: plans, land-use zones, plans in progress and the national layers, with the property looked up live (Uppsala for now).
+
+**Plan source**:
+One kommun's open plan layer as the registry (`backend/place/plan_sources.json`) describes it: the service, the layer and the attributes that carry the aktbeteckning, the document links, the plan name, the date and the plan type, plus the base pattern for links that are bare file names and the licence. Built from the survey of all 290 kommuner in `docs/research/`.
+_Avoid_: pilot (a plan source has no other layers), endpoint
+
+**Plan-layer kommun**:
+A kommun covered by its plan source alone: a pin there gives the kommun and the detaljplaner at the point, with no property, land-use zones or plans in progress.
 
 **Snapshot**:
-A dated local copy of a pilot kommun's area layers, fetched with `python -m place.fetch`. The property is looked up live instead.
+A dated local copy of a kommun's area layers: every layer of a pilot kommun (`python -m place.fetch`), or the plan layer of a plan-layer kommun (`python -m place.plan_layers`). A kommun with a snapshot is covered; anywhere else the place is "not covered yet".
+
+**Plan-document link**:
+A row of the link table (`data/geo/<code>/plan_links.jsonl`): one plan polygon matched to one document of the document store or the hosted corpus, with the match level that produced it, the document's role and the date. A plan at the pin carries its matched documents' ids, or says no document is matched yet.
+_Avoid_: corpus match (the registry match by name that `corpus_plan_id` records)
+
+**Match level**:
+How a polygon found its document, tried in order and stopped at the first hit: link (the polygon's document link is the document's address), akt (the normalised aktbeteckning appears in the document's title, file name or first page of text, same kommun only; further in it is only a mention, such as a plan the document replaces) or name (kommun and plan name agree; marked for review).
+
+**Fetch list**:
+The links of every polygon no document matched, grouped by kommun (`data/geo/plan_fetch_list.json`), for the scraper to pick up next. A polygon whose links were internal paths is listed as "no public link" with its aktbeteckning.
+
+**Plan text**:
+Whether a plan at the pin has documents in the corpus the app serves from: *read* (the place card lists them by role, plan map first), *none* (the card says no text was read and keeps the link to the kommun) or *unavailable* (the corpus could not be reached, so the plan is listed without documents). The **Text report** gives the share per kommun.
+
+**Specific question**:
+A question about one place: it names an address, a property designation, a plan or an aktbeteckning, or says "here" or "my plot". Without a **Pin** the agent asks for one before any search; with one it reads the plans at the pin. Any other question is a **General question**, answered generally with or without a pin.
+
+**Read together**:
+An amendment (tillägg) and the plan it amends are read as one: the plan its row names ("Gäller tillsammans med ..."), else the older plans at the pin. A plan naming an amendment that does not cover the pin does not bring it in.
+
+**Text report**:
+`data/geo/<code>/plan_text_report.md`, written by a match against the hosted corpus: the share of a kommun's plan polygons with documents, and for each of the others why it has none.
+
+**Coverage report**:
+One line per plan source, kept up to date across fetch runs: fetched or not and why, the polygons kept against the survey's count, and the shares of plans with an aktbeteckning and with a link.
+
+**Review mode**:
+A switch on the map panel, off by default, for checking the plan layers and their documents by eye. Zoomed out it colours every kommun by whether it has plan polygons; zoomed in to about a kommun it draws the polygons in view coloured by **Match level** (link, akt, name, none), and a click on one shows its aktbeteckning, name and match level. Layers the **Coverage report** flags as doubtful are drawn like any other.
 
 ## Relationships
 
@@ -133,4 +168,6 @@ A dated local copy of a pilot kommun's area layers, fetched with `python -m plac
 - The **Orchestrator** combines both agents' results into a **Verdict**, which becomes the **Feasibility analysis** saved as an assistant **Chat message**.
 - The **Access gate** sits in front of everything, including sign-in.
 - A **Pin** in a **Pilot kommun** gives a **Property** (looked up live) and a **Place profile** (from the **Snapshot**): its **Detaljplaner**, **Land-use zones**, **Plans in progress**, **Protected areas** and **National interests**, plus the **Ancient remains** on it (looked up live). The **Likely permits** follow from that profile. The **Place card** shows all of it.
+- A **Pin** in a **Plan-layer kommun** gives a **Place profile** with the **Detaljplaner** at the point from the kommun's **Snapshot**, each with its aktbeteckning, page and document links and licence, and nothing else. The **Plan source** says how the **Snapshot** was read; the **Coverage report** says how well.
+- Every **Detaljplan** polygon in a **Snapshot** is matched to its documents in the document store by **Match level**, giving **Plan-document links** that the **Place profile** carries; the polygons without one go to the **Fetch list**.
 - A question asked with a **Pin** is answered from its **Place profile**, and the answer keeps that **Pin**: reopening the **Chat session** brings back its **Place chip**.

@@ -9,6 +9,9 @@ Conditions, per case:
   vague     (cases with "vague") the question without any place and no pin: the agent should ask where
   conflict  (cases with "conflict_with") pinned at this case's place while the question names the other case's
             address: the agent should ask which place is meant
+  general   (cases with "question_general") a general question and no pin: answered from the corpus, with an offer to
+            pin for an exact answer
+  general_pin  the same general question with the pin: answered generally, without bringing in the plan
 
 Scores per answer:
   points      reference key points covered, 0-2 each (judge), reported as 0-1 (pin and address only)
@@ -17,9 +20,9 @@ Scores per answer:
   wrong_place statements about the place that contradict the reference (judge)
   unsupported specific rules / facts in neither the reference, the place data shown nor the cited sources (judge)
   asks        whether the answer asks which place it is about (judge); right when it matches the condition
-              (expected for vague and conflict, not for pin; with an address, asking to pin it is the hint's advice
-              when the agent cannot place it, so it is counted, not scored)
-  seconds, first token, cost, tool calls
+              (expected for address, vague and conflict, not for pin, general and general_pin)
+  offers_pin  whether the answer offers to pin a place for an exact answer (judge)
+  seconds, first token, cost, tool calls, searches (calls of the tools that look for documents)
 
 The judge defaults to another model family than the agent (MiMo v2.6 Flash); `rejudge` adds a second judge's grades
 to a result file, so a difference counts only when both judges see it.
@@ -28,6 +31,7 @@ to a result file, so a difference counts only when both judges see it.
     python -m place.bench_answers run --repeats 3 --workers 3            # -> data/agentic/place-answers-<time>.json
     python -m place.bench_answers rejudge <result.json> --judge-model openai/gpt-6-luna
     python -m place.bench_answers summary <result.json>
+    python -m place.bench_answers compare <before.json> <after.json>
 """
 
 import argparse
@@ -46,13 +50,14 @@ from place.context import place_context, question_with_place
 from place.sources import SWEDEN_TZ
 
 CASES_PATH = Path(__file__).resolve().parent / "cases_answers.jsonl"
-CONDITIONS = ("pin", "address", "vague", "conflict")
-ASKS_EXPECTED = {"pin": False, "address": None, "vague": True, "conflict": True}  # address: asking to pin is allowed
+CONDITIONS = ("pin", "address", "vague", "conflict", "general", "general_pin")
+ASKS_EXPECTED = {"pin": False, "address": True, "vague": True, "conflict": True, "general": False, "general_pin": False}
+SEARCH_TOOLS = {"search", "grep", "list_documents", "plans"}  # the tools that look for documents, not those that read them
 JUDGE_MODEL = "xiaomi/mimo-v2.6-flash"
 MAX_COST_USD = 10.0
 
 JUDGE_INSTRUCTIONS = """You grade answers of a Swedish planning assistant to a question about one specific place, against a reference.
-Return JSON only: {"points": [<0|1|2> per key point, in order], "unsupported_claims": <int>, "wrong_place_claims": <int>, "asks_for_place": <true|false>, "comment": "<one sentence>"}.
+Return JSON only: {"points": [<0|1|2> per key point, in order], "unsupported_claims": <int>, "wrong_place_claims": <int>, "asks_for_place": <true|false>, "offers_pin": <true|false>, "comment": "<one sentence>"}.
 - points: 2 = the key point is clearly stated, 1 = partially / vaguely, 0 = missing or contradicted. An empty list when there are no key points.
 - unsupported_claims: number of specific rules/numbers/facts in the answer that are stated neither in the reference, nor
   in the place data the assistant was given, nor in the cited sources below, or that contradict them. A claim those
@@ -61,7 +66,8 @@ Return JSON only: {"points": [<0|1|2> per key point, in order], "unsupported_cla
   detaljplan, "outside detaljplan" when it is inside, a protected area or ancient remain that is not there, another
   property designation). Saying that something is unknown or must be checked is not wrong.
 - asks_for_place: true if the answer asks the user which place or property the question is about, or asks them to
-  pin it on the map, instead of or before answering for a known place."""
+  pin it on the map, instead of or before answering for a known place.
+- offers_pin: true if the answer, having answered, offers to pin a place on the map for an exact answer."""
 
 
 def load_cases(path: Path = CASES_PATH) -> list[dict]:
@@ -76,9 +82,11 @@ def load_cases(path: Path = CASES_PATH) -> list[dict]:
 
 def jobs(cases: list[dict], conditions=CONDITIONS, repeats: int = 1) -> list[tuple[str, str, int]]:
     """(case id, condition, repeat) for every case and condition that applies to it: pin and address always,
-    vague for cases marked "vague", conflict for cases with "conflict_with"."""
+    vague for cases marked "vague", conflict for cases with "conflict_with", general and general_pin for cases with
+    "question_general"."""
     applies = {"pin": lambda c: True, "address": lambda c: True, "vague": lambda c: bool(c.get("vague")),
-               "conflict": lambda c: bool(c.get("conflict_with"))}
+               "conflict": lambda c: bool(c.get("conflict_with")), "general": lambda c: bool(c.get("question_general")),
+               "general_pin": lambda c: bool(c.get("question_general"))}
     return [(case["id"], condition, repeat) for repeat in range(repeats) for case in cases
             for condition in conditions if applies[condition](case)]
 
@@ -91,6 +99,10 @@ def prompt(case: dict, condition: str, cases_by_id: dict[str, dict], profile_of:
         typed, profile = case["question_address"], None
     elif condition == "vague":
         typed, profile = case["question"], None
+    elif condition == "general":
+        typed, profile = case["question_general"], None
+    elif condition == "general_pin":
+        typed, profile = case["question_general"], profile_of(case["pin"]["lat"], case["pin"]["lon"])
     elif condition == "conflict":
         typed, profile = cases_by_id[case["conflict_with"]]["question_address"], profile_of(case["pin"]["lat"], case["pin"]["lon"])
     else:
@@ -113,6 +125,9 @@ def _judge_input(case: dict, condition: str, typed: str, answer: str, place_text
         named = cases_by_id[case["conflict_with"]]
         reference = (f"The user pinned one place on the map ({case['pin']['label']}: {case['reference_place']}) but the "
                      f"question names another ({named['pin']['label']}). The assistant should ask which place is meant.")
+        points = "(none)"
+    elif condition in ("general", "general_pin"):
+        reference = "The question is general: its answer does not turn on any one place."
         points = "(none)"
     else:
         reference = "No place is pinned and the question does not name one: the answer depends on the place."
@@ -142,15 +157,18 @@ def judge(case: dict, condition: str, typed: str, answer: str, place_text: str |
     scores = (list(grade.get("points") or []) + [0] * wanted)[:wanted]  # the judge returned too few / many
     return {"points": scores, "unsupported": grade.get("unsupported_claims", 0),
             "wrong_place": grade.get("wrong_place_claims", 0), "asks": grade.get("asks_for_place"),
+            "offers_pin": grade.get("offers_pin"),
             "comment": grade.get("comment"), "cost": float(getattr(response.usage, "cost", 0) or 0), "model": model}
 
 
 def scores(row: dict, grade: dict) -> dict:
-    """The row's scores under one judge's grade: points (0-1, pin and address only), asks_ok, unsupported and
-    wrong_place."""
+    """The row's scores under one judge's grade: points (0-1, pin and address only; none for an address the answer
+    rightly asks to pin), asks_ok, unsupported and wrong_place."""
     points, expected = grade["points"], ASKS_EXPECTED[row["condition"]]
+    if row["condition"] == "address" and grade["asks"]:
+        points = []
     return {"points": sum(points) / (2 * len(points)) if points else None,
-            "asks_ok": None if grade["asks"] is None or expected is None else grade["asks"] == expected,
+            "asks_ok": None if grade["asks"] is None else grade["asks"] == expected,
             "unsupported": grade["unsupported"], "wrong_place": grade["wrong_place"]}
 
 
@@ -212,7 +230,8 @@ class AnswerBench:
                    first_token_s=run.first_token_s,
                    cost=round(run.usage.get("cost", 0.0), 5), llm_calls=run.llm_calls, error=run.error,
                    tool_calls=len(run.steps), tools=[step.get("tool") for step in run.steps],
-                   facts_named=facts_named(case, run.answer) if condition in ("pin", "address") else None,
+                   offer_pin=bool(getattr(run, "offer_pin", False)),
+                   facts_named=facts_named(case, run.answer) if condition in ("pin", "address", "general_pin") else None,
                    facts=len(case.get("facts") or []))
         row["facts_share"] = (len(row["facts_named"]) / row["facts"] if row["facts_named"] is not None and row["facts"]
                               else None)
@@ -251,9 +270,11 @@ class AnswerBench:
 
 
 def summarise(rows: list[dict], judge_model: str) -> dict:
-    """Means per condition under one judge: {condition: {"answers", "errors", "points", "facts", "wrong_place",
-    "unsupported", "asks" (share asking for the place), "asks_ok", "seconds", "first_token_s", "cost",
-    "tool_calls"}}, plus "by_case": the points and facts per case and condition."""
+    """Means per condition under one judge: {condition: {"answers", "errors", "points", "facts" (for general_pin, the
+    pinned place's facts the general answer brought in), "wrong_place", "unsupported", "asks" (share asking for the
+    place), "asks_ok", "offers_pin" (share offering to pin), "seconds", "first_token_s", "cost", "tool_calls",
+    "searches" (calls of SEARCH_TOOLS; None for a run that did not record its tools)}}, plus "by_case": the points and
+    facts per case and condition."""
     def mean(values):
         values = [value for value in values if value is not None]
         return round(fmean(values), 3) if values else None
@@ -270,8 +291,11 @@ def summarise(rows: list[dict], judge_model: str) -> dict:
             "wrong_place": mean(g["wrong_place"] for g in graded), "unsupported": mean(g["unsupported"] for g in graded),
             "asks": mean(None if g["asks"] is None else float(g["asks"]) for g in graded),
             "asks_ok": mean(None if g["asks_ok"] is None else float(g["asks_ok"]) for g in graded),
+            "offers_pin": mean(None if g.get("offers_pin") is None else float(g["offers_pin"]) for g in graded),
             "seconds": mean(row.get("seconds") for row in mine), "first_token_s": mean(row.get("first_token_s") for row in mine),
-            "cost": mean(row.get("cost") for row in mine), "tool_calls": mean(row.get("tool_calls") for row in mine)}
+            "cost": mean(row.get("cost") for row in mine), "tool_calls": mean(row.get("tool_calls") for row in mine),
+            "searches": mean(None if row.get("tools") is None else float(sum(tool in SEARCH_TOOLS for tool in row["tools"]))
+                             for row in mine)}
     by_case: dict = {}
     for row in rows:
         grade = (row.get("grades") or {}).get(judge_model)
@@ -349,6 +373,15 @@ def rejudge(path: Path, judge_model: str, cases: list[dict], *, bench: AnswerBen
     return result
 
 
+def compare(before: dict, after: dict) -> dict:
+    """Two result files side by side, each under its own judge: {condition: {metric: {"before", "after"}}} for the
+    conditions both have and the metrics of summarise. A metric a file did not record is None on its side."""
+    first, second = summarise(before["rows"], before["judge"]), summarise(after["rows"], after["judge"])
+    return {condition: {metric: {"before": first[condition][metric], "after": second[condition][metric]}
+                        for metric in first[condition]}
+            for condition in CONDITIONS if condition in first and condition in second}
+
+
 def _print_summary(summary: dict) -> None:
     for condition in CONDITIONS:
         if condition in summary:
@@ -378,6 +411,9 @@ def main() -> None:
     show = sub.add_parser("summary")
     show.add_argument("path", type=Path)
     show.add_argument("--judge-model")
+    side_by_side = sub.add_parser("compare")
+    side_by_side.add_argument("before", type=Path)
+    side_by_side.add_argument("after", type=Path)
     args = parser.parse_args()
 
     cases = load_cases()
@@ -392,6 +428,11 @@ def main() -> None:
     elif args.command == "rejudge":
         result = rejudge(args.path, args.judge_model, cases)
         _print_summary(result["summaries"][args.judge_model])
+    elif args.command == "compare":
+        files = (json.loads(path.read_text(encoding="utf-8")) for path in (args.before, args.after))
+        for condition, metrics in compare(*files).items():
+            print(f"  {condition:11} " + "  ".join(f"{metric} {values['before']} -> {values['after']}"
+                                                   for metric, values in metrics.items()))
     else:
         result = json.loads(args.path.read_text(encoding="utf-8"))
         model = args.judge_model or result["judge"]

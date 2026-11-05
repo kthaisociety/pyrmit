@@ -30,7 +30,7 @@ TOOLS_GUIDE = """You have tools over an offline corpus:
 How to work:
 1. Identify the kommun and the place (find_kommun). Note what the corpus has for that kommun.
 2. Work out which rules decide the case: is the site inside a detaljplan? national rules (bygglov/anmälan, förhandsbesked, strandskydd, jordbruksmark, sammanhållen bebyggelse, VA)? local rules (detaljplan provisions, översiktsplan intentions, local guidance, fees)?
-3. For a site inside a detaljplan, list the kommun's plans (plans, with words of the area name) and read the plan's
+3. For a site inside a detaljplan that no pinned place lists, list the kommun's plans (plans, with words of the area name) and read the plan's
    rules as a table (plan_rules: building area, heights, storeys, plot size, prickmark...); the plankarta shows
    which area carries which code: when the question names a property (e.g. "Grimsta 5:125") or a precise place, open
    the plankarta around it (view_map_area with the plankarta doc_id and the property number) and only apply the rules
@@ -50,6 +50,13 @@ How to work:
 6. As soon as the main points of the answer are supported by sources, call answer_ready (alone) with the kind of
    question (mode). Do not keep searching for marginal details; say what is unknown instead. You will then write the
    final answer."""
+
+PIN_GUIDE = """What a pin on the map changes. A question is specific when it is about one place: it names an address, a property designation, a named plan or aktbeteckning, or says "here", "my plot", "our house" and the like. Any other question is a general question: how a rule, procedure, fee or document works, in Sweden or in a kommun as a whole.
+- Specific, with a pin: the pinned place lists the plans that apply. Read their documents with read_plan first, without searching for them, and an amendment together with the plan it amends, as listed: it changes that plan where they differ. Answer from the passages, citing them, and search further only for what the plans do not settle, such as statute text.
+- A plan listed as "Text not read": name the plan, say its text is not read, give the kommun's link listed with it and answer from the statutes.
+- General, with a pin: answer generally, without bringing in the plan or the pinned place's other data.
+- Specific, without a pin: your first call is ask_user with offer_pin, before any search.
+- General, without a pin: answer with the search tools and close with one sentence's offer to pin a place for an exact answer."""
 
 MODES = ("verdict", "explain", "propose", "develop")
 
@@ -110,7 +117,7 @@ Completeness: the user will act on this answer, so before writing go through you
 
 IMAGE_REMOVED = "\n(Image removed after the turn it was shown in: use what you noted from it.)"
 
-SYSTEM_PROMPT = f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{MODES_GUIDE}\n\n{ANSWER_FORMAT}"
+SYSTEM_PROMPT = f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{PIN_GUIDE}\n\n{MODES_GUIDE}\n\n{ANSWER_FORMAT}"
 
 # The corpus line of TOOLS_GUIDE about the kommuner: true of the national corpus only. On a snapshot (data/small's
 # few kommuner, the Neon demo's three) the agent answered "all 290 kommuner" from it; kommun_scope replaces it

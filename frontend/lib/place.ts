@@ -26,8 +26,24 @@ export interface PlaceFeature {
   fetched: string;
   geometry: GeoJSON.Geometry;
   share?: number; // zones: fraction of the property covered
+  page?: string | null; // plans: the plan's page link
+  documents?: string[]; // plans: absolute links to the plan documents, in the layer's order
+  licence?: string; // plans: the layer's licence ("unknown" when it states none)
+  document_ids?: string[]; // plans: the document store's documents matched to the polygon ([]: none yet)
+  document_match?: 'link' | 'akt' | 'name' | null; // plans: the level that matched them (null: none yet)
+  corpus_documents?: PlanDocument[]; // plans: those of them in the corpus, plan maps first
+  text_status?: 'read' | 'none' | 'unavailable'; // plans: unavailable when the corpus could not be reached
+  read_with?: { ref: string; corpus_documents: PlanDocument[] }[]; // plans: read together with these (amendments)
   corpus_plan_id?: string | null;
   provisions_indexed?: boolean;
+}
+
+// A plan's document in the corpus, with its role in the plan (plankarta, planbeskrivning, ...; null when unknown)
+export interface PlanDocument {
+  doc_id: string;
+  role: string | null;
+  title: string | null;
+  url: string | null;
 }
 
 export interface PlaceLayer {
@@ -103,6 +119,60 @@ export async function fetchPlaceProfile(pin: Pin): Promise<PlaceProfile> {
 /** The pilot kommuner the map covers, for its first view. Throws an Error when the lookup fails. */
 export async function fetchPlaceCoverage(): Promise<PlaceCoverage[]> {
   return getJson<PlaceCoverage[]>('/api/place/coverage');
+}
+
+// --- the review mode: which kommuner have plan polygons and which polygons have a document ---------------------
+
+// One kommun of the coverage view (GET /api/place/review/coverage), registry kommuner and pilots alike
+export interface CoverageProperties {
+  code: string;
+  name: string;
+  covered: boolean; // the kommun has a plans snapshot
+  polygons: number; // plans in the snapshot (0 when not covered)
+  matched: number; // of them with at least one matched document
+  fetched: string | null; // snapshot date
+  reason: string | null; // when not covered: why the last fetch failed, or "not fetched yet"
+}
+
+// The kommun outlines; geometry is null for a kommun whose boundary was never fetched
+export type ReviewCoverage = GeoJSON.FeatureCollection<GeoJSON.Geometry | null, CoverageProperties>;
+
+export type MatchLevel = 'link' | 'akt' | 'name';
+
+// One plan polygon of a map view (GET /api/place/review/plans)
+export interface ReviewPlanProperties {
+  code: string; // kommun code
+  kommun: string;
+  ref: string | null; // aktbeteckning
+  name: string | null;
+  date: string | null;
+  match: MatchLevel | null; // the level its documents matched at, null when none is matched
+}
+
+export interface ReviewPlans extends GeoJSON.FeatureCollection<GeoJSON.Geometry, ReviewPlanProperties> {
+  truncated: boolean; // more polygons met the view than the backend serves at once: zoom in
+}
+
+export type BBox = [number, number, number, number]; // west, south, east, north
+
+// The review mode's colours: a kommun green when it has polygons and red when not; a plan by the level its document
+// matched at, grey when none did
+export const COVERAGE_COLOURS = { covered: '#30d158', not_covered: '#ff453a' };
+export const MATCH_COLOURS: Record<MatchLevel | 'none', string> = {
+  link: '#0a84ff', akt: '#30d158', name: '#ff9f0a', none: '#8e8e93',
+};
+
+/** Every kommun's outline with whether it has plan polygons. Throws an Error with the backend's message on failure. */
+export async function fetchReviewCoverage(): Promise<ReviewCoverage> {
+  return getJson<ReviewCoverage>('/api/place/review/coverage');
+}
+
+/**
+ * The plan polygons in the box with their match level. Throws an Error with the backend's message when the box is
+ * refused (wider than a kommun, or malformed) or the lookup fails.
+ */
+export async function fetchPlansInView(bbox: BBox): Promise<ReviewPlans> {
+  return getJson<ReviewPlans>(`/api/place/review/plans?${new URLSearchParams({ bbox: bbox.join(',') })}`);
 }
 
 // The place a chat is about: the pin and the label its chip shows (sent with each question, ADR-0004)

@@ -29,7 +29,7 @@ from agentic.tools import LAW_ALIASES, CorpusTools, _fold, normalize_section, ru
 from corpus.common import DATA_DIR, RESULTS_ROOT
 
 RESULTS = RESULTS_ROOT / "agentic"
-REPLAYED = ("read", "law_section", "grep", "list_documents", "find_kommun", "plans", "plan_rules")
+REPLAYED = ("read", "law_section", "grep", "list_documents", "find_kommun", "plans", "plan_rules", "read_plan")
 HEX_ID = re.compile(r"(?<![0-9a-f])[0-9a-f]{16}(?![0-9a-f])")
 DOC_ID = re.compile(r"(?:pdf|page|law|legacy):[^\s\]\"']+")
 

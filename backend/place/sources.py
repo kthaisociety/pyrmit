@@ -12,6 +12,7 @@ open ArcGIS service); NATIONAL layers are clipped to each pilot kommun. Checked 
   GetFeatureInfo)
 """
 
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
@@ -31,6 +32,9 @@ METRES_PER_DEGREE_LAT = 110_540  # enough for distances around a property
 def today() -> str:
     """Today's date in Sweden (ISO), the date snapshots and live lookups are stamped with."""
     return datetime.now(SWEDEN_TZ).date().isoformat()
+
+
+PLAN_KINDS = ("plan", "plan_addition", "area_regulations")
 
 
 @dataclass(frozen=True)
@@ -122,11 +126,16 @@ def layers_for(code: str) -> list[Layer]:
     return PILOTS[code]["layers"] + NATIONAL_LAYERS
 
 
+def plan_layer_definitions(code: str) -> list[Layer]:
+    """The kommun's layers of plans in force (PLAN_KINDS), in the order they are listed."""
+    return [layer for layer in layers_for(code) if layer.kind in PLAN_KINDS]
+
+
 def layer_by_id(code: str, layer_id: str) -> Layer | None:
     return next((layer for layer in layers_for(code) if layer.id == layer_id), None)
 
 
-def _first(props: dict, *keys: str):
+def first_value(props: dict, *keys: str):
     """First non-empty attribute among keys (case-insensitive): services name the same thing differently."""
     lowered = {k.lower(): v for k, v in props.items()}
     for key in keys:
@@ -136,7 +145,7 @@ def _first(props: dict, *keys: str):
     return None
 
 
-def _date(value) -> str | None:
+def iso_date(value) -> str | None:
     """'20020109', '2022-09-19' or an ArcGIS epoch in ms -> ISO date."""
     if value in (None, ""):
         return None
@@ -148,44 +157,50 @@ def _date(value) -> str | None:
     return text[:10]
 
 
+# In a plan row's "Ovrigt": "Gäller tillsammans med 0380-P99/22 och 03-89:387"
+_AKTBETECKNING = re.compile(r"(?<![\w/-])\d{2,4}-[\w/:.-]*\w")
+
+
 def feature(layer: Layer, props: dict) -> dict:
-    """Profile feature from a layer's raw attributes."""
+    """Profile feature from a layer's raw attributes. A plan also carries "named_plans": the aktbeteckningar its row
+    says it is read together with."""
     out = {"layer": layer.id, "kind": layer.kind, "layer_title": layer.title, "name": None, "ref": None,
            "type": None, "date": None, "status": None, "authority": None, "law": layer.law, "text": None,
            "url": None, "note": layer.note}
-    if layer.kind in ("plan", "plan_addition", "area_regulations"):
-        out.update(name=_first(props, "Plannamn"), ref=_first(props, "Aktbeteckning"),
-                   type=_first(props, "Plantyp"), date=_date(_first(props, "LagaKraftDatum")),
-                   url=_first(props, "UrlDokument"), text=_first(props, "AdminBestammelser", "Ovrigt"),
-                   note=_first(props, "Kommentar") or layer.note)
+    if layer.kind in PLAN_KINDS:
+        out.update(name=first_value(props, "Plannamn"), ref=first_value(props, "Aktbeteckning"),
+                   type=first_value(props, "Plantyp"), date=iso_date(first_value(props, "LagaKraftDatum")),
+                   url=first_value(props, "UrlDokument"), text=first_value(props, "AdminBestammelser", "Ovrigt"),
+                   note=first_value(props, "Kommentar") or layer.note,
+                   named_plans=_AKTBETECKNING.findall(first_value(props, "Ovrigt") or ""))
     elif layer.kind == "plan_pending":
-        out.update(name=_first(props, "Name"), ref=_first(props, "DiarieNummer"), status=_first(props, "Status"),
-                   text=_first(props, "HUVUDSAKLIGT_SYFTE", "HandelseBeskrivning"))
+        out.update(name=first_value(props, "Name"), ref=first_value(props, "DiarieNummer"), status=first_value(props, "Status"),
+                   text=first_value(props, "HUVUDSAKLIGT_SYFTE", "HandelseBeskrivning"))
     elif layer.kind == "zone":
-        out.update(name=_first(props, "AnvBestammelse"), ref=_first(props, "AnvBeteckning"),
-                   type=_first(props, "Anvandningstyp"), text=_first(props, "PlanBestammelser"),
-                   note=_first(props, "Kommentar") or layer.note)
+        out.update(name=first_value(props, "AnvBestammelse"), ref=first_value(props, "AnvBeteckning"),
+                   type=first_value(props, "Anvandningstyp"), text=first_value(props, "PlanBestammelser"),
+                   note=first_value(props, "Kommentar") or layer.note)
     elif layer.kind == "protected":
-        nvrid = _first(props, "NVRID")
-        out.update(name=_first(props, "NAMN"), ref=nvrid, type=_first(props, "SKYDDSTYP"),
-                   status=_first(props, "BESLUTSSTATUS"), authority=_first(props, "BESLUTSMYNDIGHET"),
-                   date=_date(_first(props, "URSPR_BESLUTSDATUM")),
+        nvrid = first_value(props, "NVRID")
+        out.update(name=first_value(props, "NAMN"), ref=nvrid, type=first_value(props, "SKYDDSTYP"),
+                   status=first_value(props, "BESLUTSSTATUS"), authority=first_value(props, "BESLUTSMYNDIGHET"),
+                   date=iso_date(first_value(props, "URSPR_BESLUTSDATUM")),
                    url=f"https://skyddadnatur.naturvardsverket.se/sknat/?nvrid={nvrid}" if nvrid else None,
-                   permit_authority=_first(props, "PROVNINGSMYNDIGHET_DISPENS", "BESLUTSMYNDIGHET"))
+                   permit_authority=first_value(props, "PROVNINGSMYNDIGHET_DISPENS", "BESLUTSMYNDIGHET"))
     elif layer.kind == "natura2000":
-        code = _first(props, "OMRADESKOD")
-        out.update(name=_first(props, "OMRADESNAMN"), ref=code, type=_first(props, "OMRADESTYP"),
-                   authority=_first(props, "UPPGIFTSLAMNARE"),
+        code = first_value(props, "OMRADESKOD")
+        out.update(name=first_value(props, "OMRADESNAMN"), ref=code, type=first_value(props, "OMRADESTYP"),
+                   authority=first_value(props, "UPPGIFTSLAMNARE"),
                    url=f"https://natura2000.eea.europa.eu/Natura2000/SDF.aspx?site={code}" if code else None)
     elif layer.kind == "national_interest":
-        links = [_first(props, key) for key in ("BESKRIVNIN", "OBJEKTLANK", "LANK_VARDE", "LANK_BESLU", "URL")]
-        out.update(name=_first(props, "NAMN", "OBJNAMN", "OMRADESNAMN", "BENAMNING", "NAME") or layer.title,
-                   ref=_first(props, "RIKSID", "ORGINALID", "ORIGINALID", "OBJID", "OMRADESNR"),
-                   type=layer.title, law=_first(props, "LAGRUM") or layer.law,
-                   date=_date(_first(props, "BESLUTSDAT", "BESLDATUM")),
+        links = [first_value(props, key) for key in ("BESKRIVNIN", "OBJEKTLANK", "LANK_VARDE", "LANK_BESLU", "URL")]
+        out.update(name=first_value(props, "NAMN", "OBJNAMN", "OMRADESNAMN", "BENAMNING", "NAME") or layer.title,
+                   ref=first_value(props, "RIKSID", "ORGINALID", "ORIGINALID", "OBJID", "OMRADESNR"),
+                   type=layer.title, law=first_value(props, "LAGRUM") or layer.law,
+                   date=iso_date(first_value(props, "BESLUTSDAT", "BESLDATUM")),
                    url=next((link for link in links if str(link or "").startswith("http")), None))
     elif layer.kind == "ancient_remain":
-        out.update(name=_first(props, "lamningstyp"), ref=_first(props, "raa_nummer", "lamningsnummer"),
-                   type=_first(props, "lamningstyp"), status=_first(props, "antikvarisk_bedomning"),
-                   url=_first(props, "url"))
+        out.update(name=first_value(props, "lamningstyp"), ref=first_value(props, "raa_nummer", "lamningsnummer"),
+                   type=first_value(props, "lamningstyp"), status=first_value(props, "antikvarisk_bedomning"),
+                   url=first_value(props, "url"))
     return out

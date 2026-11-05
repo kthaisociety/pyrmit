@@ -74,6 +74,7 @@ TOOLS = {
     "find_kommun": "tells which kommun a place name belongs to",
     "plans": "lists a kommun's plans from the plan registry",
     "plan_rules": "gives the coded rules of one plan",
+    "read_plan": "reads the documents of a pinned plan, whole or by section",
 }
 
 

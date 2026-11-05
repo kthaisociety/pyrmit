@@ -22,6 +22,7 @@ from localrag.index import chunk_text
 logger = logging.getLogger(__name__)
 SNIPPET = 350
 READ_LIMIT = 9000
+PLAN_READ_LIMIT = 20000  # characters of one read_plan call: a plan's map and description in one go, about 5k tokens
 
 # Short names the model is likely to use -> words of the statute title
 LAW_ALIASES = {
@@ -97,6 +98,15 @@ def parse_doc_types(value) -> list[str] | None:
     return list(dict.fromkeys(types)) or None
 
 
+def _headings(documents: dict[str, list[dict]]) -> str:
+    """The headings of each document, in reading order: what read_plan's section can ask for."""
+    lines = []
+    for doc_id, chunks in documents.items():
+        headings = list(dict.fromkeys(chunk["section"] for chunk in chunks if chunk.get("section")))
+        lines.append(f"Headings of {doc_id}: {'; '.join(headings) if headings else 'none'}")
+    return "\n".join(lines)
+
+
 def _label_key(text: str) -> str:
     """A printed label as OCR may read it: '5.125' / '5,125' / '5;125' for the property number '5:125'."""
     text = text.strip(" .,;()[]").lower()
@@ -131,6 +141,9 @@ class _MemoryCorpus:
 
     def doc_chunk_ids(self, doc_id: str) -> list[str]:
         return self.doc_ids.get(doc_id, [])
+
+    def doc_chunks(self, doc_id: str) -> list[dict]:
+        return [self.chunks[chunk_id] for chunk_id in self.doc_ids.get(doc_id, [])]
 
     def documents(self, codes: set[str], doc_types: list[str] | None, title_contains: str | None) -> list[dict]:
         docs = [dict(d, chunks=len(self.doc_ids[d["doc_id"]])) for d in self.docs.values()
@@ -211,6 +224,11 @@ class _DiskCorpus:
     def doc_chunk_ids(self, doc_id: str) -> list[str]:
         return [r[0] for r in self.store.query(
             "SELECT chunk_id FROM chunks WHERE doc_id = ? ORDER BY CAST(chunk_index AS INTEGER)", (doc_id,))]
+
+    def doc_chunks(self, doc_id: str) -> list[dict]:
+        # One query for the whole document: a query per chunk is a round trip each to the hosted corpus
+        return [self.store._chunk(row) for row in self.store.query(
+            "SELECT * FROM chunks WHERE doc_id = ? ORDER BY CAST(chunk_index AS INTEGER)", (doc_id,))]
 
     @staticmethod
     def _filters(doc_types: list[str] | None, title_contains: str | None) -> tuple[str, list]:
@@ -513,6 +531,57 @@ class CorpusTools:
                               f"'13 §' (laws without chapters).{hint}")
         return ToolResult("\n\n".join(f"[c:{c['chunk_id']}] {chunk_text(c)}" for c in hits), [c["chunk_id"] for c in hits])
 
+    def read_plan(self, doc_ids, section: str | None = None, start: int = 0) -> ToolResult:
+        """The documents of a plan as one text in reading order: `doc_ids` in the order given (a list, one id or a
+        comma-separated string, written as read accepts them), each document's chunks in chunk order, every chunk
+        tagged [c:<id>] with its position in what is being read. At most PLAN_READ_LIMIT characters per call, never
+        less than one chunk; when more remains the text ends with the call that continues from position `start`, so
+        repeating it reads every chunk once. `section`: only the chunks whose heading contains these words
+        (case-insensitive). Without `section` each document's headings are listed first.
+
+        Reads the corpus store only: no local file, snapshot, link table or plan registry, so it works on an install
+        that has nothing but the hosted corpus (ADR-0010). An id the corpus does not hold is named in the text and
+        skipped. Errors, as ToolResult.error: bad_args (no ids, or `start` past the end), unknown_id (no id is in the
+        corpus), not_found (no heading contains `section`; the text lists the headings there are)."""
+        written = [doc_ids] if isinstance(doc_ids, str) else list(doc_ids or [])
+        ids = list(dict.fromkeys(self._doc_id(part) for item in written for part in str(item).split(",") if part.strip()))
+        if not ids:
+            return _failed("bad_args", "read_plan needs doc_ids, as the pinned place lists them.")
+        documents = {doc_id: chunks for doc_id in ids if (chunks := self.corpus.doc_chunks(doc_id))}
+        if not documents:
+            return _failed("unknown_id", f"Not in the corpus: {', '.join(ids)}.")
+        words = (section or "").strip().lower()
+        wanted = [chunk for chunks in documents.values() for chunk in chunks
+                  if not words or words in (chunk.get("section") or "").lower()]
+        if not wanted:
+            return _failed("not_found", f"No heading contains '{section}'. {_headings(documents)}")
+        start = max(0, int(start or 0))
+        if start >= len(wanted):
+            return _failed("bad_args", f"{len(wanted)} chunks to read (positions 0-{len(wanted) - 1}); start {start} is "
+                                       "past the end.")
+        missing = [doc_id for doc_id in ids if doc_id not in documents]
+        parts = [f"Not in the corpus, skipped: {', '.join(missing)}."] if missing else []
+        if not words and start == 0:
+            parts.append(_headings(documents))
+        shown, size, current = [], 0, None
+        for position, chunk in enumerate(wanted[start:], start=start):
+            text = chunk_text(chunk)
+            if shown and size + len(text) > PLAN_READ_LIMIT:
+                break
+            if chunk["doc_id"] != current:
+                current = chunk["doc_id"]
+                url = f", url {chunk['url']}" if chunk.get("url") else ""
+                parts.append(f"=== {chunk.get('title')} ({current}{url})")
+            heading = f" | {chunk['section']}" if chunk.get("section") else ""
+            parts.append(f"--- [c:{chunk['chunk_id']}] position {position}/{len(wanted)}{heading}\n{text}")
+            shown.append(chunk["chunk_id"])
+            size += len(text)
+        following = start + len(shown)
+        if following < len(wanted):
+            within = f", section={section!r}" if words else ""
+            parts.append(f"More to read: read_plan(doc_ids={list(documents)}{within}, start={following})")
+        return ToolResult("\n".join(parts), shown)
+
     def _plans(self) -> dict[str, list[dict]]:
         """The plan registry (corpus.plans), by kommun code; loaded on first use."""
         if self._plan_registry is None:
@@ -750,6 +819,12 @@ TOOL_SCHEMAS = [
      "parameters": {"type": "object", "properties": {
          "kommun": {"type": "string"}, "query": {"type": "string", "description": "words of the plan / area name"},
          "status": {"type": "string"}}, "required": ["kommun"]}},
+    {"type": "function", "name": "read_plan",
+     "description": "Read the documents of a plan the pinned place lists, in reading order, whole or one section: no search needed to find them. Pass doc_ids as the pinned place lists them; for an amendment (tillägg), also those of the plan it amends. Repeat the call it ends with to read on.",
+     "parameters": {"type": "object", "properties": {
+         "doc_ids": {"type": "array", "items": {"type": "string"}, "description": "the documents, in the order listed"},
+         "section": {"type": "string", "description": "only the chunks whose heading contains these words"},
+         "start": {"type": "integer", "description": "position to continue from"}}, "required": ["doc_ids"]}},
     {"type": "function", "name": "plan_rules",
      "description": "The planbestämmelser of a plan (from plans): building area, heights, storeys, plot size, prickmark, ancillary buildings, genomförandetid..., each citeable. topic filter: building_area, height, storeys, plot_size, no_building, ancillary, roof, implementation, use, shoreline, noise, design.",
      "parameters": {"type": "object", "properties": {"plan_id": {"type": "string"}, "topic": {"type": "string"}},
@@ -773,6 +848,7 @@ def run_tool(tools: CorpusTools, name: str, arguments: dict) -> ToolResult:
         "find_kommun": tools.find_kommun, "search": tools.search, "grep": tools.grep,
         "list_documents": tools.list_documents, "read": tools.read, "law_section": tools.law_section,
         "view_pdf_page": tools.view_pdf_page, "plans": tools.plans, "plan_rules": tools.plan_rules,
+        "read_plan": tools.read_plan,
         "view_map_area": tools.view_map_area,
     }
     if name not in handlers:

@@ -9,6 +9,7 @@ import pytest
 from place import bench_answers
 from place.bench_answers import (
     AnswerBench,
+    compare,
     facts_named,
     jobs,
     load_cases,
@@ -81,7 +82,7 @@ def test_asking_for_the_place_is_right_only_when_the_condition_expects_it():
     grade = {"points": [2, 1], "asks": True, "unsupported": 1, "wrong_place": 0}
     assert scores({"condition": "vague"}, grade)["asks_ok"] is True
     assert scores({"condition": "pin"}, grade) == {"points": 0.75, "asks_ok": False, "unsupported": 1, "wrong_place": 0}
-    assert scores({"condition": "address"}, grade)["asks_ok"] is None  # asking to pin an address it cannot place is allowed
+    assert scores({"condition": "address"}, grade)["asks_ok"] is True  # a named address without a pin: ask for the pin
 
 
 def fake_grade(case, condition, typed, answer, place_text, sources, cases_by_id, model):
@@ -139,3 +140,105 @@ def test_the_pin_condition_can_carry_the_permits_statute_text():
     profile = lambda lat, lon: {**fake_profile(lat, lon)}
     _, sent, _ = prompt(CASES[0], "pin", BY_ID, profile, law_text=lambda law, section: "text")
     assert sent.startswith("[Place pinned")  # an uncovered place has no permits, so no statute text
+
+
+# --- general questions, and two runs side by side --------------------------------------------------------------------
+
+GENERAL = {**CASES[0], "question_general": "Vad är en attefallsåtgärd?", "vague": False, "conflict_with": None,
+           "facts": [{"label": "plan", "any": ["0380-P90/6"]}], "key_points": ["Names the plan."]}
+
+
+def general_grade(case, condition, typed, answer, place_text, sources, cases_by_id, model):
+    return {"points": [2], "unsupported": 0, "wrong_place": 0, "asks": False, "offers_pin": condition == "general",
+            "comment": "", "cost": 0.001, "model": model}
+
+
+def general_agent(question, tools, **kwargs):
+    return SimpleNamespace(answer="En attefallsåtgärd, 0380-P90/6.", mode="explain", seconds=1.0, first_token_s=0.5,
+                           usage={"cost": 0.01}, llm_calls=2, error=None, seen_chunks=[], choices=[], offer_pin=False,
+                           steps=[{"tool": "read_plan"}, {"tool": "search"}, {"tool": "grep"}])
+
+
+@pytest.fixture
+def general_run(tmp_path):
+    bench = AnswerBench([GENERAL], run_agent=general_agent, tools=object(), profile_of=fake_profile,
+                        sources_of=lambda answer, seen: "", grade=general_grade)
+    return run_bench([GENERAL], repeats=1, workers=1, bench=bench, out_dir=tmp_path)["summary"]
+
+
+def test_a_case_with_a_general_question_runs_it_with_and_without_the_pin():
+    assert {("norby", "general", 0), ("norby", "general_pin", 0)} <= set(jobs([GENERAL]))
+
+
+def test_a_case_without_a_general_question_does_not():
+    assert not [job for job in jobs(CASES) if job[1].startswith("general")]
+
+
+def test_the_general_condition_sends_the_hint_and_the_question():
+    typed, sent, place = prompt(GENERAL, "general", {"norby": GENERAL}, fake_profile)
+    assert (typed, sent, place) == (GENERAL["question_general"], f"{NO_PIN_HINT}\n\n{GENERAL['question_general']}", None)
+
+
+def test_the_pinned_general_condition_sends_the_place_before_the_question():
+    _, sent, place = prompt(GENERAL, "general_pin", {"norby": GENERAL}, fake_profile)
+    assert sent == f"{place}\n\n{GENERAL['question_general']}"
+
+
+def test_an_address_the_answer_asks_to_pin_has_no_points_to_grade():
+    """Asking for the pin is the right answer to a named address, so its key points do not count against it."""
+    asked = scores({"condition": "address"}, {"points": [0], "asks": True, "unsupported": 0, "wrong_place": 0})
+    assert asked["points"] is None
+
+
+def test_an_address_answered_without_asking_keeps_its_points():
+    answered = scores({"condition": "address"}, {"points": [2], "asks": False, "unsupported": 0, "wrong_place": 0})
+    assert answered["points"] == 1.0
+
+
+@pytest.mark.parametrize("condition", ["general", "general_pin"])
+def test_a_general_question_should_not_ask_where(condition):
+    grade = {"points": [], "asks": True, "unsupported": 0, "wrong_place": 0}
+    assert scores({"condition": condition}, grade)["asks_ok"] is False
+
+
+def test_the_summary_counts_the_calls_that_look_for_documents(general_run):
+    """read_plan reads, so it is a tool call but not a search."""
+    assert (general_run["pin"]["tool_calls"], general_run["pin"]["searches"]) == (3.0, 2.0)
+
+
+def test_the_summary_counts_the_offers_to_pin(general_run):
+    assert (general_run["general"]["offers_pin"], general_run["general_pin"]["offers_pin"]) == (1.0, 0.0)
+
+
+def test_the_summary_counts_the_plan_brought_into_a_general_answer(general_run):
+    """An answer to a pinned general question that names the place's plan shows in its facts."""
+    assert general_run["general_pin"]["facts"] == 1.0
+
+
+def result_of(judge, tool_calls, conditions=("pin",), **row):
+    grade = {"points": 1.0, "asks": False, "asks_ok": True, "unsupported": 0, "wrong_place": 0}
+    return {"judge": judge, "rows": [{"condition": condition, "case": "norby", "tool_calls": tool_calls, "answer": "x",
+                                      "grades": {judge: grade}, **row} for condition in conditions]}
+
+
+def test_compare_puts_a_metric_of_two_runs_side_by_side():
+    assert compare(result_of("a", 9), result_of("a", 3))["pin"]["tool_calls"] == {"before": 9.0, "after": 3.0}
+
+
+def test_compare_reads_each_run_under_its_own_judge():
+    assert compare(result_of("a", 9), result_of("b", 3))["pin"]["points"] == {"before": 1.0, "after": 1.0}
+
+
+def test_compare_leaves_out_a_condition_only_one_run_has():
+    assert "general" not in compare(result_of("a", 1), result_of("a", 1, ("pin", "general")))
+
+
+def test_compare_leaves_a_metric_an_older_run_did_not_record_empty():
+    """A result file from before a metric existed gives None on its side."""
+    compared = compare(result_of("a", 1), result_of("a", 1, tools=["search"]))
+    assert compared["pin"]["searches"] == {"before": None, "after": 1.0}
+
+
+def test_the_real_cases_carry_general_questions():
+    """The locked cases hold general questions, so the conditions run on the real file."""
+    assert sum(bool(case.get("question_general")) for case in load_cases()) >= 3
