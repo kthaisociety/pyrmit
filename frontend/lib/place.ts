@@ -144,9 +144,16 @@ export interface ReviewPlans extends GeoJSON.FeatureCollection<GeoJSON.Geometry,
 
 export type BBox = [number, number, number, number]; // west, south, east, north
 
+// The review mode's colours: a kommun green when it has polygons and red when not; a plan by the level its document
+// matched at, grey when none did
+export const COVERAGE_COLOURS = { covered: '#30d158', not_covered: '#ff453a' };
+export const MATCH_COLOURS: Record<MatchLevel | 'none', string> = {
+  link: '#0a84ff', akt: '#30d158', name: '#ff9f0a', none: '#8e8e93',
+};
+
 /** Every kommun's outline with whether it has plan polygons. Throws an Error with the backend's message on failure. */
 export async function fetchReviewCoverage(): Promise<ReviewCoverage> {
-  throw new Error('not implemented');
+  return getJson<ReviewCoverage>('/api/place/review/coverage');
 }
 
 /**
@@ -154,8 +161,7 @@ export async function fetchReviewCoverage(): Promise<ReviewCoverage> {
  * refused (wider than a kommun, or malformed) or the lookup fails.
  */
 export async function fetchPlansInView(bbox: BBox): Promise<ReviewPlans> {
-  void bbox;
-  throw new Error('not implemented');
+  return getJson<ReviewPlans>(`/api/place/review/plans?${new URLSearchParams({ bbox: bbox.join(',') })}`);
 }
 
 // The place a chat is about: the pin and the label its chip shows (sent with each question, ADR-0004)

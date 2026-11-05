@@ -248,9 +248,12 @@ def _reason(count: int, source: PlanSource) -> str | None:
     return None
 
 
-def _write(out: Path, boundary: dict, boundary_date: str, features: list[dict], source: PlanSource, row: dict) -> None:
+def _write_boundary(out: Path, boundary: dict) -> None:
     out.mkdir(parents=True, exist_ok=True)
     (out / "kommun.geojson").write_text(json.dumps(boundary, ensure_ascii=False), encoding="utf-8")
+
+
+def _write(out: Path, boundary_date: str, features: list[dict], source: PlanSource, row: dict) -> None:
     (out / f"{LAYER_ID}.geojson").write_text(json.dumps({"type": "FeatureCollection", "features": features},
                                                           ensure_ascii=False), encoding="utf-8")
     manifest = {"kommun": {"code": source.code, "name": source.name, "fetched": boundary_date,
@@ -274,6 +277,7 @@ def _shares(plans: list[dict]) -> dict:
 def _snapshot(client: httpx.Client, source: PlanSource, out: Path, row: dict) -> None:
     """Fetch, normalise and write the source's layer, filling in `row`; nothing written when the row gets a reason."""
     boundary, boundary_date = _boundary(client, source, out)
+    _write_boundary(out, boundary)
     raw = (fetch_arcgis(client, _arcgis_layer(source), None) if source.service == "arcgis"
            else _fetch_wfs(client, source))
     features = _polygons(raw, shape(boundary["geometry"]))
@@ -284,7 +288,7 @@ def _snapshot(client: httpx.Client, source: PlanSource, out: Path, row: dict) ->
     for item in features:
         item["properties"][PLAN_KEY] = _plan_properties(source, item["properties"])
     row.update(_shares([item["properties"][PLAN_KEY] for item in features]))
-    _write(out, boundary, boundary_date, features, source, row)
+    _write(out, boundary_date, features, source, row)
     row["fetched"] = True
 
 
@@ -345,14 +349,19 @@ def fetch_registry(sources: Iterable[PlanSource], *, client: httpx.Client | None
         if client is None:
             http.close()
     Path(out_dir).mkdir(parents=True, exist_ok=True)
-    (Path(out_dir) / COVERAGE_REPORT).write_text(coverage_report(rows), encoding="utf-8")
+    merged = load_coverage(out_dir) | {row["code"]: row for row in rows}
+    (Path(out_dir) / COVERAGE_ROWS).write_text(json.dumps(merged, ensure_ascii=False, indent=1) + "\n",
+                                               encoding="utf-8")
+    (Path(out_dir) / COVERAGE_REPORT).write_text(coverage_report([merged[code] for code in sorted(merged)]),
+                                                 encoding="utf-8")
     return rows
 
 
 def load_coverage(out_dir: Path = GEO_DIR) -> dict[str, dict]:
     """The coverage rows of every run so far, {kommun code: the row fetch_plan_layer returned last for it}, read from
     `out_dir`/COVERAGE_ROWS; {} before any run."""
-    raise NotImplementedError
+    path = Path(out_dir) / COVERAGE_ROWS
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 def _share(value: float | None) -> str:

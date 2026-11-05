@@ -78,7 +78,8 @@ class PlaceStore:
         snapshot and for one whose plan-layer fetch failed after its boundary was fetched (place.plan_layers keeps
         it). None when no boundary was ever written. A kommun with only an outline is not covered: kommun_at and
         kommuner leave it out."""
-        raise NotImplementedError
+        path = self.root / code / "kommun.geojson"
+        return json.loads(path.read_text(encoding="utf-8"))["geometry"] if path.exists() else None
 
     def kommun_at(self, lon: float, lat: float) -> str | None:
         """Code of the pilot kommun whose boundary contains the point, or None outside every snapshot."""
@@ -88,11 +89,12 @@ class PlaceStore:
 
     def layers(self, code: str) -> list[dict]:
         """The kommun's layers from its manifest: [{"id", "title", "provider", "licence", "fetched", "complete",
-        "status"}], status "ok" when the snapshot file exists, else "unavailable"."""
+        "count" (features in the snapshot, None when the manifest does not say), "status"}], status "ok" when the
+        snapshot file exists, else "unavailable"."""
         entries = self._kommun_manifests()[code]["layers"]
         return [{"id": layer_id, "title": entry.get("title"), "provider": entry.get("provider"),
                  "licence": entry.get("licence"), "fetched": entry.get("fetched"),
-                 "complete": bool(entry.get("complete")),
+                 "complete": bool(entry.get("complete")), "count": entry.get("count"),
                  "status": "ok" if self._path(code, layer_id).exists() else "unavailable"}
                 for layer_id, entry in entries.items()]
 

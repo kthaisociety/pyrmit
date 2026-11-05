@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 import models
 from dependencies import get_current_user
-from place import geocode, live, profile, registry
+from place import geocode, live, profile, registry, review
 from place.registry import PlanSource
 from place.store import PlaceStore
 
@@ -80,7 +80,7 @@ def review_coverage(store: Annotated[PlaceStore, Depends(get_place_store)],
                     user: Annotated[models.User, Depends(get_current_user)]) -> dict:
     """place.review.coverage of the registry's kommuner and the snapshots: a FeatureCollection, one feature per
     kommun, for the map's review mode."""
-    raise NotImplementedError
+    return review.coverage(store, sources.values())
 
 
 @router.get("/place/review/plans")
@@ -89,7 +89,13 @@ def review_plans(bbox: Annotated[str, Query(description="west,south,east,north i
                  user: Annotated[models.User, Depends(get_current_user)]) -> dict:
     """place.review.plans_in_view of the box `bbox` ("west,south,east,north"): a FeatureCollection with "truncated".
     422 with a message when the box is not four numbers, is malformed or is wider than place.review.MAX_SPAN."""
-    raise NotImplementedError
+    try:
+        bounds = tuple(float(part) for part in bbox.split(","))
+        if len(bounds) != 4:
+            raise ValueError("The box must be four numbers: west,south,east,north.")
+        return review.plans_in_view(store, bounds)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/place/search")

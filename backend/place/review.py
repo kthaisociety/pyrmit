@@ -5,9 +5,16 @@ place.plan_layers and the link tables; no provider or model call (ADR-0002, ADR-
 viewport, never for the whole country (ADR-0008).
 """
 
+import math
 from collections.abc import Iterable
 
+from shapely.geometry import box, mapping, shape
+
+from place import plan_layers
+from place.plan_links import polygon_key
 from place.registry import PlanSource
+from place.sources import PILOTS, layer_by_id
+from place.sources import feature as pilot_feature
 from place.store import PlaceStore
 
 MAX_SPAN = (2.0, 1.0)       # the widest box plans_in_view serves, degrees of longitude and latitude (about a kommun)
@@ -16,6 +23,16 @@ PLAN_TOLERANCE = 0.00002    # degrees (about 2 m): the polygons are simplified t
 OUTLINE_TOLERANCE = 0.001   # degrees (about 100 m): the kommun outlines of the coverage view
 NOT_FETCHED_YET = "not fetched yet"
 MATCH_LEVELS = ("link", "akt", "name")
+
+
+def _simplified(geometry: dict | None, tolerance: float) -> dict | None:
+    return mapping(shape(geometry).simplify(tolerance, preserve_topology=True)) if geometry else None
+
+
+def _plans_layer(store: PlaceStore, code: str) -> dict | None:
+    """The plans layer's manifest entry of a kommun with a snapshot file for it, else None."""
+    layer = next((layer for layer in store.layers(code) if layer["id"] == plan_layers.LAYER_ID), None)
+    return layer if layer and layer["status"] == "ok" else None
 
 
 def coverage(store: PlaceStore, sources: Iterable[PlanSource]) -> dict:
@@ -32,7 +49,46 @@ def coverage(store: PlaceStore, sources: Iterable[PlanSource]) -> dict:
 
     A snapshot the coverage report flags as doubtful (a low share of aktbeteckningar or links) counts as covered
     like any other: nothing is filtered out here."""
-    raise NotImplementedError
+    names = {source.code: source.name for source in sources}
+    snapshots = {kommun["code"]: kommun for kommun in store.kommuner()}
+    rows = plan_layers.load_coverage(store.root)
+    features = []
+    for code in sorted(set(names) | set(snapshots)):
+        layer = _plans_layer(store, code) if code in snapshots else None
+        if layer:
+            properties = {"covered": True, "polygons": layer.get("count") or 0, "matched": len(store.plan_links(code)),
+                          "fetched": layer.get("fetched"), "reason": None}
+        else:
+            properties = {"covered": False, "polygons": 0, "matched": 0, "fetched": None,
+                          "reason": (rows.get(code) or {}).get("reason") or NOT_FETCHED_YET}
+        features.append({"type": "Feature", "geometry": _simplified(store.outline(code), OUTLINE_TOLERANCE),
+                         "properties": {"code": code, "name": names.get(code) or snapshots[code]["name"], **properties}})
+    return {"type": "FeatureCollection", "features": features}
+
+
+def _checked(bbox: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+    """The box as four floats, or ValueError with the reason."""
+    if len(bbox) != 4 or not all(isinstance(value, int | float) and math.isfinite(value) for value in bbox):
+        raise ValueError("The box must be four coordinates: west, south, east, north.")
+    west, south, east, north = (float(value) for value in bbox)
+    if not (-180 <= west <= 180 and -180 <= east <= 180 and -90 <= south <= 90 and -90 <= north <= 90):
+        raise ValueError("The box must be in WGS84 degrees.")
+    if west >= east or south >= north:
+        raise ValueError("The box must have west left of east and south below north.")
+    if east - west > MAX_SPAN[0] or north - south > MAX_SPAN[1]:
+        raise ValueError(f"The box is wider than a kommun: at most {MAX_SPAN[0]}° by {MAX_SPAN[1]}° is served at once.")
+    return west, south, east, north
+
+
+def _overlaps(kommun_bbox: list, west: float, south: float, east: float, north: float) -> bool:
+    k_west, k_south, k_east, k_north = kommun_bbox
+    return k_west <= east and k_east >= west and k_south <= north and k_north >= south
+
+
+def _plan_row(code: str, props: dict) -> dict:
+    """The plan of a snapshot feature: a pilot kommun's read through place.sources, the others' through PLAN_KEY."""
+    layer = layer_by_id(code, plan_layers.LAYER_ID) if code in PILOTS else None
+    return pilot_feature(layer, props) if layer else plan_layers.feature(props)
 
 
 def plans_in_view(store: PlaceStore, bbox: tuple[float, float, float, float]) -> dict:
@@ -48,4 +104,24 @@ def plans_in_view(store: PlaceStore, bbox: tuple[float, float, float, float]) ->
     At most MAX_PLANS features are served; "truncated" is True when more met the box, else False. Raises ValueError
     when the box is wider than MAX_SPAN in longitude or latitude, when west >= east or south >= north, or when a
     bound is not a coordinate."""
-    raise NotImplementedError
+    west, south, east, north = _checked(bbox)
+    view = box(west, south, east, north)
+    features: list[dict] = []
+    truncated = False
+    for kommun in store.kommuner():
+        if truncated or not _overlaps(kommun["bbox"], west, south, east, north):
+            continue
+        code = kommun["code"]
+        links = store.plan_links(code)
+        for props, geometry in store.features(code, plan_layers.LAYER_ID, view):
+            if len(features) >= MAX_PLANS:
+                truncated = True
+                break
+            row = _plan_row(code, props)
+            matched = links.get(polygon_key(row) or "", [])
+            features.append({"type": "Feature",
+                             "geometry": mapping(geometry.simplify(PLAN_TOLERANCE, preserve_topology=True)),
+                             "properties": {"code": code, "kommun": kommun["name"], "ref": row["ref"],
+                                            "name": row["name"], "date": row["date"],
+                                            "match": matched[0]["level"] if matched else None}})
+    return {"type": "FeatureCollection", "features": features, "truncated": truncated}
