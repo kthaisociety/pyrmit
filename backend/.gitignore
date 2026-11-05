@@ -158,8 +158,8 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 # Embedding benchmark: frozen corpus and cached vectors
-benchmark/cache/
-benchmark/data/
+src/benchmark/cache/
+src/benchmark/data/
 
 # Local corpus and indexes (large, rebuilt by corpus/ and localrag/, shared outside git: see README).
 # Benchmark results (data/agentic, ~50 MB) and retrieval evals (data/eval) are versioned.
