@@ -31,12 +31,15 @@ Load these only when the task needs them:
 | POST   | `/api/auth/token`                  | OAuth2 password form login, returns JWT   |
 | POST   | `/api/auth/signout`                | Revoke the current login session          |
 | GET    | `/api/auth/me`                     | Current user                              |
+| PATCH  | `/api/auth/me`                     | Update the profile name                   |
+| PATCH  | `/api/auth/password`               | Change the password                       |
 | GET    | `/api/sessions`                    | List chat sessions                        |
 | GET    | `/api/sessions/{session_id}`       | Messages in a chat session                |
 | DELETE | `/api/sessions`                    | Delete all chat sessions                  |
 | DELETE | `/api/sessions/{session_id}`       | Delete one chat session                   |
+| PATCH  | `/api/sessions/{session_id}`       | Rename a chat session                     |
 | POST   | `/api/chat`                        | Send message, get response                |
-| POST   | `/api/chat/stream`                 | Send message, stream response             |
+| POST   | `/api/chat/stream`                 | Send message, stream response (SSE), used by the UI |
 | GET    | `/api/history`                     | Message history                           |
 | POST   | `/api/chunks/ingest-detaljplan`    | Ingest one detaljplan PDF or Markdown     |
 | POST   | `/api/chunks/ingest-data-folder`   | Ingest every file in a data folder        |
@@ -52,11 +55,11 @@ Load these only when the task needs them:
 | `accounts`         | id, user_id (FK), provider_id, password (hash)                           |
 | `sessions`         | id (= JWT `sid`), user_id (FK), expires_at; token unused (ADR-0001)      |
 | `chat_sessions`    | id, user_id (FK), title, updated_at                                      |
-| `chat_messages`    | id, session_id (FK), role, content, created_at                           |
+| `chat_messages`    | id, session_id (FK), role, content, trace (JSONB, pipeline events), status (streaming / done / error, assistant only), created_at |
 | `document_chunks`  | id, document_id, document_name, chunk_index, content, embedding (3072)  |
 | `law_chunks`       | id, law_name, source_file, chapter, section, chunk_index, content, embedding (3072) |
 
-Migrations/init: `backend/src/db/init.sql`. Match functions (pgvector): `backend/src/db/match_functions.sql`.
+Tables are created at startup by `Base.metadata.create_all` in `backend/src/main.py`, which never alters an existing table: columns added later (`chat_messages.trace`, `status`) are added there with an idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. Migrations/init: `backend/src/db/init.sql`. Match functions (pgvector): `backend/src/db/match_functions.sql`.
 
 ---
 
@@ -97,6 +100,11 @@ Backend (`backend/.env`), names as read by the code:
 
 - `DATABASE_URL`
 - `AI_GATEWAY_API_KEY` (if set, model calls go through the Vercel AI Gateway) or `OPENAI_API_KEY`
+- `LLM_PROVIDER` (openai | gateway | openrouter, with `OPENROUTER_API_KEY` or `OPENROUTER_KEY`), `LLM_MODEL` -- optional chat override (`backend/src/llm.py`)
+- `LLM_TIMEOUT_S` (default 180) -- max wait per API response or stream chunk, one retry
+- `LLM_REASONING_EFFORT` (answers), `LLM_REWRITE_REASONING_EFFORT` (query rewrite, default low)
+- `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `EMBEDDING_QUERY_PREFIX`, `EMBEDDING_DOCUMENT_PREFIX` -- embedding model of the pgvector tables (`backend/src/embeddings.py`; default openai text-embedding-3-large at 3072, PCR-0004); `EMBEDDING_RUNTIME` (auto | torch | onnx) for local models
+- `RAG_TOP_K` (default 10) -- chunks per pool (laws / documents) given to the answer model
 - `MISTRAL_API_KEY` -- PDF OCR
 - `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` -- optional, turn on Langfuse tracing of model calls
 - `OPENAI_BASE_URL` -- optional override of the OpenAI endpoint
@@ -116,7 +124,9 @@ Frontend (`frontend/.env`):
 ### Backend (Python / FastAPI)
 
 - `backend/src/main.py` -- FastAPI app entry, CORS, router registration
-- `backend/src/llm.py` -- OpenAI client and model name resolution, AI Gateway switch (PCR-0003)
+- `backend/src/llm.py` -- chat client and model name resolution (OpenAI, AI Gateway, OpenRouter), Responses API helpers, timeout and retry (PCR-0003)
+- `backend/src/embeddings.py` -- `Embedder` (openai / openrouter / a local OpenAI-compatible server / in-process sentence-transformers), `get_embedder()` from `EMBEDDING_*`; the vector column dimension is `EMBEDDING_DIM`; `main.py` logs an error when the tables were embedded with another model (PCR-0003, PCR-0004)
+- `backend/src/pipeline_trace.py` -- `CallRecorder` + `recorded_chat_completion` / `recorded_embedding`: prompts, outputs, token usage, cost and timings of every call, for the pipeline inspector
 - `backend/src/observability.py` -- Langfuse tracing wrappers for chat and embedding calls, no-op when Langfuse is not configured
 - `backend/src/models.py` -- SQLAlchemy ORM models
 - `backend/src/schemas.py` -- Pydantic request/response schemas
@@ -124,13 +134,14 @@ Frontend (`frontend/.env`):
 - `backend/src/dependencies.py` -- `get_current_session` checks the bearer JWT and its login session row, `get_current_user` returns its user
 - `backend/src/routers/access_gate.py` -- Access gate unlock
 - `backend/src/routers/auth.py` -- Signup, signin, token, signout, /me, profile, password
-- `backend/src/routers/chat.py` -- Chat and streaming chat endpoints, chat session CRUD
+- `backend/src/routers/chat.py` -- Chat and streaming chat endpoints, chat session CRUD; the streamed answer is generated in a background thread and saved as it goes (see Chat Request)
 - `backend/src/routers/chunks.py` -- Ingestion endpoints
 - `backend/src/chunking/ingest_pipeline.py` -- Core ingestion: OCR, chunk, embed, push
 - `backend/src/chunking/chunk_detaljplan.py` -- Detaljplan chunker
 - `backend/src/chunking/chunk_laws.py` -- Law TXT chunker (chapter/section aware)
 - `backend/src/chunking/ingest_laws.py` -- CLI script to ingest all law TXT files
 - `backend/src/chunking/embed.py` -- Embedding helpers
+- `backend/src/chunking/reembed.py` -- re-embeds the stored chunks with the configured model (alters the vector dimension, stores the model label as the column comment). Needs `--yes`; meant for a dedicated Neon branch
 - `backend/src/ocr/` -- Mistral OCR, PDF to Markdown
 - `backend/src/db/database.py` -- SQLAlchemy engine + `get_db` session factory
 - `backend/src/db/push_db.py` -- `PushDB` class: psycopg2 inserts into chunk tables
@@ -143,7 +154,10 @@ Frontend (`frontend/.env`):
 - `frontend/app/(protected)/auth/page.tsx` -- Login / signup page
 - `frontend/app/dev-access/` -- Access gate form
 - `frontend/lib/auth.ts` -- Auth helpers, `authFetch`
-- `frontend/components/Chat.tsx` -- Chat message list, input form, session history fetch
+- `frontend/components/Chat.tsx` -- message list, SSE stream consumption, session history; a new chat is announced to the sidebar on the `session_id` event; opening another chat aborts the local stream only, and history messages with status `streaming` are fetched again every 2 s until done; the "Process" timeline (one line per step or tool call) until the answer text starts; then "Inspect pipeline" and a clickable Sources list
+- `frontend/components/PipelineTrace.tsx` -- the "Inspect pipeline" panel: a totals line (time, tokens, cost), then one collapsible step per stage with its API calls
+- `frontend/components/ChunkCard.tsx` -- expandable chunk card; `frontend/components/CitedMarkdown.tsx` -- answer markdown with `[n]` citation chips
+- `frontend/components/` also holds the map panel (`place/`), the source viewer and the Benchmark, Pipeline and Database views; each needs backend routes that the port of v2 brings piece by piece (epic #61)
 - `frontend/components/Sidebar.tsx` -- Session list, new chat button, user info + logout
 - `frontend/components/Settings.tsx` -- User settings
 
@@ -178,13 +192,31 @@ Frontend (`frontend/.env`):
 
 ---
 
+## Chat Request
+
+The frontend uses `POST /api/chat/stream` (SSE); `POST /api/chat` runs the same logic without streaming.
+
+1. Access-gate middleware, then `get_current_user` checks the bearer JWT and its login session.
+2. The chat session is created or looked up; the user message and an empty assistant message (status `streaming`) are saved. The answer is generated in a background thread independent of the HTTP connection: the response only relays its events, so closing the tab or opening another chat neither stops nor loses the answer.
+3. A model call rewrites the latest message as a standalone English query (location, units and project type from the last 5 messages).
+4. `parse_query` extracts location, units and project type by regex.
+5. Location or units missing: general RAG, the query embedded once, the top `RAG_TOP_K` law and document chunks, an answer in English markdown quoting Swedish verbatim (PCR-0006) and a Sources list. Both present: `Orchestrator.analyze` runs LawAgent and DocumentAgent in parallel and applies fixed rules for the verdict.
+6. SSE events: `session_id`, `thinking`, `tool_call` / `tool_result`, `pipeline`, `response.output_text.delta`, `response.completed`, `done` (or `error`). `relay()` sends a `: keep-alive` comment after 10 s idle (`SSE_HEARTBEAT_S`), since the Next.js dev proxy drops a stream idle for 30 s; the frontend aborts after 45 s without bytes (`STREAM_STALL_MS`) and reloads the session.
+7. The worker updates the assistant message from the events: partial content every 2 s, then the final content, its `trace` (every pipeline event) and status `done` (or `error`).
+
+`pipeline` events (`{type: "pipeline", stage, data}`) feed the inspector: `translation`, `intent`, `retrieval` (matched chunks with source, distance, content), `agent_output`, `verdict`, and `call` (one per model, embedding or search call: model, prompts, output, token usage incl. reasoning tokens and the OpenRouter cost, duration), captured by a `CallRecorder` passed to the agents. They are saved in `chat_messages.trace` (~20-60 KB per answer), so a reopened conversation keeps its inspector and sources.
+
+Gotchas: a location the regex misses ("for Vallentuna": only in / at / i / på / vid count) silently takes the general RAG path; the units regex misses "apartment(s)", which the rewrite makes of "lägenheter".
+
+---
+
 ## Debugging Principle
 
 > If a bug occurs, you should always be able to answer:
 > **"Is this a data/retrieval bug (backend) or a display/UX bug (frontend)?"**
 
 - **Auth bugs**: Missing/expired bearer token, 401s -> investigate `backend/src/routers/auth.py`, `backend/src/security.py`, `backend/src/dependencies.py`. Redirects to the access gate -> `backend/src/routers/access_gate.py`, `frontend/lib/`
-- **RAG quality bugs**: Wrong or irrelevant chunks returned -> investigate `backend/src/agents/base.py`, embedding model, chunk size
+- **RAG quality bugs**: open "Inspect pipeline" on the answer (rewritten query, route, retrieved chunks with distances); then `backend/src/agents/base.py`, the embedding model, chunk sizes. `_embed` returns None on failure (e.g. a missing key for `EMBEDDING_PROVIDER`) and retrieval then silently returns nothing
 - **Ingestion bugs**: Chunks not appearing in DB -> investigate `backend/src/chunking/ingest_pipeline.py`, `backend/src/db/push_db.py`
 - **Chat bugs**: Wrong answer, missing context -> investigate `backend/src/routers/chat.py` prompt construction and retrieval call
 - **Frontend bugs**: UI not updating, session not switching, auth redirect loop -> investigate `frontend/components/`

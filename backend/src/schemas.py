@@ -110,15 +110,26 @@ class ChatSession(BaseModel):
         from_attributes = True
 
 
+class PlacePin(BaseModel):
+    """The place pinned on the chat's map: the question is about it (place/, ADR-0004)."""
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    label: str | None = None  # e.g. "Uppsala Kungsängen 7:8", as the chip shows it
+
+
 class ChatRequest(BaseModel):
     session_id: str | None = None
     messages: list[ChatMessage] = Field(default_factory=list)
+    place: PlacePin | None = None
+    answer_to_question: bool = False  # the message is the user's answer to the agent's question (a clicked option)
 
 
 class MessageResponse(ChatMessage):
     id: int
     session_id: str | None = None
     created_at: datetime
+    trace: list[dict] | None = None
+    status: str | None = None
 
     class Config:
         from_attributes = True
@@ -186,3 +197,116 @@ class AnalyzeResponse(BaseModel):
     requirements: list[str]
     timeline: str | int | None = None
     next_steps: list[str]
+
+
+# --- Database browser schemas ---
+
+ChunkTableName = Literal["law", "document"]
+# "neon": pgvector tables; "local": the offline corpus served by localrag (data/corpus/chunks.jsonl)
+ChunkStore = Literal["neon", "local"]
+
+
+class TypeCount(BaseModel):
+    doc_type: str
+    documents: int
+    chunks: int
+    pdfs: int = 0
+    pages: int = 0
+
+
+class SourceCount(BaseModel):
+    name: str
+    count: int
+    key: str | None = None            # value to filter on when it differs from the name (local corpus: kommun code)
+    documents: int | None = None
+    types: list[TypeCount] | None = None  # local corpus: documents per type within the kommun
+    scanned: int | None = None  # local corpus: scanned PDFs read by the OCR (its outputs)
+
+
+class ChunkTableOverview(BaseModel):
+    total: int
+    with_embedding: int
+    sources: list[SourceCount]
+
+
+class DbOverview(BaseModel):
+    law: ChunkTableOverview
+    document: ChunkTableOverview
+
+
+class DbSource(BaseModel):
+    name: str    # the Database view's button
+    detail: str  # where the rows come from (database endpoint, store folder, model)
+
+
+class DbSources(BaseModel):
+    neon: DbSource   # the pgvector RAG tables (law_chunks / document_chunks) of DATABASE_URL
+    local: DbSource  # the agent's corpus: disk store, corpus database (LOCAL_RAG_STORE=neon) or in memory
+
+
+class ChunkRow(BaseModel):
+    id: str
+    source: str
+    chunk_index: int | None = None
+    chapter: str | None = None
+    chapter_title: str | None = None
+    section: str | None = None
+    content: str
+    has_embedding: bool
+    created_at: datetime | None = None
+    # Local corpus documents
+    doc_id: str | None = None
+    kind: str | None = None
+    doc_type: str | None = None
+    kommun: str | None = None
+    url: str | None = None
+
+
+class DocumentRow(BaseModel):
+    doc_id: str
+    title: str
+    kind: str
+    doc_type: str | None = None
+    url: str | None = None
+    chunks: int
+    scanned: bool = False  # a scanned PDF whose text comes from the OCR
+
+
+class DocumentPage(BaseModel):
+    total: int
+    offset: int
+    limit: int
+    items: list[DocumentRow]
+
+
+class ChunkPage(BaseModel):
+    total: int | None  # None: not counted (text filter over the whole local corpus)
+    has_more: bool | None = None
+    offset: int
+    limit: int
+    items: list[ChunkRow]
+
+
+class ChunkSearchRequest(BaseModel):
+    query: str = Field(min_length=1)
+    k: int = Field(default=5, ge=1, le=50)
+    store: ChunkStore = "neon"
+
+
+class ChunkSearchMatch(BaseModel):
+    source: str
+    chunk_index: int | None = None
+    distance: float | None = None
+    content: str
+    # Local corpus: to open the original document (/api/docs/locate)
+    chunk_id: str | None = None
+    doc_id: str | None = None
+    kind: str | None = None
+    url: str | None = None
+
+
+class ChunkSearchResponse(BaseModel):
+    embedding_ok: bool
+    kommuner: list[str] = []
+    law: list[ChunkSearchMatch]
+    document: list[ChunkSearchMatch]

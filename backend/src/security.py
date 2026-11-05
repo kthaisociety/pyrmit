@@ -20,7 +20,7 @@ def get_jwt_secret_key() -> str:
 
 
 def get_access_token_expire_minutes() -> int:
-    raw_value = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30").strip()
+    raw_value = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080").strip()
     try:
         value = int(raw_value)
     except ValueError as exc:

@@ -1,3 +1,4 @@
+import logging
 import os
 from dotenv import load_dotenv
 
@@ -7,19 +8,51 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import inspect, text
 from db.database import engine, Base
 from dev_access import (
     is_access_gate_exempt_path,
     is_dev_access_enabled,
     request_has_dev_access,
 )
+from embeddings import EmbeddingConfig
 from routers import access_gate, chat, auth, chunks, agents
 from logging_config import setup_logging
 
 setup_logging()
+logger = logging.getLogger(__name__)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
+
+# create_all never alters existing tables: add columns introduced after a table was created
+_message_columns = {column["name"] for column in inspect(engine).get_columns("chat_messages")}
+for _column, _type in (("trace", "JSONB"), ("status", "VARCHAR")):
+    if _column not in _message_columns:
+        with engine.begin() as connection:
+            connection.execute(text(f"ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS {_column} {_type}"))
+
+
+def _check_embedding_config() -> None:
+    """Vectors from different models are not comparable: flag a DB embedded with another model."""
+    config = EmbeddingConfig.from_env()
+    with engine.connect() as connection:
+        for table in ("law_chunks", "document_chunks"):
+            dim, comment = connection.execute(
+                text(
+                    "SELECT atttypmod, col_description(attrelid, attnum) FROM pg_attribute "
+                    "WHERE attrelid = to_regclass(:table) AND attname = 'embedding'"
+                ),
+                {"table": table},
+            ).one()
+            if dim > 0 and dim != config.dim:
+                logger.error("%s.embedding is vector(%d) but EMBEDDING_DIM=%s", table, dim, config.dim)
+            # The column comment is written by chunking/reembed.py
+            if comment and comment != config.label:
+                logger.error("%s was embedded with %s but the app uses %s", table, comment, config.label)
+
+
+_check_embedding_config()
 
 app = FastAPI()
 

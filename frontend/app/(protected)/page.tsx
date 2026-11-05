@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import Chat from '@/components/Chat';
 import Sidebar from '@/components/Sidebar';
 import Settings from '@/components/Settings';
+import DatabaseBrowser from '@/components/DatabaseBrowser';
+import BenchmarkBrowser from '@/components/BenchmarkBrowser';
+import PipelineBrowser from '@/components/PipelineBrowser';
+import SidebarToggle from '@/components/SidebarToggle';
 import { authFetch, clearAccessToken, getStoredAccessToken } from '@/lib/auth';
 
 interface User {
@@ -18,11 +22,26 @@ export default function Home() {
   const [refreshSidebarTrigger, setRefreshSidebarTrigger] = useState(0);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
+  const [view, setView] = useState<'chat' | 'settings' | 'database' | 'benchmark' | 'pipeline'>('chat');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [logoutError, setLogoutError] = useState('');
   const router = useRouter();
+
+  // The sidebar stays as the user left it (a per-browser convenience: storage may be unavailable)
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('sidebarOpen') === 'false') setSidebarOpen(false);
+    } catch {}
+  }, []);
+
+  const toggleSidebar = (open: boolean) => {
+    setSidebarOpen(open);
+    try {
+      localStorage.setItem('sidebarOpen', String(open));
+    } catch {}
+  };
 
   useEffect(() => {
     if (!getStoredAccessToken()) {
@@ -91,26 +110,39 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-full bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 overflow-hidden">
-      <Sidebar
+      {sidebarOpen && <Sidebar
+        onClose={() => toggleSidebar(false)}
         currentSessionId={currentSessionId}
-        onSelectSession={(id) => { setCurrentSessionId(id); setShowSettings(false); }}
-        onNewChat={() => { setCurrentSessionId(null); setShowSettings(false); }}
+        onSelectSession={(id) => { setCurrentSessionId(id); setView('chat'); }}
+        onNewChat={() => { setCurrentSessionId(null); setView('chat'); }}
         refreshTrigger={refreshSidebarTrigger}
         user={user}
-        onOpenSettings={() => setShowSettings(true)}
-      />
+        onOpenSettings={() => setView('settings')}
+        onOpenDatabase={() => setView('database')}
+        onOpenBenchmark={() => setView('benchmark')}
+        onOpenPipeline={() => setView('pipeline')}
+      />}
 
       <main className="flex-1 flex flex-col h-full relative min-w-0">
-        {showSettings && user ? (
+        {!sidebarOpen && (
+          <SidebarToggle open={false} onClick={() => toggleSidebar(true)} className="absolute left-3 top-3 z-30" />
+        )}
+        {view === 'settings' && user ? (
           <Settings
             user={user}
-            onBack={() => setShowSettings(false)}
+            onBack={() => setView('chat')}
             onLogout={handleLogout}
             logoutLoading={logoutLoading}
             logoutError={logoutError}
             onUserUpdated={(updated) => setUser(updated)}
             onAllChatsCleared={handleAllChatsCleared}
           />
+        ) : view === 'database' ? (
+          <DatabaseBrowser onBack={() => setView('chat')} />
+        ) : view === 'benchmark' ? (
+          <BenchmarkBrowser onBack={() => setView('chat')} />
+        ) : view === 'pipeline' ? (
+          <PipelineBrowser onBack={() => setView('chat')} />
         ) : (
           <Chat
             sessionId={currentSessionId}
