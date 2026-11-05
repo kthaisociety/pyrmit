@@ -127,6 +127,8 @@ Other kommuner: `python -m place.plan_layers` copies the plan layer of every kom
 
 Plan documents: `python -m place.plan_links` matches every plan polygon of every snapshot to the document store's detaljplan documents (`data/corpus/documents.jsonl`; by link, by aktbeteckning in the title, file name or first page of text, or by name for review) into `backend/data/geo/<code>/plan_links.jsonl`, lists the unmatched polygons' links in `backend/data/geo/plan_fetch_list.json` for the scraper and writes `backend/data/geo/plan_match_report.md`. Restart the backend afterwards: the place card's plans then carry their document ids.
 
+Review mode: the "Review" button on the map panel colours every kommun by whether it has plan polygons (from `backend/data/geo/plan_coverage.json`, the rows behind the coverage report) and, zoomed in, draws the polygons in view by match level. It reads the snapshots and link tables above, so run those first and restart the backend.
+
 Lookup benchmark (no model calls): `python -m place.bench candidates --kommun 0380` proposes places covering the hard cases (`place/cases_draft_0380.jsonl`); check each by hand, fill in its `expected` layers and `checked`, set `locked` to the date and move it to `place/cases.jsonl`; then `python -m place.bench run --label <name>` scores the lookup per layer (`data/agentic/place-bench-*.json`) and `python -m place.bench compare <a> <b>` compares two runs.
 
 Place evaluation (report: `reports/place_eval_report.md`):

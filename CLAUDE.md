@@ -588,7 +588,8 @@ rerunning `agentic.rejudge` continues. A run that sits a long time before its fi
    feature with the raw attributes plus `_plan` {ref, name, date, type, page, documents, dropped_links} normalised at
    write time (ADR-0005: bare file names through the base pattern, HTML anchors unwrapped, UNC / drive / file: paths
    dropped and counted). A kommun that fails, returns no polygon or under half the survey's count (not for shared
-   servers) gets no snapshot and a reason; data/geo/plan_coverage.md has one line per kommun
+   servers) gets no snapshot and a reason, and keeps its boundary; each row is merged into data/geo/plan_coverage.json
+   as its kommun finishes and data/geo/plan_coverage.md has one line per kommun of every run so far
    python -m place.plan_links [--kommun <code>]  -> data/geo/<code>/plan_links.jsonl (ADR-0007): every plan polygon of
    every snapshot matched to the store's detaljplan documents (data/corpus/documents.jsonl, read once; missing =
    nothing written), three levels per polygon, first hit wins: link (polygon page / document link = document url;
@@ -596,7 +597,7 @@ rerunning `agentic.rejudge` continues. A run that sits a long time before its fi
    0380-P 2015/12 = P2015-12; found in the title, file name or first 3,000 characters of the same kommun's documents only), name (title = plan name, marked
    review). Unmatched polygons -> data/geo/plan_fetch_list.json by kommun ("no public link" when the links were
    internal paths); data/geo/plan_match_report.md counts levels, unmatched and the store's unclaimed share. The
-   run of 2026-11-05 (17 kommuner, the local store only): 97 of 17,960 polygons, that store holds few detaljplan documents per kommun
+   run of 2026-11-05 (the 146 of 180 registry kommuner fetched plus Uppsala, the local store only): 258 of 66,569 polygons, that store holds few detaljplan documents per kommun
 2. The chat's map panel (components/place/) -> GET /api/place/profile -> place.profile.build_profile:
    kommun from the snapshot boundaries (a plan-layer kommun: the plans at the point from `_plan`, property
    "not_covered", sections "not_covered", a note when no plan was found since the layer is not known to be complete;
@@ -742,6 +743,8 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | GET    | `/api/pipeline`                   | Yes  | Measurements of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency), read from the files the steps write; cached until one changes. Without a corpus (no `check.json`): the national snapshot `data/agentic/pipeline-national.json` with `snapshot: {built}` |
 | GET    | `/api/place/profile?lat=&lon=`    | Yes  | Place profile of a pinned point: property (live), plans, zones, plans in progress, inside/outside detaljplan (no LLM) |
 | GET    | `/api/place/coverage`             | Yes  | Every kommun with a snapshot, pilot or plan-layer (code, name, bbox, fetch date), for the map's first view |
+| GET    | `/api/place/review/coverage`      | Yes  | Every registry kommun and snapshot as a GeoJSON outline: covered, polygons, matched, fetch date, why not (the map's review mode) |
+| GET    | `/api/place/review/plans?bbox=`   | Yes  | The plan polygons in a box of at most 2° by 1°, at most 4,000, with their match level and `truncated`; 422 for a wider or malformed box (ADR-0008) |
 | GET    | `/api/place/search?q=`            | Yes  | Address / place search for the map (street addresses from the pilot kommun's address register, else Nominatim: Sweden only, 1 request/s, pilot kommuner first; cached); 503 when Nominatim is down |
 
 All routes are additionally behind the access gate when it is enabled.
@@ -882,7 +885,8 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   `fetch.py` (snapshot CLI), `registry.py` (`PlanSource`, the plan source registry `plan_sources.json` built from the
   survey), `plan_layers.py` (plan-layer snapshots for the registry kommuner, link normalisation, the coverage
   report), `plan_links.py` (`normalise_akt`, `polygon_key`, `match_kommun` / `run`: the plan-document link table,
-  fetch list and match report), `store.py` (`PlaceStore`, snapshot format, STRtree per layer, `plan_links`),
+  fetch list and match report), `review.py` (`coverage`, `plans_in_view`: the map's review mode, by viewport,
+  ADR-0008), `store.py` (`PlaceStore`, snapshot format, STRtree per layer, `plan_links`, `outline`),
   `live.py` (property and
   ancient remains at a point), `profile.py` (`build_profile`), `permits.py` (`likely_permits`), `context.py` (the
   place as text for the agent, `compact_profile`, `question_with_place`: what the agent is sent, used by the chat and
@@ -1008,8 +1012,9 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
 - `frontend/components/place/` -- `PlacePanel` (map panel beside the chat, opened by the pin button in the message
   bar: full-height map, the card as a glass sheet with a grabber, Apple Maps style; system font; controls styled in
-  `globals.css` under `.place-map`), `PlaceMap` (MapLibre 6 + OpenFreeMap Positron, outlines per kind, `bottomInset`
-  keeps the view centred above the sheet, attribution required by ODbL / OpenMapTiles / OpenFreeMap kept small),
+  `globals.css` under `.place-map`; the review mode's switch, fetches and legend, ADR-0009), `PlaceMap` (MapLibre 6 +
+  OpenFreeMap Positron, outlines per kind, the review layers, `bottomInset` keeps the view centred above the sheet,
+  attribution required by ODbL / OpenMapTiles / OpenFreeMap kept small; draws props and fetches nothing),
   `PlaceCard` (iOS-style grouped sections with icon tiles; "None found" vs "could not be reached"), `PlaceSearch`
   (floating search, Enter only; a match becomes a grey proposed pin with "Pin here"), `PlaceChip` (the chat's pinned
   place above the input), `glass.ts` (the shared glass style); `frontend/lib/place.ts` -- types

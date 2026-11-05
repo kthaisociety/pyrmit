@@ -141,7 +141,10 @@ How a polygon found its document, tried in order and stopped at the first hit: l
 The links of every polygon no document matched, grouped by kommun (`data/geo/plan_fetch_list.json`), for the scraper to pick up next. A polygon whose links were internal paths is listed as "no public link" with its aktbeteckning.
 
 **Coverage report**:
-One line per plan source after a fetch run: fetched or not and why, the polygons kept against the survey's count, and the shares of plans with an aktbeteckning and with a link.
+One line per plan source, kept up to date across fetch runs: fetched or not and why, the polygons kept against the survey's count, and the shares of plans with an aktbeteckning and with a link.
+
+**Review mode**:
+A switch on the map panel, off by default, for checking the plan layers and their documents by eye. Zoomed out it colours every kommun by whether it has plan polygons; zoomed in to about a kommun it draws the polygons in view coloured by **Match level** (link, akt, name, none), and a click on one shows its aktbeteckning, name and match level. Layers the **Coverage report** flags as doubtful are drawn like any other.
 
 ## Relationships
 

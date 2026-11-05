@@ -22,7 +22,6 @@ MAX_PLANS = 4000            # the most polygons one view gets; beyond it the col
 PLAN_TOLERANCE = 0.00002    # degrees (about 2 m): the polygons are simplified this much before they are served
 OUTLINE_TOLERANCE = 0.001   # degrees (about 100 m): the kommun outlines of the coverage view
 NOT_FETCHED_YET = "not fetched yet"
-MATCH_LEVELS = ("link", "akt", "name")
 
 
 def _simplified(geometry: dict | None, tolerance: float) -> dict | None:
@@ -42,10 +41,10 @@ def coverage(store: PlaceStore, sources: Iterable[PlanSource]) -> dict:
 
     A feature's geometry is the kommun outline (store.outline, simplified to OUTLINE_TOLERANCE), or None when no
     boundary was ever fetched. Its properties: {"code", "name", "covered" (True when the kommun has a plans
-    snapshot), "polygons" (the snapshot's plan count, 0 when not covered), "matched" (polygons with at least one
-    plan-document link, 0 when none), "fetched" (the snapshot date, None when not covered), "reason" (None when
-    covered; else the coverage row's reason for the last failed fetch, or NOT_FETCHED_YET when the fetch never ran
-    for the kommun)}.
+    snapshot), "polygons" (the snapshot's plan count, 0 when not covered), "matched" (the plans with at least one
+    plan-document link, by polygon key: polygons sharing an aktbeteckning count once; 0 when none), "fetched" (the
+    snapshot date, None when not covered), "reason" (None when covered; else the coverage row's reason for the last
+    failed fetch, or NOT_FETCHED_YET when the fetch never ran for the kommun)}.
 
     A snapshot the coverage report flags as doubtful (a low share of aktbeteckningar or links) counts as covered
     like any other: nothing is filtered out here."""
@@ -80,17 +79,6 @@ def _checked(bbox: tuple[float, float, float, float]) -> tuple[float, float, flo
     return west, south, east, north
 
 
-def _overlaps(kommun_bbox: list, west: float, south: float, east: float, north: float) -> bool:
-    k_west, k_south, k_east, k_north = kommun_bbox
-    return k_west <= east and k_east >= west and k_south <= north and k_north >= south
-
-
-def _plan_row(code: str, props: dict) -> dict:
-    """The plan of a snapshot feature: a pilot kommun's read through place.sources, the others' through PLAN_KEY."""
-    layer = layer_by_id(code, plan_layers.LAYER_ID) if code in PILOTS else None
-    return pilot_feature(layer, props) if layer else plan_layers.feature(props)
-
-
 def plans_in_view(store: PlaceStore, bbox: tuple[float, float, float, float]) -> dict:
     """The plan polygons meeting `bbox` (west, south, east, north, WGS84) as a GeoJSON FeatureCollection with one
     extra member, "truncated".
@@ -104,24 +92,22 @@ def plans_in_view(store: PlaceStore, bbox: tuple[float, float, float, float]) ->
     At most MAX_PLANS features are served; "truncated" is True when more met the box, else False. Raises ValueError
     when the box is wider than MAX_SPAN in longitude or latitude, when west >= east or south >= north, or when a
     bound is not a coordinate."""
-    west, south, east, north = _checked(bbox)
-    view = box(west, south, east, north)
+    view = box(*_checked(bbox))
     features: list[dict] = []
-    truncated = False
     for kommun in store.kommuner():
-        if truncated or not _overlaps(kommun["bbox"], west, south, east, north):
+        if not box(*kommun["bbox"]).intersects(view):
             continue
         code = kommun["code"]
+        layer = layer_by_id(code, plan_layers.LAYER_ID) if code in PILOTS else None
         links = store.plan_links(code)
         for props, geometry in store.features(code, plan_layers.LAYER_ID, view):
-            if len(features) >= MAX_PLANS:
-                truncated = True
-                break
-            row = _plan_row(code, props)
+            if len(features) == MAX_PLANS:
+                return {"type": "FeatureCollection", "features": features, "truncated": True}
+            row = pilot_feature(layer, props) if layer else plan_layers.feature(props)
             matched = links.get(polygon_key(row) or "", [])
             features.append({"type": "Feature",
                              "geometry": mapping(geometry.simplify(PLAN_TOLERANCE, preserve_topology=True)),
                              "properties": {"code": code, "kommun": kommun["name"], "ref": row["ref"],
                                             "name": row["name"], "date": row["date"],
                                             "match": matched[0]["level"] if matched else None}})
-    return {"type": "FeatureCollection", "features": features, "truncated": truncated}
+    return {"type": "FeatureCollection", "features": features, "truncated": False}
