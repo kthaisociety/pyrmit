@@ -20,6 +20,9 @@ from place.sources import (
 UPPSALA_PROPERTY_LAYER = 51  # Fastighetsgränser: one polygon per part of a property, "fastighet" = "TRAKT 7:8"
 UPPSALA_ADDRESS_LAYER = 11   # Adresser: the kommun's belägenhetsadresser, one point per entrance
 TIMEOUT_S = 15
+# Uppsala's property layer answered a point query with "Error performing query operation" in about half the calls on
+# 2026-11-05 while the plan layers answered every time: one more try catches most of them
+PROPERTY_TRIES = 2
 COORDINATE_DECIMALS = 6      # ~0.1 m: pins closer than that share a cached lookup
 # Every kind of lämning in the register, from fornlämning to "ingen antikvarisk bedömning"
 RAA_LAYERS = "fornlamning,mojligfornlamning,ovrkulthistlamning,ingenantikvariskbedomning,ejkulthistlamning"
@@ -31,7 +34,7 @@ class PlaceSourceUnavailable(Exception):
     """A live source did not answer: network error, HTTP error or an unreadable payload."""
 
 
-def _query(params: dict) -> list[dict]:
+def _query_once(params: dict) -> list[dict]:
     try:
         response = httpx.get(f"{UPPSALA_MAP}/{UPPSALA_PROPERTY_LAYER}/query", timeout=TIMEOUT_S,
                              headers={"User-Agent": USER_AGENT},
@@ -43,6 +46,17 @@ def _query(params: dict) -> list[dict]:
     if "error" in data:
         raise PlaceSourceUnavailable(f"Uppsala property service: {data['error']}")
     return data.get("features") or []
+
+
+def _query(params: dict) -> list[dict]:
+    """The property layer's features for `params`, asked up to PROPERTY_TRIES times; the last failure is raised."""
+    for attempt in range(1, PROPERTY_TRIES + 1):
+        try:
+            return _query_once(params)
+        except PlaceSourceUnavailable:
+            if attempt == PROPERTY_TRIES:
+                raise
+    raise AssertionError("unreachable")
 
 
 def _designation(kommun: str, fastighet: str) -> str:
