@@ -97,9 +97,9 @@ def test_coverage_counts_the_plans_with_a_matched_document(tmp_path):
 
 
 def test_coverage_includes_a_pilot_kommun_beside_the_registry(tmp_path):
-    """Uppsala, which has a snapshot but no plan source, is covered like a registry kommun."""
+    """Uppsala, which has a snapshot but no plan source, is covered, its plan layers counted together."""
     row = by_code(coverage(nacka_store(tmp_path), [source()]))["0380"]["properties"]
-    assert (row["covered"], row["polygons"]) == (True, 3)
+    assert (row["covered"], row["polygons"]) == (True, 5)
 
 
 def test_coverage_keeps_a_doubtful_layer_like_any_other(tmp_path):
@@ -107,7 +107,7 @@ def test_coverage_keeps_a_doubtful_layer_like_any_other(tmp_path):
     bare = [(geometry, props | {"aktbeteckning": None, "url": None}) for geometry, props in NACKA_FEATURES]
     fetch_plan_layer(source(), client=fake_services(bare), out_dir=tmp_path)
     row = by_code(coverage(PlaceStore(tmp_path), [source()]))["0182"]["properties"]
-    assert (row["covered"], row["polygons"]) == (True, 3)
+    assert (row["covered"], row["polygons"]) == (True, 5)
 
 
 # --- the plans in a map view --------------------------------------------------------------------------------------

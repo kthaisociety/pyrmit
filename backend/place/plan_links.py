@@ -351,9 +351,9 @@ def text_report(code: str, result: dict, plans: list[dict]) -> str:
     matched = row["polygons"] - row["unmatched"]
     share = _share(matched / row["polygons"] if row["polygons"] else None)
     reasons = [(item, reason(item)) for item in result["fetch"]]
-    lines = [f"# Plan text in the hosted corpus, kommun {code}, {today()}", "",
-             f"{matched} of {row['polygons']} polygons have documents in the hosted corpus ({share}): "
-             f"{row['link']} by link, {row['akt']} by aktbeteckning, {row['name']} by name (for review).", ""]
+    summary = (f"{matched} of {row['polygons']} polygons have documents in the hosted corpus ({share}): "
+               f"{row['link']} by link, {row['akt']} by aktbeteckning, {row['name']} by name (for review).")
+    lines = [f"# Plan text in the hosted corpus, kommun {code}, {today()}", "", summary, ""]
     if reasons:
         lines += [f"- {text}: {sum(1 for _, why in reasons if why == text)}"
                   for text in (NO_LINK, NOT_IN_REGISTRY, NOT_IN_CORPUS)]

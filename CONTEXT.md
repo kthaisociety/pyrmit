@@ -131,7 +131,7 @@ A kommun covered by its plan source alone: a pin there gives the kommun and the 
 A dated local copy of a kommun's area layers: every layer of a pilot kommun (`python -m place.fetch`), or the plan layer of a plan-layer kommun (`python -m place.plan_layers`). A kommun with a snapshot is covered; anywhere else the place is "not covered yet".
 
 **Plan-document link**:
-A row of the link table (`data/geo/<code>/plan_links.jsonl`): one plan polygon matched to one document of the document store, with the match level that produced it and the date. A plan at the pin carries its matched documents' ids, or says no document is matched yet.
+A row of the link table (`data/geo/<code>/plan_links.jsonl`): one plan polygon matched to one document of the document store or the hosted corpus, with the match level that produced it, the document's role and the date. A plan at the pin carries its matched documents' ids, or says no document is matched yet.
 _Avoid_: corpus match (the registry match by name that `corpus_plan_id` records)
 
 **Match level**:
@@ -139,6 +139,12 @@ How a polygon found its document, tried in order and stopped at the first hit: l
 
 **Fetch list**:
 The links of every polygon no document matched, grouped by kommun (`data/geo/plan_fetch_list.json`), for the scraper to pick up next. A polygon whose links were internal paths is listed as "no public link" with its aktbeteckning.
+
+**Plan text**:
+Whether a plan at the pin has documents in the corpus the app serves from: *read* (the place card lists them by role, plan map first), *none* (the card says no text was read and keeps the link to the kommun) or *unavailable* (the corpus could not be reached, so the plan is listed without documents). The **Text report** gives the share per kommun.
+
+**Text report**:
+`data/geo/<code>/plan_text_report.md`, written by a match against the hosted corpus: the share of a kommun's plan polygons with documents, and for each of the others why it has none.
 
 **Coverage report**:
 One line per plan source, kept up to date across fetch runs: fetched or not and why, the polygons kept against the survey's count, and the shares of plans with an aktbeteckning and with a link.

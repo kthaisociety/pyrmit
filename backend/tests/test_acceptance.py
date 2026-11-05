@@ -22,7 +22,13 @@ from place.plan_links import (
 )
 from place.profile import CorpusUnavailable, build_profile
 from place.store import PlaceStore
-from tests.unit.place.snapshot import PIN, fake_property, no_remains, registry, write_snapshot
+from tests.unit.place.snapshot import (
+    PIN,
+    fake_property,
+    no_remains,
+    registry,
+    write_snapshot,
+)
 
 PAGE = "https://www.uppsala.se/detaljplaner/{}/"
 ATLE = "0380-P2002/5"

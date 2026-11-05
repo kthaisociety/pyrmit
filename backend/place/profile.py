@@ -1,9 +1,9 @@
 """The place profile of a point: what the place card shows and what the chat answers from."""
 
 import json
+import logging
 import math
 import re
-import logging
 import threading
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -19,11 +19,11 @@ from place import live, plan_layers
 from place.permits import likely_permits
 from place.plan_links import polygon_key
 from place.sources import (
-    PLAN_KINDS,
     ANCIENT_REMAINS,
     METRES_PER_DEGREE_LAT,
     NATIONAL_LAYERS,
     PILOTS,
+    PLAN_KINDS,
     SECTION_KINDS,
     Layer,
     today,
