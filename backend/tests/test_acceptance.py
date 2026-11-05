@@ -131,6 +131,28 @@ def test_polygon_links_to_the_documents_of_its_plan_page(geo):
     assert atle == {MAP_ID: "link", DESCRIPTION_ID: "link"}
 
 
+def test_a_plan_addition_links_to_the_documents_of_its_plan_page(geo):
+    """A tillägg's polygon is linked to its plan's documents like a plan's."""
+    (geo / "0380" / "plan_pages.json").write_text(json.dumps({"0380-P2012/9": PAGE.format("atle")}), encoding="utf-8")
+    run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
+    assert {row["doc_id"] for row in link_rows(geo) if row["ref"] == "0380-P2012/9"} == {MAP_ID, DESCRIPTION_ID}
+
+
+def test_a_document_of_another_plan_is_not_hit_on_a_mention(geo):
+    """A document the registry places under another plan's page is not linked for naming an aktbeteckning."""
+    mention = (STADSPLAN_ID, 1, "pdf", "detaljplan", "0380", "Stadsplan (PDF)", "https://www.uppsala.se/k/stadsplan.pdf",
+               "Ersätter 0380-P2010/1")
+    run_hosted("0380", FakeCorpus([*CHUNKS, mention]), plans_of, geo_dir=geo)
+    assert not [row for row in link_rows(geo) if row["ref"] == "0380-P2010/1"]
+
+
+def test_a_document_in_no_plan_is_hit_on_its_aktbeteckning(geo):
+    """A document the registry places under no plan page is linked when its front names the aktbeteckning."""
+    own = ("pdf:0380:own", 0, "pdf", "detaljplan", "0380", "Plankarta", "https://www.uppsala.se/z/plankarta.pdf", "0380-P2010/1")
+    run_hosted("0380", FakeCorpus([*CHUNKS, own]), plans_of, geo_dir=geo)
+    assert [(row["doc_id"], row["level"]) for row in link_rows(geo) if row["ref"] == "0380-P2010/1"] == [("pdf:0380:own", "akt")]
+
+
 def test_link_rows_carry_the_documents_role(geo):
     """Each link row says the document's role."""
     run_hosted("0380", FakeCorpus(), plans_of, geo_dir=geo)
@@ -165,8 +187,9 @@ def test_report_states_the_share_of_polygons_with_text(geo):
 def test_report_says_a_plan_page_is_missing_from_the_registry(geo):
     """A polygon whose page no registry plan has is listed with that reason."""
     documents = load_hosted_documents(["0380"], FakeCorpus(), plans_of)["0380"]
-    report = text_report("0380", match_kommun("0380", documents, geo_dir=geo), plans_of("0380"))
-    assert any("0380-P2012/9" in line and NOT_IN_REGISTRY in line for line in report.splitlines())
+    without_it = [plan for plan in PLANS if plan["name"] != "Grannplanen"]
+    report = text_report("0380", match_kommun("0380", documents, geo_dir=geo), without_it)
+    assert any("0380-P2010/1" in line and NOT_IN_REGISTRY in line for line in report.splitlines())
 
 
 def test_report_says_a_plans_documents_are_not_in_the_corpus(geo):

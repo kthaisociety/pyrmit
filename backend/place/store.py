@@ -126,7 +126,8 @@ class PlaceStore:
                 if line.strip():
                     row = json.loads(line)
                     links.setdefault(row["key"], []).append({"doc_id": row["doc_id"], "level": row["level"],
-                                                             "review": row.get("review", False)})
+                                                             "review": row.get("review", False),
+                                                             "role": row.get("role")})
         return links
 
     def features(self, code: str, layer_id: str, geometry) -> list[tuple[dict, object]]:

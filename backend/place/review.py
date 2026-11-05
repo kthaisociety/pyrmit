@@ -13,7 +13,7 @@ from shapely.geometry import box, mapping, shape
 from place import plan_layers
 from place.plan_links import polygon_key
 from place.registry import PlanSource
-from place.sources import PILOTS, layer_by_id
+from place.sources import PILOTS, layer_by_id, plan_layer_definitions
 from place.sources import feature as pilot_feature
 from place.store import PlaceStore
 
@@ -34,6 +34,14 @@ def _plans_layer(store: PlaceStore, code: str) -> dict | None:
     return layer if layer and layer["status"] == "ok" else None
 
 
+def _polygons(store: PlaceStore, code: str, layer: dict) -> int:
+    """The polygons the link table can hold keys of: a pilot kommun's plan layers together, else the plans layer."""
+    if code not in PILOTS:
+        return layer.get("count") or 0
+    ids = {definition.id for definition in plan_layer_definitions(code)}
+    return sum(entry.get("count") or 0 for entry in store.layers(code) if entry["id"] in ids)
+
+
 def coverage(store: PlaceStore, sources: Iterable[PlanSource]) -> dict:
     """The coverage of every kommun as a GeoJSON FeatureCollection: one Feature per kommun of `sources` (the plan
     source registry) and per kommun with a snapshot that is not in it (a pilot kommun), in kommun code order, each
@@ -41,7 +49,7 @@ def coverage(store: PlaceStore, sources: Iterable[PlanSource]) -> dict:
 
     A feature's geometry is the kommun outline (store.outline, simplified to OUTLINE_TOLERANCE), or None when no
     boundary was ever fetched. Its properties: {"code", "name", "covered" (True when the kommun has a plans
-    snapshot), "polygons" (the snapshot's plan count, 0 when not covered), "matched" (the plans with at least one
+    snapshot), "polygons" (the snapshot's plan count, a pilot kommun's plan layers together, 0 when not covered), "matched" (the plans with at least one
     plan-document link, by polygon key: polygons sharing an aktbeteckning count once; 0 when none), "fetched" (the
     snapshot date, None when not covered), "reason" (None when covered; else the coverage row's reason for the last
     failed fetch, or NOT_FETCHED_YET when the fetch never ran for the kommun)}.
@@ -55,7 +63,7 @@ def coverage(store: PlaceStore, sources: Iterable[PlanSource]) -> dict:
     for code in sorted(set(names) | set(snapshots)):
         layer = _plans_layer(store, code) if code in snapshots else None
         if layer:
-            properties = {"covered": True, "polygons": layer.get("count") or 0, "matched": len(store.plan_links(code)),
+            properties = {"covered": True, "polygons": _polygons(store, code, layer), "matched": len(store.plan_links(code)),
                           "fetched": layer.get("fetched"), "reason": None}
         else:
             properties = {"covered": False, "polygons": 0, "matched": 0, "fetched": None,

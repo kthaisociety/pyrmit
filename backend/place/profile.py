@@ -3,8 +3,10 @@
 import json
 import math
 import re
+import logging
 import threading
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from pathlib import Path
 
@@ -17,6 +19,7 @@ from place import live, plan_layers
 from place.permits import likely_permits
 from place.plan_links import polygon_key
 from place.sources import (
+    PLAN_KINDS,
     ANCIENT_REMAINS,
     METRES_PER_DEGREE_LAT,
     NATIONAL_LAYERS,
@@ -28,6 +31,14 @@ from place.sources import (
 from place.sources import feature as layer_feature
 from place.store import PlaceStore
 
+logger = logging.getLogger(__name__)
+
+# The wait for the corpus on a pin: past Neon waking from suspend (a few seconds), short of a pin that seems to hang.
+# One worker keeps PgStore's connection, which is per thread
+CORPUS_LOOKUP_SECONDS = 8
+_corpus_worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="corpus-documents")
+ROLE_ORDER = {"plankarta": 0, "planbeskrivning": 1}
+DOCUMENTS_UNAVAILABLE = "The plan documents could not be read from the corpus right now: the plans are listed without them."
 NOT_A_DECISION = ("Registry data, not a decision: the adopted plan documents and the authorities' decisions are "
                   "binding.")
 STRANDSKYDD = {
@@ -42,7 +53,6 @@ SECTIONS = (*SECTION_KINDS, "ancient_remains")
 ANCIENT_REMAINS_RADIUS_M = 30         # without a property: remains this close to the pin
 MIN_SHARE = 0.02                     # a feature covering less of the property only touches its boundary
 FINISHED_STAGES = {"avslutat", "avbrutet", "avbruten"}  # still in the kommun's "pågående" layer, no longer in progress
-PLAN_KINDS = ("plan", "plan_addition", "area_regulations")
 CORPUS_PLANS = Path(__file__).resolve().parent.parent / "data" / "corpus" / "plans.jsonl"
 
 _store: PlaceStore | None = None
@@ -171,36 +181,71 @@ class CorpusUnavailable(RuntimeError):
     """The corpus the plan documents are read from cannot be reached."""
 
 
+def _read_documents(doc_ids: list[str]) -> dict[str, dict]:
+    from localrag.service import get_retriever
+
+    store = getattr(get_retriever(), "store", None)
+    if store is None:
+        raise CorpusUnavailable("the app's corpus is not in a store")
+    marks = ",".join("?" * len(doc_ids))
+    return {row["doc_id"]: {"title": row["title"], "url": row["url"]} for row in store.query(
+        f"SELECT DISTINCT doc_id, title, url FROM chunks WHERE doc_id IN ({marks})", tuple(doc_ids))}
+
+
 def hosted_documents(doc_ids: list[str]) -> dict[str, dict]:
     """{doc_id: {"title", "url"}} of the documents in the corpus the app serves from (LOCAL_RAG_STORE), those it does
     not hold left out. Waits at most CORPUS_LOOKUP_SECONDS. Raises CorpusUnavailable when the corpus cannot be reached
     in that time, or when the app has no local corpus."""
-    raise NotImplementedError
+    from localrag.service import local_backend_enabled
+
+    if not local_backend_enabled():
+        raise CorpusUnavailable("the app has no local corpus")
+    try:
+        return _corpus_worker.submit(_read_documents, doc_ids).result(timeout=CORPUS_LOOKUP_SECONDS)
+    except Exception as exc:  # a timeout, or the driver's own errors: psycopg2 is only imported with the hosted store
+        logger.warning("Plan documents not read from the corpus: %s", type(exc).__name__)
+        raise CorpusUnavailable(type(exc).__name__) from exc
 
 
-def _with_documents(rows: list[dict], links: dict[str, list[dict]]) -> list[dict]:
-    """The plan rows with the document store's matched documents (place.plan_links), none when no link exists."""
+def _with_documents(rows: list[dict], links: dict[str, list[dict]],
+                    corpus_documents: Callable[[list[str]], dict[str, dict]]) -> tuple[list[dict], list[str]]:
+    """The plan rows with their documents (place.plan_links) as the corpus holds them, and the notes that go with them:
+    one when the corpus could not be reached, which leaves the rows without documents."""
+    matched_of = [links.get(polygon_key(row) or "", []) for row in rows]
+    doc_ids = sorted({link["doc_id"] for matched in matched_of for link in matched})
+    found, unavailable = {}, False
+    if doc_ids:
+        try:
+            found = corpus_documents(doc_ids)
+        except CorpusUnavailable:
+            unavailable = True
     out = []
-    for row in rows:
-        matched = links.get(polygon_key(row) or "", [])
+    for row, matched in zip(rows, matched_of, strict=True):
+        documents = sorted(({"doc_id": link["doc_id"], "role": link.get("role"), **found[link["doc_id"]]}
+                            for link in matched if link["doc_id"] in found),
+                           key=lambda document: ROLE_ORDER.get(document["role"], len(ROLE_ORDER)))
+        status = "read" if documents else "unavailable" if unavailable and matched else "none"
         out.append(row | {"document_ids": [link["doc_id"] for link in matched],
-                          "document_match": matched[0]["level"] if matched else None})
-    return out
+                          "document_match": matched[0]["level"] if matched else None,
+                          "corpus_documents": documents, "text_status": status})
+    return out, [DOCUMENTS_UNAVAILABLE] if unavailable else []
 
 
-def _plan_layer_profile(lat: float, lon: float, code: str, store: PlaceStore) -> dict:
+def _plan_layer_profile(lat: float, lon: float, code: str, store: PlaceStore,
+                        corpus_documents: Callable[[list[str]], dict[str, dict]]) -> dict:
     """The profile of a point in a kommun whose plan layer place.plan_layers snapshotted: the plans at the point
     from that layer, nothing else looked up."""
     name = next(kommun["name"] for kommun in store.kommuner() if kommun["code"] == code)
     meta = next((layer for layer in store.layers(code) if layer["id"] == plan_layers.LAYER_ID), {})
     point = Point(lon, lat)
-    plans = _with_documents(_by_date_newest_first([
+    plans, document_notes = _with_documents(_by_date_newest_first([
         plan_layers.feature(props) | {"source": meta.get("provider"), "fetched": meta.get("fetched"),
                                       "licence": meta.get("licence"), "geometry": mapping(geometry),
                                       "corpus_plan_id": None, "provisions_indexed": False}
-        for props, geometry in store.features(code, plan_layers.LAYER_ID, point)]), store.plan_links(code))
+        for props, geometry in store.features(code, plan_layers.LAYER_ID, point)]), store.plan_links(code),
+        corpus_documents)
     notes = [NOT_A_DECISION, (f"Only {name} kommun's plan layer is checked here: no property, land-use zones or plans "
-                              "in progress.")]
+                              "in progress."), *document_notes]
     if not plans:
         notes.append(f"No plan was found in {name} kommun's plan layer at this point. The layer is not known to hold "
                      "every plan in force, so an older plan may still apply.")
@@ -297,7 +342,7 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
     if code is None:
         return _not_covered(lat, lon)
     if code not in PILOTS:
-        return _plan_layer_profile(lat, lon, code, store)
+        return _plan_layer_profile(lat, lon, code, store, corpus_documents or hosted_documents)
 
     kommun = PILOTS[code]["name"]
     found, property_status = _property(code, lon, lat, property_at or live.property_at)
@@ -321,10 +366,11 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
         if plan.get("page"):
             plans_by_page.setdefault(plan["page"]["url"], plan)
     pages = store.plan_pages(code)
-    plans = _with_documents(_by_date_newest_first([
+    plans, document_notes = _with_documents(_by_date_newest_first([
         _without_share(row) | {"page": row["url"], "documents": [], "licence": meta.get(row["layer"], {}).get("licence")}
         | _corpus_match(_plan_key(row["name"], kommun), plans_by_key, pages.get(row["ref"]), plans_by_page)
-        for kind in PLAN_KINDS for row in rows.get(kind, [])]), store.plan_links(code))
+        for kind in PLAN_KINDS for row in rows.get(kind, [])]), store.plan_links(code),
+        corpus_documents or hosted_documents)
 
     remains, remains_entry = _ancient_remains(ancient_remains_at or live.ancient_remains_at,
                                               area if found else _around_pin(point, lat))
@@ -339,5 +385,5 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
                "pending_plans": [_without_share(row) for row in rows.get("plan_pending", [])
                                  if (row["status"] or "").lower() not in FINISHED_STAGES],
                **sections, "ancient_remains": remains, "strandskydd": dict(STRANDSKYDD),
-               "section_status": section_status, "layers": consulted, "notes": [NOT_A_DECISION]}
+               "section_status": section_status, "layers": consulted, "notes": [NOT_A_DECISION, *document_notes]}
     return profile | {"permits": likely_permits(profile)}

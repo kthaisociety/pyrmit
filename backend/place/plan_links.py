@@ -4,24 +4,31 @@ detaljplan documents corpus.extract wrote), so a pin leads to the text of the pl
 
     cd backend && python -m place.plan_links                     # every kommun with a snapshot
     python -m place.plan_links --kommun 0182 --kommun 0380       # some of them
+    python -m place.plan_links --kommun 0380 --hosted            # against the hosted corpus (CORPUS_DATABASE_URL)
 
 -> data/geo/<code>/plan_links.jsonl (the link table), data/geo/plan_fetch_list.json (the links of the polygons no
 document matched, for the scraper) and data/geo/plan_match_report.md (one line per kommun). Three match levels per
 polygon, tried in order, the first with a hit wins: LINK (a polygon link equals a document's address), AKT (the
 normalised aktbeteckning equals one read from the title, the file name or the front of the text of a document of the
 same kommun) and NAME (the kommun and the plan name agree, marked for review). Restart the backend after a run.
+
+--hosted matches against the PDFs of the hosted corpus instead, where a polygon also hits the documents of the registry
+plan (data/corpus/plans.jsonl) with its page, and writes the kommun's link table and its text report
+(data/geo/<code>/plan_text_report.md: the share of polygons with text, and why the others have none). The last run
+decides what a kommun's table holds, so a run against the local document store replaces a hosted one's links.
 """
 
 import argparse
 import json
+import os
 import re
 from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
-from corpus.common import DOCUMENTS_PATH
+from corpus.common import BACKEND_DIR, DATA_DIR, DOCUMENTS_PATH
 from place import plan_layers
-from place.sources import PILOTS, layer_by_id, today
+from place.sources import PILOTS, plan_layer_definitions, today
 from place.sources import feature as pilot_feature
 from place.store import GEO_DIR, PlaceStore
 
@@ -36,6 +43,7 @@ NO_LINK = "the polygon has no link"
 NOT_IN_REGISTRY = "its plan page is not in the plan registry"
 NOT_IN_CORPUS = "its plan has no documents in the hosted corpus"
 DOCUMENT_TYPE = "detaljplan"
+HOSTED_FRONT_CHUNKS = 3  # chunks read per hosted document: more than AKT_FRONT_CHARS of text
 # How far into a document's text an aktbeteckning says the document is about that plan, about its first page. Further
 # in it is most often a mention: a new plan's description lists the plans it replaces and the plans around it
 AKT_FRONT_CHARS = 3000
@@ -95,32 +103,61 @@ def load_hosted_documents(codes: list[str], store, plans: Callable[[str], list[d
     "planbeskrivning", ..., None for a document in no plan). `store` answers query(sql, params) on the chunks view
     (localrag.pg_store.PgStore); `plans` gives a kommun's registry plans. Raises DocumentStoreUnavailable when the
     store cannot be read."""
-    raise NotImplementedError
+    by_kommun: dict[str, list[dict]] = {}
+    try:
+        for code in codes:
+            of_plans: dict[str, dict] = {}
+            for plan in plans(code):
+                page = (plan.get("page") or {}).get("url")
+                for held in plan.get("documents") or []:
+                    entry = of_plans.setdefault(held["doc_id"], {"role": held.get("role"), "plan_pages": []})
+                    if page:
+                        entry["plan_pages"].append(page)
+            documents: dict[str, dict] = {}
+            for row in store.query("SELECT doc_id, title, url, kommun_code, text FROM chunks WHERE kind = 'pdf' "
+                                   "AND doc_type = ? AND kommun_code = ? AND CAST(chunk_index AS INTEGER) < ? "
+                                   "ORDER BY doc_id, CAST(chunk_index AS INTEGER)",
+                                   (DOCUMENT_TYPE, code, HOSTED_FRONT_CHUNKS)):
+                known = of_plans.get(row["doc_id"], {})
+                document = documents.setdefault(row["doc_id"], {
+                    "doc_id": row["doc_id"], "kommun_code": row["kommun_code"], "title": row["title"], "url": row["url"],
+                    "text": "", "role": known.get("role"), "plan_pages": known.get("plan_pages", [])})
+                document["text"] += (row["text"] or "") + "\n"
+            by_kommun[code] = list(documents.values())
+    except Exception as exc:  # the driver's own errors: psycopg2 is only imported with the hosted store
+        raise DocumentStoreUnavailable(f"The hosted corpus cannot be read: {exc}") from exc
+    return by_kommun
 
 
 # --- the polygons and the keys ----------------------------------------------------------------------------------
 
 def _polygons(code: str, geo_dir: Path) -> list[dict]:
     """The snapshot's plans as {"ref", "name", "url", "page", "documents", "dropped_links"}, in file order. A pilot
-    kommun's page is the one its document link leads to (plan_pages.json, place.plan_documents) when known."""
-    path = geo_dir / code / f"{plan_layers.LAYER_ID}.geojson"
-    layer = layer_by_id(code, plan_layers.LAYER_ID) if code in PILOTS else None
-    pages = PlaceStore(geo_dir).plan_pages(code) if layer else {}
-    polygons = []
-    for item in json.loads(path.read_text(encoding="utf-8"))["features"]:
-        props = item.get("properties") or {}
-        if plan_layers.PLAN_KEY in props or layer is None:
+    kommun's plans are those of its plan layers (plans, additions, area regulations), each with the page its document
+    link leads to (plan_pages.json, place.plan_documents) when known."""
+    if code not in PILOTS:
+        polygons = []
+        for item in _features(geo_dir / code / f"{plan_layers.LAYER_ID}.geojson"):
+            props = item.get("properties") or {}
             row = plan_layers.feature(props)
             polygons.append({"ref": row["ref"], "name": row["name"], "url": row["url"], "page": row["page"],
                              "documents": row["documents"],
                              "dropped_links": (props.get(plan_layers.PLAN_KEY) or {}).get("dropped_links", 0)})
-        else:
-            row = pilot_feature(layer, props)
+        return polygons
+    pages = PlaceStore(geo_dir).plan_pages(code)
+    polygons = []
+    for layer in plan_layer_definitions(code):
+        for item in _features(geo_dir / code / f"{layer.id}.geojson"):
+            row = pilot_feature(layer, item.get("properties") or {})
             polygons.append({"ref": row["ref"], "name": row["name"], "url": row["url"],
                              "page": pages.get(row["ref"]) or row["url"],
                              "documents": [row["url"]] if pages.get(row["ref"]) and row["url"] else [],
                              "dropped_links": 0})
     return polygons
+
+
+def _features(path: Path) -> list[dict]:
+    return json.loads(path.read_text(encoding="utf-8"))["features"] if path.exists() else []
 
 
 def _url_key(url: str | None) -> str | None:
@@ -173,9 +210,11 @@ class _Index:
         self.by_akt: dict[str, list[dict]] = {}
         self.by_name: dict[str, list[dict]] = {}
         for document in documents:
-            url = _url_key(document.get("url"))
-            if url:
-                self.by_url.setdefault(url, []).append(document)
+            for url in map(_url_key, [document.get("url"), *document.get("plan_pages", [])]):
+                if url:
+                    self.by_url.setdefault(url, []).append(document)
+            if document.get("plan_pages"):
+                continue  # the registry knows its plan: an aktbeteckning or a name in it is only a mention of another
             for key in _own_akt_keys(document, code):
                 self.by_akt.setdefault(key, []).append(document)
             name = _name_key(document.get("title"), kommun)
@@ -214,17 +253,19 @@ def _kommun_name(code: str, geo_dir: Path) -> str | None:
 
 
 def match_kommun(code: str, documents: list[dict], *, geo_dir: Path = GEO_DIR) -> dict:
-    """Match the plan polygons of the kommun's snapshot (`geo_dir`/<code>/plans.geojson, a pilot kommun's plans read
-    through place.sources.feature, a plan-layer kommun's through place.plan_layers.feature) to `documents`, the
-    store's documents of that kommun only.
+    """Match the plan polygons of the kommun's snapshot (a plan-layer kommun's `geo_dir`/<code>/plans.geojson through
+    place.plan_layers.feature, a pilot kommun's plan layers through place.sources.feature) to `documents`, the store's
+    documents of that kommun only.
 
     Per polygon the levels run in order and stop at the first with a hit; every document hitting at that level is
     linked, and a document may be linked from several polygons. "link": a polygon's page or document link equals a
     document's url (scheme, trailing slash and case of the host ignored). "akt": the polygon's normalised
-    aktbeteckning equals one in a document's title, file name or first AKT_FRONT_CHARS of text. "name": the polygon's name and a document's title agree
+    aktbeteckning equals one in a document's title, file name or first AKT_FRONT_CHARS of text, unless the plan
+    registry places the document under a plan page ("plan_pages"), which makes that page's plan its plan. "name": the polygon's name and a document's title agree
     once "Detaljplan för", the kommun suffix, case and punctuation are dropped; such a link carries "review" True.
 
-    Returns {"code", "links": [{"key" (polygon_key), "ref", "doc_id", "level", "review", "date"}], "fetch":
+    Returns {"code", "links": [{"key" (polygon_key), "ref", "doc_id", "level", "review", "role" (the document's, None
+    when it has none), "date"}], "fetch":
     [{"key", "ref", "name", "links" (the polygon's page and document links), "reason" (NO_PUBLIC_LINK when the
     polygon had links dropped as internal paths and none left, else None)}] for the polygons no document matched,
     "report": {"code", "polygons", "link", "akt", "name", "unmatched", "documents", "unclaimed_share" (the share
@@ -246,7 +287,7 @@ def match_kommun(code: str, documents: list[dict], *, geo_dir: Path = GEO_DIR) -
         for document in hits:
             claimed.add(document["doc_id"])
             links.append({"key": polygon_key(polygon), "ref": polygon["ref"], "doc_id": document["doc_id"],
-                          "level": level, "review": level == "name", "date": date})
+                          "level": level, "review": level == "name", "role": document.get("role"), "date": date})
     polygons = sum(counts.values()) + len(fetch)
     report = {"code": code, "polygons": polygons, **counts, "unmatched": len(fetch), "documents": len(own),
               "unclaimed_share": (1 - len(claimed) / len(own)) if own else None}
@@ -299,7 +340,26 @@ def text_report(code: str, result: dict, plans: list[dict]) -> str:
     in the hosted corpus, the counts per match level, and a table of the polygons without documents (aktbeteckning,
     name, reason: NO_LINK when the polygon has no link, NOT_IN_REGISTRY when no plan of `plans` has its page,
     NOT_IN_CORPUS when one has but none of its documents is in the corpus)."""
-    raise NotImplementedError
+    pages = {_url_key((plan.get("page") or {}).get("url")) for plan in plans} - {None}
+
+    def reason(item: dict) -> str:
+        if not item["links"]:
+            return NO_LINK
+        return NOT_IN_CORPUS if pages & set(map(_url_key, item["links"])) else NOT_IN_REGISTRY
+
+    row = result["report"]
+    matched = row["polygons"] - row["unmatched"]
+    share = _share(matched / row["polygons"] if row["polygons"] else None)
+    reasons = [(item, reason(item)) for item in result["fetch"]]
+    lines = [f"# Plan text in the hosted corpus, kommun {code}, {today()}", "",
+             f"{matched} of {row['polygons']} polygons have documents in the hosted corpus ({share}): "
+             f"{row['link']} by link, {row['akt']} by aktbeteckning, {row['name']} by name (for review).", ""]
+    if reasons:
+        lines += [f"- {text}: {sum(1 for _, why in reasons if why == text)}"
+                  for text in (NO_LINK, NOT_IN_REGISTRY, NOT_IN_CORPUS)]
+        lines += ["", "| Aktbeteckning | Name | Reason |", "|---|---|---|"]
+        lines += [f"| {item['ref'] or '–'} | {item['name'] or '–'} | {why} |" for item, why in reasons]
+    return "\n".join(lines) + "\n"
 
 
 def run_hosted(code: str, store, plans: Callable[[str], list[dict]], *, geo_dir: Path = GEO_DIR) -> dict:
@@ -308,7 +368,40 @@ def run_hosted(code: str, store, plans: Callable[[str], list[dict]], *, geo_dir:
     match_kommun. Writes `geo_dir`/<code>/LINKS_FILE, each row also carrying the document's "role", and
     `geo_dir`/<code>/TEXT_REPORT; the national fetch list and match report are left alone. Returns match_kommun's
     report row. A DocumentStoreUnavailable stops the run with nothing written."""
-    raise NotImplementedError
+    result = match_kommun(code, load_hosted_documents([code], store, plans).get(code, []), geo_dir=geo_dir)
+    report = text_report(code, result, plans(code))
+    write_links(code, result["links"], geo_dir)
+    (geo_dir / code / TEXT_REPORT).write_text(report, encoding="utf-8")
+    return result["report"]
+
+
+def _registry_plans(code: str) -> list[dict]:
+    """The plan registry's plans of a kommun (data/corpus/plans.jsonl), [] without the file."""
+    path = DATA_DIR / "plans.jsonl"
+    if not path.exists():
+        return []
+    with path.open(encoding="utf-8") as lines:
+        return [plan for plan in map(json.loads, lines) if plan["kommun_code"] == code]
+
+
+def _main_hosted(codes: list[str]) -> None:
+    from dotenv import load_dotenv
+
+    from localrag.pg_store import PgStore
+
+    load_dotenv(BACKEND_DIR / ".env")
+    if not os.getenv("CORPUS_DATABASE_URL"):
+        raise SystemExit("Nothing written: --hosted needs CORPUS_DATABASE_URL")
+    try:
+        store = PgStore(os.environ["CORPUS_DATABASE_URL"])
+        for code in codes:
+            row = run_hosted(code, store, _registry_plans)
+            print(f"{code}: {row['polygons'] - row['unmatched']} of {row['polygons']} polygons have documents -> "
+                  f"{GEO_DIR / code / TEXT_REPORT}")
+    except DocumentStoreUnavailable as exc:
+        raise SystemExit(f"Nothing written: {exc}") from exc
+    except Exception as exc:  # opening the store: the driver's own errors, without the address in the message
+        raise SystemExit(f"Nothing written: the hosted corpus cannot be reached ({type(exc).__name__})") from exc
 
 
 def main() -> None:
@@ -316,7 +409,13 @@ def main() -> None:
     corpus at CORPUS_DATABASE_URL (one or more --kommun required)."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--kommun", action="append", help="kommun code (default: every kommun with a snapshot)")
+    parser.add_argument("--hosted", action="store_true", help="match against the hosted corpus (needs --kommun)")
     args = parser.parse_args()
+    if args.hosted:
+        if not args.kommun:
+            parser.error("--hosted needs --kommun")
+        _main_hosted(args.kommun)
+        return
     codes = args.kommun or [kommun["code"] for kommun in PlaceStore().kommuner()]
     try:
         rows = run(codes)

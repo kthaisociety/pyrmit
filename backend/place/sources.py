@@ -33,6 +33,9 @@ def today() -> str:
     return datetime.now(SWEDEN_TZ).date().isoformat()
 
 
+PLAN_KINDS = ("plan", "plan_addition", "area_regulations")
+
+
 @dataclass(frozen=True)
 class Layer:
     id: str                 # snapshot file name and key in the manifest
@@ -122,6 +125,11 @@ def layers_for(code: str) -> list[Layer]:
     return PILOTS[code]["layers"] + NATIONAL_LAYERS
 
 
+def plan_layer_definitions(code: str) -> list[Layer]:
+    """The kommun's layers of plans in force (PLAN_KINDS), in the order they are listed."""
+    return [layer for layer in layers_for(code) if layer.kind in PLAN_KINDS]
+
+
 def layer_by_id(code: str, layer_id: str) -> Layer | None:
     return next((layer for layer in layers_for(code) if layer.id == layer_id), None)
 
@@ -153,7 +161,7 @@ def feature(layer: Layer, props: dict) -> dict:
     out = {"layer": layer.id, "kind": layer.kind, "layer_title": layer.title, "name": None, "ref": None,
            "type": None, "date": None, "status": None, "authority": None, "law": layer.law, "text": None,
            "url": None, "note": layer.note}
-    if layer.kind in ("plan", "plan_addition", "area_regulations"):
+    if layer.kind in PLAN_KINDS:
         out.update(name=first_value(props, "Plannamn"), ref=first_value(props, "Aktbeteckning"),
                    type=first_value(props, "Plantyp"), date=iso_date(first_value(props, "LagaKraftDatum")),
                    url=first_value(props, "UrlDokument"), text=first_value(props, "AdminBestammelser", "Ovrigt"),
