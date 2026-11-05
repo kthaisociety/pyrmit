@@ -61,6 +61,7 @@ GEO_DIR =BACKEND_DIR / "data" / "geo"  # place.store.GEO_DIR (not imported: shap
 SYNC_STAMP = "neon_sync.json"
 STORAGE_LIMIT_MB = 1000  # the free plan's storage per project; a files load stops short of it
 FILES_BUILT = "files_built"  # corpus_meta key: when load_files last ran (the sync refreshes its files on a change)
+UPSERT_FILE = "INSERT INTO corpus_files VALUES (%s, %s) ON CONFLICT (path) DO UPDATE SET data = EXCLUDED.data"  # bytes -> bytea
 
 
 class StorageLimitError(RuntimeError):
@@ -103,8 +104,7 @@ def load_files(store, kommuner: list[str] | None = None, limit_mb: float = STORA
     if needed_mb > limit_mb:
         raise StorageLimitError(needed_mb, limit_mb)
     for path, data in packed.items():
-        store.execute("INSERT INTO corpus_files VALUES (%s, %s) ON CONFLICT (path) DO UPDATE SET data = EXCLUDED.data",
-                      (path, data))  # psycopg2 adapts bytes to bytea
+        store.execute(UPSERT_FILE, (path, data))
     built = datetime.now(UTC).isoformat(timespec="seconds")
     store.execute("INSERT INTO corpus_meta VALUES (%s, %s) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
                   (FILES_BUILT, json.dumps(built)))
@@ -187,12 +187,8 @@ def _load_chunks(cursor, lite: sqlite3.Connection, vectors: np.ndarray, total: i
 
 def _small_files(kommuner: list[str]) -> dict[str, Path]:
     """Files the app reads from disk, by their corpus_files path: gazetteer, plan registry, the kommuner's place
-    snapshots (place.fetch + place.plan_documents)."""
-    files = {"corpus/municipalities.json": MUNICIPALITIES_PATH, "corpus/plans.jsonl": PLANS_PATH}
-    for code in kommuner:
-        if (GEO_DIR / code).is_dir():
-            files.update({f"geo/{code}/{path.name}": path for path in sorted((GEO_DIR / code).iterdir()) if path.is_file()})
-    return files
+    snapshots (snapshot_files)."""
+    return {"corpus/municipalities.json": MUNICIPALITIES_PATH, "corpus/plans.jsonl": PLANS_PATH, **snapshot_files(kommuner)}
 
 
 def load(model: str, url: str, skip_chunks: bool = False) -> dict:
@@ -220,8 +216,7 @@ def load(model: str, url: str, skip_chunks: bool = False) -> dict:
     kommuner = sorted(r[0] for r in lite.execute("SELECT DISTINCT kommun_code FROM chunks WHERE kommun_code IS NOT NULL"))
     files = _small_files(kommuner)
     for name, path in files.items():
-        cursor.execute("INSERT INTO corpus_files VALUES (%s, %s) ON CONFLICT (path) DO UPDATE SET data = EXCLUDED.data",
-                       (name, psycopg2.Binary(gzip.compress(path.read_bytes(), 6))))
+        cursor.execute(UPSERT_FILE, (name, gzip.compress(path.read_bytes(), 6)))
     ocr = 0
     for (doc_id,) in lite.execute("SELECT DISTINCT doc_id FROM chunks WHERE kind = 'pdf'"):
         path = pdf_files.ocr_path(doc_id)
