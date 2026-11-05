@@ -168,7 +168,7 @@ def scores(row: dict, grade: dict) -> dict:
     if row["condition"] == "address" and grade["asks"]:
         points = []
     return {"points": sum(points) / (2 * len(points)) if points else None,
-            "asks_ok": None if grade["asks"] is None or expected is None else grade["asks"] == expected,
+            "asks_ok": None if grade["asks"] is None else grade["asks"] == expected,
             "unsupported": grade["unsupported"], "wrong_place": grade["wrong_place"]}
 
 

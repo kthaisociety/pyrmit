@@ -81,7 +81,7 @@ def test_asking_for_the_place_is_right_only_when_the_condition_expects_it():
     grade = {"points": [2, 1], "asks": True, "unsupported": 1, "wrong_place": 0}
     assert scores({"condition": "vague"}, grade)["asks_ok"] is True
     assert scores({"condition": "pin"}, grade) == {"points": 0.75, "asks_ok": False, "unsupported": 1, "wrong_place": 0}
-    assert scores({"condition": "address"}, grade)["asks_ok"] is None  # asking to pin an address it cannot place is allowed
+    assert scores({"condition": "address"}, grade)["asks_ok"] is True  # a named address without a pin: ask for the pin
 
 
 def fake_grade(case, condition, typed, answer, place_text, sources, cases_by_id, model):

@@ -357,7 +357,8 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
 `agentic/agent.py` runs a Responses-API tool loop (default `openai/gpt-6-luna` via OpenRouter) with tools from
 `agentic/tools.py` (`CorpusTools` over `_DiskCorpus` (SQLite) or `_MemoryCorpus`): `find_kommun`, `search` (hybrid
 dense + BM25 "stem"), `grep`, `list_documents`, `read`, `law_section` ("PBL", "9 kap. 4 §"), `plans` / `plan_rules`
-(plan registry from `data/corpus/plans.jsonl`, loaded on first use), `view_map_area` (zoomed crop of a text-layer
+(plan registry from `data/corpus/plans.jsonl`, loaded on first use), `read_plan` (the documents the pinned place lists, in
+reading order, whole or by heading, from the corpus only: ADR-0010; `PIN_GUIDE` says when), `view_map_area` (zoomed crop of a text-layer
 plankarta around a printed label such as a property number "5:125", plus the codes printed in that area with their
 meaning from the registry; search/word coordinates are unrotated, rendering uses `rect * page.rotation_matrix`),
 `view_pdf_page` (whole page image sent to the model), plus `answer_ready(mode)`: the agent classifies the question

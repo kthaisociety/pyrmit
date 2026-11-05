@@ -136,7 +136,7 @@ Lookup benchmark (no model calls): `python -m place.bench candidates --kommun 03
 Place evaluation (report: `reports/place_eval_report.md`):
 - `python -m place.check_sources --n 300` (free) checks the snapshots against each provider's own point query.
 - `python -m place.check_search --n 150 --form typed|lower|no_letter` (free) searches Uppsala's register addresses through the map search.
-- `python -m place.bench_answers run --repeats 3` (paid, about $1 for 120 answers) has the chat agent answer the locked cases in `place/cases_answers.jsonl` with and without a pin. `rejudge <file> --judge-model openai/gpt-6-luna` adds a second judge.
+- `python -m place.bench_answers run --repeats 3` (paid, about $1 for 120 answers) has the chat agent answer the locked cases in `place/cases_answers.jsonl` with and without a pin, and their general questions the same way. `rejudge <file> --judge-model openai/gpt-6-luna` adds a second judge; `compare <before.json> <after.json>` puts two runs side by side (tool calls, searches, points, cost).
 - `python -m place.report --sources … --search name=… --answers … [--compare name=…]` builds the report from the result files and `place/report_findings.md`.
 
 Open <http://localhost:3000>, enter the access-gate password, then sign up. The first start downloads the embedding model from Hugging Face (2.3 GB on a GPU, 570 MB on a CPU), then preloads the store in about 30–60 s.

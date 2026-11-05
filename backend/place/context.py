@@ -43,25 +43,22 @@ def _plan(plan: dict) -> str:
     """One plan at the pin: its type, name and date, then its documents and the call that reads them (with those of the
     plans it is read together with), or that its text is not read and the kommun's link."""
     kind = PLAN_TYPES.get(plan["kind"], "Detaljplan")
-    line = f"- {kind} {plan['ref']} \"{plan['name']}\", laga kraft {plan['date'] or 'unknown'}."
-    documents = plan.get("corpus_documents") or []
-    read_with = plan.get("read_with") or []
-    if documents:
-        line += f" Documents: {_documents(documents)}."
-    else:
-        link = plan.get("url") or plan.get("page")
-        line += f" Text not read; the kommun's page: {link}." if link else " Text not read; no link to it is known."
+    parts = [f"- {kind} {plan['ref']} \"{plan['name']}\", laga kraft {plan['date'] or 'unknown'}."]
+    documents, read_with = plan.get("corpus_documents") or [], plan.get("read_with") or []
+    link = plan.get("url") or plan.get("page")
+    parts.append(f"Documents: {_documents(documents)}." if documents
+                 else f"Text not read; the kommun's page: {link}." if link else "Text not read; no link to it is known.")
+    doc_ids = [document["doc_id"] for source in (plan, *read_with) for document in source.get("corpus_documents") or []]
+    call = f"read_plan(doc_ids={doc_ids})." if doc_ids else ""
     if read_with:
         named = ", ".join(other["ref"] if other["corpus_documents"] else f"{other['ref']} (text not read)"
                           for other in read_with)
-        line += f" Read together with {named}"
-        line += "." if not any(other["corpus_documents"] for other in read_with) else ""
-    doc_ids = [document["doc_id"] for source in (plan, *read_with) for document in source.get("corpus_documents") or []]
-    if doc_ids:
-        line += f"{':' if read_with and line[-1] != '.' else ''} read_plan(doc_ids={doc_ids})."
+        parts.append(f"Read together with {named}: {call}" if call else f"Read together with {named}.")
+    elif call:
+        parts.append(call)
     if plan.get("provisions_indexed"):
-        line += f" Provisions: plan_rules('{plan['corpus_plan_id']}')."
-    return line
+        parts.append(f"Provisions: plan_rules('{plan['corpus_plan_id']}').")
+    return " ".join(parts)
 
 
 def _zone(zone: dict) -> str:
@@ -121,8 +118,9 @@ def _permit(permit: dict) -> str:
 
 def place_context(profile: dict, law_text: Callable[[str, str], str | None] | None = None) -> str:
     """The place profile as a block of English text that goes before the user's question: the pinned point, the
-    property and kommun, inside or outside a detaljplan, each plan in force (aktbeteckning, name, laga kraft date),
-    the land-use zones, the plans in progress, the protected areas, Natura 2000 sites, national interests and
+    property and kommun, inside or outside a detaljplan, each plan at the pin (type, aktbeteckning, name, laga kraft
+    date, and its documents with the read_plan call that reads them, or that its text is not read and the kommun's
+    link), the land-use zones, the plans in progress, the protected areas, Natura 2000 sites, national interests and
     ancient remains, the strandskydd note and the likely permits, under the note that it is registry data, not a
     decision. The property line names its addresses when the property lookup found them, and the kommun line its
     code. With `law_text` ((law, section) -> the section's text tagged [c:<chunk id>], or None), the text of the

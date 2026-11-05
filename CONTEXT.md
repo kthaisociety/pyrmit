@@ -143,6 +143,12 @@ The links of every polygon no document matched, grouped by kommun (`data/geo/pla
 **Plan text**:
 Whether a plan at the pin has documents in the corpus the app serves from: *read* (the place card lists them by role, plan map first), *none* (the card says no text was read and keeps the link to the kommun) or *unavailable* (the corpus could not be reached, so the plan is listed without documents). The **Text report** gives the share per kommun.
 
+**Specific question**:
+A question about one place: it names an address, a property designation, a plan or an aktbeteckning, or says "here" or "my plot". Without a **Pin** the agent asks for one before any search; with one it reads the plans at the pin. Any other question is a **General question**, answered generally with or without a pin.
+
+**Read together**:
+An amendment (tillägg) and the plan it amends are read as one: the plan its row names ("Gäller tillsammans med ..."), else the older plans at the pin. A plan naming an amendment that does not cover the pin does not bring it in.
+
 **Text report**:
 `data/geo/<code>/plan_text_report.md`, written by a match against the hosted corpus: the share of a kommun's plan polygons with documents, and for each of the others why it has none.
 
