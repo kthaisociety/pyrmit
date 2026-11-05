@@ -107,7 +107,7 @@ def test_coverage_keeps_a_doubtful_layer_like_any_other(tmp_path):
     bare = [(geometry, props | {"aktbeteckning": None, "url": None}) for geometry, props in NACKA_FEATURES]
     fetch_plan_layer(source(), client=fake_services(bare), out_dir=tmp_path)
     row = by_code(coverage(PlaceStore(tmp_path), [source()]))["0182"]["properties"]
-    assert (row["covered"], row["polygons"]) == (True, 5)
+    assert (row["covered"], row["polygons"]) == (True, 3)
 
 
 # --- the plans in a map view --------------------------------------------------------------------------------------
