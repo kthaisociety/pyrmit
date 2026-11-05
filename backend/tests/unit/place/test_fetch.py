@@ -104,3 +104,10 @@ def test_boundary_raises_when_neither_name_finds_it(monkeypatch):
     monkeypatch.setattr("place.fetch.RETRY_DELAY_S", 0)
     with pytest.raises(RuntimeError, match="No municipality boundary"):
         kommun_boundary(boundary_client({"Boxholm kommun": [BOXHOLM_TOWN]}), "0560", "Boxholm")
+
+
+def test_boundary_of_a_kommun_with_an_irregular_name(monkeypatch):
+    """Falun is "Falu kommun" in OpenStreetMap, which neither the name nor its genitive finds."""
+    monkeypatch.setattr("place.fetch.RETRY_DELAY_S", 0)
+    falu = BOXHOLM | {"name": "Falu kommun"}
+    assert kommun_boundary(boundary_client({"Falu kommun": [falu]}), "2080", "Falun") == falu["geojson"]

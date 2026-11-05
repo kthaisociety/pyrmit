@@ -219,6 +219,16 @@ def _in_wgs84(geometries: list[dict]) -> list[dict]:
     return geometries
 
 
+def _meets(geometry: dict, boundary) -> bool:
+    """Whether the polygon meets the boundary; False for one the geometry library cannot read (too few positions,
+    a null position), which a service may hold among thousands of good ones."""
+    try:
+        return shape(geometry).intersects(boundary)
+    except (ValueError, TypeError, IndexError, ShapelyError) as exc:
+        logger.warning("left out an unreadable polygon: %s", exc)
+        return False
+
+
 def _polygons(raw: list[dict], boundary) -> list[dict]:
     """The features with a polygon that meets the kommun boundary, as plain GeoJSON features."""
     with_geometry = [item for item in raw if item.get("geometry")
@@ -226,7 +236,7 @@ def _polygons(raw: list[dict], boundary) -> list[dict]:
                      and _first_position(item["geometry"].get("coordinates"))]
     geometries = _in_wgs84([item["geometry"] for item in with_geometry])
     return [{"type": "Feature", "geometry": geometry, "properties": item.get("properties") or {}}
-            for item, geometry in zip(with_geometry, geometries) if shape(geometry).intersects(boundary)]
+            for item, geometry in zip(with_geometry, geometries) if _meets(geometry, boundary)]
 
 
 # --- the snapshot ---------------------------------------------------------------------------------------------------
@@ -244,9 +254,10 @@ def _boundary(client: httpx.Client, source: PlanSource, out: Path) -> tuple[dict
         "code": source.code, "name": source.name, "source": BOUNDARY_SOURCE, "licence": BOUNDARY_LICENCE}}, today()
 
 
-def _reason(count: int, source: PlanSource) -> str | None:
+def _reason(count: int, answered: int, source: PlanSource) -> str | None:
     if count == 0:
-        return "no polygons in the layer"
+        return (f"no polygons in the layer: it answered {answered} features, none a polygon in the kommun" if answered
+                else "no polygons in the layer")
     if not source.shared and source.survey_count and count < MIN_SHARE_OF_SURVEY * source.survey_count:
         return f"{count} polygons, the survey counted {source.survey_count}"
     return None
@@ -286,7 +297,7 @@ def _snapshot(client: httpx.Client, source: PlanSource, out: Path, row: dict) ->
            else _fetch_wfs(client, source))
     features = _polygons(raw, shape(boundary["geometry"]))
     row["count"] = len(features)
-    row["reason"] = _reason(len(features), source)
+    row["reason"] = _reason(len(features), len(raw), source)
     if row["reason"]:
         return
     for item in features:

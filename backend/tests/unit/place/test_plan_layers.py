@@ -6,7 +6,12 @@ import json
 import httpx
 import pytest
 
-from place.plan_layers import COVERAGE_REPORT, fetch_plan_layer, fetch_registry, load_coverage
+from place.plan_layers import (
+    COVERAGE_REPORT,
+    fetch_plan_layer,
+    fetch_registry,
+    load_coverage,
+)
 from place.sources import today
 from tests.unit.place.plan_layer import (
     NACKA_BOUNDARY,
@@ -171,14 +176,23 @@ def test_a_polygon_with_only_empty_rings_is_left_out(tmp_path):
     assert (row["fetched"], row["count"]) == (True, 3)
 
 
-def test_an_unusable_answer_is_recorded_as_the_kommuns_reason(tmp_path):
-    """A polygon the geometry library cannot read fails that kommun with a reason, never the run."""
-    broken = ({"type": "Polygon", "coordinates": [[[18.1], [18.2]]]}, {"OBJECTID": 4, "aktbeteckning": "0182-P1",
-                                                                       "plannamn": "Trasig", "lagakraft": None,
-                                                                       "plantyp": None, "url": None})
-    rows = fetch_registry([source()], client=fake_services(NACKA_FEATURES + [broken]), out_dir=tmp_path)
-    assert rows[0]["fetched"] is False
-    assert rows[0]["reason"]
+@pytest.mark.parametrize("coordinates", [[[[18.1, 59.3], [18.2, 59.3]]], [[[18.1, 59.3], [None, None], [18.2, 59.3], [18.1, 59.4]]]],
+                         ids=["too-few-positions", "null-position"])
+def test_a_polygon_the_geometry_library_cannot_read_is_left_out(tmp_path, coordinates):
+    """One degenerate polygon goes, its kommun is still fetched (Hammarö has one with too few positions)."""
+    broken = ({"type": "Polygon", "coordinates": coordinates}, {"OBJECTID": 4, "aktbeteckning": "0182-P1",
+                                                                "plannamn": "Trasig", "lagakraft": None,
+                                                                "plantyp": None, "url": None})
+    row = fetch_plan_layer(source(), client=fake_services(NACKA_FEATURES + [broken]), out_dir=tmp_path)
+    assert (row["fetched"], row["count"]) == (True, 3)
+
+
+def test_the_reason_says_what_a_layer_without_polygons_answered(tmp_path):
+    """A layer answering features without a polygon (ArcGIS may hold the geometry back) says how many it answered."""
+    bare = [(None, props) for _, props in NACKA_FEATURES]
+    row = fetch_plan_layer(source(), client=fake_services(bare), out_dir=tmp_path)
+    assert (row["fetched"], row["reason"]) == (False, ("no polygons in the layer: it answered 3 features, none a "
+                                                      "polygon in the kommun"))
 
 
 def test_a_run_cut_short_keeps_the_rows_of_the_kommuner_it_finished(tmp_path):

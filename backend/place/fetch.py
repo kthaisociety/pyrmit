@@ -30,6 +30,9 @@ ATTEMPTS = 2
 RETRY_DELAY_S = 1.0
 
 
+IRREGULAR_KOMMUN_NAMES = {"Falun": "Falu"}   # the name in "<name> kommun" where it is not the registry's
+
+
 def new_client() -> httpx.Client:
     return httpx.Client(headers={"User-Agent": USER_AGENT}, timeout=90, follow_redirects=True)
 
@@ -54,8 +57,10 @@ def kommun_boundary(client: httpx.Client, code: str, name: str | None = None) ->
     """The kommun's boundary from OpenStreetMap, as a GeoJSON geometry. `name` is the kommun's name, looked up in
     PILOTS when not given (KeyError for a kommun that is neither). Nominatim is asked for "<name> kommun" and, when
     that finds no boundary, for the genitive "<name>s kommun": OpenStreetMap names Boxholm "Boxholms kommun" and the
-    plain name then finds only the town. Raises RuntimeError when neither has a municipality boundary."""
+    plain name then finds only the town. A name neither form reaches is in IRREGULAR_KOMMUN_NAMES. Raises RuntimeError
+    when neither has a municipality boundary."""
     name = name or PILOTS[code]["name"]
+    name = IRREGULAR_KOMMUN_NAMES.get(name, name)
     for attempt, query in enumerate((f"{name} kommun", f"{name}s kommun")):
         if attempt:
             time.sleep(RETRY_DELAY_S)  # Nominatim allows one request a second
