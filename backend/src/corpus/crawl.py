@@ -146,9 +146,15 @@ class _WildcardRule(RuleLine):
         return bool(self.regex.match(unquote(filename)))
 
 
+# Python 3.13.13+ reads robots.txt by RFC 9309 itself (* and $, the longest match wins): its RuleLine then has fullmatch
+_NATIVE_WILDCARDS = hasattr(RuleLine("/a$", False), "fullmatch")
+
+
 def robots_parser(text: str) -> RobotFileParser:
     parser = RobotFileParser()
     parser.parse(text.splitlines())
+    if _NATIVE_WILDCARDS:  # our wrapper would read the stripped $ of its rules as a prefix
+        return parser
     for entry in parser.entries + ([parser.default_entry] if parser.default_entry else []):
         # Most specific rule first (Google: the longest matching rule wins)
         entry.rulelines = sorted((_WildcardRule(rule) for rule in entry.rulelines), key=lambda r: -len(r.path))
