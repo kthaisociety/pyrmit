@@ -20,6 +20,7 @@ Load these only when the task needs them:
 | `agents`   | `backend/src/agents/` | Python               | Multi-agent RAG: LawAgent + DocumentAgent + Orchestrator     |
 | `localrag` | `backend/src/localrag/` | Python             | Local retrieval: GPU embeddings, Swedish BM25, hybrid + rerank, kommun gazetteer, disk store, hosted corpus store, eval |
 | `agentic`  | `backend/src/agentic/` | Python              | Tool-calling agent over the corpus (`CHAT_MODE=agent`), case benchmarks, reports |
+| `place`    | `backend/src/place/` | Python               | Place lookup for the map pin: snapshots, plan source registry, plan-document links, live property and ancient remains, likely permits, address search, evaluations |
 | `corpus`   | `backend/src/corpus/` | Python (CLI)         | Offline corpus: Wikidata kommuner, Riksdagen laws, kommun website crawl, OCR, text extraction, PDF filter, chunking, plan registry, checks |
 
 ---
@@ -58,6 +59,11 @@ Load these only when the task needs them:
 | GET    | `/api/benchmark/sets`, `/cases`, `/case`, `/image/{id}` | Benchmark case sets, cases, one case + its past results (`data/agentic/bench-*.json`), plankarta crop |
 | POST   | `/api/benchmark/run`               | Run the agent on a case now (chat settings) and grade it; background job (spends credits) |
 | GET    | `/api/benchmark/run/{job_id}`      | Progress and result of that job (polled) |
+| GET    | `/api/place/profile?lat=&lon=`     | Place profile of a pinned point: property (live), plans with their documents, zones, plans in progress, inside / outside detaljplan (no model call, ADR-0003) |
+| GET    | `/api/place/coverage`              | Every kommun with a snapshot, pilot or plan-layer (code, name, bbox, fetch date), for the map's first view |
+| GET    | `/api/place/review/coverage`       | Every registry kommun and snapshot as a GeoJSON outline: covered, polygons, matched, fetch date, why not (review mode) |
+| GET    | `/api/place/review/plans?bbox=`    | The plan polygons in a box of at most 2° by 1°, at most 4,000, with their match level and `truncated`; 422 for a wider or malformed box (ADR-0008) |
+| GET    | `/api/place/search?q=`             | Address / place search for the map (the pilot kommun's address register, else Nominatim at 1 request/s); 503 when Nominatim is down |
 
 ---
 
@@ -165,6 +171,8 @@ Frontend (`frontend/.env`):
 - `backend/src/routers/db_browser.py` -- read-only chunk browser + search over both stores (never user tables or embeddings); local kommun and type counts from `localrag.store.summary`; `/api/db/sources` names the real source of each store
 - `backend/src/routers/docs.py` -- opens a cited chunk in its original document (PDF page + highlight, or URL text fragment; the PDF comes from `corpus.pdf_files`); chunks come from the agent's corpus tools
 - `backend/src/routers/benchmark.py` -- Benchmark view API: case sets, past results parsed from the result file names, in-memory run jobs (lost on restart)
+- `backend/src/routers/place.py` -- `/api/place/*`
+- `backend/src/place/` -- `sources.py` (layers, attribute mapping, pilot kommuner), `fetch.py` (snapshot CLI), `registry.py` (`plan_sources.json`, built from the survey in `docs/research/`), `plan_layers.py`, `plan_links.py`, `review.py` (review mode, ADR-0008), `store.py` (`PlaceStore`, STRtree per layer), `live.py`, `profile.py` (`build_profile`), `permits.py`, `context.py` (the place as text for the agent), `geocode.py`, `check_sources.py` / `check_search.py` / `bench_answers.py` / `bench.py` / `report.py` (the evaluation, see Place Lookup)
 - `backend/src/localrag/` -- `analyzer.py` (Swedish BM25 tokens), `gazetteer.py`, `index.py` (VectorStore), `store.py` (disk store), `retriever.py` (`LocalRetriever`), `service.py` (chat integration), `eval.py` + `questions.jsonl`, `rewrite_queries.py`, `models.toml`, `pg_store.py` (the hosted corpus: loader + `PgStore` / `PgRetriever`). Never `pip install` a package that depends on torch without the CUDA index
 - `backend/src/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat integration, `CitationNumberer`), `run.py` (CLI), `bench.py` + `cases*.jsonl`, `cases_from_caselaw.py`, `cases_from_corpus.py`, `cases_from_plans.py`, `rejudge.py`, `grounding.py`, `health.py`, `replay.py`, `coverage.py`, `report.py` / `report_technical.py` (PDF reports)
 - `backend/src/corpus/` -- the offline corpus steps (see Offline Corpus): `common.py` (paths: `BACKEND_DIR` = `backend/`, `DATA_ROOT` from `CORPUS_DATA_DIR`), `municipalities.py`, `laws.py`, `crawl.py`, `ocr.py` + `ocr_engines.py` (run in `backend/.venv-ocr`), `extract.py`, `pdf_filter.py`, `chunk.py`, `plans.py`, `check.py`, `snapshot.py`, `caselaw.py` (MÖD rulings for the case benchmark, not searchable), `pdf_files.py` (where the serving code reads crawled PDFs and OCR outputs: crawl folder, else a cache filled from the PDF's URL)
@@ -200,6 +208,7 @@ Frontend (`frontend/.env`):
 
 - `backend/tests/unit/agentic/` -- agent tools on fake corpora, citations numbered for every delta size, images sent once, questions back to the user, task scoring, tool health, coverage causes; `test_replay.py` replays stored tool calls on the real disk store and skips without it
 - `backend/tests/unit/localrag/` -- VectorStore growth and resume, the hosted corpus's SQL and file sync
+- `backend/tests/unit/place/` -- the place module on a fake Uppsala snapshot (`snapshot.py`, `plan_layer.py`, `hosted.py`), no real services
 - `backend/tests/unit/conftest.py` also fakes the kommun list of the gazetteer, so no test reads `data/corpus/municipalities.json`
 - `backend/tests/unit/corpus/` -- crawler rules (robots.txt wildcards, `url_key`, off-topic PDFs, sitemaps), PDF filter (no drop without the LLM or a review), OCR benchmark scoring, PDF download into the cache, the data folder
 - `backend/tests/unit/` -- pytest unit tests, one file per module in `backend/src/`, same folder layout. `backend/tests/test_acceptance.py` is the one temporary exception, it exists only on an issue's branch. No real database or model calls (PCR-0011). Most files hold only a docstring so far. Known failures are marked `xfail` with a linked issue.
@@ -691,6 +700,89 @@ the `sh.exe` first or it starts the next step. Claude Code reaps background shel
 run one benchmark process at a time (threads via `--workers` are fine); results are saved per answer, `--resume` /
 rerunning `agentic.rejudge` continues. A run that sits a long time before its first case may be stuck at startup
 (Hugging Face model check): the result file name is stamped when the cases start.
+
+---
+
+## Place Lookup (map pin, epic #31)
+
+```
+1. python -m place.fetch --kommun 0380  -> data/geo/0380/ (gitignored): kommun.geojson (OSM boundary), one GeoJSON per
+   layer (Uppsala's plans / tillägg / områdesbestämmelser / pågående / användning from its ArcGIS service, Naturvårdsverket
+   skyddade områden + Natura 2000 WFS, Boverket riksintressen) and manifest.json (fetch date, licence, count,
+   "complete" = the plan layer holds every plan in force). ~10 s, 10k features (ADR-0002: snapshots, not per-pin calls)
+   python -m place.plan_documents --kommun 0380  -> each plan's page (UrlDokument, 1,413 plans) and its PDFs into the
+   crawl folder data/corpus/raw/web/0380/ + data/geo/0380/plan_pages.json (aktbeteckning -> page), 1 request/s. The
+   entries go before the manifest's done line, which `corpus.crawl --revisit` needs last (until 2026-10-25 they were
+   appended after it, so the revisit skipped Uppsala); a plan whose page a later `crawl --force` dropped from the
+   manifest is recorded again. Run it after a crawl of 0380, not during (both rewrite the manifest)
+   python -m place.plan_layers [--kommun <code>]  -> data/geo/<code>/ for every kommun in place/plan_sources.json
+   (the registry: 180 kommuner with an open ArcGIS or WFS plan layer, built from docs/research/kommun-planlager.csv by
+   `python -m place.registry`, hand-edited for base patterns of bare file-name links and licences, ADR-0006): the
+   boundary from Nominatim, the whole plan layer clipped to it (a shared server's other kommuner fall out), each
+   feature with the raw attributes plus `_plan` {ref, name, date, type, page, documents, dropped_links} normalised at
+   write time (ADR-0005: bare file names through the base pattern, HTML anchors unwrapped, UNC / drive / file: paths
+   dropped and counted). A kommun that fails, returns no polygon or under half the survey's count (not for shared
+   servers) gets no snapshot and a reason, and keeps its boundary; each row is merged into data/geo/plan_coverage.json
+   as its kommun finishes and data/geo/plan_coverage.md has one line per kommun of every run so far
+   python -m place.plan_links [--kommun <code>]  -> data/geo/<code>/plan_links.jsonl (ADR-0007): every plan polygon of
+   every snapshot matched to the store's detaljplan documents (data/corpus/documents.jsonl, read once; missing =
+   nothing written), three levels per polygon, first hit wins: link (polygon page / document link = document url;
+   a pilot kommun also through plan_pages.json), akt (`normalise_akt`: kommun prefix dropped, "-" / "." as "/", so
+   0380-P 2015/12 = P2015-12; found in the title, file name or first 3,000 characters of the same kommun's documents only), name (title = plan name, marked
+   review). Unmatched polygons -> data/geo/plan_fetch_list.json by kommun ("no public link" when the links were
+   internal paths); data/geo/plan_match_report.md counts levels, unmatched and the store's unclaimed share. The
+   run of 2026-11-05 (the 146 of 180 registry kommuner fetched plus Uppsala, the local store only): 258 of 66,569 polygons, that store holds few detaljplan documents per kommun
+   python -m place.plan_links --kommun 0380 --hosted  -> the same link table from the hosted corpus's PDFs (the store at
+   CORPUS_DATABASE_URL), a polygon also hitting the documents of the registry plan with its page, and a document the
+   registry places under a plan page not hit at the akt or name level (a mention); a pilot kommun's additions and area
+   regulations are matched too. Writes data/geo/<code>/plan_text_report.md, not the national fetch list or report;
+   unreachable = nothing written. The run of 2026-11-05 for Uppsala: 1,268 of 1,417 polygons have documents (1,247
+   link, 21 akt; 1,234 of the 1,377 in the plans layer), 148 with a page outside the registry, 1 with no document
+2. The chat's map panel (components/place/) -> GET /api/place/profile -> place.profile.build_profile:
+   kommun from the snapshot boundaries (a plan-layer kommun: the plans at the point from `_plan`, property
+   "not_covered", sections "not_covered", a note when no plan was found since the layer is not known to be complete;
+   every plan row carries `document_ids` / `document_match` from the link table, [] / None before a match run, and
+   `corpus_documents` (role, title, address, read from the corpus at the pin, at most 8 s) with `text_status`: read,
+   none, or unavailable when the corpus cannot be reached, which also adds a note),
+   the property live from Uppsala's layer 51 (place.live, cached per point),
+   features that contain the pin or cover >= 2 % of the property, plans newest first matched to the corpus registry by
+   name, "outside" detaljplan only with a complete plan layer (else "unknown"); the national layers by the same rule;
+   ancient remains live from RAÄ (WMS GetFeatureInfo, buffer = half the image over a square whose inscribed circle
+   covers the property, then filtered to it; 30 m around the pin without a property); strandskydd "not checked";
+   section_status ok / unavailable / not_covered so "none" never hides "not checked"; place.permits.likely_permits by
+   fixed rules (bygglov by detaljplan status, dispens per protected area with the register's dispens authority,
+   Natura 2000 tillstånd, KML tillstånd per Fornlämning, riksintressen as considerations). No model calls (ADR-0003)
+3. The map's search (GET /api/place/search -> place.geocode.search_places): a street and number goes first to the pilot
+   kommun's own address register (Uppsala's layer 11, 56k belägenhetsadresser; "Kungsgatan 47" also finds 47A-E, the
+   typed post town picks among equal names), anything else or no register hit to Nominatim (1 request/s)
+```
+
+Evaluation (2026-10-25, report `reports/place_eval_report.md`, built by `python -m place.report` from the result files
+plus the hand-written `place/report_findings.md`):
+- `python -m place.check_sources --n 300` (free): each snapshot layer against the provider's own point query (ArcGIS
+  identify with tolerance 0, WFS Intersects filter) at seeded points + the draft facit places, and the profile time
+  -> `data/agentic/place-sources-*.json`. Not a facit: it checks the copy, not the data.
+- `python -m place.check_search --n 150 [--form typed|lower|no_letter]` (free, Nominatim at 1 req/s): register addresses
+  searched as typed, scored on distance and same property -> `place-search-*.json`. Since the search uses the same
+  register, the typed form alone grades the register against itself: the lower / no_letter forms test typing variants.
+- `python -m place.bench_answers run --repeats 3 --workers 4` (paid, ~$0.008 per answer incl. the MiMo judge): the chat
+  agent on `place/cases_answers.jsonl` (15 Uppsala places, references locked before the run) under the conditions pin /
+  address / vague / conflict, the question built by `place.context.question_with_place` as in the chat; `rejudge
+  <file> --judge-model openai/gpt-6-luna` adds the second judge -> `place-answers-*.json`. The address condition counts
+  "asks to pin it" without scoring it (the no-pin hint tells the agent to)
+
+Gotchas: Uppsala's streets are properties too (Dragarbrunn 1:2, Kronåsen 1:2), so a pin on a street gets that property and
+every plan it crosses; ~5 % of Uppsala's register address points inside plans lie on such a street property.
+Naturvårdsverket sends some polygons with a ring outside its shell (15 of 93 protected areas in Uppsala): `PlaceStore`
+repairs invalid geometries with `make_valid` on load, else "contains the pin" is wrong (Gula stigen was missed).
+Länsstyrelsernas strandskydd services answered 403 during a planned outage (22-27 Oct 2026); the durable source is NGP
+Strandskydd (#32). RAÄ has no bulk download (ancient remains must be live). The corpus registry holds no Uppsala plan
+provisions (61 plans, none with provisions), so a pinned Uppsala plan always says "provisions not indexed". The
+totalförsvar "stoppområde för höga objekt" covers ~86 % of Uppsala's points and is listed on almost every card. OSM
+lacks most Swedish house numbers: Nominatim found the house for 28 % of Uppsala's addresses (the rest: the street or
+nothing), hence the register first. MapLibre 6 loads its worker from a file next to its own module, which bundlers move:
+`PlaceMap.pointAtBundledWorker` emits it with `new URL(..., import.meta.url)`. A `.next` folder from before the repo
+moved (KTHAIS -> Projekt) made Turbopack panic ("Next.js package not found"): delete `.next` after moving the repo.
 
 ---
 

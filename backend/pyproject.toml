@@ -27,6 +27,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "pyyaml>=6.0.0",
     "requests>=2.31.0",
+    "shapely>=2.0",  # the place lookup: plan polygons, snapshots, STRtree
     "sqlalchemy>=2.0.25,<2.1",  # 2.1 makes postgresql:// use psycopg 3, which is not installed
     "supabase>=2.28.0",
     "truststore>=0.10.0",  # TLS with the OS certificate store: crawler and PDF downloads
