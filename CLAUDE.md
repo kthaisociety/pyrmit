@@ -281,6 +281,57 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
   `data/small` = the 2026-10-22 corpus (7.8k PDFs, 349k chunks; for demos / the PoC): `CORPUS_DATA_DIR=data/small`
   in `.env` serves it. Its `corpus/raw` is a directory junction to `data/corpus/raw` (same PDFs), so
   `corpus.check --delete-orphan-pdfs` keeps the PDFs any snapshot's documents.jsonl references.
+- Hosted demo for outside testers (2026-10-31, README "Try it without the data"): `LOCAL_RAG_STORE=neon` serves the
+  corpus from Postgres (`localrag.pg_store.PgRetriever` / `PgStore`), no local data. Built from `data/demo`
+  (`python -m corpus.snapshot --kommuner 0380 0115 0180`) = laws + Uppsala (plan layers, map pin) + Vallentuna
+  (benchmark kommun, no plan layer) + Stockholm (thin: its plans are on vaxer.stockholm), 115,127 chunks, 2,635 plans;
+  Uppsala is 81 % of it (6,658 documents, 63 % of its chunks in the 4,067 documents of its 2,177 plans:
+  `place.plan_documents` fetched every plan in force). Embedded with **bge-m3** (`st-bge-m3`, ~60 chunks/s on the GPU,
+  32 min) because arctic is not on OpenRouter and OpenRouter's `baai/bge-m3` gives the same vectors (cosine 0.99999 on
+  the 18,440 chunks embedded both ways in October): testers set `LOCAL_RAG_MODEL=or-bge-m3` (queries through
+  OpenRouter; `pg_store.same_vectors` checks the model against `corpus_meta`), no torch / sentence-transformers needed
+  (checked from a clean venv with the README's install line). Eval on its 34 questions (`data/demo/eval-*.json`, kept
+  out of `data/eval`, where `report_technical` would mix it into the October model table): dense-sv R@5 0.88 vs arctic
+  0.87, R@1 0.63 vs 0.71; hybrid-sv-stem R@5 0.72 vs 0.77, R@10 0.88 vs 0.85. `python -m localrag.pg_store` loads the
+  Neon branch `demo` (schema-only: no production users / chats; its URL is `CORPUS_DATABASE_URL` in `backend/.env`,
+  same role and password as production): 665 MB of the free plan's 1 GB (chunks 596, OCR 33, stem frequencies 15, small files 7,
+  places 6), ~17 min for the chunks from home (`--skip-chunks` redoes the rest). Serving: views `chunks` / `places`
+  carry the disk store's columns and `PgStore.query` turns `?` into `%s` and LIKE into ILIKE, so `_DiskCorpus` and the
+  Database view run their SQLite SQL unchanged (made portable: MIN() per document instead of a bare GROUP BY, LIKE
+  instead of GLOB, `store.regexp()` = REGEXP or `~*` with `\b` -> `\y`); `DiskRetriever.search` takes its rankings from
+  `_rankings`, which `PgRetriever` runs in SQL: dense `ORDER BY embedding <#> q` (exact, same top 8 as the disk store,
+  0.05-0.09 s on laws / Vallentuna / Stockholm, 0.5 s on Uppsala's 93k chunks), BM25 approached by sum(IDF x
+  ts_rank normalization 1) on the chunks holding a stem found in under 10 % of the chunks (`corpus_terms`; vs FTS5 on
+  the 34 questions: top-10 overlap 0.80, 0.17 s mean / 2 s max; plain ts_rank 0.57). The agent's searches then share
+  14-16 of 16 results with the disk store; read / law_section / plans / plan_rules / view_map_area give identical
+  output. Small files the app reads from disk (gazetteer, plan registry, Uppsala's place snapshot) sit in
+  `corpus_files` and `sync_files` writes the missing ones at startup (`main._open_corpus_database`, before serving: the
+  map caches its manifests on the first request), never over a file it did not write (`data/neon_sync.json`); OCR
+  outputs come per document through `pdf_files.remote_ocr`. PgStore reopens a connection Neon closed (compute
+  suspended after 5 idle minutes). The free plan's 100 CU-h a month are shared with production. PDFs come from
+  `corpus.pdf_files` (crawl folder, else downloaded from their URL into the cache: 8/8 plankartor and 4/4 cited
+  passages worked without the crawl folder, 0.2-34 s the first time; the source viewer first asks `locate` with
+  `download=false` and shows "Downloading the PDF from <host>…" when `needs_download`). The Pipeline view shows the
+  national corpus's page from `data/agentic/pipeline-national.json` (versioned, ~100 KB) when there is no
+  `check.json`, with a banner saying so; refresh it on the corpus machine after a rebuild with
+  `python -m routers.pipeline --snapshot` (~2.5 min). The agent's prompt says which kommuner the corpus holds
+  (`agent.kommun_scope`: the "all 290 kommuner" line of TOOLS_GUIDE is replaced when the corpus has documents of
+  fewer than 250, from `CorpusTools.corpus_kommuner` = the store summary; before, the demo agent answered "290"), and
+  `find_kommun` says "no documents in this corpus" for a kommun outside it. The statutes are the same in every
+  corpus (national, data/small, demo: 15 laws, 3,651 sections; `corpus.snapshot` always keeps `kind == "law"`). Gotcha: `corpus.plans` gives two plan pages without PDFs and with the same name the same `plan_id` (260
+  ids nationally; `plan_rules` gets the first). Gotcha: `requirements.txt` keeps SQLAlchemy < 2.1 (uv.lock 2.0.46):
+  2.1 makes `postgresql://` use psycopg 3, which is not installed (a clean install failed on it). End to end
+  (2026-11-01, fresh install, `stream_agent`, Kårsta komplementbostadshus question): 24 tool calls, none failed, 59 s,
+  first answer text 50 s, $0.0085, 7 sources cited. Testers get a role created in SQL on the `demo` branch (a role
+  made in the console joins `neon_superuser`: read / write on every table, and `neondb_owner` carries the production
+  password): DML on users / accounts / sessions / chat_sessions / chat_messages + `chat_messages_id_seq`, SELECT on
+  the corpus tables and views (checked with a NOLOGIN role in a rolled-back transaction: corpus writes, DROP and
+  CREATE refused). `pg_store` drops and recreates the corpus tables: re-run the corpus GRANT after a reload. The
+  project's developers get `backend/.env.demo` (the maintainer's `.env` + `LOCAL_RAG_STORE=neon`,
+  `LOCAL_RAG_MODEL=or-bge-m3`, `CORPUS_DATABASE_URL`; DATABASE_URL stays the production branch; `.env.*` is
+  gitignored, the repo is public) and save it as `backend/.env`. On this machine `.env` holds `CORPUS_DATABASE_URL`
+  (unused in disk mode); to try the developers' setup, start the backend with `LOCAL_RAG_STORE=neon
+  LOCAL_RAG_MODEL=or-bge-m3 CORPUS_DATA_DIR=data/neon-test` set in the shell (python-dotenv never overrides them).
 - `LocalRetriever` searches two pools like the chat (laws / kommun documents). The kommun pool is filtered to the
   kommuner named in the question (`gazetteer.detect_kommuner`, fallback `CorpusPlaces` for places missing from
   Wikidata, e.g. "Veda"). Modes (`LOCAL_RAG_MODE`): dense (default), bm25 (Swedish stems + compound 5-grams),
@@ -677,17 +728,18 @@ When `ACCESS_GATE_PASSWORD` (or `DEV_ACCESS_PASSWORD`) is set, every backend req
 | POST   | `/api/chunks/ingest-detaljplan`   | Yes  | Ingest a detaljplan PDF or markdown file        |
 | POST   | `/api/chunks/ingest-data-folder`  | Yes  | Ingest every supported file in a folder         |
 | POST   | `/api/analyze`                    | Yes  | Multi-agent feasibility analysis                |
+| GET    | `/api/db/sources`                 | Yes  | What each store of the Database view reads: `neon` = the pgvector tables of DATABASE_URL (endpoint/database), `local` = the agent's corpus (disk store folder, or corpus database endpoint + chunks + kommuner + models); never a password |
 | GET    | `/api/db/overview`                | Yes  | Chunk counts per table and per source (`store`=neon/local) |
 | GET    | `/api/db/chunks`                  | Yes  | Paginated chunks (`table`=law/document, `source` (local: kommun code), `doc_type`, `doc_id`, `q` text filter, `store`); local without a kommun: store order, `total` null with a text filter (not counted) |
 | GET    | `/api/db/documents`               | Yes  | Local disk store: a kommun's documents (`source`=kommun code, `doc_type`, `q` title filter, `scanned`=only the scanned PDFs read by the OCR) by type then title, with chunk counts and a `scanned` flag (an OCR output exists: the store has no OCR column) |
 | POST   | `/api/db/search`                  | Yes  | Retrieval top-k on both pools, no LLM (`store`: neon = pgvector, local = localrag) |
-| GET    | `/api/docs/locate`                | Yes  | Where to open a cited chunk: PDF page + zoom on the passage, or original URL with `#:~:text=` |
+| GET    | `/api/docs/locate`                | Yes  | Where to open a cited chunk: PDF page + zoom on the passage, or original URL with `#:~:text=`; `download=false` answers at once with `needs_download` + `source_host` when the PDF must first come from the kommun's site |
 | GET    | `/api/docs/pdf/{chunk_id}`        | Yes  | The chunk's crawled PDF with the passage highlighted (PyMuPDF annotations) |
 | GET    | `/api/docs/tool-image`            | Yes  | Image an agent tool call looked at (`tool`=view_map_area/view_pdf_page, `input`=the call's JSON arguments), re-rendered for the inspector |
 | GET    | `/api/benchmark/sets`, `/cases`, `/case`, `/image/{id}` | Yes | Benchmark case sets, cases, one case + its past results (from `data/agentic/bench-*.json`), plankarta crop |
 | POST   | `/api/benchmark/run`              | Yes  | Run the agent on a case now (chat settings) and grade it; background job (spends credits) |
 | GET    | `/api/benchmark/run/{job_id}`     | Yes  | Progress (tool calls) and result of that job (polled: a run outlasts the frontend proxy timeout) |
-| GET    | `/api/pipeline`                   | Yes  | Measurements of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency), read from the files the steps write; cached until one changes |
+| GET    | `/api/pipeline`                   | Yes  | Measurements of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency), read from the files the steps write; cached until one changes. Without a corpus (no `check.json`): the national snapshot `data/agentic/pipeline-national.json` with `snapshot: {built}` |
 | GET    | `/api/place/profile?lat=&lon=`    | Yes  | Place profile of a pinned point: property (live), plans, zones, plans in progress, inside/outside detaljplan (no LLM) |
 | GET    | `/api/place/coverage`             | Yes  | Every kommun with a snapshot, pilot or plan-layer (code, name, bbox, fetch date), for the map's first view |
 | GET    | `/api/place/search?q=`            | Yes  | Address / place search for the map (street addresses from the pilot kommun's address register, else Nominatim: Sweden only, 1 request/s, pilot kommuner first; cached); 503 when Nominatim is down |
@@ -778,6 +830,9 @@ EMBEDDING_RUNTIME=auto                 # local (st) models: torch fp16 on a CUDA
                                        # (`onnx_file` in localrag/models.toml) on the CPU via onnxruntime | torch | onnx
 RETRIEVAL_BACKEND=pgvector             # or "local" (localrag/service.py) + LOCAL_RAG_MODEL / _MODE / _DENSE_QUERY / _RERANKER
 RAG_TOP_K=10                           # chunks per pool (laws / documents) given to the answer model
+PDF_CACHE_DIR=data/cache/pdf           # crawled PDFs downloaded from their URL when the crawl folder lacks them
+CORPUS_DATABASE_URL=                   # the corpus database (Neon demo branch): `python -m localrag.pg_store` loads it,
+                                       # LOCAL_RAG_STORE=neon serves it (LOCAL_RAG_MODEL=or-bge-m3)
 CHAT_MODE=rag                          # or "agent" (agentic/service.py) + AGENT_MODEL / AGENT_EFFORT (final answer,
                                        # medium) / AGENT_EXPLORE_EFFORT (tool turns, medium) / AGENT_MAX_STEPS (10)
 HF_HUB_DISABLE_XET=1                   # Hugging Face downloads can hang on Windows without it
@@ -819,8 +874,10 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/routers/db_browser.py` -- Read-only chunk browser + semantic search (never exposes user/auth tables or
   embeddings). Local disk store (1.9M rows): kommun / type counts from `localrag.store.summary` (cached in
   `store/<model>/summary.json`, written by `localrag.store`; the GROUP BY takes ~30 s), filters on `kommun_code`
-  (indexed; the kommun name and a sort over every row took 17-30 s per page)
-- `backend/routers/docs.py` -- Open a cited chunk in its original document (PDF page + highlight, or URL text fragment)
+  (indexed; the kommun name and a sort over every row took 17-30 s per page). `/api/db/sources` (`local_source`,
+  `database_label`) names the real source of each store for the view's buttons
+- `backend/routers/docs.py` -- Open a cited chunk in its original document (PDF page + highlight, or URL text fragment;
+  the PDF comes from `corpus.pdf_files`: crawl folder, else downloaded from its URL into the cache)
 - `backend/place/` -- place lookups for the map pin: `sources.py` (layers, attribute mapping, pilot kommuner),
   `fetch.py` (snapshot CLI), `registry.py` (`PlanSource`, the plan source registry `plan_sources.json` built from the
   survey), `plan_layers.py` (plan-layer snapshots for the registry kommuner, link normalisation, the coverage
@@ -861,11 +918,14 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/benchmark/` -- Retrieval-only embedding benchmark: `export_corpus.py` (freeze DB chunks to `data/corpus.jsonl`), `models.toml` (models to compare), `questions.jsonl` (hand-written questions, en+sv, labelled by verbatim excerpts since law chapter/section metadata is unreliable), `generate_questions.py` (synthetic questions via the chat LLM), `run.py` (hit@k / recall@5 / MRR, per-table search like the chat; caches corpus vectors in `cache/`, writes `results/`). Runs spend API credits
 - `backend/corpus/` -- `municipalities.py`, `laws.py`, `crawl.py`, `ocr.py`, `extract.py`, `chunk.py` (see "Offline Corpus"),
   `caselaw.py` (MÖD rulings from lagen.nu, for the case benchmark; not part of the searchable corpus),
-  `plans.py` (detaljplan registry + planbestämmelser), `check.py` (checks after a rebuild)
+  `plans.py` (detaljplan registry + planbestämmelser), `check.py` (checks after a rebuild), `snapshot.py` (corpus
+  snapshot of a few kommuner, e.g. `data/demo`), `pdf_files.py` (where the serving code reads crawled PDFs / OCR
+  outputs: crawl folder, else a cache filled from the PDF's original URL)
 - `backend/localrag/` -- `analyzer.py` (Swedish BM25 tokens), `gazetteer.py`, `index.py` (VectorStore), `retriever.py`
   (`LocalRetriever`), `service.py` (chat integration), `eval.py` + `questions.jsonl` (use-case questions with
   verbatim-excerpt / law-section labels), `rewrite_queries.py` (Swedish queries from the chat LLM), `models.toml`
-  (local + OpenRouter embedding models). Do not `pip install` packages that depend on torch without the CUDA
+  (local + OpenRouter embedding models), `pg_store.py` (the corpus in Postgres: loader + `PgStore` /
+  `PgRetriever`, served with `LOCAL_RAG_STORE=neon`). Do not `pip install` packages that depend on torch without the CUDA
   index (easyocr pulled in a CPU torch once)
 - `backend/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat
   integration, `CitationNumberer`), `run.py` (CLI), `bench.py` + `cases.jsonl` (case benchmark),
@@ -891,6 +951,16 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
 - `backend/tests/test_health.py` -- tool failure counts per tool
 - `backend/tests/test_coverage.py` -- why a plan PDF of the coverage reference is missing (crawl manifest causes)
 - `backend/tests/test_replay.py` -- stored agent tool calls replayed on the real store (skipped without it, ~2 min)
+- `backend/tests/unit/corpus/test_pdf_files.py` -- PDFs fetched from their URL into the cache when the crawl folder
+  lacks them (fake HTTP transport): once, refused when not a PDF / too large / HTTP error; OCR from the corpus database
+- `backend/tests/unit/localrag/test_pg_store.py` -- SQLite SQL / Python regex for Postgres, model compatibility, file sync
+  (never over foreign files), place detection in one query (fake store), `_DiskCorpus` SQL on a three-chunk SQLite
+- `backend/tests/unit/routers/test_db_browser.py` -- the Database view's source labels (corpus database / disk store /
+  memory / unavailable; endpoint without the password); `frontend/tests/unit/components/DatabaseBrowser.test.tsx` --
+  the buttons take the backend's source names, generic labels when the route fails
+- `backend/tests/unit/routers/test_pipeline.py` -- the national snapshot without a corpus, live measures with one;
+  `frontend/tests/unit/components/PipelineBrowser.test.tsx` (snapshot banner), `SourceViewer.test.tsx` (the
+  "Downloading the PDF from <host>" status, none for a local PDF); `tests/test_tools.py` also checks `kommun_scope`
 - Gotcha when editing through a shell heredoc: `\\b` in a Python string can arrive as a backspace character (it broke a
   chunker regex silently); write patch scripts to a file, and scan for control characters after shell edits
 
@@ -918,8 +988,10 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   per step / tool call (tool, its query or arguments, result summary, duration), the last 3 ("Show all" expands), shown
   only until the answer text starts (rebuilt from the saved trace for an answer still generating, `stepsFromTrace`); once finished, "Inspect pipeline" and a clickable "Sources" list (retrieved chunks per source, from `pipeline` events) below the answer
 - `frontend/components/PipelineTrace.tsx` -- "Inspect pipeline" panel rendering `pipeline` events (live or from saved `trace`): a totals line (time, tokens, cost) then one collapsible step per stage (Understand, Retrieve, Agents, Verdict, Answer) with a one-line summary, and the stage's API calls nested inside (assigned by call kind/name in `stepOf`). An expanded `view_map_area` / `view_pdf_page` tool call shows the image the agent looked at: traces store no images (tool records carry `tool` + `image`), `ToolImage` re-renders them from the call's arguments via `/api/docs/tool-image` (older traces: tool taken from the call name)
-- `frontend/components/DatabaseBrowser.tsx` -- Database view with a Neon / Local corpus toggle: stats, chunk browsing, search
-  playground. Local kommun documents: kommun select (documents and scanned PDFs per kommun), document-type chips,
+- `frontend/components/DatabaseBrowser.tsx` -- Database view with a store toggle, the buttons named by `/api/db/sources`
+  ("pgvector tables" = law_chunks / document_chunks of DATABASE_URL; "Agent corpus · disk / · Neon / · memory" = what
+  the agent searches; the source detail in the header and as tooltip, generic labels when the route fails): stats,
+  chunk browsing, search playground (store keys `neon` / `local` in the API). Local kommun documents: kommun select (documents and scanned PDFs per kommun), document-type chips,
   "Only scanned PDFs" (OCR) checkbox, then the kommun's documents by type (`DocumentList`, click one for its chunks;
   scans carry an OCR badge); without a kommun, chunks in store order. Every local
   chunk (browse and search) links to its original (`SourceLinks`): crawled PDF opened at the passage in the
@@ -929,7 +1001,10 @@ API_PROXY_TARGET=http://localhost:8000   # or NEXT_PUBLIC_API_URL; used by the n
   (`localrag.service._row`). The 7 "legacy:" PoC documents have no original
 - `frontend/lib/corpus.ts` -- document type names / hints and number formatting shared by the Database and Pipeline views
 - `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)
-- `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage
+- `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage.
+  No open button for the 7 `legacy:` documents of the early prototype (963 Vallentuna chunks, in every corpus, added
+  by hand without file or URL, no crawled twin: kept for their content), a note instead; only the clicked button
+  waits (the latest click wins)
 - `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
 - `frontend/components/place/` -- `PlacePanel` (map panel beside the chat, opened by the pin button in the message
   bar: full-height map, the card as a glass sheet with a grabber, Apple Maps style; system font; controls styled in

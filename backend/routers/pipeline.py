@@ -526,12 +526,40 @@ def _signature() -> tuple:
     return tuple(sorted((str(p), p.stat().st_mtime) for p in paths if p.exists())) + (ocr_outputs,)
 
 
+# The page as built on the machine that holds the national corpus, versioned: an install without the corpus (the
+# Neon demo, LOCAL_RAG_STORE=neon) shows it, so the other developers see what building the corpus took.
+# Refresh it after a rebuild: `python -m routers.pipeline --snapshot` (~2.5 min: the PDF filter's decisions)
+SNAPSHOT_PATH = AGENTIC_DIR / "pipeline-national.json"
+
+
+def build() -> dict:
+    check = _load(DATA_DIR / "check.json") or {}
+    return {"corpus": DATA_DIR.parent.name, "steps": [
+        crawl_step(check), filter_step(), ocr_step(check), documents_step(check), plans_step(check), tools_step(),
+    ]}
+
+
 @router.get("/pipeline")
 def pipeline(_: models.User = Depends(get_current_user)) -> dict:
+    if not (DATA_DIR / "check.json").exists() and SNAPSHOT_PATH.exists():
+        return _load(SNAPSHOT_PATH)  # carries "snapshot": {built, ...}, shown as such by the view
     signature = _signature()
     if _cache.get("signature") != signature:
-        check = _load(DATA_DIR / "check.json") or {}
-        _cache.update(signature=signature, result={"corpus": DATA_DIR.parent.name, "steps": [
-            crawl_step(check), filter_step(), ocr_step(check), documents_step(check), plans_step(check), tools_step(),
-        ]})
+        _cache.update(signature=signature, result=build())
     return _cache["result"]
+
+
+def write_snapshot() -> dict:
+    result = build()
+    result["snapshot"] = {"built": datetime.now().strftime("%Y-%m-%d"), "corpus": result["corpus"]}
+    SNAPSHOT_PATH.write_text(json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8")
+    return result
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Pipeline view")
+    parser.add_argument("--snapshot", action="store_true", help=f"write the page of this corpus to {SNAPSHOT_PATH}")
+    if parser.parse_args().snapshot:
+        print(f"{SNAPSHOT_PATH}: snapshot of corpus {write_snapshot()['corpus']!r}")

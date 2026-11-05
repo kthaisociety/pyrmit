@@ -130,6 +130,19 @@ def test_grep_documents_output(memory_tools):
     assert len(result.chunk_ids) == 3
 
 
+def test_agent_told_which_kommuner_the_corpus_holds(memory_tools, monkeypatch):
+    """On a snapshot (the Neon demo) the agent must not claim all 290 kommuner, which the gazetteer still knows."""
+    from agentic import agent
+
+    monkeypatch.setattr(agent, "kommun_label", lambda code: {"0115": "Vallentuna (0115)"}.get(code, code))
+    assert memory_tools.corpus_kommuner() == ["0115"]
+    scope = agent.kommun_scope(memory_tools)
+    assert scope.startswith("- The websites of 1 kommuner only: Vallentuna (0115)") and "no document" in scope
+    national = type("Tools", (), {"corpus_kommuner": lambda self: [f"{n:04d}" for n in range(289)]})()
+    assert agent.kommun_scope(national) == agent.NATIONAL_SCOPE  # the national corpus keeps the prompt as it was
+    assert agent.kommun_scope(None) == agent.NATIONAL_SCOPE
+
+
 def test_list_documents_pages(memory_tools):
     first = memory_tools.list_documents("0115", limit=2)
     assert "showing 1-2; next page: offset=2" in first.text
@@ -142,7 +155,9 @@ def test_view_map_area_on_a_scan(memory_tools, tmp_path, monkeypatch):
 
     import pymupdf
 
-    monkeypatch.setattr(T, "WEB_DIR", tmp_path)
+    from corpus import pdf_files
+
+    monkeypatch.setattr(pdf_files, "WEB_DIR", tmp_path)
     (tmp_path / "0115" / "pdf").mkdir(parents=True)
     (tmp_path / "0115" / "ocr").mkdir()
     pdf = pymupdf.open()

@@ -344,6 +344,8 @@ function FlowStrip({ steps, onSelect }: { steps: Step[]; onSelect: (id: string) 
 export default function PipelineBrowser({ onBack }: { onBack: () => void }) {
   const [steps, setSteps] = useState<Step[] | null>(null);
   const [corpus, setCorpus] = useState('');
+  // Set when this install has no corpus (corpus on Neon): the page is the national corpus's, as measured where it is built
+  const [snapshot, setSnapshot] = useState<{ built: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [glossary, setGlossary] = useState(false);
@@ -354,6 +356,7 @@ export default function PipelineBrowser({ onBack }: { onBack: () => void }) {
       .then((data) => {
         setSteps(data.steps);
         setCorpus(data.corpus);
+        setSnapshot(data.snapshot ?? null);
       })
       .catch((e) => setError(String(e)));
   useEffect(() => {
@@ -383,7 +386,11 @@ export default function PipelineBrowser({ onBack }: { onBack: () => void }) {
           <ArrowLeft size={18} />
         </button>
         <h1 className="text-lg font-semibold">Pipeline</h1>
-        {corpus && <span className="text-xs text-zinc-500">corpus: {corpus}</span>}
+        {corpus && (
+          <span className="text-xs text-zinc-500">
+            {snapshot ? `national corpus, measured on ${snapshot.built}` : `corpus: ${corpus}`}
+          </span>
+        )}
         <button onClick={reload} className="ml-auto rounded-lg p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800" title="Reload">
           <RefreshCw size={16} />
         </button>
@@ -401,6 +408,13 @@ export default function PipelineBrowser({ onBack }: { onBack: () => void }) {
             </p>
           </div>
 
+          {snapshot && (
+            <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+              These measurements describe the national corpus (all kommuner), built and measured on the machine that
+              holds it on {snapshot.built}. This installation searches an extract of it hosted on Neon (a few kommuner
+              and the laws: see the Database view), so the numbers here are not those of the corpus you query.
+            </p>
+          )}
           {error && <p className="text-sm text-red-600">{error}</p>}
           {!steps && !error && <Loader2 size={18} className="mx-auto mt-10 animate-spin text-zinc-400" />}
           {steps && (

@@ -187,6 +187,11 @@ class DiskStore:
     def query(self, sql: str, params: tuple = ()) -> list:
         return self.connection.execute(sql, params).fetchall()
 
+    @staticmethod
+    def regexp(expression: str, pattern: str) -> tuple[str, str]:
+        """SQL condition "expression matches pattern" (case-insensitive, Python syntax) and its parameter."""
+        return f"{expression} REGEXP ?", pattern
+
     def summary(self) -> list[dict]:
         return summary(self.dir)
 
@@ -332,11 +337,8 @@ class DiskRetriever:
         results: dict = {}
         for pool in ("law", "local"):
             filters = (doc_types, title_contains) if pool == "local" else (None, None)
-            rowids = self.store.pool_rowids(pool, kommuner or None, *filters)
-            keep = self.store.local_mask(*filters) if pool == "local" and rowids is None else None
-            rankings = [self.store.dense_top(v, rowids, candidates, keep) for v in vectors]
-            if mode in ("bm25", "hybrid"):
-                rankings.append(self.store.bm25_top(query_sv or query, pool, kommuner or None, candidates, *filters))
+            bm25_query = (query_sv or query) if mode in ("bm25", "hybrid") else None
+            rankings = self._rankings(pool, vectors, bm25_query, kommuner or None, filters, candidates)
             fused: dict[int, float] = {}
             for ranking in rankings:
                 for rank, rowid in enumerate(ranking):
@@ -346,6 +348,16 @@ class DiskRetriever:
             results[pool] = [Hit(chunks[rowid], fused[rowid], rank) for rank, rowid in enumerate(order, start=1)]
         results["kommuner"] = kommuner or []
         return results
+
+    def _rankings(self, pool: str, vectors: list[np.ndarray], bm25_query: str | None, kommuner: list[str] | None,
+                  filters: tuple, candidates: int) -> list[list[int]]:
+        """Row ids of the pool by each query vector, then by BM25 when `bm25_query` is given (fused by search)."""
+        rowids = self.store.pool_rowids(pool, kommuner, *filters)
+        keep = self.store.local_mask(*filters) if pool == "local" and rowids is None else None
+        rankings = [self.store.dense_top(v, rowids, candidates, keep) for v in vectors]
+        if bm25_query is not None:
+            rankings.append(self.store.bm25_top(bm25_query, pool, kommuner, candidates, *filters))
+        return rankings
 
 
 def main() -> None:

@@ -31,12 +31,23 @@ interface Location {
   view?: { zoom: number; left: number; top: number } | null; // zoom on the highlighted passage
   url?: string;
   source_url?: string | null;
+  needs_download?: boolean; // asked with download=false: the PDF must first come from the kommun's site
+  source_host?: string | null;
 }
 
-async function locateChunk(chunkId: string): Promise<Location> {
-  const response = await authFetch(`/api/docs/locate?chunk_id=${encodeURIComponent(chunkId)}`);
+async function locateChunk(chunkId: string, download = true): Promise<Location> {
+  const query = new URLSearchParams({ chunk_id: chunkId, ...(download ? {} : { download: 'false' }) });
+  const response = await authFetch(`/api/docs/locate?${query}`);
   if (!response.ok) throw new Error(`locate failed (${response.status})`);
   return response.json();
+}
+
+// A crawled PDF, or a web page / statute with its address. The 7 "legacy:" documents of the early prototype (963
+// Vallentuna chunks, in every corpus) were added by hand without their file or URL: nothing to open
+// open (citations saved by older versions carry no doc_id: the backend decides)
+function hasOriginal(chunk: CitedChunk): boolean {
+  if (chunk.doc_id === undefined) return true;
+  return !chunk.doc_id.startsWith('legacy:') && (chunk.doc_id.startsWith('pdf:') || Boolean(chunk.url));
 }
 
 // A web page or statute in a new tab, scrolled to the chunk's wording (Chrome text fragment)
@@ -56,6 +67,7 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
 }) {
   const [pdf, setPdf] = useState<{ blobUrl: string; url: string; page: number; note: string } | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null); // what the open click is waiting for
   const [error, setError] = useState<string | null>(null);
 
   // The latest click: a slower earlier request (or one for the previous citation) must not replace its result
@@ -79,11 +91,20 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
   const open = async (chunk: CitedChunk) => {
     const mine = ++request.current;
     setLoading(chunk.chunk_id);
+    setStatus(null);
     setError(null);
     try {
-      const location = await locateChunk(chunk.chunk_id);
+      // First ask without downloading: an install without the crawled PDFs (corpus on Neon) fetches the PDF from
+      // the kommun's site, which can take seconds, so the viewer says so before the download starts
+      let location = await locateChunk(chunk.chunk_id, false);
       if (mine !== request.current) return;
+      if (location.needs_download) {
+        setStatus(`Downloading the PDF from ${location.source_host ?? "the kommun's website"} (first time only, then kept)…`);
+        location = await locateChunk(chunk.chunk_id);
+        if (mine !== request.current) return;
+      }
       if (location.type === 'pdf' && location.pdf_url) {
+        setStatus('Opening the PDF…');
         // Fetched with the auth header, shown from a blob URL: the browser's PDF viewer opens it at #page
         const file = await authFetch(location.pdf_url);
         if (!file.ok) throw new Error(`PDF failed (${file.status})`);
@@ -110,13 +131,15 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
     } catch (exc) {
       if (mine === request.current) setError(exc instanceof Error ? exc.message : String(exc));
     } finally {
-      if (mine === request.current) setLoading(null);
+      if (mine === request.current) {
+        setLoading(null);
+        setStatus(null);
+      }
     }
   };
 
   useEffect(() => {
     if (autoOpen && citation.chunks.length > 0) open(citation.chunks[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [citation, autoOpen]);
 
   return (
@@ -142,15 +165,22 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
             {citation.chunks.map((chunk) => (
               <div key={chunk.chunk_id} className="space-y-1.5">
                 <ChunkCard source={chunk.source} chunkIndex={chunk.chunk_index} content={chunk.content} defaultOpen={!pdf} />
-                <button
-                  onClick={() => open(chunk)}
-                  disabled={loading !== null}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1 text-xs text-zinc-600 hover:border-zinc-400 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
-                >
-                  {loading === chunk.chunk_id ? <Loader2 size={12} className="animate-spin" /> :
-                    chunk.doc_id?.startsWith('pdf:') ? <FileText size={12} /> : <ExternalLink size={12} />}
-                  {chunk.doc_id?.startsWith('pdf:') ? 'Open the PDF at this passage' : 'Open the original at this passage'}
-                </button>
+                {hasOriginal(chunk) ? (
+                  // Only this button waits: another chunk can still be opened (the latest click wins)
+                  <button
+                    onClick={() => open(chunk)}
+                    disabled={loading === chunk.chunk_id}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-2.5 py-1 text-xs text-zinc-600 hover:border-zinc-400 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
+                  >
+                    {loading === chunk.chunk_id ? <Loader2 size={12} className="animate-spin" /> :
+                      chunk.doc_id?.startsWith('pdf:') ? <FileText size={12} /> : <ExternalLink size={12} />}
+                    {chunk.doc_id?.startsWith('pdf:') ? 'Open the PDF at this passage' : 'Open the original at this passage'}
+                  </button>
+                ) : (
+                  <p className="text-xs italic text-zinc-500 dark:text-zinc-400">
+                    No original kept: this document was added by hand before the crawl, without its file or web address.
+                  </p>
+                )}
                 {chunk.url && chunk.doc_id?.startsWith('pdf:') && (
                   <a
                     href={chunk.url}
@@ -161,6 +191,9 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
                   >
                     <ExternalLink size={12} /> On the kommun&apos;s website
                   </a>
+                )}
+                {loading === chunk.chunk_id && status && (
+                  <p role="status" className="text-xs text-zinc-500 dark:text-zinc-400">{status}</p>
                 )}
               </div>
             ))}

@@ -13,7 +13,8 @@ import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-from corpus.common import MUNICIPALITIES_PATH, WEB_DIR
+from corpus.common import MUNICIPALITIES_PATH
+from corpus.pdf_files import ocr_path, pdf_path, split_doc_id
 from corpus.plans import PLANS_PATH
 from localrag.gazetteer import detect_kommuner, kommun_label
 from localrag.index import chunk_text
@@ -144,6 +145,9 @@ class _MemoryCorpus:
                 counts[doc["doc_type"]] += 1
         return dict(counts)
 
+    def kommun_codes(self) -> list[str]:
+        return sorted({doc["kommun_code"] for doc in self.docs.values() if doc.get("kommun_code")})
+
     def grep(self, regex: re.Pattern, scope: str, codes: set[str], limit: int, doc_types: list[str] | None = None,
              title_contains: str | None = None) -> tuple[int, list[tuple[dict, re.Match]]]:
         total, hits = 0, []
@@ -178,7 +182,7 @@ LOCAL_KINDS = "('page', 'pdf')"  # corpus/extract.py: web pages and PDFs
 
 
 class _DiskCorpus:
-    """Chunks in SQLite (DiskStore): nothing is loaded up front."""
+    """Chunks in SQLite (DiskStore) or Postgres (localrag.pg_store.PgStore, same SQL): nothing is loaded up front."""
 
     GREP_SCAN_LIMIT = 2000
 
@@ -199,9 +203,10 @@ class _DiskCorpus:
         return dict(rows[0]) if rows else None
 
     def doc_ids_ending(self, suffix: str, limit: int = 2) -> list[str]:
-        # No index on the suffix (~0.3 s): only a fallback for an id read() could not resolve
-        return [r[0] for r in self.store.query("SELECT DISTINCT doc_id FROM chunks WHERE doc_id GLOB ? LIMIT ?",
-                                               (f"*:{suffix}", limit))]
+        # No index on the suffix (~0.3 s): only a fallback for an id read() could not resolve. Hex suffixes: no
+        # LIKE wildcard in them
+        return [r[0] for r in self.store.query("SELECT DISTINCT doc_id FROM chunks WHERE doc_id LIKE ? LIMIT ?",
+                                               (f"%:{suffix}", limit))]
 
     def doc_chunk_ids(self, doc_id: str) -> list[str]:
         return [r[0] for r in self.store.query(
@@ -220,14 +225,20 @@ class _DiskCorpus:
 
     def documents(self, codes: set[str], doc_types: list[str] | None, title_contains: str | None) -> list[dict]:
         filters, params = self._filters(doc_types, title_contains)
-        sql = (f"SELECT doc_id, title, kind, doc_type, kommun, kommun_code, url, COUNT(*) AS chunks FROM chunks "
+        # MIN() of the document's columns (the same on all its chunks): Postgres wants every column aggregated
+        sql = (f"SELECT doc_id, MIN(title) AS title, MIN(kind) AS kind, MIN(doc_type) AS doc_type, MIN(kommun) AS kommun, "
+               f"MIN(kommun_code) AS kommun_code, MIN(url) AS url, COUNT(*) AS chunks FROM chunks "
                f"WHERE kind IN {LOCAL_KINDS} AND kommun_code IN ({','.join('?' * len(codes))}){filters}")
-        return [dict(r) for r in self.store.query(sql + " GROUP BY doc_id ORDER BY title", (*codes, *params))]
+        return [dict(r) for r in self.store.query(sql + " GROUP BY doc_id ORDER BY MIN(title)", (*codes, *params))]
 
     def doc_type_counts(self, code: str) -> dict[str, int]:
         return {r[0]: r[1] for r in self.store.query(
             f"SELECT doc_type, COUNT(DISTINCT doc_id) FROM chunks WHERE kind IN {LOCAL_KINDS} AND kommun_code = ? "
             "GROUP BY doc_type", (code,))}
+
+    def kommun_codes(self) -> list[str]:
+        # From the store's summary (cached: summary.json next to the disk store, in memory for the corpus database)
+        return sorted({row["kommun_code"] for row in self.store.summary() if row["kommun_code"]})
 
     def grep(self, regex: re.Pattern, scope: str, codes: set[str], limit: int, doc_types: list[str] | None = None,
              title_contains: str | None = None) -> tuple[int, list[tuple[dict, re.Match]]]:
@@ -242,8 +253,9 @@ class _DiskCorpus:
             scope = "kommun"  # a document filter leaves the statutes out
         where = [{"law": "kind = 'law'", "kommun": local}.get(scope, f"(kind = 'law' OR ({local}))")]
         params: list = (list(codes) + filter_params) if scope != "law" else []
-        where.append("(header || ' ' || text) REGEXP ?")
-        params.append(regex.pattern)
+        condition, pattern = self.store.regexp("(header || ' ' || text)", regex.pattern)
+        where.append(condition)
+        params.append(pattern)
         # The count is capped: an unfiltered regex over the whole corpus scans every row once
         rows = self.store.query(f"SELECT * FROM chunks WHERE {' AND '.join(where)} LIMIT {self.GREP_SCAN_LIMIT}",
                                 tuple(params))
@@ -270,6 +282,14 @@ class CorpusTools:
         self.corpus = _DiskCorpus(retriever.store) if hasattr(retriever, "store") else _MemoryCorpus(retriever.chunks)
         self.municipalities = json.loads(MUNICIPALITIES_PATH.read_text(encoding="utf-8"))
         self._plan_registry: dict[str, list[dict]] | None = None
+        self._kommuner: list[str] | None = None
+
+    def corpus_kommuner(self) -> list[str]:
+        """Codes of the kommuner the corpus has documents of: (almost) all 290 in the national corpus, a few in a
+        snapshot such as the Neon demo (the gazetteer still knows all 290)."""
+        if getattr(self, "_kommuner", None) is None:
+            self._kommuner = self.corpus.kommun_codes()
+        return self._kommuner
 
     def get_chunk(self, chunk_id: str) -> dict | None:
         """A chunk by id; a truncated id (8-15 hex characters, the model sometimes drops some) is resolved
@@ -329,8 +349,10 @@ class CorpusTools:
         for code in codes:
             kommun = next((m for m in self.municipalities if m["code"] == code), None)
             by_type = self.corpus.doc_type_counts(code)
+            held = (f"{sum(by_type.values())} documents in the corpus: {by_type}" if by_type else
+                    "no documents in this corpus (only the statutes apply to it here)")
             lines.append(f"{kommun_label(code)} – {kommun['county'] if kommun else ''}, website "
-                         f"{kommun['website'] if kommun else '?'}; {sum(by_type.values())} documents in the corpus: {by_type}")
+                         f"{kommun['website'] if kommun else '?'}; {held}")
         return ToolResult("\n".join(lines))
 
     @staticmethod
@@ -555,15 +577,20 @@ class CorpusTools:
                     return {r["code"]: (r["text"], r.get("chunk_id")) for r in plan["provisions"] if r.get("code")}
         return {}
 
+    def _pdf_file(self, doc_id: str):
+        """The PDF's local file; downloaded from its original URL when this install has no crawl folder."""
+        doc = self.corpus.doc(doc_id)
+        return pdf_path(doc_id, doc.get("url") if doc else None)
+
     @staticmethod
-    def _ocr_words(code: str, pdf_id: str, page_index: int) -> list[tuple] | None:
+    def _ocr_words(doc_id: str, page_index: int) -> list[tuple] | None:
         """Words corpus.ocr read on a scanned page, as (Rect, text) in unrotated PDF points like get_text("words");
         None when the PDF has no OCR output with word boxes."""
         import pymupdf
 
-        path = WEB_DIR / code / "ocr" / f"{pdf_id}.json"
+        path = ocr_path(doc_id)
         try:
-            words = json.loads(path.read_text(encoding="utf-8")).get("words")
+            words = json.loads(path.read_text(encoding="utf-8")).get("words") if path else None
         except (OSError, ValueError):
             return None
         if not words:
@@ -590,12 +617,12 @@ class CorpusTools:
         """Zoom on a plankarta around a label (property designation such as '5:125', a street, a code), and list
         the codes printed in that area with their meaning: which zone rules apply to a given property. Scanned
         plankartor: the label is looked up in the words corpus.ocr read (with their positions)."""
-        match = re.fullmatch(r"pdf:(\d{4}):(\w+)", self._doc_id(doc_id) or "")
-        if not match:
+        stored = self._doc_id(doc_id)
+        if split_doc_id(stored) is None:
             return _failed("bad_args", "Only crawled PDFs (doc_id 'pdf:<code>:<id>') can be viewed.")
-        path = WEB_DIR / match.group(1) / "pdf" / f"{match.group(2)}.pdf"
-        if not path.exists():
-            return _failed("no_data", f"PDF file missing for {doc_id}.")
+        path = self._pdf_file(stored)
+        if path is None:
+            return _failed("no_data", f"PDF file missing for {doc_id} (not downloadable from its URL).")
         import pymupdf
 
         pdf = pymupdf.open(path)
@@ -606,7 +633,7 @@ class CorpusTools:
         hits = target.search_for(str(around).strip())
         ocr = None
         if not hits and not target.get_text("text").strip():  # a scan: no text layer
-            ocr = self._ocr_words(match.group(1), match.group(2), page_index)
+            ocr = self._ocr_words(stored, page_index)
             if ocr is None:
                 return _failed("no_data", f"Page {page_index + 1} of {doc_id} is a scan not read by the OCR yet: look "
                                           "at it with view_pdf_page.")
@@ -659,12 +686,12 @@ class CorpusTools:
 
     def view_pdf_page(self, doc_id: str, page: int = 1) -> ToolResult:
         """Render a PDF page as an image (plankarta maps, tables, scanned pages)."""
-        match = re.fullmatch(r"pdf:(\d{4}):(\w+)", self._doc_id(doc_id) or "")
-        if not match:
+        stored = self._doc_id(doc_id)
+        if split_doc_id(stored) is None:
             return _failed("bad_args", "Only crawled PDFs (doc_id 'pdf:<code>:<id>') can be viewed.")
-        path = WEB_DIR / match.group(1) / "pdf" / f"{match.group(2)}.pdf"
-        if not path.exists():
-            return _failed("no_data", f"PDF file missing for {doc_id}.")
+        path = self._pdf_file(stored)
+        if path is None:
+            return _failed("no_data", f"PDF file missing for {doc_id} (not downloadable from its URL).")
         import pymupdf
 
         pdf = pymupdf.open(path)

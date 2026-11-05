@@ -22,6 +22,48 @@ Architecture, data flow and every module are described in [`CLAUDE.md`](CLAUDE.m
 
 ---
 
+## Try it without the data (corpus hosted on Neon)
+
+The Neon `demo` branch holds a corpus of three kommuner and the statutes: Uppsala (with the map: plan layers, property lookup), Vallentuna, Stockholm (few plans) and the 15 laws. The app queries it directly and embeds the questions through OpenRouter: no GPU, no model and no corpus to download. Only questions about these three kommuner find their documents.
+
+Requirements: Python 3.13 + [uv](https://docs.astral.sh/uv/), [Bun](https://bun.sh/), and the `.env.demo` a maintainer sends you (database URLs, OpenRouter key), saved as `backend/.env`. Never commit it: the repository is public.
+
+```bash
+git clone https://github.com/kthaisociety/pyrmit.git && cd pyrmit/backend
+uv venv --python 3.13
+uv pip install -r requirements.txt bm25s PyStemmer pymupdf trafilatura "httpx[http2]" truststore lxml
+cd ../frontend && bun install
+```
+
+`backend/.env`:
+
+```properties
+CHAT_MODE=agent
+RETRIEVAL_BACKEND=local
+LOCAL_RAG_STORE=neon
+LOCAL_RAG_MODEL=or-bge-m3              # questions embedded through OpenRouter, same vectors as the stored ones
+LLM_PROVIDER=openrouter
+OPENROUTER_KEY=...                     # agent model + query embeddings, about $0.01 per answer
+DATABASE_URL=postgresql://...          # Neon demo branch: users, chats and the corpus
+CORPUS_DATABASE_URL=postgresql://...   # the same URL
+JWT_SECRET_KEY=...                     # any long random string
+```
+
+Run the backend and the frontend as in [Run](#run) below, open <http://localhost:3000> and sign up. At startup the backend writes the few files it reads from disk (gazetteer, plan registry, Uppsala's map layers, about 25 MB) into `backend/data/`; a cited PDF is downloaded from the kommun's site the first time it is opened, then kept in `backend/data/cache/pdf/`.
+
+### The PDFs, and keeping the corpus fresh
+
+The database holds the text of every document, so searching and reading never depend on the kommun websites. The PDF files are not in it (Uppsala's alone weigh 9.5 GB), and two parts of the app need them: opening a cited passage in its PDF, and the agent's map tools, which look at a plankarta. There are two ways to serve them:
+
+| | How | How robust |
+|---|---|---|
+| **Today: from the kommun websites** | The backend downloads a PDF from its original URL the first time it is needed and keeps it in `backend/data/cache/pdf/`. Scanned plankartor also need the words the OCR read on them, which the kommun sites don't have: they come from the database. | Free and nothing to upload, but it relies on the sites. A link dies when a kommun reorganises its website; a file replaced at the same URL may no longer match the indexed text (wrong page, wrong highlight, wrong position on the map); a site can be down or slow (up to ~30 s for a 40 MB plan). The agent then keeps the text and loses only the PDF view. On 2026-10-31, 65 PDFs drawn at random all answered with the crawled file. |
+| **Next: our own copies in object storage** | The crawl already downloads every PDF: upload them to a bucket, Cloudflare R2 (about $3.5 a month for the 244 GB of the national crawl, no egress fees) or Neon Object Storage (5 GB free per project, enough for the demo's 2.1 GB of plankartor), and read them from there, with the kommun site as a last resort. | Robust: the file served is the one that was indexed, whatever the websites do. |
+
+Either way the corpus ages: kommuner adopt new plans and revise their översiktsplan. Re-run `python -m corpus.crawl --revisit` from time to time (it re-reads only the pages that list PDFs), then rebuild the snapshot and reload the database (`CLAUDE.md`, "Hosted demo").
+
+---
+
 ## Quick start (with the shared data)
 
 ### Requirements
