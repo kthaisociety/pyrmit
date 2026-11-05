@@ -17,7 +17,9 @@ const located = { type: 'pdf', page: 3, found: true, highlighted: true, pdf_url:
 
 beforeEach(() => {
   vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:pdf', revokeObjectURL: () => {} }));
-  server.use(http.get('*/api/docs/pdf/c1', () => new HttpResponse(new Blob(['%PDF-1.7']), { status: 200 })));
+  // A string body: jsdom's Blob has no stream() on Node 22, which made MSW fail the request in CI
+  server.use(http.get('*/api/docs/pdf/c1', () =>
+    new HttpResponse('%PDF-1.7', { status: 200, headers: { 'Content-Type': 'application/pdf' } })));
 });
 
 describe('SourceViewer', () => {
