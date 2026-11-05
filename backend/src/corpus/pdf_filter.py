@@ -180,9 +180,8 @@ def model_text(row: dict) -> str:
 
 def vectors(rows: list[dict]) -> np.ndarray:
     """arctic vectors of model_text, cached by doc_id."""
-    from localrag.index import load_model_config
-
     from embeddings import Embedder
+    from localrag.index import load_model_config
 
     cache_ids, cache = FILTER_DIR / "vector_ids.json", FILTER_DIR / "vectors.npy"
     ids = json.loads(cache_ids.read_text()) if cache_ids.exists() else []

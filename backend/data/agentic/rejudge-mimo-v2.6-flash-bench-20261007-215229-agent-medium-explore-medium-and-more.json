@@ -1,0 +1,1758 @@
+[
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2025-43",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.1,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.0,
+   "point_scores": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000108374,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The verdict 'Unclear' is acceptable and all cited rules are supported by the sources, but the answer omits every reference key point: it never mentions PBL 9 kap. 35 § or the disturbance/significant-nuisance condition, does not identify landslide risk as a potential bar, does not discuss the need for further investigation due to slope/level differences or the 80 m³ scale, and does not mention that the application was remitted rather than refused."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2015-14",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.1,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.0,
+   "point_scores": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000134036,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as unclear rather than not feasible and omits all five reference key points (FBL 3 kap. 2 §, 5 kap. 8 §, 5 kap. 6 §, the plan-purpose/minor-deviation analysis), while relying on an unprovided source for its central FBL 7 kap. 2 § claim."
+  }
+ },
+ {
+  "file": "bench-20261007-215229-agent-medium-explore-medium.json",
+  "case": "norrtalje-permanent-home",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.5,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.6666666666666666,
+   "point_scores": [
+    1,
+    2,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000163142,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly classifies the project as feasible with conditions and thoroughly addresses water/sewage constraints with cited sources, but only partially covers the översiktsplan's role regarding conversion (framing it as a non-prohibition rather than active address) and vaguely touches on detaljplan building-size limits and extension permits."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2024-8",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.7,
+   "unsupported": 4,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.7,
+   "point_scores": [
+    2,
+    1,
+    2,
+    1,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000138264,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer covers the precaution, reasonableness and supervision rules well but only partly conveys that heating need matters in the balance, that smoke/odour evidence can establish a need for precautions despite heating use, and that the authority must weigh options like firing limits or supplementary heating on an insufficient record; the naming of 'Bygg- och miljönämnden' as Kävlinge's authority is not supported by the cited sources."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2025-22",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.75,
+   "unsupported": 3,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.75,
+   "point_scores": [
+    2,
+    1,
+    1,
+    2
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000140042,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as feasible with conditions and states the 3 kap. 2 § rule and the 3 kap. 1 § suitability requirement clearly, but it only hints at the interpretive principle and at the reference's actual holding on the minimum-size rule, and it attributes a benefits-vs-costs test to FBL 5 kap. 4 § that is stated neither in the reference nor in the cited source (which is 3 kap. 2 §)."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2018-19",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.25,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.125,
+   "point_scores": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000115612,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer gives an 'Unclear' verdict instead of the expected not_feasible and omits all four reference rules (MB 2 kap. 1 §, 2 kap. 6 §, 22 kap. 25 §), only partially touching on the point that leaving turbine locations open is a material deficiency."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2014-53",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.125,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.25,
+   "point_scores": [
+    0,
+    0,
+    1,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.00043056,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as unclear rather than feasible/conditional and omits the core FBL 5 kap. 5 § improvement test and 5 kap. 4 § balancing test, touching on the sea-access issue and 5 kap. 7 § only partially while all cited claims are source-supported."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2017-14",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.0,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.0,
+   "point_scores": [
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000619836,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer never engages the reference's core reasoning under PBL 9 kap. 30 § and 2 kap. 9 § — that covering the gable windows constitutes a significant nuisance that the 1929 plan did not assess and cannot be justified by the building right — instead retreating to an 'unclear/ask the municipality' stance, so all key points are missed, though its factual statements are supported by the cited sources."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2026-1",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.5,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.5,
+   "point_scores": [
+    1,
+    1,
+    2,
+    0,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000238252,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly calls for a documented, site-specific bird assessment and clearly specified protective measures, but it omits 4 § artskyddsförordningen's population-level effect test, MB 2 kap. 1–2 §§ burden of proof, the 2 kap. 7 § reasonableness/proportionality standard tied to the lake's birdlife, and the requirement that measures be documented in the notification itself, while citing sources and authorities (e.g. Länsstyrelsen Norrbotten) not grounded in the reference or given citations."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2020-7",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.375,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.375,
+   "point_scores": [
+    0,
+    1,
+    1,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.00012782,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer gives a well-sourced permit-threshold analysis but largely omits the reference's core 2 kap. 6 § townscape assessment, architecture policy and 2 kap. 9 § nuisance points, covering them only indirectly or by declaring the sources silent."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2020-7",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.5,
+   "unsupported": 3,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.5,
+   "point_scores": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.00028917,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as feasible with conditions and correctly covers the permit thresholds, plan-adaptation and sanction-fee rules, but it only touches on the 2 kap. 6 § townscape/overall-effect requirement, never mentions the architecture policy or 2 kap. 9 § nuisance assessment, and states Uppsala's fee figures (SEK 8,800/12,900, from 1 January 2026) whose cited sources are not among the provided excerpts."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2016-25",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.3,
+   "unsupported": 4,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.5,
+   "point_scores": [
+    1,
+    1,
+    1,
+    1,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000915796,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as feasible with conditions and covers ridge height, the 4.5 m boundary rule, classification uncertainty, plot/entrance facts and notification, but it states a 30 m² allowance rather than the reference's 15 m² limit, does not spell out the reference's row-house/self-contained-part criteria, omits PBF 6 kap. 5 § and the startbesked requirement, and cites a phone number/e-mail not found in the supplied excerpts."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2019-18",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "not_feasible",
+   "verdict_ok": false,
+   "points": 0.2,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "not_feasible",
+   "verdict_ok": false,
+   "points": 0.1,
+   "point_scores": [
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.000135002,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer wrongly rules the project not feasible, omitting the small-deviation rule of 9 kap. 31 b § and contradicting the reference on the expired implementation period, the 60 dB(A) guideline, and the court's acceptance of the combined deviations."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2020-28",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.3,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.3,
+   "point_scores": [
+    2,
+    1,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000154182,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as feasible with conditions and correctly cites PBL 2 kap. 5 and 9 §§ plus 4 kap. 12 §, but it hedges on whether the room-orientation/balcony/patio/ventilation requirements were themselves considered sufficient (key point 2) and omits the reference's points on the brewery's permitted activity not defeating the plan, property-rights regard under 4 kap. 36 §, and reliance on parking outside the boundary."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2024-31",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.2,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.1,
+   "point_scores": [
+    0,
+    0,
+    0,
+    0,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000135912,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer reaches an acceptable conditional verdict and its cited PBL/PBF provisions are supported by the given sources, but it omits all four substantive key points (the sign definition in 1 kap. 7 b § PBF, the indoor-sign exemption in 6 kap. 3 §, the light-installation test in 6 kap. 3 a §, and the incidental-illumination rule), addressing only vaguely that classification remains undecided."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2020-2",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": false,
+   "points": 0.7,
+   "unsupported": 3,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": false,
+   "points": 0.7,
+   "point_scores": [
+    2,
+    2,
+    1,
+    2,
+    0
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.0010183,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly covers the prohibition, the exhaustive special-ground requirement and the expiry of the 2008 approvals, but treats the road question as open rather than as failing here, omits the 25 § proportionality assessment, and asserts an unsupported ten-week processing time and a tariff-based fee; overall it classifies the project as feasible with conditions instead of not feasible."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2018-27",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.5,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.4,
+   "point_scores": [
+    0,
+    2,
+    1,
+    1,
+    0
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.00129781,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly grounds land-suitability and noise requirements (PBL 2 kap. 5 §, 2 kap. 9 §) and flags species and agricultural-land constraints, but it omits the reference's points about municipal discretion under PBL 1 kap. 2 §, assessment of unspecified future business at bygglov, miljöbalken conditions, and the court's finding that the plan was implementable; the planbesked step is not supported by the cited material."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2017-32",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.2,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.1,
+   "point_scores": [
+    0,
+    0,
+    1,
+    0,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000148176,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as unclear and never addresses the decisive rules (PBL 2 kap. 2 §, MB 4 kap. 4 §, the materially different use and public-access impact), only partly covering MB 4 kap. 2 § via a municipal planning document, so four key points are missing entirely."
+  }
+ },
+ {
+  "file": "bench-20261017-133642-rag-medium-explore-low.json",
+  "case": "gotland-own-va",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.3333333333333333,
+   "unsupported": 7,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.5,
+   "point_scores": [
+    1,
+    1,
+    1
+   ],
+   "unsupported": 5,
+   "judge_cost": 0.000227192,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly conveys that VA documents are needed in the bygglov case and that a permit from Miljö- och byggnämnden is required for an individual sewage system, but it never mentions FMH 13 § or the översiktsplan's role, does not clearly contrast enskilt VA with connection to the municipal network, and introduces specific figures (2 m deep test pit, 50 m distances, a quoted 'redovisa att platsen är lämplig' and a good-quality/good-quantity water documentation rule) that appear in none of the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2014-53",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.5,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.625,
+   "point_scores": [
+    2,
+    2,
+    1,
+    0
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.00072799,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly covers the improvement and benefits-balance tests and flags plan constraints, but only touches on the court's assessment of housing values/sea access and omits FBL 5 kap. 7 § entirely, while citing a source (11 kap. 6 §) that does not support its claim about 5 kap. 3 §."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2025-9",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.0,
+   "unsupported": 3,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.0,
+   "point_scores": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 9.716e-05,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as unclear and none of the four key points (deviation under 9 kap. 31 c §, the 2 kap. 9 § significant-nuisance test, the significance of the existing mast for helicopter inspections, or the accepted alternative-location investigation) are stated, while all cited legal claims are backed by the provided excerpts."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2024-73",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.125,
+   "unsupported": 3,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.25,
+   "point_scores": [
+    0,
+    0,
+    1,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.001090236,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as feasible with conditions and gives well-sourced cultural-environment and agricultural-land guidance, but it omits the reference's building-definition reasoning (PBL 1 kap. 4 §, roof/durability vs building, movability not implying temporariness), states permit status as unsettled rather than as a non-permit byggnadsverk under supervision, and only partly covers the neighbour-objection assessment; the SEK 1,110 hourly fee is not shown in the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261017-133642-rag-medium-explore-low.json",
+  "case": "vallentuna-subdivide",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.5,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.625,
+   "point_scores": [
+    1,
+    1,
+    1,
+    2
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000218848,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly classifies the project as feasible with conditions and covers the process (förhandsbesked, application to Lantmäteriet) with all claims supported by the cited sources, but it never states that a new property is created through a lantmäteriförrättning under FBL 10:1, only vaguely addresses the lasting-suitability requirement of FBL 3:1, and omits bygglov as the building-permission route."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2026-13",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.2,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.1,
+   "point_scores": [
+    0,
+    1,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000419008,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer dismisses the issue as unclear and omits the reference's core conclusion that PBL 9 kap. 2 § requires permission for this repeated short-term rental pattern, citing only tangential municipal material plus an unverified PBL 1 kap. 4 § claim."
+  }
+ },
+ {
+  "file": "bench-20261007-215229-agent-medium-explore-medium.json",
+  "case": "norrtalje-permanent-home",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.8333333333333334,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.8333333333333334,
+   "point_scores": [
+    2,
+    2,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000578668,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly highlights the översiktsplan's stance on conversion and the water/wastewater prerequisites, and flags the detailed plan as a check, but it does not mention that the detaljplan may limit building size or that extensions require permits, and it asserts the name/role of Norrtälje Vatten och Avfall AB without support in the cited sources."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2021-17",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.875,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.5,
+   "point_scores": [
+    1,
+    0,
+    1,
+    2
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000699776,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer reaches the correct not-feasible conclusion and captures the partial-floor point, but it cites PBL 9 kap. 56 § instead of 30 § and omits the key principle that a storey is judged by technical construction rather than outward appearance."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2016-25",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.1,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.1,
+   "point_scores": [
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.000800996,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The verdict and several municipal conditions match, but the answer substitutes a 30 m² limit for the reference's 15 m² rule and omits the row-house/self-contained-unit criteria, the own-plot condition, and the notification/startbesked requirements, while adding an unsupported phone number."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2020-12",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": false,
+   "points": 0.625,
+   "unsupported": 5,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": false,
+   "points": 0.75,
+   "point_scores": [
+    2,
+    2,
+    1,
+    1
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.00083541,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly states the 4.0 m ridge limit and the six-metre road-datum rule and works out that the ridge would reach about 5 m, but it hedges the applicability of the rule, never addresses that the public space was the road rather than the intervening strip, never states that a raised site does not itself justify another measurement, and asserts the out-of-plan limits (50 m²/4.5 m/65 m²) and a 10-week decision time not found in the reference or cited sources."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2020-3",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.375,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.125,
+   "point_scores": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000556416,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the plan as unclear rather than not feasible and addresses only a partial version of key point 1 (5 kap. 22 § comment duty), while the supervision/referral rules, 4 kap. 36 § and 4 kap. 33 § are entirely missing, though its stated claims are supported by the cited provisions."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2019-7",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.25,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.0,
+   "point_scores": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000863156,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer stays at the municipal-process level and never engages any of the four reference key points (PBL 2 kap. 2 § suitable-use test, MB 3 kap. 4 § cultivability criteria, the finding that a rocky woodland-edge site may not be cultivable land, or the non-binding nature of an earlier property-formation assessment / PBL 9 kap. 31 §), while its factual claims are all traceable to the cited municipal and statutory sources."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2021-6",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.2,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.1,
+   "point_scores": [
+    0,
+    0,
+    1,
+    0,
+    0
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.000581878,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer ignores the entire reasonableness framework (MB 26 kap. 12 §§, weighing of interests, 1975 issue, the dock exception and MB 26 kap. 15–16 §§) and instead classifies the case as Unclear, while asserting that Osbysjön is wholly a bird-protection area with applications directed to Länsstyrelsen, which the cited municipal page does not say (it states applications go to the municipality)."
+  }
+ },
+ {
+  "file": "bench-20261017-133642-rag-medium-explore-low.json",
+  "case": "norrtalje-rezone",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.25,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.125,
+   "point_scores": [
+    0,
+    0,
+    0,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000648116,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer is well-sourced and cautious, but it omits the planbesked first step and fee, the four-month decision deadline, and Norrtälje's plan prioritisation/backlog, only partially covering the detaljplan stages and farmland protection through an example timeline and FÖP material."
+  }
+ },
+ {
+  "file": "bench-20261007-215229-agent-medium-explore-medium.json",
+  "case": "vallentuna-tower",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.8333333333333334,
+   "unsupported": 4,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.8333333333333334,
+   "point_scores": [
+    1,
+    2,
+    2
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000933996,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly requires a bygglov and addresses landscape/riksintressen/översiktsplan, but it only vaguely gestures at the Armed Forces consultation rule for >20 m objects outside built-up areas (mentioning Försvarsmakten only in the Arlanda obstacle-analysis context), and it names specific consultation parties (Swedavia, Trafikverket, LFV) not found in the cited excerpt."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2012-24",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.4,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.4,
+   "point_scores": [
+    2,
+    0,
+    0,
+    1,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000998608,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly quotes the rule that an exemption decision must state the extent of land taken as tomt, but it overlooks key point 2 (a tomtplatsbestämning may cover existing buildings and other land where no earlier determination exists) and the overall/privatization assessment, and it classifies the project as unclear rather than conditional/feasible-with-conditions."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2020-7",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.75,
+   "unsupported": 4,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.625,
+   "point_scores": [
+    2,
+    1,
+    1,
+    1
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.001314516,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly classifies the project as feasible with conditions and clearly states the 2 kap. 6 § adaptation requirement, but it only partially covers the role of the design programme/architecture policy, the full set of adaptation factors (function, materials, visibility), and it omits the point that meeting the adaptation requirement does not itself grant a permit and the remaining assessment under 2 kap. 9 §, while citing a phone number, email and a 'site plan showing support walls' requirement not found in the provided excerpts."
+  }
+ },
+ {
+  "file": "bench-20261007-215229-agent-medium-explore-medium.json",
+  "case": "ydre-lake-house",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 1.0,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.001083758,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly classifies the project as feasible only with conditions, covering the 100 m strandskydd, the prohibition on new buildings, the särskilda skäl dispensation requirement, and the need for bygglov/förhandsbesked, with all specific claims backed by the cited sources."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2024-23",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.25,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.25,
+   "point_scores": [
+    0,
+    0,
+    1,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000562296,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as unclear and largely reports what its sources lack, so it omits the key points on the 18 c § public-interest exemption, municipal renewable electricity as an important public interest, and the dispensation requirement, mentioning alternatives comparison only indirectly."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2020-12",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": false,
+   "points": 0.75,
+   "unsupported": 5,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.625,
+   "point_scores": [
+    2,
+    1,
+    1,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000976438,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as feasible with conditions and never applies the road-level height calculation (ridge ~5 m vs the 4.0 m limit), and it attributes its fee figures to '2026' though the cited tariff does not state a year."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2021-6",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.1,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.1,
+   "point_scores": [
+    0,
+    0,
+    1,
+    0,
+    0
+   ],
+   "unsupported": 2,
+   "judge_cost": 0.000630138,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer never addresses the reference's core issues — the MB 26 kap. 12 § reasonableness assessment, weighing of interests, the dock exception, or MB 26 kap. 15–16 §§ — instead giving generic dispensation advice and an 'Unclear' verdict outside the acceptable set, while asserting an Osbysjön-to-Länsstyrelsen application route absent from the provided excerpts."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2023-11",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.125,
+   "unsupported": 3,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.125,
+   "point_scores": [
+    1,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000706636,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as unclear instead of not feasible, mentions only the PBL 4 kap. 2 § rule incompletely, and omits the PBF building-permission point, the cumulative/no-splitting assessment rule, and the conclusion that the significant environmental impact prevents a positive preliminary decision."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2022-4",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.5,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.625,
+   "point_scores": [
+    1,
+    1,
+    2,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000785036,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer reaches the correct not-feasible verdict and states the attic-storey test clearly, but it only partially covers the 45°/frontispiece height rule, never states the dormer-vs-frontispiece (roof vs façade) distinction, and substitutes 9 kap. 56/60 §§ for the reference's 9 kap. 31 b § minor-deviation ruling; it also asserts without support that Vellinge's dormer/frontispiece guidance is written for one- or two-dwelling houses."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2023-21",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.375,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.25,
+   "point_scores": [
+    0,
+    0,
+    2,
+    0
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000772856,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer gives the correct conditional verdict and clearly states the MB 6 kap. 6–7 §§ screening, consultation and separate reasoned decision requirements, but it never addresses that the school together with housing and commercial premises may be an 'other urban development project' under PBL 4 kap. 34 § second paragraph nor the additional criteria in MBF 10–13 §§ (citing only MBF 5 §), and it does not convey the reference's point about the defective screening decision while citing a PBL 5 kap. 11 a § screening duty not contained in the provided sources."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2022-4",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.125,
+   "unsupported": 3,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.125,
+   "point_scores": [
+    0,
+    0,
+    1,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000347396,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer leaves the decisive 0.7 m attic test unresolved and omits the reference's findings on 45-degree height measurement of frontispieces, the non-applicability of the dormer exception, and the PBL 9 kap. 31 b § minor-deviation assessment, classifying the case as unclear rather than not feasible."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2020-52",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.875,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.875,
+   "point_scores": [
+    2,
+    1,
+    2,
+    2
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000504476,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer matches the reference's conditional stance and clearly covers points 1, 3 and 4, but only hints at the 8 kap. 5 § rule about the version of rules applicable at construction rather than stating it."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2019-18",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "not_feasible",
+   "verdict_ok": false,
+   "points": 0.3,
+   "unsupported": 4,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "not_feasible",
+   "verdict_ok": false,
+   "points": 0.3,
+   "point_scores": [
+    1,
+    2,
+    0,
+    0,
+    0
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.000674156,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly notes the plan stays in force and restates the small-deviation test, but it never engages the reference's key holdings—treating the noise deviation as acceptable, the 60 dB(A) guideline as evidence, and the combined deviations (incl. 2.5 m²) as approved—so it reaches the opposite, unsupported conclusion of infeasibility."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2017-33",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.2,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.5,
+   "point_scores": [
+    1,
+    0,
+    2,
+    1,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000448476,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer states the railway-tunnel permit exemption (via PBL 9 kap. 28 § rather than PBF 6 kap. 1 § 3) and cites supported provisions, but it omits the court's assessment of the intended completed form and the PBL 1 kap. 4 § point, only gestures at the detailed-plan ground-level and separate-permission issues, and therefore classifies the project as Unclear rather than feasible or conditional."
+  }
+ },
+ {
+  "file": "bench-20261017-133642-rag-medium-explore-low.json",
+  "case": "norrtalje-permanent-home",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.3333333333333333,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": true,
+   "points": 0.3333333333333333,
+   "point_scores": [
+    1,
+    0,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000501536,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer reasonably classifies the issue as unclear and correctly cites the översiktsplan, PBL and strandskydd sources, but it omits the reference's central water/sewage capacity point and only partially addresses the detaljplan's building-size and extension limits."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2019-7",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.75,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.5,
+   "point_scores": [
+    0,
+    2,
+    1,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.001157576,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer gives an Unclear verdict instead of the acceptable feasible/conditional, omits the PBL 2 kap. 2 § suitable-use assessment (KP1), only hints at (rather than states) that the site may fall outside cultivable land so MB 3 kap. 4 § would not apply, and covers the outside-detailed-plan test under 9 kap. 57 § without the property-formation non-binding point, plus one uncited claim about a separate wastewater application."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2021-17",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.375,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.5,
+   "point_scores": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000462336,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer cites accurate, well-supported rules from PBF and PBL 10 kap. 2 a § with no invented facts, but it classifies the project as unclear instead of not_feasible, omits PBL 9 kap. 30 §, and stops short of concluding that the tower counts as a third storey in breach of the two-storey limit."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2020-2",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": false,
+   "points": 0.6,
+   "unsupported": 7,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": false,
+   "points": 0.5,
+   "point_scores": [
+    1,
+    1,
+    1,
+    2,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000921528,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly notes the lapsed 2008 exemption and the need for a new special-grounds assessment, but it contradicts the expected verdict by calling the project feasible with conditions and omits the road's actual insufficiency and the 25 § proportionality balance."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2020-2",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.3,
+   "unsupported": 7,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "unclear",
+   "verdict_ok": false,
+   "points": 0.4,
+   "point_scores": [
+    2,
+    1,
+    1,
+    0,
+    0
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.00079653,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly states the basic prohibition but classifies the project as unclear instead of not feasible, misses the 18 h five-year lapse and the 25 § proportionality assessment, never addresses the road-separation ground, and cites MB 7 kap 16 § as support for an unrelated PBL deferral rule."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2026-17",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": false,
+   "points": 0.5,
+   "unsupported": 3,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": false,
+   "points": 0.5,
+   "point_scores": [
+    1,
+    1,
+    1,
+    1
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.001084496,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer hedges appropriately and cites relevant statutes, but it never states the PBL 2 kap. 2 § förhandsbesked test, only partially summarizes the MB 3 kap. 4 § test, does not clearly say existing agricultural buildings do not remove the land from protection, only vaguely assigns the valuable-agricultural-land determination to the municipality, and its SEK 19,500 preliminary-ruling fee figure is not found in the cited excerpts."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2026-13",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.8,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.6,
+   "point_scores": [
+    2,
+    1,
+    1,
+    2,
+    0
+   ],
+   "unsupported": 1,
+   "judge_cost": 0.001103048,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly classifies the matter as conditional on a change-of-use assessment and clearly covers the permit trigger and rental/cleaning indicators, but it only partially addresses the scale/surroundings and residential-vs-temporary-accommodation distinctions and never mentions the ruling's scope (permission required, not grantability), plus one claim about the municipality's application category cites a source not provided."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2025-9",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.75,
+   "unsupported": 3,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.625,
+   "point_scores": [
+    2,
+    1,
+    1,
+    1
+   ],
+   "unsupported": 3,
+   "judge_cost": 0.000986496,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies the project as feasible with conditions and covers the expired-plan deviation rule well, but it only partially addresses the neighbour/nuisance threshold, the role of the existing mast, and the fact that the deviation was actually accepted, while mis-attributing plans 93/101 to Djupvik (the source says Lofta) and adding unverified 10-week and fee claims."
+  }
+ },
+ {
+  "file": "bench-20261007-215229-agent-medium-explore-medium.json",
+  "case": "morby-five-storeys",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 1.0,
+   "unsupported": 2,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 1.0,
+   "point_scores": [
+    2,
+    2,
+    2,
+    2
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000598838,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly concludes the project is not feasible as described, covering all four key points (7,000 m² BTA limit, four storeys plus attic only, 15 m safety distance from Teknikvägen, and the need for a plan change to build more) with all claims backed by the cited sources."
+  }
+ },
+ {
+  "file": "bench-20261007-215229-agent-medium-explore-medium.json",
+  "case": "ydre-barn-demolition",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.8333333333333334,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.8333333333333334,
+   "point_scores": [
+    1,
+    2,
+    2
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000461356,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly explains the 9 kap. 44 § outside-detaljplan rule, advises confirming with Ydre, and covers heritage values and demolition waste, but it never states that a rivningslov is generally required inside detaljplan areas (43 §), so key point 1 is only partially covered; all specific figures and rules cited are supported by the given sources."
+  }
+ },
+ {
+  "file": "bench-20261007-221849-agent-medium-explore-medium-cases_caselaw.json",
+  "case": "mod-2020-52",
+  "system": "agent",
+  "repeat": 1,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.875,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.875,
+   "point_scores": [
+    2,
+    1,
+    2,
+    2
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000494256,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer clearly covers the accessibility requirement, the non-blocking effect of the final certificate and the committee's corrective-order power with the door assessment left open, and only hints at the point that applicable requirements are those in force at construction by listing it as an uncertainty; no unsupported specific claims were found."
+  }
+ },
+ {
+  "file": "bench-20261007-215229-agent-medium-explore-medium.json",
+  "case": "attefall-vallentuna",
+  "system": "agent",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.5,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.625,
+   "point_scores": [
+    2,
+    1,
+    2,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000586516,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer correctly covers the permit exemption limits and the cultural-value exception but only partially conveys that anmälan/startbesked are generally required, and it omits the possible need for neighbours' consent near the property boundary."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2016-24",
+  "system": "rag",
+  "repeat": 1,
+  "old": {
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.5,
+   "unsupported": 1,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "not_feasible",
+   "verdict_ok": true,
+   "points": 0.625,
+   "point_scores": [
+    2,
+    1,
+    1,
+    1
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000909428,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer reaches the correct verdict and clearly states the PBL detailed-plan trigger, but omits the 4 kap. 2 § andra stycket exception, only partially covers the combined-assessment factors (no mention of affected property owners), and hedges on the project-specific conclusion instead of stating that prior detailed planning is needed."
+  }
+ },
+ {
+  "file": "bench-20261017-134133-rag-medium-explore-low-cases_caselaw.json",
+  "case": "mod-2023-21",
+  "system": "rag",
+  "repeat": 0,
+  "old": {
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.375,
+   "unsupported": 0,
+   "judge_model": null
+  },
+  "new": {
+   "task": "verdict",
+   "verdict": "conditional",
+   "verdict_ok": true,
+   "points": 0.375,
+   "point_scores": [
+    1,
+    1,
+    1,
+    0
+   ],
+   "unsupported": 0,
+   "judge_cost": 0.000685356,
+   "judge_model": "xiaomi/mimo-v2.6-flash",
+   "comment": "The answer classifies conditionally and touches PBL 4 kap. 34 §, the PBF 2 kap. 5 § (MBF) criteria and the separate screening decision, but it leaves key points partial (no explicit MBF 5 § general criteria, no 'circumstances for and against' content requirement) and omits entirely the reference's point about the prior defective screening and what the court did/did not decide."
+  }
+ }
+]

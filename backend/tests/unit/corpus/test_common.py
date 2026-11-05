@@ -33,3 +33,17 @@ def test_snapshot_setting_picks_another_corpus_folder(monkeypatch, reload_common
     module = reload_common()
     assert module.DATA_DIR == module.BACKEND_DIR / "data" / "small" / "corpus"
     assert module.RESULTS_ROOT == module.BACKEND_DIR / "data"  # benchmark results stay in data/ whatever the corpus
+
+
+@pytest.mark.parametrize("garbled, fixed", [
+    ("OmvandlingsomrÃ¥den - Haninge kommun", "Omvandlingsområden - Haninge kommun"),
+    ("VÃ¤lj kranvatten â\x80\x93 bra", "Välj kranvatten – bra"),  # read as latin-1
+    ("VÃ¤lj kranvatten â€“ bra", "Välj kranvatten – bra"),  # read as cp1252
+    ("Planprogram för Ã rsta Slott", "Planprogram för Årsta Slott"),  # the 0x85 of "Å" became a space
+    ("Café Ångström – 50 m² “citat”", "Café Ångström – 50 m² “citat”"),  # correct text is left alone
+    ("", ""),
+])
+def test_repair_mojibake(garbled, fixed):
+    from corpus.common import repair_mojibake
+
+    assert repair_mojibake(garbled) == fixed

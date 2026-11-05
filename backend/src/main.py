@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 from dotenv import load_dotenv
 
 # Must run before any module that reads env vars at import time
@@ -16,7 +17,7 @@ from dev_access import (
     request_has_dev_access,
 )
 from embeddings import EmbeddingConfig
-from routers import access_gate, chat, auth, chunks, agents
+from routers import access_gate, chat, auth, chunks, agents, db_browser, docs, benchmark
 from logging_config import setup_logging
 
 setup_logging()
@@ -57,6 +58,36 @@ _check_embedding_config()
 app = FastAPI()
 
 
+def _preload_local_corpus() -> None:
+    """Load the local index (~1 min on the full corpus) at startup rather than on the first question."""
+    from agentic.service import agent_enabled, get_tools
+    from localrag.service import get_retriever, local_backend_enabled
+
+    try:
+        if agent_enabled():
+            get_tools()
+        elif local_backend_enabled():
+            get_retriever()
+    except Exception:
+        logger.exception("Preloading the local corpus failed")
+
+
+def _open_corpus_database() -> None:
+    """LOCAL_RAG_STORE=neon: open the corpus database before serving. It writes the small files this install lacks
+    (gazetteer, plan registry, place snapshots), which the map caches on its first request (a few seconds)."""
+    from localrag.service import get_retriever, local_backend_enabled
+
+    if os.getenv("LOCAL_RAG_STORE", "disk").strip() == "neon" and local_backend_enabled():
+        try:
+            get_retriever()
+        except Exception:
+            logger.exception("Opening the corpus database failed")
+
+
+_open_corpus_database()
+threading.Thread(target=_preload_local_corpus, name="preload-local-corpus", daemon=True).start()
+
+
 @app.middleware("http")
 async def development_access_middleware(request, call_next):
     if (
@@ -92,6 +123,9 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(chunks.router, prefix="/api", tags=["chunks"])
 app.include_router(agents.router, prefix="/api", tags=["agents"])
+app.include_router(db_browser.router, prefix="/api", tags=["db-browser"])
+app.include_router(docs.router, prefix="/api", tags=["docs"])
+app.include_router(benchmark.router, prefix="/api", tags=["benchmark"])
 
 @app.get("/")
 def read_root():

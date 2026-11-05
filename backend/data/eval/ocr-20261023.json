@@ -1,0 +1,309 @@
+{
+ "easyocr-gpu": {
+  "synthetic/map": {
+   "ref_words": 15814,
+   "pred_words": 11245,
+   "exact": 7055,
+   "near": 7653,
+   "labels": 305,
+   "labels_found": 33,
+   "labels_lenient": 101,
+   "images": 15,
+   "seconds": 329.36,
+   "located": 6263,
+   "labels_located": 33
+  },
+  "synthetic/all": {
+   "ref_words": 19393,
+   "pred_words": 14740,
+   "exact": 10360,
+   "near": 11012,
+   "labels": 329,
+   "labels_found": 51,
+   "labels_lenient": 124,
+   "images": 30,
+   "seconds": 387.95,
+   "located": 9386,
+   "labels_located": 50
+  },
+  "synthetic/text": {
+   "ref_words": 3579,
+   "pred_words": 3495,
+   "exact": 3305,
+   "near": 3359,
+   "labels": 24,
+   "labels_found": 18,
+   "labels_lenient": 23,
+   "images": 15,
+   "seconds": 58.59,
+   "located": 3123,
+   "labels_located": 17
+  },
+  "real/map": {
+   "ref_words": 420,
+   "pred_words": 398,
+   "exact": 290,
+   "near": 336,
+   "labels": 13,
+   "labels_found": 0,
+   "labels_lenient": 4,
+   "images": 12,
+   "seconds": 7.1
+  },
+  "real/all": {
+   "ref_words": 581,
+   "pred_words": 579,
+   "exact": 379,
+   "near": 451,
+   "labels": 13,
+   "labels_found": 0,
+   "labels_lenient": 4,
+   "images": 13,
+   "seconds": 12.239999999999998
+  },
+  "real/text": {
+   "ref_words": 161,
+   "pred_words": 181,
+   "exact": 89,
+   "near": 115,
+   "labels": 0,
+   "labels_found": 0,
+   "labels_lenient": 0,
+   "images": 1,
+   "seconds": 5.14
+  }
+ },
+ "rapid-v6-medium-gpu-300dpi": {
+  "real/map": {
+   "ref_words": 420,
+   "pred_words": 438,
+   "exact": 349,
+   "near": 371,
+   "labels": 13,
+   "labels_found": 8,
+   "labels_lenient": 8,
+   "images": 12,
+   "seconds": 12.49
+  },
+  "real/all": {
+   "ref_words": 581,
+   "pred_words": 596,
+   "exact": 485,
+   "near": 512,
+   "labels": 13,
+   "labels_found": 8,
+   "labels_lenient": 8,
+   "images": 13,
+   "seconds": 15.7
+  },
+  "real/text": {
+   "ref_words": 161,
+   "pred_words": 158,
+   "exact": 136,
+   "near": 141,
+   "labels": 0,
+   "labels_found": 0,
+   "labels_lenient": 0,
+   "images": 1,
+   "seconds": 3.21
+  }
+ },
+ "rapid-v6-medium-gpu-x1.5": {
+  "synthetic/map": {
+   "ref_words": 15814,
+   "pred_words": 11789,
+   "exact": 8105,
+   "near": 8453,
+   "labels": 305,
+   "labels_found": 140,
+   "labels_lenient": 144,
+   "images": 15,
+   "seconds": 400.84999999999997,
+   "located": 7848,
+   "labels_located": 138
+  },
+  "synthetic/all": {
+   "ref_words": 15814,
+   "pred_words": 11789,
+   "exact": 8105,
+   "near": 8453,
+   "labels": 305,
+   "labels_found": 140,
+   "labels_lenient": 144,
+   "images": 15,
+   "seconds": 400.84999999999997,
+   "located": 7848,
+   "labels_located": 138
+  },
+  "real/map": {
+   "ref_words": 420,
+   "pred_words": 423,
+   "exact": 359,
+   "near": 374,
+   "labels": 13,
+   "labels_found": 8,
+   "labels_lenient": 8,
+   "images": 12,
+   "seconds": 10.48
+  },
+  "real/all": {
+   "ref_words": 420,
+   "pred_words": 423,
+   "exact": 359,
+   "near": 374,
+   "labels": 13,
+   "labels_found": 8,
+   "labels_lenient": 8,
+   "images": 12,
+   "seconds": 10.48
+  }
+ },
+ "rapid-v6-medium-gpu": {
+  "synthetic/map": {
+   "ref_words": 15814,
+   "pred_words": 11686,
+   "exact": 8261,
+   "near": 8578,
+   "labels": 305,
+   "labels_found": 140,
+   "labels_lenient": 145,
+   "images": 15,
+   "seconds": 245.54999999999995,
+   "located": 8019,
+   "labels_located": 140
+  },
+  "synthetic/all": {
+   "ref_words": 19393,
+   "pred_words": 15151,
+   "exact": 11595,
+   "near": 11930,
+   "labels": 329,
+   "labels_found": 160,
+   "labels_lenient": 165,
+   "images": 30,
+   "seconds": 308.07999999999987,
+   "located": 11342,
+   "labels_located": 160
+  },
+  "synthetic/text": {
+   "ref_words": 3579,
+   "pred_words": 3465,
+   "exact": 3334,
+   "near": 3352,
+   "labels": 24,
+   "labels_found": 20,
+   "labels_lenient": 20,
+   "images": 15,
+   "seconds": 62.53,
+   "located": 3323,
+   "labels_located": 20
+  },
+  "real/map": {
+   "ref_words": 420,
+   "pred_words": 418,
+   "exact": 366,
+   "near": 381,
+   "labels": 13,
+   "labels_found": 8,
+   "labels_lenient": 8,
+   "images": 12,
+   "seconds": 14.8
+  },
+  "real/all": {
+   "ref_words": 581,
+   "pred_words": 559,
+   "exact": 484,
+   "near": 504,
+   "labels": 13,
+   "labels_found": 8,
+   "labels_lenient": 8,
+   "images": 13,
+   "seconds": 18.54
+  },
+  "real/text": {
+   "ref_words": 161,
+   "pred_words": 141,
+   "exact": 118,
+   "near": 123,
+   "labels": 0,
+   "labels_found": 0,
+   "labels_lenient": 0,
+   "images": 1,
+   "seconds": 3.74
+  }
+ },
+ "rapid-v6-small-gpu": {
+  "synthetic/map": {
+   "ref_words": 15814,
+   "pred_words": 11363,
+   "exact": 7722,
+   "near": 8115,
+   "labels": 305,
+   "labels_found": 121,
+   "labels_lenient": 123,
+   "images": 15,
+   "seconds": 106.11999999999999,
+   "located": 7489,
+   "labels_located": 121
+  },
+  "synthetic/all": {
+   "ref_words": 19393,
+   "pred_words": 14737,
+   "exact": 10889,
+   "near": 11301,
+   "labels": 329,
+   "labels_found": 142,
+   "labels_lenient": 144,
+   "images": 30,
+   "seconds": 126.89999999999999,
+   "located": 10649,
+   "labels_located": 142
+  },
+  "synthetic/text": {
+   "ref_words": 3579,
+   "pred_words": 3374,
+   "exact": 3167,
+   "near": 3186,
+   "labels": 24,
+   "labels_found": 21,
+   "labels_lenient": 21,
+   "images": 15,
+   "seconds": 20.78,
+   "located": 3160,
+   "labels_located": 21
+  },
+  "real/map": {
+   "ref_words": 420,
+   "pred_words": 403,
+   "exact": 354,
+   "near": 371,
+   "labels": 13,
+   "labels_found": 6,
+   "labels_lenient": 6,
+   "images": 12,
+   "seconds": 4.4799999999999995
+  },
+  "real/all": {
+   "ref_words": 581,
+   "pred_words": 551,
+   "exact": 464,
+   "near": 483,
+   "labels": 13,
+   "labels_found": 6,
+   "labels_lenient": 6,
+   "images": 13,
+   "seconds": 5.83
+  },
+  "real/text": {
+   "ref_words": 161,
+   "pred_words": 148,
+   "exact": 110,
+   "near": 112,
+   "labels": 0,
+   "labels_found": 0,
+   "labels_lenient": 0,
+   "images": 1,
+   "seconds": 1.35
+  }
+ }
+}
