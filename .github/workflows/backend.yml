@@ -33,7 +33,8 @@ jobs:
             exit 1
           fi
       - uses: astral-sh/setup-uv@v10.2.0
-      - run: uv sync --frozen
+      # The corpus extra holds what the corpus steps' tests import; the local extra (torch) stays out.
+      - run: uv sync --frozen --extra corpus
       - run: uv run --no-sync pytest
 
   docker:
