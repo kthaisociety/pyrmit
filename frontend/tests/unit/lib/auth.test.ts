@@ -1,6 +1,6 @@
 // Unit tests for lib/auth.ts.
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   authFetch,
@@ -82,17 +82,104 @@ describe('authFetch', () => {
     expect(assign).toHaveBeenCalledWith('/dev-access?next=%2Fchat%3Fx%3D1');
   });
 
-  it('does not redirect on a 401 for any other reason', async () => {
-    const assign = vi.fn();
-    vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, assign });
+  it('keeps the JWT when redirecting to the access gate', async () => {
+    storeAccessToken('abc');
+    vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, assign: vi.fn() });
     server.use(
       http.get('*/api/auth/me', () =>
-        HttpResponse.json({ detail: 'Invalid token' }, { status: 401 }),
+        HttpResponse.json({ detail: 'Access password required' }, { status: 401 }),
       ),
     );
 
     await authFetch('/api/auth/me');
 
+    expect(getStoredAccessToken()).toBe('abc');
+  });
+});
+
+describe('authFetch on a revoked or expired login', () => {
+  let assign: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    assign = vi.fn();
+    vi.spyOn(window, 'location', 'get').mockReturnValue({ ...window.location, pathname: '/', assign });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const unauthorized = () => HttpResponse.json({ detail: 'Could not validate credentials' }, { status: 401 });
+
+  it('clears the token and opens the sign-in page on a protected 401', async () => {
+    storeAccessToken('abc');
+    server.use(http.post('*/api/auth/signout', unauthorized));
+
+    await authFetch('/api/auth/signout', { method: 'POST' });
+
+    expect(getStoredAccessToken()).toBeNull();
+    expect(assign).toHaveBeenCalledWith('/auth');
+  });
+
+  it.each(['token', 'signin', 'signup'])('keeps the token and the page when /api/auth/%s fails', async (path) => {
+    storeAccessToken('abc');
+    server.use(http.post(`*/api/auth/${path}`, unauthorized));
+
+    await authFetch(`/api/auth/${path}`, { method: 'POST' });
+
+    expect(getStoredAccessToken()).toBe('abc');
     expect(assign).not.toHaveBeenCalled();
+  });
+
+  it.each([403, 500, 503])('keeps the token on a %i', async (status) => {
+    storeAccessToken('abc');
+    server.use(http.get('*/api/auth/me', () => HttpResponse.json({}, { status })));
+
+    await authFetch('/api/auth/me');
+
+    expect(getStoredAccessToken()).toBe('abc');
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('keeps the token on a network error', async () => {
+    storeAccessToken('abc');
+    server.use(http.get('*/api/auth/me', () => HttpResponse.error()));
+
+    await expect(authFetch('/api/auth/me')).rejects.toThrow();
+
+    expect(getStoredAccessToken()).toBe('abc');
+  });
+
+  // The 401 is held back until another tab has changed the stored login.
+  function delayedUnauthorized() {
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => { release = resolve; });
+    server.use(http.get('*/api/auth/me', async () => { await released; return unauthorized(); }));
+    return release;
+  }
+
+  it('does not erase a newer login when a 401 for an old token arrives late', async () => {
+    storeAccessToken('old');
+    const release = delayedUnauthorized();
+
+    const pending = authFetch('/api/auth/me');
+    storeAccessToken('newer');
+    release();
+    await pending;
+
+    expect(getStoredAccessToken()).toBe('newer');
+    expect(assign).not.toHaveBeenCalled();
+  });
+
+  it('still opens the sign-in page when another tab signed out before the late 401', async () => {
+    storeAccessToken('old');
+    const release = delayedUnauthorized();
+
+    const pending = authFetch('/api/auth/me');
+    clearAccessToken();
+    release();
+    await pending;
+
+    expect(assign).toHaveBeenCalledWith('/auth');
   });
 });

@@ -19,6 +19,9 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -37,8 +40,8 @@ export default function Home() {
         setLoading(false);
       })
       .catch(() => {
-        clearAccessToken();
-        router.replace('/auth');
+        setLoadError(true);
+        setLoading(false);
       });
   }, [router]);
 
@@ -48,13 +51,19 @@ export default function Home() {
   };
 
   const handleLogout = async () => {
+    if (logoutLoading) return;
+    setLogoutLoading(true);
+    setLogoutError('');
     try {
-      await authFetch('/api/auth/signout', { method: 'POST' });
-    } catch (error) {
-      console.error('Logout failed', error);
-    } finally {
+      const response = await authFetch('/api/auth/signout', { method: 'POST' });
+      if (response.status === 401) return; // authFetch handles session expiry and the access gate.
+      if (!response.ok) throw new Error('Sign out failed');
       clearAccessToken();
       router.replace('/auth');
+    } catch {
+      setLogoutError('Could not sign out. Please try again.');
+    } finally {
+      setLogoutLoading(false);
     }
   };
 
@@ -62,6 +71,15 @@ export default function Home() {
     setCurrentSessionId(null);
     setRefreshSidebarTrigger(prev => prev + 1);
   };
+
+  if (loadError) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center gap-3">
+        <p role="alert">Could not load your account.</p>
+        <button onClick={() => window.location.reload()} className="underline">Try again</button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -88,6 +106,8 @@ export default function Home() {
             user={user}
             onBack={() => setShowSettings(false)}
             onLogout={handleLogout}
+            logoutLoading={logoutLoading}
+            logoutError={logoutError}
             onUserUpdated={(updated) => setUser(updated)}
             onAllChatsCleared={handleAllChatsCleared}
           />
