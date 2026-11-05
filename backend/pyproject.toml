@@ -4,6 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
     "argon2-cffi>=23.1.0",
+    "bm25s>=0.2.0",  # the local corpus: Swedish BM25 (memory store)
     "email-validator>=2.1.0",
     "fastapi>=0.109.0",
     "httpx>=0.27.0",
@@ -16,16 +17,19 @@ dependencies = [
     "numpy>=1.26.0",
     "openai>=1.10.0",
     "pgvector>=0.4.0",
+    "pymupdf>=1.24.0",  # cited PDFs at the passage, map crops for the agent
     "psycopg2-binary>=2.9.9",
     "pwdlib[argon2]>=0.2.1",
     "pydantic>=2.6.0",
     "pyjwt>=2.8.0",
+    "PyStemmer>=2.2.0",  # Swedish stems of the BM25 queries
     "python-dotenv>=1.0.0",
     "python-multipart>=0.0.9",
     "pyyaml>=6.0.0",
     "requests>=2.31.0",
     "sqlalchemy>=2.0.25,<2.1",  # 2.1 makes postgresql:// use psycopg 3, which is not installed
     "supabase>=2.28.0",
+    "truststore>=0.10.0",  # TLS with the OS certificate store: crawler and PDF downloads
     "uvicorn>=0.27.0",
 ]
 
@@ -35,10 +39,8 @@ corpus = [
     "httpx[http2]>=0.27.0",  # the crawler uses HTTP/2
     "lxml>=5.0.0",
     "pillow>=10.0.0",
-    "pymupdf>=1.24.0",
     "scikit-learn>=1.5.0",
     "trafilatura>=1.12.0",
-    "truststore>=0.10.0",  # crawler TLS: the OS certificate store fetches missing intermediates
 ]
 # Local embedding models (EMBEDDING_PROVIDER=st, LOCAL_RAG_MODEL=st-*). Pulls torch, so CI leaves it out: install torch
 # with CUDA first (uv pip install torch --index-url https://download.pytorch.org/whl/cu128), then uv sync --extra local
@@ -61,7 +63,7 @@ only-include = ["src"]
 sources = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "."]  # "." for helpers shared between test files (tests.unit.place.snapshot)
 testpaths = ["tests"]
 addopts = "--import-mode=importlib"
 
@@ -77,6 +79,10 @@ target-version = "py313"
 [tool.ruff.lint]
 # Ruff's default rules for the version pinned in uv.lock (PCR-0012). Leave `select` unset.
 
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency markers in parameter defaults are the framework's idiom, not a shared mutable default (B008)
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.File", "fastapi.Form", "fastapi.Body"]
+
 # Baseline: rules each file broke when ruff was turned on. Shrink this, never grow it.
 [tool.ruff.lint.per-file-ignores]
 "src/agents/__init__.py" = ["F401", "I001"]
@@ -91,17 +97,17 @@ target-version = "py313"
 "src/chunking/ingest_pipeline.py" = ["I001"]
 "src/db/push_db.py" = ["F401", "I001", "RET501"]
 "src/db/run_match_functions.py" = ["I001"]
-"src/dependencies.py" = ["B008", "I001"]
+"src/dependencies.py" = ["I001"]
 "src/llm.py" = ["UP035"]
 "src/main.py" = ["I001"]
 "src/models.py" = ["F401", "I001"]
 "src/observability.py" = ["I001"]
 "src/ocr/create_markdown.py" = ["F841", "G201", "I001", "LOG015"]
 "src/routers/__init__.py" = ["F401"]
-"src/routers/agents.py" = ["B008", "F811", "I001"]
-"src/routers/auth.py" = ["B008", "I001"]
-"src/routers/chat.py" = ["B008", "F401", "G201", "I001", "UP035", "UP043"]
-"src/routers/chunks.py" = ["B008", "BLE001", "I001"]
+"src/routers/agents.py" = ["F811", "I001"]
+"src/routers/auth.py" = ["I001"]
+"src/routers/chat.py" = ["F401", "G201", "I001", "UP035", "UP043"]
+"src/routers/chunks.py" = ["BLE001", "I001"]
 "src/routers/queryDB.py" = ["N999"]
 "src/security.py" = ["I001"]
 "tests/unit/agents/test_agents.py" = ["I001", "SIM117"]

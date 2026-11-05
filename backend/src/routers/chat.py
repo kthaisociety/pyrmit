@@ -20,6 +20,8 @@ from agents.orchestrator import Orchestrator
 from agents.parsers import format_response, parse_query
 from db.database import SessionLocal, get_db
 from dependencies import get_current_user
+from agentic.service import agent_enabled
+from localrag.service import SWEDISH_QUERY_SUFFIX, local_backend_enabled, retrieve as local_retrieve, split_rewrite
 from llm import (
     build_responses_input,
     get_response_output_text,
@@ -385,6 +387,41 @@ def chat_stream(
                 yield _sse({"type": "session_id", "session_id": session_id})
 
             try:
+                if agent_enabled():
+                    # ── Agentic path: the model explores the local corpus with tools ──
+                    from agentic.service import stream_agent
+
+                    yield _sse({"type": "thinking", "label": "Exploring the documents"})
+                    yield emit("intent", location=None, units=None, project_type=None, route="agent")
+                    history = [{"role": m.role, "content": m.content} for m in messages_snapshot[:-1][-6:]
+                               if m.role in ("user", "assistant") and m.content]
+
+                    def record(**call):
+                        recorder.record(**call)
+
+                    answered = request.answer_to_question
+                    question = original_content
+
+                    outcome = yield from stream_agent(question, history, record, _sse,
+                                                      flush=lambda: list(emit_calls()), allow_ask=not answered)
+                    yield from emit_calls()
+                    yield emit("retrieval", agent="law", query=original_content, embedding_ok=True,
+                               matches=outcome["law_rows"])
+                    yield emit("retrieval", agent="document", query=original_content, embedding_ok=True,
+                               matches=outcome["local_rows"])
+                    # The answer itself was streamed by stream_agent; append the numbered source list
+                    # [n] -> source label + cited chunks, for the clickable citations in the UI
+                    yield emit("citations", items=outcome["citations"])
+                    if outcome.get("choices") or outcome.get("offer_pin"):  # the agent asked: shown as buttons
+                        yield emit("choices", options=outcome.get("choices") or [],
+                                   offer_pin=bool(outcome.get("offer_pin")))
+                    suffix = _format_sources(outcome["sources"], numbered=True)
+                    accumulated = outcome["answer"] + suffix
+                    yield _sse({"type": "response.output_text.delta", "delta": suffix})
+                    yield _sse({"type": "response.completed"})
+                    yield _sse({"type": "done", "session_id": session_id})
+                    return
+
                 # ── Step 1: translate / contextualize ──────────────────────────
                 yield _sse({"type": "thinking", "label": "Understanding your question"})
 
@@ -407,6 +444,10 @@ def chat_stream(
                         f"(return only the translation, no explanation): {original_content}"
                     )
 
+                query_sv = None
+                if local_backend_enabled():
+                    # The local corpus is Swedish: get the Swedish search query from the same call
+                    context_prompt += "\n\n" + SWEDISH_QUERY_SUFFIX
                 try:
                     tr = recorded_chat_completion(
                         recorder,
@@ -417,6 +458,8 @@ def chat_stream(
                         temperature=0,
                     )
                     translated = get_response_output_text(tr).strip() or original_content
+                    if local_backend_enabled():
+                        translated, query_sv = split_rewrite(translated, original_content)
                 except Exception:
                     logger.warning("Translation failed, using original", exc_info=True)
                     translated = original_content
@@ -449,15 +492,25 @@ def chat_stream(
                     # ── General RAG path ───────────────────────────────────────
                     law_agent = LawAgent(db, client, recorder)
                     document_agent = DocumentAgent(db, client, recorder)
-                    yield _sse({"type": "tool_call", "name": "embed_query", "input": translated})
-                    embedding = law_agent._embed(translated)
-                    embedding_ok = embedding is not None
-                    yield _sse({"type": "tool_result", "name": "embed_query",
-                                "result": "Embedding computed" if embedding_ok else "Embedding failed"})
+                    if local_backend_enabled():
+                        # Local corpus: BM25 and the dense model use the Swedish query (see localrag/eval.py)
+                        yield _sse({"type": "tool_call", "name": "retrieve_local_corpus", "input": f"k={RAG_TOP_K}"})
+                        law_debug_rows, doc_debug_rows, kommuner = local_retrieve(translated, query_sv, k=RAG_TOP_K,
+                                                                                  recorder=recorder)
+                        embedding_ok = True
+                        from localrag.gazetteer import kommun_label  # local deps only when the local backend is on
 
-                    yield _sse({"type": "tool_call", "name": "retrieve_law_chunks", "input": f"k={RAG_TOP_K}"})
-                    law_debug_rows = law_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
-                    doc_debug_rows = document_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
+                        yield emit("local_query", query_sv=query_sv, kommuner=[kommun_label(code) for code in kommuner])
+                    else:
+                        yield _sse({"type": "tool_call", "name": "embed_query", "input": translated})
+                        embedding = law_agent._embed(translated)
+                        embedding_ok = embedding is not None
+                        yield _sse({"type": "tool_result", "name": "embed_query",
+                                    "result": "Embedding computed" if embedding_ok else "Embedding failed"})
+
+                        yield _sse({"type": "tool_call", "name": "retrieve_law_chunks", "input": f"k={RAG_TOP_K}"})
+                        law_debug_rows = law_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
+                        doc_debug_rows = document_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
 
                     law_agent._log_retrieval(translated, law_debug_rows)
                     document_agent._log_retrieval(translated, doc_debug_rows)
