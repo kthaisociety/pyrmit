@@ -1,6 +1,8 @@
 """The permits and prövningar a place profile points to, by fixed rules (no model): what the place card lists under
 "likely permits". Each comes with its legal basis and the authority that decides it."""
 
+from answer_language import Language
+
 LANSSTYRELSEN = "Länsstyrelsen"
 
 BYGGLOV_REASON = {
@@ -73,7 +75,7 @@ def _national_interest(interest: dict, kommun: str) -> dict:
                    f"{interest['type']}: weighed in the prövning, not a permit of its own.", kind="consideration")
 
 
-def likely_permits(profile: dict) -> list[dict]:
+def likely_permits(profile: dict, language: Language = "en") -> list[dict]:
     """The likely permits of a place profile (see place.profile.build_profile), in this order:
 
     - bygglov, always for a covered place: tested against the detaljplan when inside one, against PBL 2 and 8 kap.
@@ -87,7 +89,11 @@ def likely_permits(profile: dict) -> list[dict]:
 
     Returns [{"key", "title", "law", "authority", "reason", "kind"}], kind "permit" or "consideration". The key is
     stable across runs, for the benchmark: "bygglov", "dispens:<NVRID>", "natura2000:<site code>",
-    "fornlamning:<RAÄ number>", "contact:<RAÄ number>", "riksintresse:<name>". An uncovered place has none."""
+    "fornlamning:<RAÄ number>", "contact:<RAÄ number>", "riksintresse:<name>". An uncovered place has none.
+
+    `language` ("sv" or "en") is the language of each title and reason; key, law, authority and kind are the same in
+    both. In English a Swedish domain term keeps its Swedish form with its glossary.GLOSSARY explanation in
+    parentheses on first use in each text ("Bygglov (building permit)"); in Swedish there is none ("Bygglov")."""
     if not profile.get("covered"):
         return []
     kommun = profile["kommun"]["name"]

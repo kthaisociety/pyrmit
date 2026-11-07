@@ -15,6 +15,7 @@ from shapely.errors import GEOSException
 from shapely.geometry import Point, mapping, shape
 from shapely.validation import make_valid
 
+from answer_language import Language
 from place import live, plan_layers
 from place.permits import likely_permits
 from place.plan_links import polygon_key
@@ -295,7 +296,8 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
                   corpus_documents: Callable[[list[str]], dict[str, dict]] | None = None,
                   property_at: Callable[[str, float, float], dict | None] | None = None,
                   plan_registry: Callable[[str], list[dict]] | None = None,
-                  ancient_remains_at: Callable[[dict], list[dict]] | None = None) -> dict:
+                  ancient_remains_at: Callable[[dict], list[dict]] | None = None,
+                  language: Language = "en") -> dict:
     """Place profile of a point in WGS84. `store`, `property_at` (code, lon, lat), `plan_registry` (kommun code
     -> plan records of data/corpus/plans.jsonl) and `ancient_remains_at` (GeoJSON geometry -> register features,
     see place.live) default to the snapshots, the live property service, the corpus registry and Riksantikvarieämbetet.
@@ -334,6 +336,12 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
       "not_covered" outside the pilot kommuner
     - "layers": [{"id", "title", "provider", "licence", "fetched", "status"}] for every layer consulted
     - "notes": user-facing caveats, the first one NOT_A_DECISION
+
+    `language` ("sv" or "en", the page language the user chose) is the language of the user-facing texts: every note,
+    the strandskydd reason and note, and each permit's title and reason (likely_permits). Registry values (names,
+    designations, refs, codes, dates, laws, authorities) and every key stay the same in both. In English a Swedish
+    domain term in those texts stays in Swedish and is followed by its English explanation from glossary.GLOSSARY in
+    parentheses on its first use in each text; in Swedish no explanation is added.
 
     Every row of plans, zones, pending_plans, protected_areas, natura2000, national_interests and ancient_remains
     is a feature of `place.sources.feature` (`place.plan_layers.feature` in a plan-layer kommun) plus "source"
