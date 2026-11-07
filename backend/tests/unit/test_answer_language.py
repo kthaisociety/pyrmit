@@ -2,7 +2,7 @@
 
 from answer_language import (
     LANGUAGE_RULE,
-    REWRITE_LANGUAGE_SUFFIX,
+    REWRITE_LANGUAGE_INSTRUCTION,
     parse_language,
     split_language,
 )
@@ -40,9 +40,22 @@ def test_split_language_removes_only_the_lang_line():
     assert split_language(output) == (f"{REWRITE}\nSV: bygglov friggebod tomt", "sv")
 
 
-def test_the_rewrite_suffix_asks_for_a_lang_line():
-    assert "LANG:" in REWRITE_LANGUAGE_SUFFIX
+def test_the_rewrite_instruction_asks_for_a_lang_line():
+    assert "LANG:" in REWRITE_LANGUAGE_INSTRUCTION
 
 
 def test_the_language_rule_asks_for_swedish_quotes_verbatim():
     assert "verbatim" in LANGUAGE_RULE
+
+
+def test_a_lang_line_first_is_removed_from_the_rewrite():
+    """The rewrite starts with its LANG line; the query after it is what remains."""
+    assert split_language(f"LANG: sv\n{REWRITE}") == (REWRITE, "sv")
+
+
+def test_the_rewrite_instruction_judges_the_users_words_not_the_translation():
+    assert "never the language of your translation" in REWRITE_LANGUAGE_INSTRUCTION
+
+
+def test_the_language_rule_answers_other_languages_in_english():
+    assert "any other language is answered in English, never in that language" in LANGUAGE_RULE

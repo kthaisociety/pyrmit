@@ -18,7 +18,7 @@ from agents.document_agent import DocumentAgent
 from agents.law_agent import LawAgent
 from agents.orchestrator import Orchestrator
 from agents.parsers import format_response, parse_query
-from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_SUFFIX, Language, split_language
+from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_INSTRUCTION, Language, split_language
 from glossary import glossary_prompt
 from db.database import SessionLocal, get_db
 from dependencies import get_current_user
@@ -249,7 +249,7 @@ Conversation History:
 Latest User Message: {original_content}"""
         else:
             context_prompt = f"Translate the following user message to English (return only the translation, no explanation): {original_content}"
-        context_prompt += "\n\n" + REWRITE_LANGUAGE_SUFFIX
+        context_prompt = REWRITE_LANGUAGE_INSTRUCTION + "\n\n" + context_prompt
 
         language: Language = "en"
         try:
@@ -499,7 +499,7 @@ def chat_stream(
                         f"(return only the translation, no explanation): {original_content}"
                     )
 
-                context_prompt += "\n\n" + REWRITE_LANGUAGE_SUFFIX
+                context_prompt = REWRITE_LANGUAGE_INSTRUCTION + "\n\n" + context_prompt
                 language: Language = "en"
                 query_sv = None
                 if local_backend_enabled():

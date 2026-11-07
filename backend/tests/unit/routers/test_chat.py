@@ -36,7 +36,7 @@ def _jsonb_as_json(element, compiler, **kw):
 import agentic.service
 import models
 from agents.base import BaseRAGAgent
-from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_SUFFIX
+from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_INSTRUCTION
 from db.database import get_db
 from dependencies import get_current_user
 from place.context import NO_PIN_HINT
@@ -447,7 +447,7 @@ def test_the_streamed_answer_is_not_told_to_answer_in_english(rag):
 
 def test_the_streamed_rewrite_asks_for_the_language(rag):
     stream_swedish(rag)
-    assert REWRITE_LANGUAGE_SUFFIX and REWRITE_LANGUAGE_SUFFIX in rewrite_call(rag)["input"]
+    assert REWRITE_LANGUAGE_INSTRUCTION and REWRITE_LANGUAGE_INSTRUCTION in rewrite_call(rag)["input"]
 
 
 def test_the_streamed_clarifying_prompt_follows_a_swedish_decision(rag):
@@ -468,9 +468,20 @@ def test_the_answer_follows_the_language_rule(rag):
 
 def test_the_rewrite_asks_for_the_language(rag):
     post_swedish(rag)
-    assert REWRITE_LANGUAGE_SUFFIX and REWRITE_LANGUAGE_SUFFIX in rewrite_call(rag)["input"]
+    assert REWRITE_LANGUAGE_INSTRUCTION and REWRITE_LANGUAGE_INSTRUCTION in rewrite_call(rag)["input"]
 
 
 def test_the_clarifying_prompt_follows_a_swedish_decision(rag):
     rag.rows = []
     assert "I need a bit more information" not in post_swedish(rag)
+
+
+def test_the_streamed_rewrite_starts_with_the_language_instruction(rag):
+    """Asked for first, the LANG line is about the user's words, not the English rewrite."""
+    stream_swedish(rag)
+    assert rewrite_call(rag)["input"].startswith(REWRITE_LANGUAGE_INSTRUCTION)
+
+
+def test_the_rewrite_starts_with_the_language_instruction(rag):
+    post_swedish(rag)
+    assert rewrite_call(rag)["input"].startswith(REWRITE_LANGUAGE_INSTRUCTION)
