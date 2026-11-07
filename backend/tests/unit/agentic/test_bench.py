@@ -66,6 +66,21 @@ def test_a_block_quote_is_checked():
     assert bench.quotes_verbatim("> Bygglov krävs alltid för nybyggnad.\n\nSo you need one.", [SOURCE]) is False
 
 
+def test_a_quoted_block_line_is_checked_without_its_reference():
+    """A block quote line holding a quote and its law reference is checked on the quote alone."""
+    assert bench.quotes_verbatim(f'> "{SOURCE}" (PBL 9 kap. 2 §)', [SOURCE]) is True
+
+
+def test_a_quote_spanning_block_lines_is_checked_without_its_reference():
+    source = f"{SOURCE} Det gäller även tillbyggnad."
+    answer = f'> "{SOURCE}\n> Det gäller även tillbyggnad." (PBL 9 kap. 2 §)'
+    assert bench.quotes_verbatim(answer, [source]) is True
+
+
+def test_punctuation_and_case_do_not_break_a_verbatim_quote():
+    assert bench.quotes_verbatim('PBL says "det krävs bygglov, för nybyggnad"', [SOURCE]) is True
+
+
 def test_an_answer_without_quotes_passes_the_quote_check():
     assert bench.quotes_verbatim(ENGLISH_ANSWER, [SOURCE]) is True
 

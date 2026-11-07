@@ -215,6 +215,7 @@ _MIN_QUOTE_WORDS = 3  # shorter quoted text is a term ("byggnadsarea"), not a qu
 _MIN_FUNCTION_WORD_SHARE = 0.1
 _QUOTED = re.compile(r'["“”]([^"“”\n]+)["“”]')
 _BLOCK_QUOTE = re.compile(r"^\s*>\s?(.*)$", re.MULTILINE)
+_QUOTE_EDGE = re.compile(r'^["“”]|["“”]\s*(\([^)]*\))?\s*$')
 
 
 def _words(text: str) -> list[str]:
@@ -227,8 +228,20 @@ def _word_counts(text: str) -> tuple[int, int]:
     return sum(word in _SWEDISH_WORDS for word in words), sum(word in _ENGLISH_WORDS for word in words)
 
 
-def _normalised(text: str) -> str:
-    return re.sub(r"\s+", " ", text.replace("’", "'")).strip()
+def _tokens(text: str) -> list[str]:
+    return re.findall(r"\w+", text.lower())
+
+
+def _quotes(answer: str) -> list[str]:
+    """The quoted passages of an answer: text in quotation marks, and block quote lines without a pair of their own,
+    each without a quotation mark it opens or closes and a reference after it (a quote spanning lines
+    `> "...` / `> ..." (PBL 9 kap. 4 §)`)."""
+    quotes = [match.group(1) for match in _QUOTED.finditer(answer)]
+    for line in _BLOCK_QUOTE.findall(answer):
+        if not _QUOTED.search(line):
+            line = _QUOTE_EDGE.sub("", re.sub(r"^\*\*[^*]+:\*\*\s*", "", line.strip()))
+            quotes.append(line)
+    return quotes
 
 
 def _cited_texts(answer: str, tools, seen=()) -> list[str]:
@@ -252,19 +265,17 @@ def answer_language_ok(case: dict, answer: str) -> bool:
 
 
 def quotes_verbatim(answer: str, sources: list[str]) -> bool:
-    """Every Swedish quote in the answer appears word for word in one of the source texts (whitespace and
-    typographic quote marks normalised). A quote is text inside quotation marks ("…", “…”, ”…”) or a markdown
-    block quote line; quotes that contain no Swedish word, such as an English translation, are not checked. True when
-    the answer quotes nothing. String matching only, no model call."""
-    haystack = [_normalised(source) for source in sources]
-    quotes = [match.group(1) for match in _QUOTED.finditer(answer)]
-    quotes += [re.sub(r"^\*\*[^*]+:\*\*\s*", "", line.lstrip("> ").strip()) for line in _BLOCK_QUOTE.findall(answer)]
-    for quote in quotes:
-        quote = _normalised(quote).strip(" .,;:")
+    """Every Swedish quote in the answer appears word for word in one of the source texts (case, whitespace and
+    punctuation ignored). A quote is text inside quotation marks ("…", “…”, ”…”) or a markdown block quote line without
+    quotation marks of its own; quotes that contain no Swedish word, such as an English translation, are not checked.
+    True when the answer quotes nothing. String matching only, no model call."""
+    haystack = [f" {' '.join(_tokens(source))} " for source in sources]
+    for quote in _quotes(answer):
         swedish, english = _word_counts(quote)
-        if len(quote.split()) < _MIN_QUOTE_WORDS or swedish <= english:
+        words = _tokens(quote)
+        if len(words) < _MIN_QUOTE_WORDS or swedish <= english:
             continue  # a quoted term or an English translation: nothing to check against the sources
-        if not any(quote in source for source in haystack):
+        if not any(f" {' '.join(words)} " in source for source in haystack):
             return False
     return True
 
