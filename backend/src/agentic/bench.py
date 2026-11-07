@@ -53,7 +53,9 @@ from agentic.agent import (
 from agentic.health import health_lines
 from agentic.run import build_tools
 from agentic.tools import resolve_cited
+from answer_language import LANGUAGE_RULE
 from corpus.common import RESULTS_ROOT, read_jsonl
+from glossary import glossary_prompt
 from llm import get_openai_client, get_response_output_text, resolve_model_name
 from localrag.eval import matches
 from localrag.index import chunk_text
@@ -69,7 +71,11 @@ chunk id [c:<id>]; cite it like that.
 
 {MODES_GUIDE}
 
-{ANSWER_FORMAT}"""
+{ANSWER_FORMAT}
+
+{LANGUAGE_RULE}
+
+{glossary_prompt()}"""
 
 JUDGE_INSTRUCTIONS = """You grade answers of a Swedish planning assistant against a reference.
 Return JSON only: {"verdict": "<feasible|conditional|not_feasible|unclear>", "points": [<0|1|2> per key point, in order], "unsupported_claims": <int>, "comment": "<one sentence>"}.
@@ -199,11 +205,41 @@ def anchor_hits(case: dict, answer: str) -> list[str]:
     return hits
 
 
+# Function words that tell Swedish from English text: domain terms are Swedish in both kinds of answer, so they do not count
+SWEDISH_WORDS = frozenset(["och", "att", "det", "är", "en", "i", "för", "ett", "på", "som", "med", "av", "till", "du", "jag", "inte", "kan", "har", "om", "den", "de", "eller", "men", "från", "vid", "ska", "måste", "behöver", "enligt", "finns", "vad", "när", "så", "också", "får", "inom", "eftersom", "detta", "denna", "dessa", "sin", "sitt", "sina", "din", "ditt", "dina", "vi", "man", "där", "här", "än", "efter", "under", "hur", "bara", "redan", "alltså"])
+ENGLISH_WORDS = frozenset(["the", "and", "to", "of", "is", "for", "you", "in", "that", "a", "an", "on", "with", "are", "be", "can", "not", "or", "this", "it", "must", "need", "your", "if", "as", "by", "from", "what", "when", "also", "may", "within", "because", "these", "those", "its", "we", "there", "here", "than", "after", "under", "how", "only", "already", "so", "which", "would", "should", "does", "do"])
+MIN_QUOTE_WORDS = 3  # shorter quoted text is a term ("byggnadsarea"), not a quote of a source
+_QUOTED = re.compile(r'["“”]([^"“”\n]+)["“”]')
+_BLOCK_QUOTE = re.compile(r"^\s*>\s?(.*)$", re.MULTILINE)
+
+
+def _word_counts(text: str) -> tuple[int, int]:
+    """(Swedish function words, English function words) in the text."""
+    words = re.findall(r"[a-zåäöé]+", text.lower())
+    return sum(word in SWEDISH_WORDS for word in words), sum(word in ENGLISH_WORDS for word in words)
+
+
+def _normalised(text: str) -> str:
+    return re.sub(r"\s+", " ", text.replace("’", "'")).strip()
+
+
+def _cited_texts(answer: str, tools, seen=()) -> list[str]:
+    """The full text of every chunk the answer cites ([c:<id>])."""
+    ids = dict.fromkeys(re.findall(r"c:([0-9a-f]{8,16})(?![0-9a-f])", answer))
+    chunks = (resolve_cited(tools.get_chunk, chunk_id, seen) for chunk_id in ids)
+    return [chunk_text(chunk) for chunk in chunks if chunk]
+
+
 def answer_language_ok(case: dict, answer: str) -> bool:
     """The answer is written in the case's language (`lang`, "sv" or "en"; "en" when absent), read from its own words:
     quoted source text, citation ids and the source list are left out, so an English answer quoting Swedish law is
     still English. An empty answer is never ok. String matching only, no model call."""
-    raise NotImplementedError
+    own_words = _QUOTED.sub(" ", _BLOCK_QUOTE.sub(" ", answer.split("\n---\n")[0]))
+    own_words = re.sub(r"\[c:[^\]]*\]", " ", own_words)
+    swedish, english = _word_counts(own_words)
+    if not swedish and not english:
+        return False
+    return ("sv" if swedish > english else "en") == case.get("lang", "en")
 
 
 def quotes_verbatim(answer: str, sources: list[str]) -> bool:
@@ -211,7 +247,17 @@ def quotes_verbatim(answer: str, sources: list[str]) -> bool:
     typographic quote marks normalised). A quote is text inside quotation marks ("…", “…”, ”…”) or a markdown
     block quote line; quotes that contain no Swedish word, such as an English translation, are not checked. True when
     the answer quotes nothing. String matching only, no model call."""
-    raise NotImplementedError
+    haystack = [_normalised(source) for source in sources]
+    quotes = [match.group(1) for match in _QUOTED.finditer(answer)]
+    quotes += [re.sub(r"^\*\*[^*]+:\*\*\s*", "", line.lstrip("> ").strip()) for line in _BLOCK_QUOTE.findall(answer)]
+    for quote in quotes:
+        quote = _normalised(quote).strip(" .,;:")
+        swedish, english = _word_counts(quote)
+        if len(quote.split()) < MIN_QUOTE_WORDS or swedish <= english:
+            continue  # a quoted term or an English translation: nothing to check against the sources
+        if not any(quote in source for source in haystack):
+            return False
+    return True
 
 
 def mode_ok(case: dict, mode: str | None) -> bool:
@@ -230,6 +276,9 @@ def grade_answer(case: dict, answer: str, tools, judge_model: str, seen=()) -> d
     scores = (list(scores) + [0] * len(case["key_points"]))[:len(case["key_points"])]  # judge returned too few / many
     row = {
         "task": case.get("task", "verdict"),
+        "lang": case.get("lang", "en"),
+        "language_ok": answer_language_ok(case, answer),
+        "quotes_ok": quotes_verbatim(answer, _cited_texts(answer, tools, seen)),
         "verdict": grade.get("verdict"),
         "verdict_ok": grade.get("verdict") in case["verdicts"] if case.get("verdicts") else None,
         "points": sum(scores) / (2 * len(case["key_points"])),
@@ -389,17 +438,19 @@ def main() -> None:
         case, system, repeat = job
         try:
             run = (run_rag(case["question"], tools, model, args.effort) if system == "rag"
-                   else run_agent(case["question"], tools, model=model, effort=args.effort, max_steps=args.max_steps,
+                   else run_agent(case["question"], tools, history=case.get("history"), model=model,
+                                  effort=args.effort, max_steps=args.max_steps,
                                   explore_effort=None if args.explore_effort == "same" else args.explore_effort,
                                   disabled_tools=set(args.disable_tools or ())))
         except Exception as exc:  # noqa: BLE001 - keep the benchmark going; the failure is reported
             run = AgentRun(error=repr(exc))
         grade = (grade_answer(case, run.answer, tools, judge_model, run.seen_chunks) if run.answer
-                 else {"task": case.get("task", "verdict"), "verdict": "none",
+                 else {"task": case.get("task", "verdict"), "lang": case.get("lang", "en"), "language_ok": False,
+                       "quotes_ok": None, "verdict": "none",
                        "verdict_ok": False if case.get("verdicts") else None, "points": 0.0, "unsupported": 0,
                        "comment": run.error, "judge_cost": 0, "judge_model": judge_model})
         row = {
-            "case": case["id"], "system": system, "model": model,
+            "case": case["id"], "system": system, "model": model, "hard": bool(case.get("hard")),
             "repeat": repeat, "effort": args.effort,
             "explore_effort": args.explore_effort,
             **{key: value for key, value in grade.items() if key not in ("comment", "judge_cost")},
@@ -475,6 +526,14 @@ def main() -> None:
                 print(f"         {task:<8} n {len(rows_task):>3}  points {mean('points', rows_task):.2f}  "
                       f"evidence {shown('evidence', rows_task)}  mode_ok {shown('mode_ok', rows_task)}  "
                       + "  ".join(f"{key} {shown(key, rows_task)}" for key in extra))
+        if any(row.get("lang") == "sv" for row in mine):  # bilingual cases: the scores per question language
+            for label, subset in (("sv", [r for r in mine if r.get("lang") == "sv" and not r.get("hard")]),
+                                  ("en", [r for r in mine if r.get("lang", "en") == "en" and not r.get("hard")]),
+                                  ("hard", [r for r in mine if r.get("hard")])):
+                if subset:
+                    print(f"         {label:<8} n {len(subset):>3}  language_ok {shown('language_ok', subset)}  "
+                          f"quotes_ok {shown('quotes_ok', subset)}  verdict_ok {shown('verdict_ok', subset)}  "
+                          f"points {mean('points', subset):.2f}")
         if args.repeats > 1:  # spread of the per-repeat means: how much of a difference is noise
             for key in ("verdict_ok", "points", "evidence"):
                 per_repeat = []
