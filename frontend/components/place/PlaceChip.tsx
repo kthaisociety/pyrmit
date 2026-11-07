@@ -3,6 +3,7 @@
 import { MapPin, X } from 'lucide-react';
 
 import type { PinnedPlace } from '@/lib/place';
+import { useLanguage } from '@/lib/i18n';
 
 export interface PlaceChipProps {
   place: PinnedPlace;
@@ -12,6 +13,7 @@ export interface PlaceChipProps {
 
 /** The pinned place above the message input: its label (or the point), a tap opens the map, × clears the pin. */
 export default function PlaceChip({ place, onOpen, onClear }: PlaceChipProps) {
+  const { t } = useLanguage();
   const label = place.label ?? `${place.lat.toFixed(5)}, ${place.lon.toFixed(5)}`;
   return (
     <div className="inline-flex max-w-full items-center rounded-full bg-white/80 pl-1 pr-1 text-[13px] shadow-[0_2px_12px_rgba(0,0,0,0.08)] ring-1 ring-black/5 backdrop-blur-xl [font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif] dark:bg-zinc-800/80 dark:ring-white/10">
@@ -28,7 +30,7 @@ export default function PlaceChip({ place, onOpen, onClear }: PlaceChipProps) {
       <button
         type="button"
         onClick={onClear}
-        aria-label="Clear pin"
+        aria-label={t('place.clearPin')}
         className="grid size-6 shrink-0 place-items-center rounded-full text-zinc-500 transition-transform duration-100 hover:bg-zinc-200/70 active:scale-90 dark:hover:bg-zinc-700"
       >
         <X size={13} strokeWidth={2.5} />

@@ -37,7 +37,7 @@ function inProvider(...children: ReactNode[]) {
 }
 
 function gatePage() {
-  return inProvider(createElement(DevAccessForm, { nextPath: '/' }), createElement(LanguageSwitch));
+  return inProvider(createElement(DevAccessForm, { nextPath: '/' }));
 }
 
 function PanelHarness() {

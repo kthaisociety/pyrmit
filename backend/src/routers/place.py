@@ -70,7 +70,8 @@ def place_profile(lat: Annotated[float, Query(ge=-90, le=90)], lon: Annotated[fl
     422 when lat or lon is missing or out of range, or language is neither sv nor en."""
     try:
         return profile.build_profile(lat, lon, store=store, property_at=property_at, plan_registry=plan_registry,
-                                     ancient_remains_at=ancient_remains_at, corpus_documents=corpus_documents)
+                                     ancient_remains_at=ancient_remains_at, corpus_documents=corpus_documents,
+                                     language=language)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

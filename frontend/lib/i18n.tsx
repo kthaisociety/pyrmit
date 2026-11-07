@@ -1,9 +1,11 @@
 'use client';
 
 // The page language, Swedish or English (#75): chosen by the visitor, remembered per browser.
-import type { ReactNode } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState,
+  useSyncExternalStore } from 'react';
 
-import type { MessageKey } from '@/lib/messages';
+import { authFetch } from '@/lib/auth';
+import { en, type MessageKey, sv } from '@/lib/messages';
 
 export type Language = 'sv' | 'en';
 
@@ -27,10 +29,79 @@ export interface LanguageState {
  * a failed fetch leaves the glossary empty and shows no error.
  */
 export function LanguageProvider({ children }: { children: ReactNode }): ReactNode {
-  throw new Error('Not implemented');
+  // English on the server and while hydrating, so hydration matches; the visitor's language right after
+  const detected = useSyncExternalStore(subscribeToStorage, initialLanguage, () => 'en' as Language);
+  const [chosen, setChosen] = useState<Language | null>(null);
+  const language = chosen ?? detected;
+  const [glossary, setGlossary] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
+  useEffect(() => {
+    let current = true;
+    authFetch('/api/glossary')
+      .then((response) => (response.ok ? response.json() : {}))
+      .then((entries: Record<string, string>) => current && setGlossary(entries))
+      .catch(() => undefined); // terms then show without explanation
+    return () => {
+      current = false;
+    };
+  }, []);
+
+  const setLanguage = useCallback((next: Language) => {
+    setChosen(next);
+    try {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, next);
+    } catch {
+      // storage blocked: the choice lasts until the page is left
+    }
+  }, []);
+
+  const state = useMemo<Context>(() => {
+    const messages = language === 'sv' ? sv : en;
+    return { language, setLanguage, t: (key) => messages[key], glossary };
+  }, [language, setLanguage, glossary]);
+
+  return <LanguageContext.Provider value={state}>{children}</LanguageContext.Provider>;
 }
 
 /** The page language and its texts. Outside a LanguageProvider it throws. */
 export function useLanguage(): LanguageState {
-  throw new Error('Not implemented');
+  const { language, setLanguage, t } = useContext(LanguageContext) ?? missingProvider();
+  return { language, setLanguage, t };
+}
+
+/** The English explanation of a glossary term (lower case), or undefined. For components/Term.tsx. */
+export function useGlossaryExplanation(term: string): string | undefined {
+  const { glossary } = useContext(LanguageContext) ?? missingProvider();
+  return glossary[term.toLowerCase()];
+}
+
+interface Context extends LanguageState {
+  glossary: Record<string, string>;
+}
+
+const LanguageContext = createContext<Context | null>(null);
+
+function missingProvider(): never {
+  throw new Error('useLanguage needs a LanguageProvider');
+}
+
+// Another tab choosing a language updates this one too
+function subscribeToStorage(onChange: () => void): () => void {
+  window.addEventListener('storage', onChange);
+  return () => window.removeEventListener('storage', onChange);
+}
+
+function initialLanguage(): Language {
+  try {
+    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (stored === 'sv' || stored === 'en') return stored;
+  } catch {
+    // storage blocked: fall back to the browser's language
+  }
+  const preferred = window.navigator.languages?.[0] ?? window.navigator.language ?? '';
+  return preferred.toLowerCase().startsWith('sv') ? 'sv' : 'en';
 }

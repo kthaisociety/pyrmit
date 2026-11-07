@@ -116,7 +116,7 @@ async function getJson<T>(url: string): Promise<T> {
  * `language` query parameter). Throws an Error with the backend's message when the lookup fails.
  */
 export async function fetchPlaceProfile(pin: Pin, language: Language = 'en'): Promise<PlaceProfile> {
-  const query = new URLSearchParams({ lat: String(pin.lat), lon: String(pin.lon) });
+  const query = new URLSearchParams({ lat: String(pin.lat), lon: String(pin.lon), language });
   return getJson<PlaceProfile>(`/api/place/profile?${query}`);
 }
 

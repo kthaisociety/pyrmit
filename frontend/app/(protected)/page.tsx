@@ -10,6 +10,7 @@ import BenchmarkBrowser from '@/components/BenchmarkBrowser';
 import PipelineBrowser from '@/components/PipelineBrowser';
 import SidebarToggle from '@/components/SidebarToggle';
 import { authFetch, clearAccessToken, getStoredAccessToken } from '@/lib/auth';
+import { useLanguage } from '@/lib/i18n';
 
 interface User {
   id: string;
@@ -18,6 +19,7 @@ interface User {
 }
 
 export default function Home() {
+  const { t } = useLanguage();
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [refreshSidebarTrigger, setRefreshSidebarTrigger] = useState(0);
   const [user, setUser] = useState<User | null>(null);
@@ -80,7 +82,7 @@ export default function Home() {
       clearAccessToken();
       router.replace('/auth');
     } catch {
-      setLogoutError('Could not sign out. Please try again.');
+      setLogoutError(t('chat.signOutFailed'));
     } finally {
       setLogoutLoading(false);
     }
@@ -94,8 +96,8 @@ export default function Home() {
   if (loadError) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-3">
-        <p role="alert">Could not load your account.</p>
-        <button onClick={() => window.location.reload()} className="underline">Try again</button>
+        <p role="alert">{t('chat.loadAccountFailed')}</p>
+        <button onClick={() => window.location.reload()} className="underline">{t('chat.tryAgain')}</button>
       </div>
     );
   }

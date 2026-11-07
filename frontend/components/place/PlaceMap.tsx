@@ -5,8 +5,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapMouseEvent, Marker,
               Popup } from 'maplibre-gl';
 
+import type { MessageKey } from '@/lib/messages';
 import { COVERAGE_COLOURS, MATCH_COLOURS, type BBox, type Pin, type ReviewCoverage, type ReviewPlanProperties,
          type ReviewPlans } from '@/lib/place';
+import { useLanguage } from '@/lib/i18n';
 
 export interface PlaceOutline {
   id: string;
@@ -121,14 +123,18 @@ function viewOf(map: MapLibreMap): MapView {
   return { bbox: [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()], zoom: map.getZoom() };
 }
 
+// The match levels as the popup words them (the legend's labels, in lower case)
+const MATCH_LABEL: Record<string, MessageKey> = { link: 'place.matchLink', akt: 'place.matchAkt', name: 'place.matchName' };
+
 // The plan's aktbeteckning, name and match level, as text (never HTML from the data)
-function planPopup(properties: ReviewPlanProperties): HTMLElement {
+function planPopup(properties: ReviewPlanProperties, t: (key: MessageKey) => string): HTMLElement {
   const root = document.createElement('div');
   root.className = 'space-y-0.5 text-[13px] text-zinc-900';
   const lines = [
-    [properties.ref ?? 'No aktbeteckning', 'font-semibold'],
+    [properties.ref ?? t('place.noAktbeteckning'), 'font-semibold'],
     [properties.name ?? '', ''],
-    [`${properties.kommun} · ${properties.match ? `matched by ${properties.match}` : 'no document matched'}`, 'text-zinc-500'],
+    [`${properties.kommun} · ${properties.match ? matchedBy(properties.match, t) : t('place.noDocumentMatched')}`,
+     'text-zinc-500'],
   ];
   for (const [text, className] of lines) {
     if (!text) continue;
@@ -140,12 +146,19 @@ function planPopup(properties: ReviewPlanProperties): HTMLElement {
   return root;
 }
 
+function matchedBy(match: string, t: (key: MessageKey) => string): string {
+  const key = MATCH_LABEL[match];
+  return t('place.matchedBy').replace('{match}', key ? t(key).toLowerCase() : match);
+}
+
 /**
  * The base map (MapLibre, OpenFreeMap tiles) with the pin and the outlines; a click reports the point. In the review
  * mode the kommuner and the plans in view are coloured, and a click on a plan shows what it is instead.
  */
 export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, proposal = null, review = null,
                                    onMapClick, onViewChange }: PlaceMapProps) {
+  const { t } = useLanguage();
+  const tRef = useRef(t); // the popup, opened from a handler set up once, words itself in the current language
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -165,6 +178,9 @@ export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, propo
   useEffect(() => {
     reviewRef.current = review;
   }, [review]);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   // One map for the component's life; MapLibre is loaded here so server rendering never imports it
   useEffect(() => {
@@ -186,7 +202,7 @@ export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, propo
           if (plan) {
             popupRef.current?.remove();
             popupRef.current = new maplibregl.Popup({ closeButton: true, maxWidth: '280px' })
-              .setLngLat(event.lngLat).setDOMContent(planPopup(plan.properties as ReviewPlanProperties)).addTo(map);
+              .setLngLat(event.lngLat).setDOMContent(planPopup(plan.properties as ReviewPlanProperties, tRef.current)).addTo(map);
             return;
           }
         }
@@ -272,5 +288,5 @@ export default function PlaceMap({ pin, outlines, bounds, bottomInset = 0, propo
     if (!review) popupRef.current?.remove();
   }, [ready, review]);
 
-  return <div ref={container} className="h-full w-full" aria-label="Map of the pilot kommuner" />;
+  return <div ref={container} className="h-full w-full" aria-label={t('place.mapOfPilot')} />;
 }
