@@ -21,37 +21,10 @@ for _mod in _STUBS:
 # models must be stubbed before it's imported by the agent modules
 sys.modules.setdefault("models", MagicMock())
 
-from agents.base import BaseRAGAgent
 from agents.law_agent import LawAgent
 from agents.document_agent import DocumentAgent
 from agents.orchestrator import Orchestrator
 from agents.parsers import parse_query, format_response
-
-
-# ---------------------------------------------------------------------------
-# BaseRAGAgent._extract_json
-# ---------------------------------------------------------------------------
-
-class TestExtractJson(unittest.TestCase):
-    def test_plain_json(self):
-        text = '{"key": "value", "num": 42}'
-        result = BaseRAGAgent._extract_json(text)
-        self.assertEqual(result["key"], "value")
-        self.assertEqual(result["num"], 42)
-
-    def test_json_fenced_with_language(self):
-        text = '```json\n{"status": "ok"}\n```'
-        result = BaseRAGAgent._extract_json(text)
-        self.assertEqual(result["status"], "ok")
-
-    def test_json_fenced_without_language(self):
-        text = '```\n{"status": "ok"}\n```'
-        result = BaseRAGAgent._extract_json(text)
-        self.assertEqual(result["status"], "ok")
-
-    def test_invalid_json_returns_empty(self):
-        # The agents turn {} into their fallback result (test_fallback_on_bad_json)
-        self.assertEqual(BaseRAGAgent._extract_json("not json at all"), {})
 
 
 # ---------------------------------------------------------------------------
@@ -115,13 +88,22 @@ class TestFormatResponse(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Orchestrator._determine_feasibility
+# Orchestrator.analyze (agents faked: they return their structured readings)
 # ---------------------------------------------------------------------------
 
-class TestDetermineFeasibility(unittest.TestCase):
-    def setUp(self):
-        self.orch = Orchestrator(MagicMock(), MagicMock())
+class _FakeAgent:
+    def __init__(self, result):
+        self.result = result
 
+    def query(self, location, project_type, units, language="en"):
+        return dict(self.result)
+
+
+def _analyze(units, law, doc):
+    return Orchestrator(_FakeAgent(law), _FakeAgent(doc)).analyze("Uppsala", "residential", units)
+
+
+class TestFeasibility(unittest.TestCase):
     def _law(self, max_units, confidence=0.9):
         return {"max_units_allowed": max_units, "confidence": confidence}
 
@@ -129,94 +111,52 @@ class TestDetermineFeasibility(unittest.TestCase):
         return {"approval_rate": approval_rate, "confidence": confidence}
 
     def test_highly_feasible(self):
-        self.assertEqual(
-            self.orch._determine_feasibility(10, self._law(20), self._doc("80%"))["status"],
-            "HIGHLY FEASIBLE"
-        )
+        self.assertEqual(_analyze(10, self._law(20), self._doc("80%"))["feasibility"], "HIGHLY FEASIBLE")
 
     def test_feasible_with_challenges(self):
-        self.assertEqual(
-            self.orch._determine_feasibility(10, self._law(20), self._doc("50%"))["status"],
-            "FEASIBLE WITH CHALLENGES"
-        )
+        self.assertEqual(_analyze(10, self._law(20), self._doc("50%"))["feasibility"], "FEASIBLE WITH CHALLENGES")
 
     def test_not_feasible(self):
-        self.assertEqual(
-            self.orch._determine_feasibility(30, self._law(20), self._doc("80%"))["status"],
-            "NOT FEASIBLE"
-        )
+        self.assertEqual(_analyze(30, self._law(20), self._doc("80%"))["feasibility"], "NOT FEASIBLE")
 
     def test_uncertain_when_max_unknown(self):
-        self.assertEqual(
-            self.orch._determine_feasibility(10, self._law("unknown"), self._doc("80%"))["status"],
-            "UNCERTAIN"
-        )
+        self.assertEqual(_analyze(10, self._law("unknown"), self._doc("80%"))["feasibility"], "UNCERTAIN")
 
     def test_uncertain_when_max_varies(self):
-        self.assertEqual(
-            self.orch._determine_feasibility(10, self._law("varies"), self._doc("80%"))["status"],
-            "UNCERTAIN"
-        )
+        self.assertEqual(_analyze(10, self._law("varies"), self._doc("80%"))["feasibility"], "UNCERTAIN")
 
     def test_confidence_is_int(self):
-        result = self.orch._determine_feasibility(10, self._law(20), self._doc("80%"))
-        self.assertIsInstance(result["confidence"], int)
+        self.assertIsInstance(_analyze(10, self._law(20), self._doc("80%"))["confidence"], int)
 
     def test_boundary_exactly_at_max(self):
         # units == max_allowed should be allowed (<=)
-        self.assertIn(
-            self.orch._determine_feasibility(20, self._law(20), self._doc("80%"))["status"],
-            ["HIGHLY FEASIBLE", "FEASIBLE WITH CHALLENGES"]
-        )
+        self.assertEqual(_analyze(20, self._law(20), self._doc("80%"))["feasibility"], "HIGHLY FEASIBLE")
 
 
-# ---------------------------------------------------------------------------
-# Orchestrator._extract_requirements
-# ---------------------------------------------------------------------------
-
-class TestExtractRequirements(unittest.TestCase):
-    def setUp(self):
-        self.orch = Orchestrator(MagicMock(), MagicMock())
-
+class TestRequirements(unittest.TestCase):
     def test_combines_without_duplicates(self):
-        law = {"conditions": ["Parking plan"]}
-        doc = {"common_requirements": ["Noise study", "Parking plan"]}
-        reqs = self.orch._extract_requirements(law, doc)
-        self.assertEqual(reqs.count("Parking plan"), 1)
-        self.assertIn("Noise study", reqs)
+        reqs = _analyze(10, {"conditions": ["Parking plan"]},
+                        {"common_requirements": ["Noise study", "Parking plan"]})["requirements"]
+        self.assertEqual(reqs, ["Parking plan", "Noise study"])
 
     def test_default_when_empty(self):
-        self.assertEqual(
-            self.orch._extract_requirements({}, {}),
-            ["Consult with local planning department"]
-        )
+        self.assertEqual(_analyze(10, {}, {})["requirements"], ["Consult with local planning department"])
 
     def test_law_conditions_come_first(self):
-        law = {"conditions": ["A"]}
-        doc = {"common_requirements": ["B"]}
-        reqs = self.orch._extract_requirements(law, doc)
-        self.assertEqual(reqs[0], "A")
+        self.assertEqual(_analyze(10, {"conditions": ["A"]}, {"common_requirements": ["B"]})["requirements"][0], "A")
 
 
-# ---------------------------------------------------------------------------
-# Orchestrator._generate_next_steps
-# ---------------------------------------------------------------------------
-
-class TestGenerateNextSteps(unittest.TestCase):
-    def setUp(self):
-        self.orch = Orchestrator(MagicMock(), MagicMock())
-
+class TestNextSteps(unittest.TestCase):
     def test_highly_feasible_mentions_preapplication(self):
-        steps = self.orch._generate_next_steps({"status": "HIGHLY FEASIBLE"})
+        steps = _analyze(10, {"max_units_allowed": 20}, {"approval_rate": "80%"})["next_steps"]
         self.assertTrue(any("pre-application" in s.lower() for s in steps))
 
     def test_not_feasible_mentions_variance(self):
-        steps = self.orch._generate_next_steps({"status": "NOT FEASIBLE"})
+        steps = _analyze(30, {"max_units_allowed": 20}, {"approval_rate": "80%"})["next_steps"]
         self.assertTrue(any("variance" in s.lower() for s in steps))
 
-    def test_all_statuses_return_nonempty(self):
-        for status in ("HIGHLY FEASIBLE", "FEASIBLE WITH CHALLENGES", "NOT FEASIBLE", "UNCERTAIN"):
-            self.assertTrue(len(self.orch._generate_next_steps({"status": status})) > 0)
+    def test_uncertain_returns_steps(self):
+        self.assertTrue(_analyze(10, {}, {})["next_steps"])
 
 
 # ---------------------------------------------------------------------------
@@ -259,6 +199,14 @@ class TestLawAgentQuery(unittest.TestCase):
             with patch.object(agent, "_call_llm", return_value=llm_response):
                 result = agent.query("Malmo", "residential", 8)
         self.assertEqual(result["max_units_allowed"], 10)
+
+    def test_handles_fenced_json_without_language(self):
+        agent = self._make_agent()
+        llm_response = '```\n{"max_units_allowed": 12, "applicable_laws": [], "conditions": [], "confidence": 0.6}\n```'
+        with patch.object(agent, "_retrieve", return_value=[]):
+            with patch.object(agent, "_call_llm", return_value=llm_response):
+                result = agent.query("Malmo", "residential", 8)
+        self.assertEqual(result["max_units_allowed"], 12)
 
 
 # ---------------------------------------------------------------------------
