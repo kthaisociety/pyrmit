@@ -25,15 +25,14 @@ OPENAI_CHAT_MODEL = os.getenv("LLM_MODEL", "").strip() or (
     else "openai/gpt-5.4-nano"
 )
 
-_TRANSLATION_INSTRUCTION = (
-    "Always respond in English. "
-    "When quoting source text that is in Swedish, include the original Swedish verbatim "
-    "and follow it with an English translation."
-)
 
 # The agents' answer language (PCR-0006): their text fields in it, Swedish quotes always verbatim
 LANGUAGE_INSTRUCTION: dict[str, str] = {
-    "en": _TRANSLATION_INSTRUCTION,
+    "en": (
+        "Always respond in English. "
+        "When quoting source text that is in Swedish, include the original Swedish verbatim "
+        "and follow it with an English translation."
+    ),
     "sv": "Always respond in Swedish. Quote Swedish source text verbatim, in Swedish only.",
 }
 LANGUAGE_NAME: dict[str, str] = {"en": "English", "sv": "Swedish"}

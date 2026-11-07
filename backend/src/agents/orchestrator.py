@@ -10,8 +10,42 @@ from answer_language import Language
 
 logger = logging.getLogger(__name__)
 
-_FALLBACK_REQUIREMENT: dict[str, str] = {"en": "Consult with local planning department",
-                                         "sv": "Rådgör med kommunens plan- och byggavdelning"}
+# The analysis' fixed texts per answer language (PCR-0006): format strings filled in by the methods below
+_TEXTS: dict[str, dict[str, str]] = {
+    "en": {
+        "HIGHLY FEASIBLE": "Project appears viable. Law allows up to {max_allowed} units, and similar projects have "
+                           "{approval_rate} approval rate.",
+        "FEASIBLE WITH CHALLENGES": "Project is legally allowed but may face approval challenges. Approval rate for "
+                                    "similar projects: {approval_rate}.",
+        "NOT FEASIBLE": "Project exceeds maximum allowed density. Law allows {max_allowed} units, but you proposed "
+                        "{units} units.",
+        "UNCERTAIN": "Unable to determine feasibility with available information. Legal requirements unclear.",
+        "fallback_requirement": "Consult with local planning department",
+        "unknown": "unknown",
+        "unknown_timeline": "Unknown",
+        "max_units": "Maximum allowed: {max_units} units",
+        "laws": "Applicable laws: {laws}",
+        "special": "Special provisions: {special}",
+        "cases": "Similar cases found: {count}\nApproval rate: {approval_rate}\nTypical timeline: {timeline} months",
+    },
+    "sv": {
+        "HIGHLY FEASIBLE": "Projektet ser genomförbart ut. Lagen tillåter upp till {max_allowed} bostäder, och liknande "
+                           "projekt har godkänts i {approval_rate} av fallen.",
+        "FEASIBLE WITH CHALLENGES": "Projektet är tillåtet enligt lagen men kan möta svårigheter vid prövningen. Andel "
+                                    "godkända liknande projekt: {approval_rate}.",
+        "NOT FEASIBLE": "Projektet överskrider den högsta tillåtna tätheten. Lagen tillåter {max_allowed} bostäder, men "
+                        "du föreslår {units}.",
+        "UNCERTAIN": "Det går inte att bedöma genomförbarheten med den information som finns. Lagkraven är oklara.",
+        "fallback_requirement": "Rådgör med kommunens plan- och byggavdelning",
+        "unknown": "okänt",
+        "unknown_timeline": "Okänd",
+        "max_units": "Högsta tillåtna antal: {max_units} bostäder",
+        "laws": "Tillämpliga lagar: {laws}",
+        "special": "Särskilda bestämmelser: {special}",
+        "cases": "Liknande ärenden: {count}\nAndel godkända: {approval_rate}\nTypisk handläggningstid: {timeline} "
+                 "månader",
+    },
+}
 
 _NEXT_STEPS: dict[str, dict[str, list[str]]] = {
     "en": {
@@ -89,7 +123,7 @@ class Orchestrator:
             "law_findings": self._summarize_law_findings(law_result, language),
             "case_findings": self._summarize_case_findings(document_result, language),
             "requirements": self._extract_requirements(law_result, document_result, language),
-            "timeline": document_result.get("typical_timeline_months", "Unknown" if language == "en" else "Okänd"),
+            "timeline": document_result.get("typical_timeline_months", _TEXTS[language]["unknown_timeline"]),
             "next_steps": self._generate_next_steps(feasibility, language),
             "sources": sources,
             # Raw agent outputs (incl. retrieval traces) for the pipeline inspector
@@ -99,7 +133,6 @@ class Orchestrator:
     def _determine_feasibility(
         self, units: int, law_result: dict, document_result: dict, language: Language = "en"
     ) -> dict:
-        sv = language == "sv"
         max_allowed = law_result.get("max_units_allowed")
         approval_rate_str = document_result.get("approval_rate", "0%")
 
@@ -117,57 +150,40 @@ class Orchestrator:
             legally_allowed = None  # "varies", "unknown", or missing
 
         if legally_allowed is True and approval_rate >= 0.7:
-            return {
-                "status": "HIGHLY FEASIBLE",
-                "summary": (f"Projektet ser genomförbart ut. Lagen tillåter upp till {max_allowed} bostäder, och liknande projekt har godkänts i {approval_rate_str} av fallen." if sv else f"Project appears viable. Law allows up to {max_allowed} units, and similar projects have {approval_rate_str} approval rate."),
-                "confidence": int(min(law_confidence, doc_confidence) * 100),
-            }
-        if legally_allowed is True and approval_rate >= 0.4:
-            return {
-                "status": "FEASIBLE WITH CHALLENGES",
-                "summary": (f"Projektet är tillåtet enligt lagen men kan möta svårigheter vid prövningen. Andel godkända liknande projekt: {approval_rate_str}." if sv else f"Project is legally allowed but may face approval challenges. Approval rate for similar projects: {approval_rate_str}."),
-                "confidence": int(min(law_confidence, doc_confidence) * 100),
-            }
-        if legally_allowed is False:
-            return {
-                "status": "NOT FEASIBLE",
-                "summary": (f"Projektet överskrider den högsta tillåtna tätheten. Lagen tillåter {max_allowed} bostäder, men du föreslår {units}." if sv else f"Project exceeds maximum allowed density. Law allows {max_allowed} units, but you proposed {units} units."),
-                "confidence": int(law_confidence * 100),
-            }
-        return {
-            "status": "UNCERTAIN",
-            "summary": ("Det går inte att bedöma genomförbarheten med den information som finns. Lagkraven är oklara." if sv else "Unable to determine feasibility with available information. Legal requirements unclear."),
-            "confidence": int((law_confidence + doc_confidence) / 2 * 60),
-        }
+            status, confidence = "HIGHLY FEASIBLE", int(min(law_confidence, doc_confidence) * 100)
+        elif legally_allowed is True and approval_rate >= 0.4:
+            status, confidence = "FEASIBLE WITH CHALLENGES", int(min(law_confidence, doc_confidence) * 100)
+        elif legally_allowed is False:
+            status, confidence = "NOT FEASIBLE", int(law_confidence * 100)
+        else:
+            status, confidence = "UNCERTAIN", int((law_confidence + doc_confidence) / 2 * 60)
+        summary = _TEXTS[language][status].format(max_allowed=max_allowed, approval_rate=approval_rate_str, units=units)
+        return {"status": status, "summary": summary, "confidence": confidence}
 
     def _extract_requirements(self, law_result: dict, document_result: dict, language: Language = "en") -> list:
         requirements = list(law_result.get("conditions", []))
         for req in document_result.get("common_requirements", []):
             if req not in requirements:
                 requirements.append(req)
-        return requirements or [_FALLBACK_REQUIREMENT[language]]
+        return requirements or [_TEXTS[language]["fallback_requirement"]]
 
     def _generate_next_steps(self, feasibility: dict, language: Language = "en") -> list:
         steps = _NEXT_STEPS[language]
         return steps.get(feasibility["status"], steps["UNCERTAIN"])
 
     def _summarize_law_findings(self, law_result: dict, language: Language = "en") -> str:
-        sv = language == "sv"
-        max_units = law_result.get("max_units_allowed", "okänt" if sv else "unknown")
+        texts = _TEXTS[language]
         laws = law_result.get("applicable_laws", [])
         special = law_result.get("special_provisions", "")
-        parts = [f"Högsta tillåtna antal: {max_units} bostäder" if sv else f"Maximum allowed: {max_units} units"]
+        parts = [texts["max_units"].format(max_units=law_result.get("max_units_allowed", texts["unknown"]))]
         if laws:
-            parts.append(f"{'Tillämpliga lagar' if sv else 'Applicable laws'}: {', '.join(laws[:3])}")
+            parts.append(texts["laws"].format(laws=", ".join(laws[:3])))
         if special:
-            parts.append(f"{'Särskilda bestämmelser' if sv else 'Special provisions'}: {special}")
+            parts.append(texts["special"].format(special=special))
         return "\n".join(parts)
 
     def _summarize_case_findings(self, document_result: dict, language: Language = "en") -> str:
-        sv = language == "sv"
-        cases = document_result.get("similar_cases", [])
-        approval_rate = document_result.get("approval_rate", "okänd" if sv else "unknown")
-        timeline = document_result.get("typical_timeline_months", "okänd" if sv else "unknown")
-        if sv:
-            return f"Liknande ärenden: {len(cases)}\nAndel godkända: {approval_rate}\nTypisk handläggningstid: {timeline} månader"
-        return f"Similar cases found: {len(cases)}\nApproval rate: {approval_rate}\nTypical timeline: {timeline} months"
+        texts = _TEXTS[language]
+        return texts["cases"].format(count=len(document_result.get("similar_cases", [])),
+                                     approval_rate=document_result.get("approval_rate", texts["unknown"]),
+                                     timeline=document_result.get("typical_timeline_months", texts["unknown"]))

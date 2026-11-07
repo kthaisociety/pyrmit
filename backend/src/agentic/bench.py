@@ -121,6 +121,8 @@ Return JSON only: {{"verdict": "<...|none>", "proposals": [{{"place": "<as the a
 # Every cited chunk, whole: with 15 x 1500 chars, a quarter of the agent answers had cited facts the judge never saw
 # (counted as unsupported)
 MAX_JUDGE_SOURCES, MAX_SOURCE_CHARS = 40, 3000
+_SOURCES_SEPARATOR = "\n---\n"  # the chat's source list follows the answer after this rule
+_CITED_ID = re.compile(r"c:([0-9a-f]{8,16})(?![0-9a-f])")
 MAP_TOOLS = {"view_map_area", "view_pdf_page"}
 POINT_KINDS = ("Obstacle", "Lever", "Ask")
 
@@ -166,7 +168,7 @@ def run_rag(question: str, tools, model: str, effort: str, k: int = 10) -> Agent
 def cited_sources(answer: str, tools, seen=()) -> str:
     """The text of the chunks the answer cites ([c:<id>]), so the judge can tell sourced facts from invented ones;
     `seen` (the chunks the system was shown) resolves miscopied ids as in the chat."""
-    ids = list(dict.fromkeys(re.findall(r"c:([0-9a-f]{8,16})(?![0-9a-f])", answer)))[:MAX_JUDGE_SOURCES]
+    ids = list(dict.fromkeys(_CITED_ID.findall(answer)))[:MAX_JUDGE_SOURCES]
     chunks = [(chunk_id, resolve_cited(tools.get_chunk, chunk_id, seen)) for chunk_id in ids]
     return "\n\n".join(f"[c:{chunk_id}] {chunk_text(chunk)[:MAX_SOURCE_CHARS]}" for chunk_id, chunk in chunks if chunk)
 
@@ -206,9 +208,9 @@ def anchor_hits(case: dict, answer: str) -> list[str]:
 
 
 # Function words that tell Swedish from English text: domain terms are Swedish in both kinds of answer, so they do not count
-SWEDISH_WORDS = frozenset(["och", "att", "det", "är", "en", "i", "för", "ett", "på", "som", "med", "av", "till", "du", "jag", "inte", "kan", "har", "om", "den", "de", "eller", "men", "från", "vid", "ska", "måste", "behöver", "enligt", "finns", "vad", "när", "så", "också", "får", "inom", "eftersom", "detta", "denna", "dessa", "sin", "sitt", "sina", "din", "ditt", "dina", "vi", "man", "där", "här", "än", "efter", "under", "hur", "bara", "redan", "alltså"])
-ENGLISH_WORDS = frozenset(["the", "and", "to", "of", "is", "for", "you", "in", "that", "a", "an", "on", "with", "are", "be", "can", "not", "or", "this", "it", "must", "need", "your", "if", "as", "by", "from", "what", "when", "also", "may", "within", "because", "these", "those", "its", "we", "there", "here", "than", "after", "under", "how", "only", "already", "so", "which", "would", "should", "does", "do"])
-MIN_QUOTE_WORDS = 3  # shorter quoted text is a term ("byggnadsarea"), not a quote of a source
+_SWEDISH_WORDS = frozenset(["och", "att", "det", "är", "en", "i", "för", "ett", "på", "som", "med", "av", "till", "du", "jag", "inte", "kan", "har", "om", "den", "de", "eller", "men", "från", "vid", "ska", "måste", "behöver", "enligt", "finns", "vad", "när", "så", "också", "får", "inom", "eftersom", "detta", "denna", "dessa", "sin", "sitt", "sina", "din", "ditt", "dina", "vi", "man", "där", "här", "än", "efter", "under", "hur", "bara", "redan", "alltså"])
+_ENGLISH_WORDS = frozenset(["the", "and", "to", "of", "is", "for", "you", "in", "that", "a", "an", "on", "with", "are", "be", "can", "not", "or", "this", "it", "must", "need", "your", "if", "as", "by", "from", "what", "when", "also", "may", "within", "because", "these", "those", "its", "we", "there", "here", "than", "after", "under", "how", "only", "already", "so", "which", "would", "should", "does", "do"])
+_MIN_QUOTE_WORDS = 3  # shorter quoted text is a term ("byggnadsarea"), not a quote of a source
 _QUOTED = re.compile(r'["“”]([^"“”\n]+)["“”]')
 _BLOCK_QUOTE = re.compile(r"^\s*>\s?(.*)$", re.MULTILINE)
 
@@ -216,7 +218,7 @@ _BLOCK_QUOTE = re.compile(r"^\s*>\s?(.*)$", re.MULTILINE)
 def _word_counts(text: str) -> tuple[int, int]:
     """(Swedish function words, English function words) in the text."""
     words = re.findall(r"[a-zåäöé]+", text.lower())
-    return sum(word in SWEDISH_WORDS for word in words), sum(word in ENGLISH_WORDS for word in words)
+    return sum(word in _SWEDISH_WORDS for word in words), sum(word in _ENGLISH_WORDS for word in words)
 
 
 def _normalised(text: str) -> str:
@@ -225,7 +227,7 @@ def _normalised(text: str) -> str:
 
 def _cited_texts(answer: str, tools, seen=()) -> list[str]:
     """The full text of every chunk the answer cites ([c:<id>])."""
-    ids = dict.fromkeys(re.findall(r"c:([0-9a-f]{8,16})(?![0-9a-f])", answer))
+    ids = dict.fromkeys(_CITED_ID.findall(answer))
     chunks = (resolve_cited(tools.get_chunk, chunk_id, seen) for chunk_id in ids)
     return [chunk_text(chunk) for chunk in chunks if chunk]
 
@@ -234,7 +236,7 @@ def answer_language_ok(case: dict, answer: str) -> bool:
     """The answer is written in the case's language (`lang`, "sv" or "en"; "en" when absent), read from its own words:
     quoted source text, citation ids and the source list are left out, so an English answer quoting Swedish law is
     still English. An empty answer is never ok. String matching only, no model call."""
-    own_words = _QUOTED.sub(" ", _BLOCK_QUOTE.sub(" ", answer.split("\n---\n")[0]))
+    own_words = _QUOTED.sub(" ", _BLOCK_QUOTE.sub(" ", answer.split(_SOURCES_SEPARATOR)[0]))
     own_words = re.sub(r"\[c:[^\]]*\]", " ", own_words)
     swedish, english = _word_counts(own_words)
     if not swedish and not english:
@@ -253,7 +255,7 @@ def quotes_verbatim(answer: str, sources: list[str]) -> bool:
     for quote in quotes:
         quote = _normalised(quote).strip(" .,;:")
         swedish, english = _word_counts(quote)
-        if len(quote.split()) < MIN_QUOTE_WORDS or swedish <= english:
+        if len(quote.split()) < _MIN_QUOTE_WORDS or swedish <= english:
             continue  # a quoted term or an English translation: nothing to check against the sources
         if not any(quote in source for source in haystack):
             return False

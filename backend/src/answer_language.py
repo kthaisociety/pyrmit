@@ -41,9 +41,9 @@ def split_language(output: str) -> tuple[str, Language]:
             continue
         value = match.group(1).lower()
         language = "sv" if value == "sv" else "en"
-        rest = line[:match.start()]
-        if rest.strip():  # "LANG:" written at the end of a text line: keep the text
-            kept.append(rest)
+        text_before_lang = line[:match.start()]
+        if text_before_lang.strip():
+            kept.append(text_before_lang)
     return "\n".join(kept), language
 
 
