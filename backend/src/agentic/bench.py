@@ -211,13 +211,19 @@ def anchor_hits(case: dict, answer: str) -> list[str]:
 _SWEDISH_WORDS = frozenset(["och", "att", "det", "är", "en", "i", "för", "ett", "på", "som", "med", "av", "till", "du", "jag", "inte", "kan", "har", "om", "den", "de", "eller", "men", "från", "vid", "ska", "måste", "behöver", "enligt", "finns", "vad", "när", "så", "också", "får", "inom", "eftersom", "detta", "denna", "dessa", "sin", "sitt", "sina", "din", "ditt", "dina", "vi", "man", "där", "här", "än", "efter", "under", "hur", "bara", "redan", "alltså"])
 _ENGLISH_WORDS = frozenset(["the", "and", "to", "of", "is", "for", "you", "in", "that", "a", "an", "on", "with", "are", "be", "can", "not", "or", "this", "it", "must", "need", "your", "if", "as", "by", "from", "what", "when", "also", "may", "within", "because", "these", "those", "its", "we", "there", "here", "than", "after", "under", "how", "only", "already", "so", "which", "would", "should", "does", "do"])
 _MIN_QUOTE_WORDS = 3  # shorter quoted text is a term ("byggnadsarea"), not a quote of a source
+# Swedish and English answers measured 30-50% function words, German ones 1-2%: below this share it is another language
+_MIN_FUNCTION_WORD_SHARE = 0.1
 _QUOTED = re.compile(r'["“”]([^"“”\n]+)["“”]')
 _BLOCK_QUOTE = re.compile(r"^\s*>\s?(.*)$", re.MULTILINE)
 
 
+def _words(text: str) -> list[str]:
+    return re.findall(r"[a-zåäöéüßàâçèêëîïôûñ]+", text.lower())
+
+
 def _word_counts(text: str) -> tuple[int, int]:
     """(Swedish function words, English function words) in the text."""
-    words = re.findall(r"[a-zåäöé]+", text.lower())
+    words = _words(text)
     return sum(word in _SWEDISH_WORDS for word in words), sum(word in _ENGLISH_WORDS for word in words)
 
 
@@ -235,11 +241,12 @@ def _cited_texts(answer: str, tools, seen=()) -> list[str]:
 def answer_language_ok(case: dict, answer: str) -> bool:
     """The answer is written in the case's language (`lang`, "sv" or "en"; "en" when absent), read from its own words:
     quoted source text, citation ids and the source list are left out, so an English answer quoting Swedish law is
-    still English. An empty answer is never ok. String matching only, no model call."""
+    still English. An empty answer, or one in any other language, is never ok. String matching only, no model call."""
     own_words = _QUOTED.sub(" ", _BLOCK_QUOTE.sub(" ", answer.split(_SOURCES_SEPARATOR)[0]))
     own_words = re.sub(r"\[c:[^\]]*\]", " ", own_words)
     swedish, english = _word_counts(own_words)
-    if not swedish and not english:
+    words = len(_words(own_words))
+    if not words or max(swedish, english) < _MIN_FUNCTION_WORD_SHARE * words:
         return False
     return ("sv" if swedish > english else "en") == case.get("lang", "en")
 

@@ -39,6 +39,13 @@ def test_an_english_answer_quoting_swedish_law_is_english():
     assert bench.answer_language_ok(EN_CASE, ENGLISH_ANSWER_QUOTING) is True
 
 
+def test_an_answer_in_a_third_language_fails_an_english_case():
+    """A German question must get an English answer: a German one is in the wrong language."""
+    german = ("**Antwort:** Grundsätzlich ist ein Ferienhaus 40 Meter vom Seeufer nicht ausgeschlossen, aber es ist "
+              "auch nicht allein deshalb zulässig, weil das Grundstück außerhalb eines Bebauungsplans liegt.")
+    assert bench.answer_language_ok(EN_CASE, german) is False
+
+
 def test_a_case_without_lang_is_english():
     assert bench.answer_language_ok({"id": "x", "question": "q", "key_points": ["a"]}, ENGLISH_ANSWER) is True
 
