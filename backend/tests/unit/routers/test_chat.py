@@ -36,6 +36,7 @@ def _jsonb_as_json(element, compiler, **kw):
 import agentic.service
 import models
 from agents.base import BaseRAGAgent
+from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_SUFFIX
 from db.database import get_db
 from dependencies import get_current_user
 from place.context import NO_PIN_HINT
@@ -111,7 +112,8 @@ class BackgroundAnswerTest(unittest.TestCase):
             time.sleep(0.2)
         return self.assistant_message()
 
-    def test_answer_saved_when_client_disconnects(self):
+    def answer_after_disconnect(self):
+        """Leave the stream in the middle of the answer, then wait for the saved message."""
         body = {"messages": [{"role": "user", "content": "Hur söker man bygglov?"}], "session_id": None}
         with self.client.stream("POST", "/api/chat/stream", json=body) as response:
             seen = 0
@@ -120,23 +122,36 @@ class BackgroundAnswerTest(unittest.TestCase):
                     seen += 1
                     if seen == 2:
                         break  # leave in the middle of the answer
-        # The message exists right away, marked as streaming, with partial text saved as it goes
-        message = self.wait_until_done()
-        self.assertEqual(message.status, "done")
+        return self.wait_until_done()
+
+    def test_answer_completes_when_client_disconnects(self):
+        self.assertEqual(self.answer_after_disconnect().status, "done")
+
+    def test_full_answer_saved_when_client_disconnects(self):
+        message = self.answer_after_disconnect()
         self.assertEqual(message.content.split("\n\n---")[0], "".join(ANSWER_PARTS))
-        stages = [event["stage"] for event in (message.trace or [])]
+
+    def test_trace_saved_when_client_disconnects(self):
+        stages = [event["stage"] for event in (self.answer_after_disconnect().trace or [])]
         self.assertIn("retrieval", stages)
 
-    def test_full_stream_still_works(self):
+    def full_stream_event_types(self):
         body = {"messages": [{"role": "user", "content": "Hur söker man bygglov?"}], "session_id": None}
         events = []
         with self.client.stream("POST", "/api/chat/stream", json=body) as response:
             for line in response.iter_lines():
                 if line.startswith("data:"):
                     events.append(json.loads(line[5:]))
-        types_seen = [event["type"] for event in events]
-        self.assertEqual(types_seen[0], "session_id")
-        self.assertIn("done", types_seen)
+        return [event["type"] for event in events]
+
+    def test_full_stream_starts_with_the_session_id(self):
+        self.assertEqual(self.full_stream_event_types()[0], "session_id")
+
+    def test_full_stream_ends_with_done(self):
+        self.assertIn("done", self.full_stream_event_types())
+
+    def test_full_stream_saves_the_answer(self):
+        self.full_stream_event_types()
         self.assertEqual(self.wait_until_done().status, "done")
 
 
@@ -214,13 +229,13 @@ PINNED = {"lat": PIN[0], "lon": PIN[1], "label": "Uppsala Kungsängen 7:8"}
 
 # --- the agent gets the place ----------------------------------------------------------------------------------
 
-def test_a_pinned_question_gives_the_agent_the_place_profile(harness):
+@pytest.mark.parametrize("fact", ["Uppsala Kungsängen 7:8", "0380-P2002/5", "BCK", "Kungsängsängen", "Fyrisån",
+                                  "Uppsala 123:1", "Bygglov"])
+def test_a_pinned_question_gives_the_agent_the_place_profile(harness, fact):
     """With a pin, the agent's question carries the property, its plans, protections and permits."""
     ask(harness, PINNED)
     [question] = harness.asked
-    for fact in ("Uppsala Kungsängen 7:8", "0380-P2002/5", "BCK", "Kungsängsängen", "Fyrisån", "Uppsala 123:1",
-                 "Bygglov"):
-        assert fact in question
+    assert fact in question
 
 
 def test_a_pinned_question_carries_the_statute_text_of_its_permits(harness):
@@ -230,20 +245,35 @@ def test_a_pinned_question_carries_the_statute_text_of_its_permits(harness):
     assert "[c:aa11bb22cc33dd44] Miljöbalk 7 kap. 7 §" in question
 
 
-def test_the_question_itself_comes_after_the_place(harness):
-    """The user's own question follows the place block, unchanged."""
+def test_the_question_itself_comes_last_unchanged(harness):
+    """The user's own question ends the agent's question, unchanged."""
     ask(harness, PINNED)
     [question] = harness.asked
     assert question.rstrip().endswith(QUESTION)
+
+
+def test_the_question_itself_comes_after_the_place(harness):
+    ask(harness, PINNED)
+    [question] = harness.asked
     assert question.index("Uppsala Kungsängen 7:8") < question.index(QUESTION)
 
 
-def test_a_question_without_pin_gets_the_pin_hint(harness):
-    """Without a pin the question goes as today, with the hint to suggest pinning when the place is unclear."""
+def test_a_question_without_pin_is_sent_as_asked(harness):
     ask(harness)
     [question] = harness.asked
     assert QUESTION in question
+
+
+def test_a_question_without_pin_gets_the_pin_hint(harness):
+    """The hint to suggest pinning when the place is unclear."""
+    ask(harness)
+    [question] = harness.asked
     assert NO_PIN_HINT in question
+
+
+def test_a_question_without_pin_gets_no_place(harness):
+    ask(harness)
+    [question] = harness.asked
     assert "Kungsängen" not in question
 
 
@@ -254,13 +284,20 @@ def test_a_bad_pin_is_rejected(harness):
 
 # --- the answer keeps the place --------------------------------------------------------------------------------
 
-def test_the_answer_records_the_place_it_was_asked_about(harness):
+def place_event(harness) -> dict:
+    [event] = [e for e in saved_answer(harness).trace if e["stage"] == "place"]
+    return event
+
+
+def test_the_answer_records_the_pin_it_was_asked_about(harness):
     """The saved answer's trace holds the pin it was asked about."""
     ask(harness, PINNED)
-    trace = saved_answer(harness).trace
-    [event] = [e for e in trace if e["stage"] == "place"]
-    assert event["data"]["pin"] == PINNED
-    assert event["data"]["profile"]["property"]["designation"] == "Uppsala Kungsängen 7:8"
+    assert place_event(harness)["data"]["pin"] == PINNED
+
+
+def test_the_answer_records_the_pinned_property(harness):
+    ask(harness, PINNED)
+    assert place_event(harness)["data"]["profile"]["property"]["designation"] == "Uppsala Kungsängen 7:8"
 
 
 def test_the_recorded_profile_has_no_geometry(harness):
@@ -276,13 +313,20 @@ def test_an_answer_without_pin_records_no_place(harness):
     assert not [e for e in saved_answer(harness).trace if e["stage"] == "place"]
 
 
-def test_a_question_with_options_records_them_for_the_buttons(harness):
-    """When the agent asks the user to choose, the options are saved with the answer, for the chat's buttons."""
+def choices_event(harness) -> dict:
     harness.choices.extend(["The pinned Uppsala property", "A site in Södermalm"])
     ask(harness, PINNED)
     [event] = [e for e in saved_answer(harness).trace if e["stage"] == "choices"]
-    assert event["data"]["options"] == ["The pinned Uppsala property", "A site in Södermalm"]
-    assert event["data"]["offer_pin"] is False
+    return event
+
+
+def test_a_question_with_options_records_them_for_the_buttons(harness):
+    """When the agent asks the user to choose, the options are saved with the answer, for the chat's buttons."""
+    assert choices_event(harness)["data"]["options"] == ["The pinned Uppsala property", "A site in Södermalm"]
+
+
+def test_a_question_with_options_offers_no_pin_unless_asked(harness):
+    assert choices_event(harness)["data"]["offer_pin"] is False
 
 
 def test_an_ordinary_answer_records_no_options(harness):
@@ -290,11 +334,143 @@ def test_an_ordinary_answer_records_no_options(harness):
     assert not [e for e in saved_answer(harness).trace if e["stage"] == "choices"]
 
 
-def test_an_answer_to_the_agents_question_is_marked_and_cannot_ask_again(harness):
+def test_an_answer_to_the_agents_question_is_marked(harness):
     ask(harness, PINNED, answer_to_question=True)
-    assert "answer to your question" in harness.asked[0] and harness.allowed == [False]
+    assert "answer to your question" in harness.asked[0]
+
+
+def test_an_answer_to_the_agents_question_cannot_ask_again(harness):
+    ask(harness, PINNED, answer_to_question=True)
+    assert harness.allowed == [False]
 
 
 def test_an_ordinary_question_may_be_answered_with_a_question(harness):
     ask(harness, PINNED)
     assert harness.allowed == [True]
+
+
+# --- the answer language (RAG mode) ----------------------------------------------------------------------------
+
+SWEDISH_QUESTION = "Behöver jag bygglov för en friggebod på min tomt?"
+ENGLISH_REWRITE = "Do I need a building permit for a small shed on my plot?"
+
+
+@pytest.fixture
+def rag(monkeypatch):
+    """The chat in RAG mode on pgvector, with a fake model whose rewrite decides Swedish."""
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    models.Base.metadata.create_all(engine, tables=[models.User.__table__, models.ChatSession.__table__,
+                                                    models.ChatMessage.__table__])
+    Session = sessionmaker(bind=engine)
+    with Session() as db:
+        db.add(models.User(id="u1", name="Test", email="test@example.com"))
+        db.commit()
+    state = types.SimpleNamespace(calls=[], rows=[{"source": "PBL", "chunk_index": 0, "distance": 0.1,
+                                                   "content": "Det krävs bygglov för nybyggnad.", "preview": ""}])
+
+    def completion(client, **kwargs):
+        state.calls.append(kwargs)
+        if kwargs.get("stream"):
+            def events():
+                yield types.SimpleNamespace(type="response.output_text.delta", delta="Ja.")
+                yield types.SimpleNamespace(type="response.completed", response=types.SimpleNamespace(usage=None))
+            return events()
+        if "instructions" in kwargs:  # the answer of /api/chat
+            return types.SimpleNamespace(output_text="Ja.", usage=None)
+        return types.SimpleNamespace(output_text=f"{ENGLISH_REWRITE}\nLANG: sv", usage=None)
+
+    monkeypatch.setattr(chat, "SessionLocal", Session)
+    monkeypatch.setattr(chat, "create_chat_completion", completion)
+    monkeypatch.setattr(chat, "recorded_chat_completion", lambda recorder, client, **kw: completion(client, **kw))
+    monkeypatch.setattr(chat, "get_openai_client", lambda: object())
+    monkeypatch.setattr(chat, "agent_enabled", lambda: False)
+    monkeypatch.setattr(BaseRAGAgent, "_embed", lambda self, text: [0.0])
+    monkeypatch.setattr(BaseRAGAgent, "_retrieve_debug_rows_from_embedding", lambda self, embedding, k=5: state.rows)
+
+    app = FastAPI()
+    app.include_router(chat.router, prefix="/api")
+
+    def db_override():
+        db = Session()
+        try:
+            yield db
+        finally:
+            db.close()
+    app.dependency_overrides[get_db] = db_override
+    app.dependency_overrides[get_current_user] = lambda: types.SimpleNamespace(id="u1")
+    state.client = TestClient(app)
+    state.Session = Session
+    return state
+
+
+def stream_swedish(rag) -> str:
+    body = {"messages": [{"role": "user", "content": SWEDISH_QUESTION}], "session_id": None}
+    rag.client.post("/api/chat/stream", json=body).read()
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        with rag.Session() as db:
+            message = db.query(models.ChatMessage).filter(models.ChatMessage.role == "assistant").one_or_none()
+            if message is not None and message.status != "streaming":
+                return message.content
+        time.sleep(0.1)
+    raise AssertionError("the answer was not saved")
+
+
+def post_swedish(rag) -> str:
+    body = {"messages": [{"role": "user", "content": SWEDISH_QUESTION}], "session_id": None}
+    return rag.client.post("/api/chat", json=body).json()["content"]
+
+
+def answer_call(rag) -> dict:
+    return next(call for call in rag.calls if "instructions" in call)
+
+
+def rewrite_call(rag) -> dict:
+    return next(call for call in rag.calls if "instructions" not in call)
+
+
+def test_the_streamed_answer_is_asked_the_users_own_words(rag):
+    """The answer gets the question as written, not its English rewrite."""
+    stream_swedish(rag)
+    assert SWEDISH_QUESTION in answer_call(rag)["input"][-1]["content"]
+
+
+def test_the_streamed_answer_follows_the_language_rule(rag):
+    stream_swedish(rag)
+    assert LANGUAGE_RULE and LANGUAGE_RULE in answer_call(rag)["instructions"]
+
+
+def test_the_streamed_answer_is_not_told_to_answer_in_english(rag):
+    stream_swedish(rag)
+    assert "Answer in English" not in answer_call(rag)["instructions"]
+
+
+def test_the_streamed_rewrite_asks_for_the_language(rag):
+    stream_swedish(rag)
+    assert REWRITE_LANGUAGE_SUFFIX and REWRITE_LANGUAGE_SUFFIX in rewrite_call(rag)["input"]
+
+
+def test_the_streamed_clarifying_prompt_follows_a_swedish_decision(rag):
+    """With nothing retrieved, a question decided Swedish gets the clarifying prompt in Swedish."""
+    rag.rows = []
+    assert "I need a bit more information" not in stream_swedish(rag)
+
+
+def test_the_answer_is_asked_the_users_own_words(rag):
+    post_swedish(rag)
+    assert SWEDISH_QUESTION in answer_call(rag)["input"][-1]["content"]
+
+
+def test_the_answer_follows_the_language_rule(rag):
+    post_swedish(rag)
+    assert LANGUAGE_RULE and LANGUAGE_RULE in answer_call(rag)["instructions"]
+
+
+def test_the_rewrite_asks_for_the_language(rag):
+    post_swedish(rag)
+    assert REWRITE_LANGUAGE_SUFFIX and REWRITE_LANGUAGE_SUFFIX in rewrite_call(rag)["input"]
+
+
+def test_the_clarifying_prompt_follows_a_swedish_decision(rag):
+    rag.rows = []
+    assert "I need a bit more information" not in post_swedish(rag)

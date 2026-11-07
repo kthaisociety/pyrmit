@@ -1,5 +1,5 @@
-"""agentic.agent: the agent reads a pinned plan, and what its instructions say about a pin. A fake model: no real services
-(PCR-0011)."""
+"""agentic.agent: the agent reads a pinned plan, what its instructions say about a pin, and the answer language it is
+told to follow. A fake model: no real services (PCR-0011)."""
 
 import json
 from types import SimpleNamespace
@@ -8,6 +8,8 @@ import pytest
 
 from agentic import agent
 from agentic.tools import CorpusTools, _MemoryCorpus
+from answer_language import LANGUAGE_RULE
+from glossary import glossary_prompt
 from tests.unit.agentic.test_agent_images import FakeCall
 
 DESCRIPTION = "pdf:0380:description"
@@ -75,3 +77,53 @@ def test_the_instructions_say_what_counts_as_a_specific_question(words):
 ])
 def test_the_instructions_say_what_a_pin_changes(words):
     assert words in agent.PIN_GUIDE.lower()
+
+
+# --- the answer language --------------------------------------------------------------------------------------------
+
+class AnsweringClient:
+    """A fake model that answers on its first turn; keeps the instructions it was given."""
+
+    def __init__(self):
+        self.instructions = []
+        self.responses = SimpleNamespace(create=self.create)
+
+    def create(self, instructions="", stream=False, **kwargs):
+        self.instructions.append(instructions)
+        usage = SimpleNamespace(input_tokens=1, output_tokens=1, output_tokens_details=None, cost=0)
+        return SimpleNamespace(output=[], output_text="Svar.", usage=usage)
+
+
+@pytest.fixture
+def instructions(monkeypatch) -> str:
+    """The instructions the agent's model gets for a Swedish question."""
+    client = AnsweringClient()
+    monkeypatch.setattr(agent, "get_openai_client", lambda: client)
+    agent.run_agent("Behöver jag bygglov för en friggebod på min tomt?", tools=None, model="test/model")
+    return client.instructions[0]
+
+
+def test_the_agent_is_instructed_with_the_language_rule(instructions):
+    assert LANGUAGE_RULE and LANGUAGE_RULE in instructions
+
+
+def test_the_agent_is_not_told_to_answer_in_english(instructions):
+    assert "Answer in English" not in instructions
+
+
+def test_the_agent_is_not_told_users_ask_in_english(instructions):
+    assert "ask in English" not in instructions
+
+
+def test_the_agent_names_the_swedish_headings(instructions):
+    assert "**Bedömning:**" in instructions
+
+
+def test_the_agent_carries_the_glossary(instructions):
+    block = glossary_prompt()
+    assert block and block in instructions
+
+
+def test_ask_user_asks_in_the_users_language():
+    description = agent.ASK_USER_TOOL["parameters"]["properties"]["question"]["description"]
+    assert "in English" not in description
