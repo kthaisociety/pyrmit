@@ -127,3 +127,28 @@ def test_the_agent_carries_the_glossary(instructions):
 def test_ask_user_asks_in_the_users_language():
     description = agent.ASK_USER_TOOL["parameters"]["properties"]["question"]["description"]
     assert "in English" not in description
+
+
+class ReadyClient:
+    """A fake model: says it is ready on its first turn, then streams the answer; keeps the final turn's input."""
+
+    def __init__(self):
+        self.final_input = None
+        self.responses = SimpleNamespace(create=self.create)
+
+    def create(self, input, stream=False, **kwargs):
+        usage = SimpleNamespace(input_tokens=1, output_tokens=1, output_tokens_details=None, cost=0)
+        if stream:
+            self.final_input = list(input)
+            return iter([SimpleNamespace(type="response.output_text.delta", delta="Answer."),
+                         SimpleNamespace(type="response.completed", response=SimpleNamespace(usage=usage))])
+        ready = FakeCall(name="answer_ready", arguments=json.dumps({"mode": "verdict"}), call_id="1")
+        return SimpleNamespace(output=[ready], output_text="", usage=usage)
+
+
+def test_the_final_answer_turn_repeats_the_language_rule(monkeypatch):
+    """Asked for the final answer, the model is reminded to write it in the user's language, not the sources'."""
+    client = ReadyClient()
+    monkeypatch.setattr(agent, "get_openai_client", lambda: client)
+    agent.run_agent("Do I need a permit for a shed?", tools=None, model="test/model")
+    assert any(agent.ANSWER_LANGUAGE_REMINDER in str(item.get("output", "")) for item in client.final_input)

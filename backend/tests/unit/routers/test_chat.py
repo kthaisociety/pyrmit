@@ -485,3 +485,9 @@ def test_the_streamed_rewrite_starts_with_the_language_instruction(rag):
 def test_the_rewrite_starts_with_the_language_instruction(rag):
     post_swedish(rag)
     assert rewrite_call(rag)["input"].startswith(REWRITE_LANGUAGE_INSTRUCTION)
+
+
+def test_the_answer_turn_repeats_the_language_rule(rag):
+    """The answer's last turn says to answer in the user's language whatever the sources' language."""
+    post_swedish(rag)
+    assert "whatever the language of the sources" in answer_call(rag)["input"][-1]["content"]

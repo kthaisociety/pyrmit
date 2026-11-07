@@ -112,7 +112,8 @@ def _rag_instructions() -> str:
 def _rag_user_prompt(context: str, question: str, search_query: str) -> str:
     """The RAG answer's last user turn: the user's question as written (it decides the answer language) and the
     standalone search query rewritten from it."""
-    return (f"Based on these sources:\n\n{context}\n\nAnswer the user's question, as they wrote it: {question}\n\n"
+    return (f"Based on these sources:\n\n{context}\n\nAnswer the user's question, as they wrote it, in Swedish if they "
+            f"wrote Swedish and otherwise in English, whatever the language of the sources: {question}\n\n"
             f"(Standalone search query used for the sources: {search_query})")
 
 

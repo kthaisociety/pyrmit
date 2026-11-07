@@ -117,6 +117,11 @@ Completeness: the user will act on this answer, so before writing go through you
 # its answer; +0.03 / +0.05 key points (MiMo / Luna judge) on the 52 dev cases, same latency and cost (benchmark
 # report 2.9, with the rejected variants: per-mode recipes + site checklist, MiMo Flash as the agent)
 
+# Repeated where the answer is written: after many Swedish tool results the model drifted into Swedish for English
+# questions (live run, 2026-11-07). It names no language: the model still decides it (ADR-0011)
+ANSWER_LANGUAGE_REMINDER = ("Write it in the user's language as the answer-language rule says: Swedish if they wrote "
+                            "Swedish, otherwise English, whatever the language of the sources.")
+
 IMAGE_REMOVED = "\n(Image removed after the turn it was shown in: use what you noted from it.)"
 
 SYSTEM_PROMPT = (f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{PIN_GUIDE}\n\n{MODES_GUIDE}\n\n{ANSWER_FORMAT}\n\n{LANGUAGE_RULE}\n\n"
@@ -188,7 +193,8 @@ ASK_USER_TOOL = {
     "description": "Call (alone) instead of answering when only the user can settle what the answer depends on "
                    "(e.g. which place they mean). The question becomes the reply; the options are shown as buttons.",
     "parameters": {"type": "object", "properties": {
-        "question": {"type": "string", "description": "one short question, in the answer language"},
+        "question": {"type": "string", "description": "one short question, in Swedish if the user wrote Swedish, "
+                                                         "otherwise English"},
         "options": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": MAX_CHOICES,
                     "description": "1-4 complete replies the user can click and you can act on without more input, "
                                    "in the answer language (never 'please provide ...')"},
@@ -296,7 +302,7 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
             run.mode = mode if mode in MODES else None
             fmt = f"the {run.mode} format" if run.mode else "the required format"
             conversation.append({"type": "function_call_output", "call_id": call.call_id,
-                                 "output": f"Write the final answer now, in {fmt}."})
+                                 "output": f"Write the final answer now, in {fmt}. {ANSWER_LANGUAGE_REMINDER}"})
             asked_for_answer = True
         work = [c for c in calls if c.name not in ("answer_ready", "ask_user")]
         for call in work:
@@ -323,8 +329,8 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
     if not run.answer:
         # The final answer, streamed: the only turn that uses the answer effort
         if not asked_for_answer:
-            conversation.append({"role": "user", "content": "Tool budget reached: answer now with the evidence you "
-                                                            "have, in the required format."})
+            conversation.append({"role": "user", "content": "Tool budget reached: answer now with the evidence you have, "
+                                                            f"in the required format. {ANSWER_LANGUAGE_REMINDER}"})
         turn_started = time.perf_counter()
         send_images_once()
         stream = client.responses.create(model=model, instructions=instructions, input=conversation,
