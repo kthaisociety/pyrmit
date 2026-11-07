@@ -9,6 +9,7 @@ from openai import OpenAI
 from sqlalchemy.orm import Session
 
 from agents.base import BaseRAGAgent, _TRANSLATION_INSTRUCTION
+from answer_language import Language
 from pipeline_trace import CallRecorder
 from models import LawChunk
 from observability import start_observation
@@ -52,7 +53,11 @@ class LawAgent(BaseRAGAgent):
     def __init__(self, db: Session, openai_client: OpenAI, recorder: CallRecorder | None = None):
         super().__init__(db, openai_client, LawChunk, "Law Agent", recorder)
 
-    def query(self, location: str, project_type: str, units: int) -> dict:
+    def query(self, location: str, project_type: str, units: int, language: Language = "en") -> dict:
+        """The structured reading, its text fields written in `language` with Swedish quotes kept verbatim
+        (PCR-0006)."""
+        if language != "en":
+            raise NotImplementedError
         logger.debug("Searching regulations for %d %s units in %s", units, project_type, location)
 
         search_query = f"{location} zoning {project_type} density {units} units maximum allowed"

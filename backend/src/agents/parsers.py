@@ -4,6 +4,8 @@ Utilities for parsing user queries and formatting agent responses.
 
 import re
 
+from answer_language import Language
+
 
 def parse_query(query: str) -> dict:
     """
@@ -51,16 +53,22 @@ def parse_query(query: str) -> dict:
     return parsed
 
 
-def format_response(response: dict) -> str:
+def format_response(response: dict, language: Language = "en") -> str:
     """
     Format the orchestrator response for human readability (Markdown).
 
     Args:
         response: Response dictionary from orchestrator
+        language: the answer's language (answer_language). "sv" writes every heading and label in Swedish
+            ("## Bedömning av genomförbarhet", "**Genomförbarhet:**", "**Säkerhet:**", "### Sammanfattning",
+            "### Lagstiftning", "### Tidigare ärenden", "### Krav", "**Beräknad tid:** <n> månader",
+            "### Rekommenderade nästa steg") and the feasibility status as a Swedish label; "en" is unchanged.
 
     Returns:
         Markdown-formatted string
     """
+    if language != "en":
+        raise NotImplementedError
     output = []
     output.append("## Feasibility Analysis")
     output.append(f"\n**Feasibility:** {response['feasibility']}")

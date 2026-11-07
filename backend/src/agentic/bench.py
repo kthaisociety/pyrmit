@@ -199,6 +199,21 @@ def anchor_hits(case: dict, answer: str) -> list[str]:
     return hits
 
 
+def answer_language_ok(case: dict, answer: str) -> bool:
+    """The answer is written in the case's language (`lang`, "sv" or "en"; "en" when absent), read from its own words:
+    quoted source text, citation ids and the source list are left out, so an English answer quoting Swedish law is
+    still English. An empty answer is never ok. String matching only, no model call."""
+    raise NotImplementedError
+
+
+def quotes_verbatim(answer: str, sources: list[str]) -> bool:
+    """Every Swedish quote in the answer appears word for word in one of the source texts (whitespace and
+    typographic quote marks normalised). A quote is text inside quotation marks ("…", “…”, ”…”) or a markdown
+    block quote line; quotes that contain no Swedish word, such as an English translation, are not checked. True when
+    the answer quotes nothing. String matching only, no model call."""
+    raise NotImplementedError
+
+
 def mode_ok(case: dict, mode: str | None) -> bool:
     """The agent's mode (answer_ready) is one the case accepts: `modes` when a question mixes kinds (e.g. a
     verdict case asking "how does that work?"), else its task."""
@@ -206,7 +221,10 @@ def mode_ok(case: dict, mode: str | None) -> bool:
 
 
 def grade_answer(case: dict, answer: str, tools, judge_model: str, seen=()) -> dict:
-    """The task-dependent scores of one answer (LLM judge + string matching), as stored in a result row."""
+    """The task-dependent scores of one answer (LLM judge + string matching), as stored in a result row.
+
+    Every row also carries `lang` (the case's language), `language_ok` (answer_language_ok) and `quotes_ok`
+    (quotes_verbatim against the text of the chunks the answer cites)."""
     grade = judge(case, answer, judge_model, cited_sources(answer, tools, seen))
     scores = grade.get("points") or []
     scores = (list(scores) + [0] * len(case["key_points"]))[:len(case["key_points"])]  # judge returned too few / many

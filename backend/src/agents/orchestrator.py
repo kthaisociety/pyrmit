@@ -6,6 +6,8 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict
 
+from answer_language import Language
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,7 +18,11 @@ class Orchestrator:
         self.law_agent = law_agent
         self.document_agent = document_agent
 
-    def analyze(self, location: str, project_type: str, units: int) -> Dict[str, Any]:
+    def analyze(self, location: str, project_type: str, units: int, language: Language = "en") -> Dict[str, Any]:
+        """The feasibility analysis, with every text field (summary, findings, requirements, next steps) in
+        `language`; the agents are asked in it too. The feasibility status stays the English code either way."""
+        if language != "en":
+            raise NotImplementedError
         logger.info("Starting analysis: %d %s units in %s", units, project_type, location)
         with ThreadPoolExecutor(max_workers=2) as executor:
             law_future = executor.submit(self.law_agent.query, location, project_type, units)
