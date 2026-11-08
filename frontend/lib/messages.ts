@@ -1,4 +1,4 @@
-// The page's texts in English and Swedish (#75), one entry per text. `sv` has to carry every key `en` has.
+// The page's texts in English and Swedish, one entry per text. `sv` has to carry every key `en` has.
 export const en = {
   'language.switch': 'Language',
 

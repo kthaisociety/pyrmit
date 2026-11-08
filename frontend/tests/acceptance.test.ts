@@ -1,5 +1,5 @@
 // Acceptance tests of #75: the page in Swedish or English, remembered per browser, with the shared glossary.
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { createElement, type ReactNode, useState } from 'react';
@@ -38,6 +38,18 @@ function inProvider(...children: ReactNode[]) {
 
 function gatePage() {
   return inProvider(createElement(DevAccessForm, { nextPath: '/' }));
+}
+
+const SIDEBAR_PROPS = {
+  currentSessionId: null, onSelectSession: vi.fn(), onNewChat: vi.fn(), refreshTrigger: 0,
+  user: { id: 'u1', name: 'anna', email: 'anna@example.com' }, onOpenSettings: vi.fn(), onOpenDatabase: vi.fn(),
+  onOpenBenchmark: vi.fn(), onOpenPipeline: vi.fn(),
+};
+
+async function openKungsangen() {
+  inProvider(createElement(PanelHarness));
+  await userEvent.click(screen.getByRole('button', { name: 'Click Kungsängen' }));
+  await screen.findByText('Uppsala Kungsängen 7:8');
 }
 
 function PanelHarness() {
@@ -120,13 +132,28 @@ describe('language switch', () => {
 
   it('is in the sidebar of the app', () => {
     /** The app's sidebar carries the language switch. */
-    inProvider(createElement(Sidebar, {
-      currentSessionId: null, onSelectSession: vi.fn(), onNewChat: vi.fn(), refreshTrigger: 0,
-      user: { id: 'u1', name: 'anna', email: 'anna@example.com' }, onOpenSettings: vi.fn(), onOpenDatabase: vi.fn(),
-      onOpenBenchmark: vi.fn(), onOpenPipeline: vi.fn(),
-    }));
+    inProvider(createElement(Sidebar, SIDEBAR_PROPS));
 
     expect(screen.getByRole('button', { name: 'Svenska' })).toBeInTheDocument();
+  });
+
+  it('switches the sidebar to Swedish', async () => {
+    /** Choosing Svenska in the sidebar turns its texts Swedish. */
+    server.use(http.get('*/api/sessions', () => HttpResponse.json([])));
+    inProvider(createElement(Sidebar, SIDEBAR_PROPS));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Svenska' }));
+
+    expect(await screen.findByRole('button', { name: 'Ny chatt' })).toBeInTheDocument();
+  });
+
+  it('switches the place card to Swedish', async () => {
+    /** Choosing Svenska with a place card open turns the card's texts Swedish. */
+    await openKungsangen();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Svenska' }));
+
+    expect(await screen.findByText(/Troliga tillstånd/)).toBeInTheDocument();
   });
 
   it('fetches the place card again in the new language', async () => {
@@ -136,9 +163,7 @@ describe('language switch', () => {
       languages.push(new URL(request.url).searchParams.get('language'));
       return HttpResponse.json(kungsangen);
     }));
-    inProvider(createElement(PanelHarness));
-    await userEvent.click(screen.getByRole('button', { name: 'Click Kungsängen' }));
-    await screen.findByText('Uppsala Kungsängen 7:8');
+    await openKungsangen();
 
     await userEvent.click(screen.getByRole('button', { name: 'Svenska' }));
 
@@ -152,6 +177,15 @@ describe('glossary terms', () => {
     inProvider(createElement(Term, { term: 'bygglov' }));
 
     await waitFor(() => expect(screen.getByText('bygglov')).toHaveAttribute('title', 'building permit'));
+  });
+
+  it('in English, the place card shows detaljplan with its explanation as tooltip', async () => {
+    /** The place card's detaljplan pill keeps "detaljplan" in Swedish, titled with its glossary explanation. */
+    await openKungsangen();
+
+    const pill = screen.getByText((_, element) => element?.tagName === 'P' && element.textContent === 'Inside a detaljplan');
+
+    await waitFor(() => expect(within(pill).getByText('detaljplan')).toHaveAttribute('title', 'detailed development plan'));
   });
 
   it('matches a capitalised term to its glossary entry', async () => {

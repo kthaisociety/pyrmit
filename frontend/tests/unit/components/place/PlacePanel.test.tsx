@@ -11,6 +11,7 @@ import type { BBox, Pin, PlaceSearchResult } from '@/lib/place';
 
 import { kungsangen, reviewCoverage, reviewPlans } from '../../../mocks/place';
 import { server } from '../../../mocks/server';
+import { LanguageProvider } from '@/lib/i18n';
 
 const NACKA: BBox = [18.0, 59.25, 18.4, 59.4];
 const SWEDEN: BBox = [10.5, 55, 24.5, 69.5];
@@ -42,7 +43,7 @@ function Harness({ start = null }: { start?: Pin | null }) {
 describe('map panel', () => {
   it('places a pin where the map is clicked and shows the place card', async () => {
     /** A click on the map puts the pin there and the card of that place appears. */
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await userEvent.click(screen.getByRole('button', { name: 'Click Kungsängen' }));
 
@@ -52,7 +53,7 @@ describe('map panel', () => {
 
   it('moves the pin on a second click and shows the new place', async () => {
     /** Clicking elsewhere moves the pin and replaces the card. */
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
     await userEvent.click(screen.getByRole('button', { name: 'Click Kungsängen' }));
     await screen.findByText('Uppsala Kungsängen 7:8');
 
@@ -64,7 +65,7 @@ describe('map panel', () => {
 
   it('outlines the property, its plans and its zones on the map', async () => {
     /** The map gets one outline for the property, each plan and each zone. */
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await userEvent.click(screen.getByRole('button', { name: 'Click Kungsängen' }));
     await screen.findByText('Uppsala Kungsängen 7:8');
@@ -76,7 +77,7 @@ describe('map panel', () => {
   it('says when the place lookup fails', async () => {
     /** A failed lookup shows an error instead of an empty card. */
     server.use(http.get('*/api/place/profile', () => HttpResponse.json({ detail: 'boom' }, { status: 500 })));
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await userEvent.click(screen.getByRole('button', { name: 'Click Kungsängen' }));
 
@@ -111,7 +112,7 @@ async function search(text: string) {
 describe('address search', () => {
   it('has a floating search field on the map panel', () => {
     /** The map panel has a search field for addresses and place names. */
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     expect(screen.getByRole('searchbox', { name: 'Search for a place' })).toBeInTheDocument();
   });
@@ -119,7 +120,7 @@ describe('address search', () => {
   it('searches when Enter is pressed and lists the matches in order', async () => {
     /** Enter searches and lists the matches as the backend ranks them (pilot kommuner first). */
     searchReturns([KABO, GOTEBORG]);
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await search('kåbovägen 1');
 
@@ -132,7 +133,7 @@ describe('address search', () => {
     /** Typing alone sends no request: results appear only after Enter. */
     const asked: string[] = [];
     searchReturns([KABO], (q) => asked.push(q));
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search for a place' }), 'kåbovägen');
 
@@ -143,7 +144,7 @@ describe('address search', () => {
   it('proposes a pin at a chosen match and keeps the current card until it is confirmed', async () => {
     /** Choosing a match shows a proposed pin; the current pin and card stay. */
     searchReturns([KABO]);
-    render(createElement(Harness, { start: { lat: 59.8505, lon: 17.641 } }));
+    render(createElement(Harness, { start: { lat: 59.8505, lon: 17.641 } }), { wrapper: LanguageProvider });
     await screen.findByRole('heading', { name: 'Uppsala Kungsängen 7:8' });
 
     await search('kåbovägen 1');
@@ -158,7 +159,7 @@ describe('address search', () => {
   it('pins the place when the proposal is confirmed', async () => {
     /** Confirming the proposal moves the pin there and shows its card. */
     searchReturns([KABO]);
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await search('kåbovägen 1');
     await userEvent.click(await screen.findByRole('button', { name: /Kåbovägen 1, Uppsala/ }));
@@ -172,7 +173,7 @@ describe('address search', () => {
   it('says so when nothing matched, and suggests a street address or pinning by hand', async () => {
     /** An empty result says no match and what to try instead. */
     searchReturns([]);
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await search('xyzzy');
 
@@ -183,7 +184,7 @@ describe('address search', () => {
   it('says when the address search is unavailable', async () => {
     /** A failed search is shown as an alert, not as no match. */
     searchReturns(null);
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await search('kungsgatan');
 
@@ -193,7 +194,7 @@ describe('address search', () => {
   it('credits the address service under the results', async () => {
     /** The results list shows the search service's attribution. */
     searchReturns([KABO]);
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await search('kåbovägen 1');
 
@@ -204,7 +205,7 @@ describe('address search', () => {
   it("credits the kommun's address register when the matches come from it", async () => {
     /** A street address found in Uppsala's own register is credited to the kommun, not to OpenStreetMap. */
     searchReturns([{ ...KABO, kind: 'address' }]);
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await search('kåbovägen 1');
 
@@ -229,7 +230,7 @@ describe('review mode', () => {
   it('is off by default and the map is as before', () => {
     /** Before the user turns the review mode on, no coverage is fetched and the map gets no review layer. */
     const coverage = requestsTo('coverage');
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     expect(reviewToggle()).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByTestId('map')).toHaveAttribute('data-review', 'off');
@@ -238,7 +239,7 @@ describe('review mode', () => {
 
   it('colours the kommuner by coverage once turned on', async () => {
     /** Turning the review mode on fetches every kommun's coverage and hands it to the map. */
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await userEvent.click(reviewToggle());
 
@@ -248,7 +249,7 @@ describe('review mode', () => {
 
   it('sums up the coverage in the panel', async () => {
     /** The panel says how many kommuner have polygons, so the reviewer need not count colours. */
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await userEvent.click(reviewToggle());
 
@@ -258,7 +259,7 @@ describe('review mode', () => {
   it('fetches the plans in view once zoomed in to a kommun', async () => {
     /** Zoomed in past the threshold, the plans in the map's box are fetched for that box and drawn. */
     const plans = requestsTo('plans');
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
     await userEvent.click(reviewToggle());
 
     await userEvent.click(screen.getByRole('button', { name: 'Zoom in on Nacka' }));
@@ -270,7 +271,7 @@ describe('review mode', () => {
   it('draws no plans zoomed out', async () => {
     /** Below the threshold the map shows the coverage colours only: no plans are fetched for the whole country. */
     const plans = requestsTo('plans');
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
     await userEvent.click(reviewToggle());
     await userEvent.click(screen.getByRole('button', { name: 'Zoom in on Nacka' }));
     await waitFor(() => expect(screen.getByTestId('map')).toHaveAttribute('data-review-plans', '2'));
@@ -284,7 +285,7 @@ describe('review mode', () => {
   it('asks the reviewer to zoom in when the view had more plans than served', async () => {
     /** A truncated answer is said in the panel, so a missing polygon is not read as a missing plan. */
     server.use(http.get('*/api/place/review/plans', () => HttpResponse.json({ ...reviewPlans, truncated: true })));
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
     await userEvent.click(reviewToggle());
 
     await userEvent.click(screen.getByRole('button', { name: 'Zoom in on Nacka' }));
@@ -295,7 +296,7 @@ describe('review mode', () => {
   it('does not fetch plans while the review mode is off', async () => {
     /** Moving the map with the review mode off fetches nothing: the map behaves as it does today. */
     const plans = requestsTo('plans');
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
     expect(reviewToggle()).toHaveAttribute('aria-pressed', 'false');
 
     await userEvent.click(screen.getByRole('button', { name: 'Zoom in on Nacka' }));
@@ -305,7 +306,7 @@ describe('review mode', () => {
 
   it('clears the review layers when turned off', async () => {
     /** Turning the review mode off takes the coverage and the plans off the map. */
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
     await userEvent.click(reviewToggle());
     await waitFor(() => expect(screen.getByTestId('map')).toHaveAttribute('data-review-kommuner', '3'));
 
@@ -317,7 +318,7 @@ describe('review mode', () => {
   it('says when the coverage cannot be fetched', async () => {
     /** A failed coverage lookup is said in the panel instead of leaving the map uncoloured without a word. */
     server.use(http.get('*/api/place/review/coverage', () => HttpResponse.json({ detail: 'boom' }, { status: 500 })));
-    render(createElement(Harness));
+    render(createElement(Harness), { wrapper: LanguageProvider });
 
     await userEvent.click(reviewToggle());
 

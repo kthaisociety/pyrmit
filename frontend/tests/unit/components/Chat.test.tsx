@@ -9,6 +9,7 @@ import Chat from '@/components/Chat';
 import type { PlaceMapProps } from '@/components/place/PlaceMap';
 
 import { server } from '../../mocks/server';
+import { LanguageProvider } from '@/lib/i18n';
 
 // jsdom has no layout: the chat scrolls to its last message on render
 Element.prototype.scrollIntoView = vi.fn();
@@ -27,7 +28,7 @@ vi.mock('@/components/place/PlaceMap', () => ({
 describe('map panel', () => {
   it('opens beside the conversation from the chat', async () => {
     /** The chat has a button that opens the map panel next to the messages. */
-    render(createElement(Chat, { sessionId: null, onSessionCreated: () => undefined, user: { name: 'anna' } }));
+    render(createElement(Chat, { sessionId: null, onSessionCreated: () => undefined, user: { name: 'anna' } }), { wrapper: LanguageProvider });
 
     await userEvent.click(screen.getByRole('button', { name: 'Open map' }));
 
@@ -43,7 +44,7 @@ const PLACE_EVENT = {
 };
 
 function chat(sessionId: string | null = null) {
-  return render(createElement(Chat, { sessionId, onSessionCreated: () => undefined, user: { name: 'anna' } }));
+  return render(createElement(Chat, { sessionId, onSessionCreated: () => undefined, user: { name: 'anna' } }), { wrapper: LanguageProvider });
 }
 
 async function pinKungsangen() {

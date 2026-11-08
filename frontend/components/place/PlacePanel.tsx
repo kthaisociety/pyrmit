@@ -11,7 +11,7 @@ import {
   COVERAGE_COLOURS, MATCH_COLOURS, fetchPlaceCoverage, fetchPlaceProfile, fetchPlansInView, fetchReviewCoverage,
   type Pin, type PlaceProfile, type PlaceSearchResult, type ReviewCoverage, type ReviewPlans,
 } from '@/lib/place';
-import { useLanguage } from '@/lib/i18n';
+import { fill, useLanguage } from '@/lib/i18n';
 
 export interface PlacePanelProps {
   pin: Pin | null;
@@ -91,8 +91,7 @@ function ReviewCard({ coverage, plans, zoomedIn, error }: {
     <div className={`space-y-1 rounded-xl px-3 py-2 text-[12px] text-zinc-700 dark:text-zinc-200 ${GLASS}`}>
       {coverage && (
         <p className="font-semibold text-zinc-900 dark:text-zinc-50">
-          {t('place.kommunerWithPolygons').replace('{covered}', String(covered))
-            .replace('{total}', String(coverage.features.length))}
+          {fill(t('place.kommunerWithPolygons'), { covered: String(covered), total: String(coverage.features.length) })}
         </p>
       )}
       {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
@@ -212,8 +211,8 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
   const outlines = useMemo(() => outlinesOf(shown?.profile ?? null), [shown]);
   const hasCard = Boolean(pin);
   let reviewError: string | null = null;
-  if (coverageError !== null) reviewError = t('place.coverageError').replace('{error}', coverageError);
-  else if (plansBox && plansError !== null) reviewError = t('place.plansError').replace('{error}', plansError);
+  if (coverageError !== null) reviewError = fill(t('place.coverageError'), { error: coverageError });
+  else if (plansBox && plansError !== null) reviewError = fill(t('place.plansError'), { error: plansError });
 
   return (
     <aside
@@ -293,7 +292,7 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
             </p>
           )}
           {shown?.error && settled && (
-            <p role="alert" className="text-[13px] text-red-600 dark:text-red-400">{t('place.lookupError').replace('{error}', shown.error)}</p>
+            <p role="alert" className="text-[13px] text-red-600 dark:text-red-400">{fill(t('place.lookupError'), { error: shown.error })}</p>
           )}
           {shown?.profile && (
             <div className={settled ? '' : 'opacity-50 transition-opacity'}>

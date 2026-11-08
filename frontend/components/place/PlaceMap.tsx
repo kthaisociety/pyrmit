@@ -8,7 +8,7 @@ import type { ExpressionSpecification, GeoJSONSource, Map as MapLibreMap, MapMou
 import type { MessageKey } from '@/lib/messages';
 import { COVERAGE_COLOURS, MATCH_COLOURS, type BBox, type Pin, type ReviewCoverage, type ReviewPlanProperties,
          type ReviewPlans } from '@/lib/place';
-import { useLanguage } from '@/lib/i18n';
+import { fill, useLanguage } from '@/lib/i18n';
 
 export interface PlaceOutline {
   id: string;
@@ -148,7 +148,7 @@ function planPopup(properties: ReviewPlanProperties, t: (key: MessageKey) => str
 
 function matchedBy(match: string, t: (key: MessageKey) => string): string {
   const key = MATCH_LABEL[match];
-  return t('place.matchedBy').replace('{match}', key ? t(key).toLowerCase() : match);
+  return fill(t('place.matchedBy'), { match: key ? t(key).toLowerCase() : match });
 }
 
 /**

@@ -6,8 +6,8 @@ from glossary import explained
 
 LANSSTYRELSEN = "Länsstyrelsen"
 
-# The titles and reasons per page language (#75); English ones get their glossary explanations in _permit
-TEXTS: dict[str, dict] = {
+# The titles and reasons per page language; English ones get their glossary explanations in _permit
+_TEXTS: dict[Language, dict] = {
     "en": {
         "bygglov_title": "Bygglov",
         "bygglov_reason": {
@@ -80,13 +80,13 @@ def _authority(name: str | None, kommun: str) -> str:
 
 
 def _bygglov(detaljplan: str, kommun: str, language: Language) -> dict:
-    texts = TEXTS[language]
+    texts = _TEXTS[language]
     return _permit("bygglov", texts["bygglov_title"], "PBL 9 kap.", f"Byggnadsnämnden, {kommun} kommun",
                    texts["bygglov_reason"][detaljplan], language)
 
 
 def _protected_area(area: dict, kommun: str, language: Language) -> dict:
-    texts = TEXTS[language]
+    texts = _TEXTS[language]
     kind = (area["type"] or "skyddat område").strip()
     return _permit(f"dispens:{area['ref']}", texts["dispens_title"].format(kind=kind.lower(), name=area["name"]),
                    PROTECTED_AREA_LAW.get(kind.lower(), "MB 7 kap."),
@@ -95,13 +95,13 @@ def _protected_area(area: dict, kommun: str, language: Language) -> dict:
 
 
 def _natura2000(site: dict, language: Language) -> dict:
-    texts = TEXTS[language]
+    texts = _TEXTS[language]
     return _permit(f"natura2000:{site['ref']}", texts["natura_title"].format(name=site["name"], ref=site["ref"]),
                    "MB 7 kap. 28 a §", LANSSTYRELSEN, texts["natura_reason"], language)
 
 
 def _ancient_remain(remain: dict, language: Language) -> dict | None:
-    texts = TEXTS[language]
+    texts = _TEXTS[language]
     label = f"{remain['ref']} ({remain['type']})"
     if remain["status"] == "Fornlämning":
         return _permit(f"fornlamning:{remain['ref']}", texts["remain_title"].format(label=label), "KML 2 kap. 12 §",
@@ -113,7 +113,7 @@ def _ancient_remain(remain: dict, language: Language) -> dict | None:
 
 
 def _national_interest(interest: dict, kommun: str, language: Language) -> dict:
-    texts = TEXTS[language]
+    texts = _TEXTS[language]
     return _permit(f"riksintresse:{interest['name']}", texts["interest_title"].format(name=interest["name"]),
                    interest["law"] or "MB 3-4 kap.", f"{kommun} kommun / {LANSSTYRELSEN}",
                    texts["interest_reason"].format(type=interest["type"]), language, kind="consideration")

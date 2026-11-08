@@ -1,6 +1,6 @@
 'use client';
 
-// The page language, Swedish or English (#75): chosen by the visitor, remembered per browser.
+// The page language, Swedish or English: chosen by the visitor, remembered per browser.
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState,
   useSyncExternalStore } from 'react';
 
@@ -77,6 +77,14 @@ export function useLanguage(): LanguageState {
 export function useGlossaryExplanation(term: string): string | undefined {
   const { glossary } = useContext(LanguageContext) ?? missingProvider();
   return glossary[term.toLowerCase()];
+}
+
+/**
+ * `text` (a t() result) with each "{name}" placeholder replaced by `values[name]`, in the order `values` lists them.
+ * Each placeholder is replaced once, at its first occurrence; a placeholder with no value stays as it is.
+ */
+export function fill(text: string, values: Record<string, string>): string {
+  return Object.entries(values).reduce((filled, [name, value]) => filled.replace(`{${name}}`, value), text);
 }
 
 interface Context extends LanguageState {

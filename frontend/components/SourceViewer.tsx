@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, FileText, Loader2, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
-import { useLanguage } from '@/lib/i18n';
+import { fill, useLanguage } from '@/lib/i18n';
 import Term from '@/components/Term';
 import ChunkCard from '@/components/ChunkCard';
 
@@ -108,7 +108,7 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
       let location = await locateChunk(chunk.chunk_id, false);
       if (mine !== request.current) return;
       if (location.needs_download) {
-        setStatus(t('source.downloading').replace('{host}', location.source_host ?? t('source.kommunWebsite')));
+        setStatus(fill(t('source.downloading'), { host: location.source_host ?? t('source.kommunWebsite') }));
         location = await locateChunk(chunk.chunk_id);
         if (mine !== request.current) return;
       }
@@ -128,8 +128,7 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
           page,
           note: !location.found
             ? t('source.notLocated')
-            : (location.highlighted ? t('source.pageHighlighted') : t('source.pageScanned'))
-              .replace('{page}', String(page)),
+            : fill(t(location.highlighted ? 'source.pageHighlighted' : 'source.pageScanned'), { page: String(page) }),
         });
       } else if (location.type === 'url' && location.url) {
         window.open(location.url, '_blank', 'noopener,noreferrer');

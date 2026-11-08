@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SourceViewer, { Citation } from '@/components/SourceViewer';
 
 import { server } from '../../mocks/server';
+import { LanguageProvider } from '@/lib/i18n';
 
 const citation: Citation = {
   n: 1,
@@ -36,7 +37,7 @@ describe('SourceViewer', () => {
         return HttpResponse.json(located);
       }),
     );
-    render(<SourceViewer citation={citation} onClose={vi.fn()} />);
+    render(<SourceViewer citation={citation} onClose={vi.fn()} />, { wrapper: LanguageProvider });
 
     await userEvent.click(screen.getByRole('button', { name: /Open the PDF at this passage/ }));
 
@@ -56,7 +57,7 @@ describe('SourceViewer', () => {
         { chunk_id: 's1', source: 'PBL', chunk_index: 1, content: '4 §', doc_id: 'law:pbl', url: 'https://data.riksdagen.se/a' },
       ],
     };
-    render(<SourceViewer citation={legacy} onClose={vi.fn()} />);
+    render(<SourceViewer citation={legacy} onClose={vi.fn()} />, { wrapper: LanguageProvider });
 
     expect(screen.getByText(/No original kept/)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Open the/ })).toHaveLength(1); // the statute only
@@ -65,7 +66,7 @@ describe('SourceViewer', () => {
   it('keeps the other buttons usable while one document opens', async () => {
     server.use(http.get('*/api/docs/locate', () => new Promise(() => {}))); // never answers
     const two: Citation = { ...citation, chunks: [citation.chunks[0], { ...citation.chunks[0], chunk_id: 'c2' }] };
-    render(<SourceViewer citation={two} onClose={vi.fn()} />);
+    render(<SourceViewer citation={two} onClose={vi.fn()} />, { wrapper: LanguageProvider });
 
     const [first, second] = screen.getAllByRole('button', { name: /Open the PDF at this passage/ });
     await userEvent.click(first);
@@ -83,7 +84,7 @@ describe('SourceViewer', () => {
         return HttpResponse.json(located);
       }),
     );
-    render(<SourceViewer citation={citation} onClose={vi.fn()} />);
+    render(<SourceViewer citation={citation} onClose={vi.fn()} />, { wrapper: LanguageProvider });
 
     await userEvent.click(screen.getByRole('button', { name: /Open the PDF at this passage/ }));
 

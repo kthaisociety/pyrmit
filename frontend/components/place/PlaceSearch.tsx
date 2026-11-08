@@ -6,7 +6,7 @@ import { Loader2, MapPin, Search } from 'lucide-react';
 import { GLASS } from '@/components/place/glass';
 import type { MessageKey } from '@/lib/messages';
 import { searchPlaces, type PlaceSearchResult } from '@/lib/place';
-import { useLanguage } from '@/lib/i18n';
+import { fill, useLanguage } from '@/lib/i18n';
 
 export interface PlaceSearchProps {
   onPropose: (result: PlaceSearchResult) => void; // a match was chosen: propose a pin there
@@ -23,7 +23,7 @@ type SearchState =
 function credit(results: PlaceSearchResult[], t: (key: MessageKey) => string): string {
   const register = results.find((result) => result.kind === 'address');
   return register
-    ? t('place.addressRegisterCredit').replace('{kommun}', register.kommun ?? t('place.theKommun'))
+    ? fill(t('place.addressRegisterCredit'), { kommun: register.kommun ?? t('place.theKommun') })
     : t('place.nominatimCredit');
 }
 
@@ -82,7 +82,7 @@ export default function PlaceSearch({ onPropose }: PlaceSearchProps) {
         <div className={`overflow-hidden rounded-xl ${GLASS}`}>
           {state.results.length === 0 ? (
             <p className="px-3 py-2.5 text-[13px] text-zinc-600 dark:text-zinc-300">
-              {t('place.noMatch').replace('{query}', state.query)}
+              {fill(t('place.noMatch'), { query: state.query })}
             </p>
           ) : (
             <ul aria-label={t('place.searchResults')} className="max-h-64 divide-y divide-zinc-200/70 overflow-y-auto dark:divide-white/10">

@@ -2,7 +2,7 @@
 
 import { ReactNode, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { useLanguage } from '@/lib/i18n';
+import { fill, useLanguage } from '@/lib/i18n';
 
 export interface ChunkCardProps {
   source: string;
@@ -54,7 +54,7 @@ export default function ChunkCard({
             <span className="truncate font-medium text-zinc-800 dark:text-zinc-100">{source}</span>
             {chunkIndex !== undefined && chunkIndex !== null && (
               <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                {t('source.chunk').replace('{index}', String(chunkIndex))}
+                {fill(t('source.chunk'), { index: String(chunkIndex) })}
               </span>
             )}
             {meta.map((item) => (

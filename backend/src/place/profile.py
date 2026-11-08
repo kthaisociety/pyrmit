@@ -40,8 +40,8 @@ logger = logging.getLogger(__name__)
 CORPUS_LOOKUP_SECONDS = 8
 _corpus_worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="corpus-documents")
 ROLE_ORDER = {"plankarta": 0, "planbeskrivning": 1}
-# The profile's user-facing texts per page language (#75); English ones get their glossary explanations in _texts
-TEXTS: dict[str, dict[str, str]] = {
+# The profile's user-facing texts per page language; English ones get their glossary explanations in _texts
+_TEXTS: dict[Language, dict[str, str]] = {
     "en": {
         "not_a_decision": "Registry data, not a decision: the adopted plan documents and the authorities' decisions "
                           "are binding.",
@@ -72,14 +72,13 @@ TEXTS: dict[str, dict[str, str]] = {
         "not_covered": "Den här platsen täcks inte ännu.",
     },
 }
-DOCUMENTS_UNAVAILABLE = TEXTS["en"]["documents_unavailable"]
-NOT_A_DECISION = TEXTS["en"]["not_a_decision"]
+NOT_A_DECISION = _TEXTS["en"]["not_a_decision"]
 
 
 def _texts(language: Language) -> dict[str, str]:
     """The profile's texts in `language`, English ones with their glossary explanations (unformatted placeholders
     such as {name} are left as they are)."""
-    texts = TEXTS[language]
+    texts = _TEXTS[language]
     return {key: explained(text) for key, text in texts.items()} if language == "en" else texts
 
 
@@ -268,7 +267,7 @@ def _documents_of(matched: list[dict], found: dict[str, dict]) -> list[dict]:
 
 def _with_documents(rows: list[dict], links: dict[str, list[dict]],
                     corpus_documents: Callable[[list[str]], dict[str, dict]],
-                    language: Language = "en") -> tuple[list[dict], list[str]]:
+                    language: Language) -> tuple[list[dict], list[str]]:
     """The plan rows with their documents (place.plan_links) as the corpus holds them, and the notes that go with them:
     one when the corpus could not be reached, which leaves the rows without documents."""
     matched_of = [links.get(polygon_key(row) or "", []) for row in rows]

@@ -9,7 +9,7 @@ import {
 import Term from '@/components/Term';
 import type { MessageKey } from '@/lib/messages';
 import type { PlaceFeature, PlacePermit, PlaceProfile, SectionStatus } from '@/lib/place';
-import { useLanguage } from '@/lib/i18n';
+import { fill, useLanguage } from '@/lib/i18n';
 
 // Swedish plan kinds, shown in Swedish in either language
 const KIND_LABEL: Record<string, string> = {
@@ -197,7 +197,7 @@ function ZoneRow({ zone }: { zone: PlaceFeature }) {
       <div className="flex items-baseline gap-2">
         <span className="font-mono text-[12px] font-semibold text-emerald-700 dark:text-emerald-300">{zone.ref}</span>
         {zone.share != null && (
-          <span className="text-xs text-zinc-500 dark:text-zinc-400">{t('place.shareOfProperty').replace('{percent}', String(Math.round(zone.share * 100)))}</span>
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">{fill(t('place.shareOfProperty'), { percent: String(Math.round(zone.share * 100)) })}</span>
         )}
       </div>
       <p className="text-zinc-800 dark:text-zinc-200">{zone.name}</p>
@@ -231,7 +231,7 @@ function ProtectedRow({ area }: { area: PlaceFeature }) {
       <p className="text-xs font-medium text-green-700 dark:text-green-400">{area.type}</p>
       <Title>{area.name}</Title>
       <Meta>
-        {area.authority && <span>{t('place.decidedBy').replace('{authority}', area.authority)}</span>}
+        {area.authority && <span>{fill(t('place.decidedBy'), { authority: area.authority })}</span>}
         {area.date && <span>{area.date}</span>}
         {area.url && <DocLink href={area.url}>{t('place.decision')}</DocLink>}
       </Meta>
@@ -324,8 +324,7 @@ const SHOWN_ADDRESSES = 4;
 function addressLine(addresses: string[], t: (key: MessageKey) => string): string {
   const shown = addresses.slice(0, SHOWN_ADDRESSES).join(', ');
   if (addresses.length <= SHOWN_ADDRESSES) return shown;
-  return t('place.addressesMore').replace('{shown}', shown)
-    .replace('{count}', String(addresses.length - SHOWN_ADDRESSES));
+  return fill(t('place.addressesMore'), { shown, count: String(addresses.length - SHOWN_ADDRESSES) });
 }
 
 function Headline({ profile }: { profile: PlaceProfile }) {

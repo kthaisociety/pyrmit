@@ -1,6 +1,6 @@
 'use client';
 
-// The page language switch (#75): two buttons, "Svenska" and "English", each named in its own language, the
+// The page language switch: two buttons, "Svenska" and "English", each named in its own language, the
 // current one pressed (aria-pressed). Clicking one sets the language through useLanguage. Needs a LanguageProvider.
 import type { ReactNode } from 'react';
 
@@ -15,7 +15,7 @@ export default function LanguageSwitch(): ReactNode {
   const { language, setLanguage, t } = useLanguage();
   return (
     <div role="group" aria-label={t('language.switch')}
-         className={`inline-flex overflow-hidden rounded-lg border border-zinc-300 text-xs font-medium dark:border-zinc-700`}>
+         className="inline-flex overflow-hidden rounded-lg border border-zinc-300 text-xs font-medium dark:border-zinc-700">
       {OPTIONS.map((option) => (
         <button key={option.language} type="button" aria-label={option.label} lang={option.language}
                 aria-pressed={language === option.language} onClick={() => setLanguage(option.language)}

@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import Sidebar from '@/components/Sidebar';
 
 import { server } from '../../mocks/server';
+import { LanguageProvider } from '@/lib/i18n';
 
 function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> = {}) {
   const props = {
@@ -21,7 +22,7 @@ function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> = {}) {
     onOpenPipeline: vi.fn(),
     ...overrides,
   };
-  render(<Sidebar {...props} />);
+  render(<Sidebar {...props} />, { wrapper: LanguageProvider });
   return props;
 }
 

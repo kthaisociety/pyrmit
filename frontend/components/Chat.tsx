@@ -24,7 +24,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
-import { type LanguageState, useLanguage } from '@/lib/i18n';
+import { fill, type LanguageState, useLanguage } from '@/lib/i18n';
 import ChunkCard from '@/components/ChunkCard';
 import PipelineTrace, { type PipelineEvent, type RetrievedChunk } from '@/components/PipelineTrace';
 import SourceViewer, { type Citation } from '@/components/SourceViewer';
@@ -304,7 +304,7 @@ function describeToolCall(name: string, t: Translate, input?: string): { text: s
     case 'read':
       return {
         text: arg('chunk_id') || arg('doc_id'),
-        tags: tags(!arg('chunk_id') && Number(arg('start')) > 0 ? t('chat.call.from').replace('{start}', arg('start')) : ''),
+        tags: tags(!arg('chunk_id') && Number(arg('start')) > 0 ? fill(t('chat.call.from'), { start: arg('start') }) : ''),
       };
     case 'law_section':
       return { text: `${arg('law')} ${arg('section')}`, tags: [] };
@@ -314,11 +314,11 @@ function describeToolCall(name: string, t: Translate, input?: string): { text: s
       return { text: arg('plan_id'), tags: tags(arg('topic')) };
     case 'view_map_area':
       return {
-        text: t('chat.call.around').replace('{place}', quoted('around')),
-        tags: tags(arg('doc_id'), arg('page') && t('chat.call.page').replace('{page}', arg('page'))),
+        text: fill(t('chat.call.around'), { place: quoted('around') }),
+        tags: tags(arg('doc_id'), arg('page') && fill(t('chat.call.page'), { page: arg('page') })),
       };
     case 'view_pdf_page':
-      return { text: arg('doc_id'), tags: tags(t('chat.call.page').replace('{page}', arg('page') || '1')) };
+      return { text: arg('doc_id'), tags: tags(fill(t('chat.call.page'), { page: arg('page') || '1' })) };
     default:
       return { text: Object.values(values).map(String).join(' · '), tags: [] };
   }
@@ -339,7 +339,7 @@ const TOOL_ERROR =/^(Unknown|No kommun|No section|No plan registry|Invalid regex
 
 // "{count} …" in the current language: `one` for exactly 1, `other` for any other count
 function plural(t: Translate, count: number, one: Parameters<Translate>[0], other: Parameters<Translate>[0]): string {
-  return t(count === 1 ? one : other).replace('{count}', String(count));
+  return fill(t(count === 1 ? one : other), { count: String(count) });
 }
 
 // What the call returned, in a few words (the agent's result text is cut at 300 characters)
@@ -539,8 +539,7 @@ function CitationList({ citations, onOpen }: { citations: Citation[]; onOpen: (c
           </span>
           <span className="min-w-0 flex-1">{citation.label}</span>
           <span className="text-zinc-400">
-            {t(citation.chunks.length > 1 ? 'chat.passages.other' : 'chat.passages.one')
-              .replace('{count}', String(citation.chunks.length))}
+            {fill(t(citation.chunks.length > 1 ? 'chat.passages.other' : 'chat.passages.one'), { count: String(citation.chunks.length) })}
           </span>
         </button>
       ))}
@@ -568,7 +567,7 @@ function AnswerDetails({ sources, pipeline, citations, onOpenCitation }: {
     <div className="mt-4 space-y-3">
       {pipeline.length > 0 && (
         <CollapsibleMetaSection
-          badge={t('chat.chunkCount').replace('{count}', String(chunkCount))}
+          badge={fill(t('chat.chunkCount'), { count: String(chunkCount) })}
           icon={<Microscope size={14} />}
           title={t('chat.inspectPipeline')}
         >
@@ -680,7 +679,7 @@ function LiveProgress({ steps }: { steps: Step[] }) {
             onClick={() => setExpanded((e) => !e)}
             className="ml-auto flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
           >
-            {expanded ? t('chat.showLess') : t('chat.showAll').replace('{count}', String(items.length))}
+            {expanded ? t('chat.showLess') : fill(t('chat.showAll'), { count: String(items.length) })}
             {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
         )}
@@ -692,7 +691,7 @@ function LiveProgress({ steps }: { steps: Step[] }) {
               onClick={() => setExpanded(true)}
               className="w-full px-1.5 py-0.5 text-left text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
             >
-              {t(hidden > 1 ? 'chat.earlierSteps.other' : 'chat.earlierSteps.one').replace('{count}', String(hidden))}
+              {fill(t(hidden > 1 ? 'chat.earlierSteps.other' : 'chat.earlierSteps.one'), { count: String(hidden) })}
             </button>
           </li>
         )}
@@ -904,7 +903,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     const from = awaitingPin.from;
     if (from && from.lat === pin.lat && from.lon === pin.lon) return;
     setAwaitingPin(null);
-    void send(t('chat.pinnedMessage').replace('{place}', pinLabel), true);
+    void send(fill(t('chat.pinnedMessage'), { place: pinLabel }), true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [awaitingPin, pin, pinLabel]);
 
@@ -1058,7 +1057,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
             console.error('Stream error:', event.message);
             updateLast((msg) => ({
               ...msg,
-              content: msg.content || t('chat.streamError').replace('{message}', String(event.message)),
+              content: msg.content || fill(t('chat.streamError'), { message: String(event.message) }),
             }));
             break;
         }
