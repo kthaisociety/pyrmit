@@ -1,13 +1,13 @@
 // Unit tests for components/place/PlaceCard.tsx.
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import PlaceCard from '@/components/place/PlaceCard';
 import type { PlaceFeature, PlaceProfile } from '@/lib/place';
+import { LanguageProvider } from '@/lib/i18n';
 
 import { kaboOutside, kungsangen, nothingAround, notCovered, propertyUnavailable, street } from '../../../mocks/place';
-import { LanguageProvider } from '@/lib/i18n';
 
 function card(profile = kungsangen) {
   render(createElement(PlaceCard, { profile }), { wrapper: LanguageProvider });
@@ -84,6 +84,14 @@ describe('place card', () => {
     /** A property under a plan in force is marked inside a detaljplan. */
     card();
     expect(screen.getByText((_, element) => element?.tagName === 'P' && /^inside a detaljplan$/i.test(element.textContent ?? ''))).toBeInTheDocument();
+  });
+
+  it('in English explains detaljplan on its pill as tooltip', async () => {
+    /** The detaljplan pill keeps "detaljplan" in Swedish, titled with its glossary explanation. */
+    card();
+    const pill = screen.getByText((_, element) => element?.tagName === 'P' && element.textContent === 'Inside a detaljplan');
+
+    await waitFor(() => expect(within(pill).getByText('detaljplan')).toHaveAttribute('title', 'detailed development plan'));
   });
 
   it('says the property is outside a detaljplan', () => {

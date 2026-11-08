@@ -7,9 +7,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import Chat from '@/components/Chat';
 import type { PlaceMapProps } from '@/components/place/PlaceMap';
+import { LanguageProvider } from '@/lib/i18n';
 
 import { server } from '../../mocks/server';
-import { LanguageProvider } from '@/lib/i18n';
 
 // jsdom has no layout: the chat scrolls to its last message on render
 Element.prototype.scrollIntoView = vi.fn();

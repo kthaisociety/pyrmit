@@ -5,9 +5,9 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SourceViewer, { Citation } from '@/components/SourceViewer';
+import { LanguageProvider } from '@/lib/i18n';
 
 import { server } from '../../mocks/server';
-import { LanguageProvider } from '@/lib/i18n';
 
 const citation: Citation = {
   n: 1,

@@ -5,13 +5,14 @@ import { http, HttpResponse } from 'msw';
 import { createElement, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import LanguageSwitch from '@/components/LanguageSwitch';
 import PlacePanel, { REVIEW_PLANS_ZOOM } from '@/components/place/PlacePanel';
 import type { PlaceMapProps } from '@/components/place/PlaceMap';
 import type { BBox, Pin, PlaceSearchResult } from '@/lib/place';
+import { LanguageProvider } from '@/lib/i18n';
 
 import { kungsangen, reviewCoverage, reviewPlans } from '../../../mocks/place';
 import { server } from '../../../mocks/server';
-import { LanguageProvider } from '@/lib/i18n';
 
 const NACKA: BBox = [18.0, 59.25, 18.4, 59.4];
 const SWEDEN: BBox = [10.5, 55, 24.5, 69.5];
@@ -38,6 +39,16 @@ vi.mock('@/components/place/PlaceMap', () => ({
 function Harness({ start = null }: { start?: Pin | null }) {
   const [pin, setPin] = useState<Pin | null>(start);
   return createElement(PlacePanel, { pin, onPinChange: setPin, onClose: () => undefined });
+}
+
+function WithLanguageSwitch() {
+  return createElement('div', null, createElement(LanguageSwitch), createElement(Harness));
+}
+
+async function openKungsangen() {
+  render(createElement(WithLanguageSwitch), { wrapper: LanguageProvider });
+  await userEvent.click(screen.getByRole('button', { name: 'Click Kungsängen' }));
+  await screen.findByText('Uppsala Kungsängen 7:8');
 }
 
 describe('map panel', () => {
@@ -323,5 +334,30 @@ describe('review mode', () => {
     await userEvent.click(reviewToggle());
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not fetch the coverage/i);
+  });
+});
+
+describe('page language', () => {
+  it('shows the place card in Swedish once Svenska is chosen', async () => {
+    /** Choosing Svenska with a place card open turns the card's texts Swedish. */
+    await openKungsangen();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Svenska' }));
+
+    expect(await screen.findByText(/Troliga tillstånd/)).toBeInTheDocument();
+  });
+
+  it('fetches the place card again in the new language', async () => {
+    /** Switching to Svenska with a place card open fetches its profile again with language=sv. */
+    const languages: (string | null)[] = [];
+    server.use(http.get('*/api/place/profile', ({ request }) => {
+      languages.push(new URL(request.url).searchParams.get('language'));
+      return HttpResponse.json(kungsangen);
+    }));
+    await openKungsangen();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Svenska' }));
+
+    await waitFor(() => expect(languages).toEqual(['en', 'sv']));
   });
 });
