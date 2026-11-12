@@ -226,7 +226,7 @@ class AnswerBench:
         except Exception as exc:  # noqa: BLE001 - a failed run is a result, not a crash of the benchmark
             row.update(error=f"{type(exc).__name__}: {str(exc)[:300]}", seconds=round(time.perf_counter() - started, 1))
             return row
-        row.update(answer=run.answer, mode=run.mode, choices=list(getattr(run, "choices", [])), seconds=run.seconds,
+        row.update(answer=run.answer, mode=run.mode, questions=[{"question": q.question, "options": q.options} for q in getattr(run, "questions", [])], seconds=run.seconds,
                    first_token_s=run.first_token_s,
                    cost=round(run.usage.get("cost", 0.0), 5), llm_calls=run.llm_calls, error=run.error,
                    tool_calls=len(run.steps), tools=[step.get("tool") for step in run.steps],

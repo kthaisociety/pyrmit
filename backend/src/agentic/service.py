@@ -155,8 +155,9 @@ class CitationNumberer:
 def stream_agent(question: str, history: list[dict], record: Callable[..., None], sse: Callable[[dict], str],
                  flush: Callable[[], list[str]] = list, allow_ask: bool = True) -> Generator[str, None, dict]:
     """Yield SSE strings while the agent works, including the final answer as it streams (citations
-    already numbered); return {"answer", "law_rows", "local_rows", "sources", "citations", "choices" (the options of
-    an ask_user question, else []), "offer_pin", "run"}.
+    already numbered); return {"answer", "law_rows", "local_rows", "sources", "citations", "questions", "offer_pin",
+    "run"}. "questions" is the agent's question card, [{"question": str, "options": [str]}] (options empty for an open
+    question), and [] when it answered; "offer_pin" says whether the card also offers to pin the place.
 
     `allow_ask=False` keeps the agent from asking the user again (the message answers its question).
     `flush` returns the pipeline events of the calls recorded so far: streamed (and so saved with the
@@ -225,4 +226,6 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
     law_rows = [chunk_row(c) for c in chunks if c["kind"] == "law"]
     local_rows = [chunk_row(c) for c in chunks if c["kind"] != "law"]
     return {"answer": answer, "law_rows": law_rows, "local_rows": local_rows, "sources": numberer.labels,
-            "citations": numberer.citations(), "choices": list(run.choices), "offer_pin": run.offer_pin, "run": run}
+            "citations": numberer.citations(),
+            "questions": [{"question": asked.question, "options": list(asked.options)} for asked in run.questions],
+            "offer_pin": run.offer_pin, "run": run}

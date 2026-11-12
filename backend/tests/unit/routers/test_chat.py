@@ -36,6 +36,7 @@ def _jsonb_as_json(element, compiler, **kw):
 
 import agentic.service
 import models
+from agentic.agent import AgentRun
 from agents.base import BaseRAGAgent
 from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_INSTRUCTION
 from db.database import get_db
@@ -198,7 +199,8 @@ def harness(monkeypatch, profile_of):
         allowed.append(allow_ask)
         yield sse({"type": "response.output_text.delta", "delta": "An answer."})
         return {"answer": "An answer.", "law_rows": [], "local_rows": [], "sources": [], "citations": [],
-                "choices": list(choices), "run": None}
+                "questions": [{"question": "Which place do you mean?", "options": list(choices)}] if choices else [],
+                "run": None}
 
     monkeypatch.setattr(chat, "SessionLocal", Session)
     monkeypatch.setattr(chat, "get_openai_client", lambda: object())
@@ -340,7 +342,8 @@ def choices_event(harness) -> dict:
 
 def test_a_question_with_options_records_them_for_the_buttons(harness):
     """When the agent asks the user to choose, the options are saved with the answer, for the chat's buttons."""
-    assert choices_event(harness)["data"]["options"] == ["The pinned Uppsala property", "A site in Södermalm"]
+    assert choices_event(harness)["data"]["questions"][0]["options"] == ["The pinned Uppsala property",
+                                                                         "A site in Södermalm"]
 
 
 def test_a_question_with_options_offers_no_pin_unless_asked(harness):
@@ -350,6 +353,53 @@ def test_a_question_with_options_offers_no_pin_unless_asked(harness):
 def test_an_ordinary_answer_records_no_options(harness):
     ask(harness, PINNED)
     assert not [e for e in saved_answer(harness).trace if e["stage"] == "choices"]
+
+
+# The agent's question card (#91): saved with its questions, never claim-checked
+
+def card_harness(harness, monkeypatch, questions, offer_pin=False):
+    checked = []
+
+    def fake_stream_agent(question, history, record, sse, flush=list, allow_ask=True):
+        yield sse({"type": "response.output_text.delta", "delta": "What will the building be used for?"})
+        return {"answer": "What will the building be used for?", "law_rows": [], "local_rows": [], "sources": [],
+                "citations": [], "questions": questions, "offer_pin": offer_pin, "run": AgentRun()}
+
+    monkeypatch.setattr(agentic.service, "stream_agent", fake_stream_agent)
+    monkeypatch.setattr(chat, "_check_claims", lambda run: checked.append(run) or ({"status": "checked"}, None))
+    ask(harness, PINNED)
+    return saved_answer(harness), checked
+
+
+def card_event(message) -> dict:
+    [event] = [e for e in message.trace if e["stage"] == "choices"]
+    return event["data"]
+
+
+def test_a_card_is_saved_with_its_questions(harness, monkeypatch):
+    """The card's questions and options are saved with the answer, for the chat to show."""
+    questions = [{"question": "What will the building be used for?", "options": ["A permanent home"]},
+                 {"question": "Roughly how large will it be?", "options": []}]
+    message, _ = card_harness(harness, monkeypatch, questions)
+    assert card_event(message)["questions"] == questions
+
+
+def test_an_open_question_is_saved_as_a_card(harness, monkeypatch):
+    """A card with only open questions and no pin offer is still a card, not an answer."""
+    message, _ = card_harness(harness, monkeypatch, [{"question": "Roughly how large will it be?", "options": []}])
+    assert card_event(message)["questions"] == [{"question": "Roughly how large will it be?", "options": []}]
+
+
+def test_a_card_records_its_pin_offer_beside_its_questions(harness, monkeypatch):
+    """A card about the place keeps both its question and the button that opens the map."""
+    message, _ = card_harness(harness, monkeypatch, [{"question": "Which plot?", "options": []}], offer_pin=True)
+    assert card_event(message) == {"questions": [{"question": "Which plot?", "options": []}], "offer_pin": True}
+
+
+def test_a_card_is_not_claim_checked(harness, monkeypatch):
+    """A question back to the user makes no claims: its claims are not checked."""
+    _, checked = card_harness(harness, monkeypatch, [{"question": "Roughly how large will it be?", "options": []}])
+    assert checked == []
 
 
 def test_an_answer_to_the_agents_question_is_marked(harness):
@@ -388,7 +438,9 @@ def checked_chat(monkeypatch):
         yield sse({"type": "response.output_text.delta", "delta": shown})
         run = types.SimpleNamespace(answer=RAW, seen_chunks=[A, B, C], choices=list(state.choices), offer_pin=False)
         return {"answer": shown, "law_rows": [], "local_rows": [], "sources": numberer.labels,
-                "citations": numberer.citations(), "choices": list(state.choices), "offer_pin": False, "run": run}
+                "citations": numberer.citations(),
+                "questions": [{"question": "Which kommun?", "options": list(state.choices)}] if state.choices else [],
+                "offer_pin": False, "run": run}
 
     monkeypatch.setattr(chat, "SessionLocal", Session)
     monkeypatch.setattr(chat, "get_openai_client", lambda: object())

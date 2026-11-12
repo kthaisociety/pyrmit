@@ -66,6 +66,12 @@ The location, number of units and project type extracted from a user's message.
 **Clarifying prompt**:
 The reply sent instead of an analysis when the parsed query lacks location or units.
 
+**Question card**:
+The agent's reply when the answer turns on facts only the user can give: 1-3 questions, each with a few options or
+none (an open question), always with a free-text answer, and an offer to pin the place when the place is missing. The
+user's reply answers the whole card; the agent then answers without asking again.
+_Avoid_: clarifying prompt (the RAG path's fixed reply), follow-up question (the "Questions for you" section of an answer)
+
 **Chat session**:
 One conversation thread owned by a user, holding its chat messages.
 _Avoid_: session (clashes with the `sessions` table and with auth)
@@ -189,6 +195,7 @@ A switch on the map panel, off by default, for checking the plan layers and thei
 - A **Pin** in a **Pilot kommun** gives a **Property** (looked up live) and a **Place profile** (from the **Snapshot**): its **Detaljplaner**, **Land-use zones**, **Plans in progress**, **Protected areas** and **National interests**, plus the **Ancient remains** on it (looked up live). The **Likely permits** follow from that profile. The **Place card** shows all of it.
 - A **Pin** in a **Plan-layer kommun** gives a **Place profile** with the **Detaljplaner** at the point from the kommun's **Snapshot**, each with its aktbeteckning, page and document links and licence, and nothing else. The **Plan source** says how the **Snapshot** was read; the **Coverage report** says how well.
 - Every **Detaljplan** polygon in a **Snapshot** is matched to its documents in the document store by **Match level**, giving **Plan-document links** that the **Place profile** carries; the polygons without one go to the **Fetch list**.
+- In agent mode, a question whose conclusion turns on a fact the user has not given gets a **Question card** instead of an answer; the reply to the card gets the answer, and a **Question card** is not claim-checked.
 - An agent answer goes through the **Claim check** before it is final: its **Claims** are judged against the chunks they cite, rewritten once and flagged when still not supported, and the verdicts are saved with the **Chat message**.
 - The **Page language** decides every text the page shows, the **Place card** included; the **Answer language** decides each answer on its own, so a Swedish page can hold an English answer.
 - A question asked with a **Pin** is answered from its **Place profile**, and the answer keeps that **Pin**: reopening the **Chat session** brings back its **Place chip**.

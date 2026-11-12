@@ -57,8 +57,64 @@ PIN_GUIDE = """What a pin on the map changes. A question is specific when it is 
 - Specific, with a pin: the pinned place lists the plans that apply. Read their documents with read_plan first, without searching for them, and an amendment together with the plan it amends, as listed: it changes that plan where they differ. Answer from the passages, citing them, and search further only for what the plans do not settle, such as statute text.
 - A plan listed as "Text not read": name the plan, say its text is not read, give the kommun's link listed with it and answer from the statutes.
 - General, with a pin: answer generally, without bringing in the plan or the pinned place's other data.
-- Specific, without a pin: your first call is ask_user with offer_pin, before any search.
+- Specific, without a pin: your first call is ask_user with offer_pin, before any search: ask which place, and in the same card any other missing fact that would change the answer.
 - General, without a pin: answer with the search tools and close with one sentence's offer to pin a place for an exact answer."""
+
+ASK_GUIDE = """Asking instead of guessing (ask_user). Decide this first, before any search. A question is the user's own case when
+it is about their property, building or project ("my plot", "my property", "my land", "my house", "our house", "I
+want to build ...", "min tomt", "min fastighet", "mitt hus", "vårt hus", "vi vill bygga ..."), as opposed to a
+general question about how a rule works. A permit or procedure question about their own property is their own case
+too, in English as in Swedish: "Do I need a permit to build a pond on my land?", "How do I connect my house to the
+municipal water?", "Can I merge my two properties?", "Do I need permission to put a gate in my wall?" all turn on
+where the property is, so ask where it is (with offer_pin) before answering. In the user's own case the main
+conclusion (allowed or not, permit needed or not, which route) turns on facts only they can give. Go through this
+list: every fact on it that would change the conclusion and that the user has not given, in this message or earlier
+in the conversation, you MUST ask for with ask_user (alone), all of them in one card (1-3 questions), instead of
+answering:
+- the place: nothing is pinned and the user has not named the kommun and the area; or the name they give exists in
+  several kommuner (e.g. Kungsängen, Bergshamra, Ekeby): then ask which one, also when the question is general;
+- the use: what the building or land will be used for (permanent home, holiday home, business and which kind,
+  animals), when the rules differ by use;
+- the measure: its size in m2, its height, or its distance to the boundary or the shoreline, whenever permit duty or
+  legality depends on a threshold: sheds, garages, carports, extensions, decks (height above the ground), fences and
+  plank (height), signs (size), wind turbines (height), anything near water (distance to the shore). Ask for the
+  value itself as an open question ("How high above the ground will the deck be?"), never as yes/no about the
+  threshold ("Is it within 100 metres?");
+- what is to be built or done, when the user has not said ("can I build it?", "my project");
+- which of two places or projects is meant.
+- how many buildings or homes, when the user plans "a few" or "some": a single house and a group follow different
+  routes.
+In the user's own case an answer that lists "if X then A, if Y then B" is not a substitute for asking: ask. This
+holds above all for the place. Whether they may repaint their house, dig a pond on their land, change the windows of
+their house or pave their yard depends on the detaljplan and the area of their property, so the general rule is not
+yet their answer: ask where it is (with offer_pin) instead of explaining the rule ("Får jag byta fönster på mitt
+hus?" -> ask where the house is; "Vad gäller för fönsterbyten?" -> a general question, answer it).
+Do not ask:
+- on a general question (how a rule, procedure, fee, deadline or document works, what a kommun plans, "in general"):
+  answer it, and say in one sentence what would change the answer for a specific case;
+- for what you can find with the tools (which plan applies, a fee, a rule) or what the site is like once the place
+  is known (whether the area has municipal water and sewage, strandskydd, what its plan allows): look it up first;
+- whether the question is general or about their own case: decide that yourself from their words;
+- for a more exact place when the conversation already names the kommun and the area, locality or plan area (e.g. "a
+  villa plot in Kumla-Stensta, Vallentuna"): that is enough to find the rules, also with nothing pinned;
+- for details that do not change the main conclusion: state them as assumptions in the answer;
+- again for something the user already answered or declined to give ("just answer", "I'd rather not say"): answer
+  generally or on stated assumptions.
+Each question is short, asks for one fact, and is written in the language of the user's latest message (Swedish if
+they wrote Swedish, otherwise English), as are its options. Give options only when a few answers cover most cases:
+2-4 distinct, complete replies the user recognises and you can act on without more input (e.g. "A permanent home" /
+"A holiday home", or "Use the pinned property, Fålhagen 61:11" / "Answer generally for Södermalm, Stockholm"; note
+when a named place lies outside the kommun of the pin). A question with an open answer (a size, a height, an address,
+what they plan to build) has no options. The card always adds a free-text field, so never write "Other", "Something
+else", "Don't know", "Unsure" or "Please specify" as an option. To have them pin the place, set offer_pin as well as
+asking for the place. Never list the kommuner of the corpus as options."""
+
+# After the user answered the card the rule above made the agent ask again in plain text, ask_user being gone
+# (41 of 99 follow-ups in the missing-info eval, 2026-11-12): a run that cannot ask gets this instead
+ANSWERED_GUIDE = """Asking is over: the user has answered your questions (or declined to). Do not ask anything
+more, in the text or otherwise, whatever other instructions say about asking. Research their question with the
+tools as usual, using what they told you, and answer it in full in the mode's format; state as assumptions what
+is still unknown."""
 
 MODES = ("verdict", "explain", "propose", "develop")
 
@@ -75,12 +131,7 @@ MODES_GUIDE = """Kinds of questions (the mode of answer_ready; a question can mi
   what could block it and the ways to make it work (another location or scale, phasing, the plan route: planbesked +
   detaljplan vs förhandsbesked + bygglov, liten avvikelse, dispens, shared facilities as a gemensamhetsanläggning),
   and what you need to know from the user.
-When the answer turns on something only the user can tell and no useful answer is possible without it (which place
-is meant, which of two projects), call ask_user (alone) instead of answering; do not use it for details you can state
-as assumptions. Its options are buttons: each must be a complete reply you can act on without more input, named so
-the user recognises it (e.g. "Use the pinned property, Fålhagen 61:11" / "Answer generally for Södermalm, Stockholm";
-note when a named place lies outside the kommun of the pin). Never an option that asks the user to provide or type
-something: they can always type. To have them pin a place, set offer_pin instead of writing it as an option."""
+""" + "\n" + ASK_GUIDE
 
 ANSWER_FORMAT = """Answer in markdown, in the answer language (see the answer-language rule below), in the format of the mode you chose. The headings are given in English; a Swedish answer uses the Swedish headings in brackets:
 - verdict:
@@ -122,6 +173,11 @@ Completeness: the user will act on this answer, so before writing go through you
 ANSWER_LANGUAGE_REMINDER = ("Write it in the user's language as the answer-language rule says: Swedish if they wrote "
                             "Swedish, otherwise English, whatever the language of the sources.")
 
+# After Swedish tool results the model wrote its question card in Swedish for an English question (missing-info eval,
+# 2026-11-12): the same drift as in answers, so the same reminder follows each turn's tool results while it can ask
+ASK_LANGUAGE_REMINDER = ("(If you ask the user instead of answering, write the questions and options in the language "
+                         "of their latest message, whatever the language of these sources.)")
+
 IMAGE_REMOVED = "\n(Image removed after the turn it was shown in: use what you noted from it.)"
 
 SYSTEM_PROMPT = (f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{PIN_GUIDE}\n\n{MODES_GUIDE}\n\n{ANSWER_FORMAT}\n\n{LANGUAGE_RULE}\n\n"
@@ -147,6 +203,23 @@ def kommun_scope(tools: CorpusTools) -> str:
 
 
 @dataclass
+class AskedQuestion:
+    """One question of the agent's question card (ask_user), for a fact only the user knows that would change the
+    answer.
+
+    `question` is one short question in the answer language, never empty. `options` holds 0 to MAX_CHOICES complete
+    replies the user can click and the agent can act on without more input, trimmed, without empties or repeats; it
+    is empty for an open question, where a few likely answers do not exist (the agent decides). Every question also
+    gets a free-text "Other" field in the card, so the options never include "other" or "please provide ...".
+    """
+    question: str
+    options: list[str] = field(default_factory=list)
+
+
+MAX_QUESTIONS = 3  # questions in one card: every fact that would change the answer is asked for in one round
+
+
+@dataclass
 class AgentRun:
     answer: str = ""
     steps: list[dict] = field(default_factory=list)       # one entry per tool call
@@ -157,8 +230,10 @@ class AgentRun:
     seconds: float = 0.0
     first_token_s: float | None = None  # time until the first answer token (streamed answer)
     mode: str | None = None  # kind of question the agent chose in answer_ready (MODES)
-    choices: list[str] = field(default_factory=list)  # ask_user: the options offered with the question (the answer)
-    offer_pin: bool = False  # ask_user: also offer to pin the place on the map
+    # ask_user: the question card, 1 to MAX_QUESTIONS questions in the order asked (empty when the agent answered).
+    # `answer` then lists every question as text, so the saved message reads on its own.
+    questions: list[AskedQuestion] = field(default_factory=list)
+    offer_pin: bool = False  # ask_user: the card also offers to pin the place on the map
     error: str | None = None
 
 
@@ -190,29 +265,60 @@ ANSWER_READY_TOOL = {
 MAX_CHOICES = 4
 ASK_USER_TOOL = {
     "type": "function", "name": "ask_user",
-    "description": "Call (alone) instead of answering when only the user can settle what the answer depends on "
-                   "(e.g. which place they mean). The question becomes the reply; the options are shown as buttons.",
+    "description": "Call (alone) instead of answering when the main conclusion turns on facts only the user can give "
+                   "and has not given. Ask for all of them at once: the questions are shown together in one card, each "
+                   "with its options as buttons and a free-text field.",
     "parameters": {"type": "object", "properties": {
-        "question": {"type": "string", "description": "one short question, in Swedish if the user wrote Swedish, "
-                                                         "otherwise English"},
-        "options": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": MAX_CHOICES,
-                    "description": "1-4 complete replies the user can click and you can act on without more input, "
-                                   "in the answer language (never 'please provide ...')"},
+        "questions": {"type": "array", "minItems": 1, "maxItems": MAX_QUESTIONS, "items": {
+            "type": "object", "properties": {
+                "question": {"type": "string", "description": "one short question for one fact, in the "
+                                                                 "language of the user's latest message "
+                                                                 "(English for an English message, even "
+                                                                 "after reading Swedish sources)"},
+                "options": {"type": "array", "items": {"type": "string"}, "maxItems": MAX_CHOICES,
+                            "description": "2-4 complete replies the user can click and you can act on without more "
+                                           "input, only when a few answers cover most cases; [] for an open question. "
+                                           "Never 'Other' or 'please specify': a free-text field is always added"},
+            }, "required": ["question", "options"]},
+            "description": "1-3 questions, one per missing fact"},
         "offer_pin": {"type": "boolean", "description": "also show a button that opens the map to pin the place"},
-    }, "required": ["question", "options"]},
+    }, "required": ["questions"]},
 }
 
 
-def _choices(arguments: str | None) -> tuple[str, list[str], bool]:
-    """(question, options, offer_pin) of an ask_user call: options trimmed, without empties or repeats, at most
-    MAX_CHOICES."""
+def _clean_options(options) -> list[str]:
+    """Options trimmed, without empties or repeats, at most MAX_CHOICES."""
+    if not isinstance(options, list):
+        return []
+    trimmed = [str(option).strip() for option in options if isinstance(option, (str, int, float))]
+    return list(dict.fromkeys(option for option in trimmed if option))[:MAX_CHOICES]
+
+
+def _questions(arguments: str | None) -> tuple[list[AskedQuestion], bool]:
+    """(questions, offer_pin) of an ask_user call: questions without text dropped, at most MAX_QUESTIONS, repeats
+    merged. The flat form of a single question ({"question", "options"}) is read as one question."""
     try:
         parsed = json.loads(arguments or "{}")
     except json.JSONDecodeError:
         parsed = {}
-    options = [str(option).strip() for option in parsed.get("options") or []]
-    return (str(parsed.get("question") or "").strip(), list(dict.fromkeys(o for o in options if o))[:MAX_CHOICES],
-            bool(parsed.get("offer_pin")))
+    if not isinstance(parsed, dict):
+        parsed = {}
+    items = parsed.get("questions")
+    if not isinstance(items, list):
+        items = [parsed] if "question" in parsed else []
+    questions: list[AskedQuestion] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        text = str(item.get("question") or "").strip()
+        if text and all(text != asked.question for asked in questions):
+            questions.append(AskedQuestion(text, _clean_options(item.get("options"))))
+    return questions[:MAX_QUESTIONS], bool(parsed.get("offer_pin"))
+
+
+def questions_text(questions: list[AskedQuestion]) -> str:
+    """The card as the reply's text, for the saved conversation: the question, or one question per line."""
+    return "\n".join(asked.question for asked in questions)
 
 
 def _run_call(tools: CorpusTools, call) -> tuple:
@@ -246,6 +352,8 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
                + ([ASK_USER_TOOL] if allow_ask else []))
     note = f"\n\nNot available in this session: {', '.join(sorted(disabled))}." if disabled else ""
     instructions = SYSTEM_PROMPT.replace(NATIONAL_SCOPE, kommun_scope(tools)) + note
+    if not allow_ask:
+        instructions = instructions.replace(ASK_GUIDE, ANSWERED_GUIDE)
     # An image goes with the next model call only (re-sending every image each turn multiplied the input tokens):
     # `fresh` = attached, not sent yet; `shown` = sent once, replaced by text before the following call
     fresh: list[int] = []
@@ -286,13 +394,13 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
             run.answer = response.output_text or ""
             break
         asked = next((c for c in calls if c.name == "ask_user"), None)
-        if asked:  # a question for the user is the reply: no tools, no final answer turn
-            question, choices, offer_pin = _choices(asked.arguments)
-            if question:
-                run.answer, run.choices, run.offer_pin = question, choices, offer_pin
+        if asked:  # a question card for the user is the reply: no tools, no final answer turn
+            questions, offer_pin = _questions(asked.arguments)
+            if questions:
+                run.answer, run.questions, run.offer_pin = questions_text(questions), questions, offer_pin
                 break
             conversation.append({"type": "function_call_output", "call_id": asked.call_id,
-                                 "output": "ask_user needs a question: answer instead, or ask again."})
+                                 "output": "ask_user needs at least one question: answer instead, or ask again."})
         ready = [c for c in calls if c.name == "answer_ready"]
         for call in ready:
             try:
@@ -310,7 +418,9 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
         # Independent calls of one turn run in parallel (DB reads, GPU search, PDF rendering)
         for call, arguments, result, ms in pool.map(lambda c: _run_call(tools, c), work):
             run.seen_chunks.extend(chunk_id for chunk_id in result.chunk_ids if chunk_id not in run.seen_chunks)
-            conversation.append({"type": "function_call_output", "call_id": call.call_id, "output": result.text})
+            reminder = f"\n\n{ASK_LANGUAGE_REMINDER}" if allow_ask and call is work[-1] else ""
+            conversation.append({"type": "function_call_output", "call_id": call.call_id,
+                                 "output": result.text + reminder})
             if result.image_png:
                 fresh.append(len(conversation))
                 conversation.append(image_message(result))

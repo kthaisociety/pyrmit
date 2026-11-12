@@ -401,7 +401,7 @@ def chat_stream(
     until the check is done. A rewritten answer is sent as {"type": "answer_replaced", "content": <the numbered answer
     with its source list>} (only when the text changed) and saved as the message's content; the "citations" event
     numbers the final answer. The verdicts are saved as the "claim_check" pipeline event, ClaimCheck.as_event(). A
-    question back to the user (the agent's choices or offer_pin) is not checked and has no "claim_check" event."""
+    question back to the user (the agent's question card) is not checked and has no "claim_check" event."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
@@ -494,9 +494,10 @@ def chat_stream(
                     yield emit("retrieval", agent="document", query=original_content, embedding_ok=True,
                                matches=outcome["local_rows"])
                     # The answer itself was streamed by stream_agent; append the numbered source list
-                    asked = bool(outcome.get("choices") or outcome.get("offer_pin"))
-                    if asked:  # the agent asked: shown as buttons
-                        yield emit("choices", options=outcome.get("choices") or [],
+                    # The agent asked instead of answering: its question card, also for open questions (no options)
+                    asked = bool(outcome.get("questions") or outcome.get("offer_pin"))
+                    if asked:
+                        yield emit("choices", questions=outcome.get("questions") or [],
                                    offer_pin=bool(outcome.get("offer_pin")))
                     suffix = _format_sources(outcome["sources"], numbered=True)
                     accumulated = outcome["answer"] + suffix
