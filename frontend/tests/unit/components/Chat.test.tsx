@@ -455,21 +455,6 @@ describe('while the claims are being checked', () => {
     expect(await screen.findByText('Checking claims…')).toBeInTheDocument();
   });
 
-  it('replaces the shown answer with the rewritten one', async () => {
-    /** A rewritten answer sent after the check replaces the text already shown. */
-    server.use(http.post('*/api/chat/stream', () => sse(
-      { type: 'session_id', session_id: 's9' },
-      { type: 'response.output_text.delta', delta: ANSWER },
-      { type: 'answer_replaced', content: `${HOUSE} [1].\n\n---\n**Sources**\n- [1] PBL, 9 kap. 4 §` },
-      { type: 'response.completed' },
-      { type: 'done', session_id: 's9' },
-    )));
-    server.use(http.get('*/api/sessions/s9', () => HttpResponse.json([])));
-    chat();
-    await ask();
-
-    await waitFor(() => expect(screen.queryByText(new RegExp(FEE))).not.toBeInTheDocument());
-  });
 });
 
 describe('the source panel of a checked answer', () => {

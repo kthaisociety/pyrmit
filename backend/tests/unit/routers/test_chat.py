@@ -44,21 +44,15 @@ from dependencies import get_current_user
 from place.context import NO_PIN_HINT
 from routers import chat
 from tests.unit.agentic.claims import (
-    CHUNKS,
     FEE,
-    FEE_CITING_B,
-    FEE_SUPPORTED,
     FEE_UNSUPPORTED,
     HOUSE,
     HOUSE_SUPPORTED,
     RAW,
-    REVISED,
-    SHORTENED,
     A,
     B,
     C,
     get_chunk,
-    judged,
 )
 from tests.unit.place.snapshot import PIN
 
@@ -422,7 +416,7 @@ def test_an_ordinary_question_may_be_answered_with_a_question(harness):
 @pytest.fixture
 def checked_chat(monkeypatch):
     """The streamed chat in agent mode, with a fake agent that answers RAW having read A, B and C. The claim check
-    runs for real: script its model with the `model` fixture."""
+    runs for real: script its decision model with the `jev` fixture."""
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     models.Base.metadata.create_all(engine, tables=[models.User.__table__, models.ChatSession.__table__,
                                                     models.ChatMessage.__table__])
@@ -480,112 +474,90 @@ def claim_events(message: models.ChatMessage) -> list[dict]:
     return [event["data"] for event in message.trace or [] if event["stage"] == "claim_check"]
 
 
-def while_checking(checked_chat, model) -> models.ChatMessage:
-    """The saved answer while a slow judge (3 s) checks its claims."""
-    client = model(3.0)
+def while_checking(checked_chat, jev) -> models.ChatMessage:
+    """The saved answer while a slow decision model (3 s) checks its claims."""
+    fake = jev(delay=3.0)
     asking = threading.Thread(target=stream_events, args=(checked_chat,))
     asking.start()
     try:
         deadline = time.time() + 10
-        while not client.calls and time.time() < deadline:
+        while not fake.calls and time.time() < deadline:
             time.sleep(0.05)
-        assert client.calls, "the answer was never checked"
+        assert fake.calls, "the answer was never checked"
         time.sleep(0.5)
         return assistant_message(checked_chat)
     finally:
         asking.join(10)
 
 
-def test_the_agents_raw_answer_is_checked(checked_chat, model):
-    """The chat checks the agent's raw answer, with its chunk ids."""
-    client = model(judged(HOUSE_SUPPORTED, FEE_CITING_B))
+def test_the_agents_raw_answer_is_checked(checked_chat, jev):
+    """The chat puts the claims of the agent's raw answer to the decision model."""
+    fake = jev(supported={HOUSE: 0.9})
     stream_events(checked_chat)
-    assert RAW in client.seen(0)
+    assert sorted(fake.claims_asked()) == sorted([HOUSE, FEE])
 
 
-def test_the_rewrite_gets_the_chunks_the_agent_read(checked_chat, model):
-    """In the chat, the rewrite may draw on every chunk the agent read."""
-    client = model(judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED), REVISED, judged(HOUSE_SUPPORTED, FEE_SUPPORTED))
-    stream_events(checked_chat)
-    assert CHUNKS[C]["text"] in client.seen(1)
-
-
-def test_the_stream_says_the_claims_are_being_checked(checked_chat, model):
+def test_the_stream_says_the_claims_are_being_checked(checked_chat, jev):
     """While the check runs, the stream shows that the claims are being checked."""
-    model(judged(HOUSE_SUPPORTED, FEE_CITING_B))
+    jev(supported={HOUSE: 0.9})
     assert {"type": "thinking", "label": "Checking the claims"} in stream_events(checked_chat)
 
 
-def test_the_answer_stays_streaming_until_the_check_is_done(checked_chat, model):
+def test_the_answer_stays_streaming_until_the_check_is_done(checked_chat, jev):
     """An answer whose claims are still being checked is marked streaming."""
-    assert while_checking(checked_chat, model).status == "streaming"
+    assert while_checking(checked_chat, jev).status == "streaming"
 
 
-def test_the_answer_is_saved_before_its_check_is_done(checked_chat, model):
+def test_the_answer_is_saved_before_its_check_is_done(checked_chat, jev):
     """The streamed answer is saved while its claims are still being checked."""
-    assert HOUSE in while_checking(checked_chat, model).content
+    assert HOUSE in while_checking(checked_chat, jev).content
 
 
-def test_the_verdicts_are_saved_with_the_answer(checked_chat, model):
+def test_the_verdicts_are_saved_with_the_answer(checked_chat, jev):
     """The check's verdicts and supporting sentences are saved in the answer's trace."""
-    model(judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED), RAW, judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED))
+    jev(supported={HOUSE: 0.9, FEE: 0.1})
     stream_events(checked_chat)
     assert claim_events(saved_answer(checked_chat)) == [{"status": "checked",
                                                          "claims": [HOUSE_SUPPORTED, FEE_UNSUPPORTED]}]
 
 
-def test_a_failed_check_is_saved_with_the_answer(checked_chat, model):
+def test_a_failed_check_is_saved_with_the_answer(checked_chat, jev):
     """A check that could not run is saved as failed."""
-    model(RuntimeError("model down"))
+    jev(error=RuntimeError("model down"))
     stream_events(checked_chat)
     assert claim_events(saved_answer(checked_chat)) == [{"status": "failed", "claims": []}]
 
 
-def test_a_failed_check_keeps_the_answer(checked_chat, model):
+def test_a_failed_check_keeps_the_answer(checked_chat, jev):
     """The answer of a check that could not run is saved as it streamed."""
-    model(RuntimeError("model down"))
+    jev(error=RuntimeError("model down"))
     stream_events(checked_chat)
     assert saved_answer(checked_chat).content.startswith(f"{HOUSE} [1]. {FEE} [2].")
 
 
-def test_a_rewritten_answer_replaces_the_saved_text(checked_chat, model):
-    """The saved answer is the rewritten one, numbered, with its source list."""
-    model(judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED), SHORTENED, judged(HOUSE_SUPPORTED))
+def test_a_flagged_answer_is_saved_as_it_streamed(checked_chat, jev):
+    """The check flags but never rewrites: an answer with an unsupported claim is saved unchanged."""
+    jev(supported={HOUSE: 0.9, FEE: 0.1})
     stream_events(checked_chat)
-    assert saved_answer(checked_chat).content == f"{HOUSE} [1].\n\n---\n**Sources**\n- [1] PBL, 9 kap. 4 §"
+    assert saved_answer(checked_chat).content.startswith(f"{HOUSE} [1]. {FEE} [2].")
 
 
-def test_a_rewritten_answer_is_sent_to_the_open_chat(checked_chat, model):
-    """The stream sends the rewritten answer, as saved, to replace the text already shown."""
-    model(judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED), SHORTENED, judged(HOUSE_SUPPORTED))
-    [replaced] = [event for event in stream_events(checked_chat) if event["type"] == "answer_replaced"]
-    assert replaced["content"] == saved_answer(checked_chat).content
-
-
-def test_an_unchanged_answer_is_not_resent(checked_chat, model):
-    """When the check ran and changed nothing, its verdicts are the only thing it sends."""
-    model(judged(HOUSE_SUPPORTED, FEE_CITING_B))
+def test_the_check_sends_only_its_verdicts(checked_chat, jev):
+    """After the answer has streamed, the check sends its verdicts and no replacement text."""
+    jev(supported={HOUSE: 0.9, FEE: 0.1})
     sent = [event.get("stage", event["type"]) for event in stream_events(checked_chat)
             if event["type"] == "answer_replaced" or event.get("stage") == "claim_check"]
     assert sent == ["claim_check"]
 
 
-def test_the_citations_follow_the_rewritten_answer(checked_chat, model):
-    """After a rewrite that re-cites, the numbered sources are those of the rewritten answer."""
-    model(judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED), REVISED, judged(HOUSE_SUPPORTED, FEE_SUPPORTED))
-    stream_events(checked_chat)
-    [event] = [e for e in saved_answer(checked_chat).trace if e["stage"] == "citations"]
-    assert [item["label"] for item in event["data"]["items"]] == ["PBL, 9 kap. 4 §", "Ydre – Avgifter"]
-
-
-def test_a_question_back_to_the_user_is_not_checked(checked_chat, model):
+def test_a_question_back_to_the_user_is_not_checked(checked_chat, jev):
     """Of a question back to the user and an answer, only the answer is checked."""
-    client = model(judged(HOUSE_SUPPORTED, FEE_CITING_B), judged(HOUSE_SUPPORTED, FEE_CITING_B))
+    fake = jev(supported={HOUSE: 0.9})
     checked_chat.choices.extend(["Ydre", "Linköping"])
     stream_events(checked_chat)
     checked_chat.choices.clear()
     stream_events(checked_chat)
-    assert len(client.calls) == 1
+    assert sorted(fake.claims_asked()) == sorted([HOUSE, FEE])
 
 
 # --- the answer language (RAG mode) ----------------------------------------------------------------------------

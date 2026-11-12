@@ -71,7 +71,6 @@ interface StreamEvent {
   message?: string;
   stage?: string;
   data?: Record<string, unknown>;
-  content?: string; // answer_replaced: the rewritten answer, whole
 }
 
 const STREAM_STALL_MS = 45_000; // no bytes for this long (keep-alives every 10 s) = dead connection
@@ -1053,12 +1052,6 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
                 steps: (msg.steps ?? []).map((s) => ({ ...s, done: true })),
                 content: msg.content + event.delta,
               }));
-            }
-            break;
-
-          case 'answer_replaced':
-            if (event.content !== undefined) {
-              updateLast((msg) => ({ ...msg, content: event.content ?? msg.content }));
             }
             break;
 

@@ -22,7 +22,7 @@ from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_INSTRUCTION, Languag
 from glossary import glossary_prompt
 from db.database import SessionLocal, get_db
 from dependencies import get_current_user
-from agentic.claim_check import verify_answer
+from agentic.claim_check import check_claims
 from agentic.service import agent_enabled
 from localrag.service import SWEDISH_QUERY_SUFFIX, local_backend_enabled, retrieve as local_retrieve, split_rewrite
 from llm import (
@@ -91,11 +91,10 @@ def _sse(event: dict) -> str:
     return f"data: {json.dumps(event, default=str)}\n\n"
 
 
-def _check_claims(run) -> tuple[dict, tuple[str, list[dict]] | None]:
-    """The claim check of an agent run's answer (agentic.claim_check.verify_answer, issue #82): the data of its
-    "claim_check" pipeline event, and, when the check rewrote the answer, the rewritten answer as the user sees it
-    (citations numbered, source list appended) with its "citations" items; else None."""
-    from agentic.service import CitationNumberer, get_tools
+def _check_claims(run) -> dict:
+    """The claim check of an agent run's answer (agentic.claim_check.check_claims, issue #82): the data of its
+    "claim_check" pipeline event. A cited id the agent shortened is resolved against the chunks it read."""
+    from agentic.service import get_tools
     from agentic.tools import resolve_cited
 
     tools = get_tools()
@@ -103,12 +102,7 @@ def _check_claims(run) -> tuple[dict, tuple[str, list[dict]] | None]:
     def get_chunk(chunk_id: str) -> dict | None:
         return resolve_cited(tools.get_chunk, chunk_id, run.seen_chunks)
 
-    verified = verify_answer(run.answer, get_chunk, list(run.seen_chunks))
-    if verified.answer == run.answer:
-        return verified.check.as_event(), None
-    numberer = CitationNumberer(get_chunk)
-    shown = numberer.feed(verified.answer) + numberer.close() + _format_sources(numberer.labels, numbered=True)
-    return verified.check.as_event(), (shown, numberer.citations())
+    return check_claims(run.answer, get_chunk).as_event()
 
 
 def _agent_output_for_trace(output: dict) -> dict:
@@ -397,10 +391,9 @@ def chat_stream(
     the chat session keeps its place (ADR-0004). Without a pin the question gets place.context.NO_PIN_HINT.
 
     Claim check (issue #82): once the agent's answer has streamed, the stream says {"type": "thinking", "label":
-    "Checking the claims"} and the answer goes through agentic.claim_check.verify_answer; the message stays "streaming"
-    until the check is done. A rewritten answer is sent as {"type": "answer_replaced", "content": <the numbered answer
-    with its source list>} (only when the text changed) and saved as the message's content; the "citations" event
-    numbers the final answer. The verdicts are saved as the "claim_check" pipeline event, ClaimCheck.as_event(). A
+    "Checking the claims"} and the decision model judges its claims (agentic.claim_check.check_claims, about a second);
+    the message stays "streaming" until the check is done. The answer is never rewritten. The verdicts are saved as
+    the "claim_check" pipeline event, ClaimCheck.as_event(). A
     question back to the user (the agent's question card) is not checked and has no "claim_check" event."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
@@ -502,15 +495,12 @@ def chat_stream(
                     suffix = _format_sources(outcome["sources"], numbered=True)
                     accumulated = outcome["answer"] + suffix
                     yield _sse({"type": "response.output_text.delta", "delta": suffix})
-                    citations, check = outcome["citations"], None
+                    check = None
                     run = outcome.get("run")
                     if not asked and run is not None:
                         yield _sse({"type": "thinking", "label": "Checking the claims"})
-                        check, rewritten = _check_claims(run)
-                        if rewritten is not None:
-                            accumulated, citations = rewritten
-                            yield _sse({"type": "answer_replaced", "content": accumulated})
-                    yield emit("citations", items=citations)
+                        check = _check_claims(run)
+                    yield emit("citations", items=outcome["citations"])
                     if check is not None:
                         yield emit("claim_check", **check)
                     yield _sse({"type": "response.completed"})
@@ -811,8 +801,6 @@ def chat_stream(
                 kind = event.get("type")
                 if kind == "response.output_text.delta":
                     content += event.get("delta") or ""
-                elif kind == "answer_replaced":
-                    content = event.get("content") or content
                 elif kind == "token":
                     content += event.get("token") or ""
                 elif kind == "pipeline":

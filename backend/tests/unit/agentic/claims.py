@@ -1,12 +1,12 @@
 """
-An answer, its chunks and a scripted model for tests of the claim check (agentic.claim_check) and the chat that runs it.
+An answer, its chunks and a scripted decision model (Jev) for tests of the claim check (agentic.claim_check) and the
+chat that runs it.
 
-RAW cites A for the house rule and B for the fee; B does not state the fee, C (read by the agent, not cited) does.
+RAW cites A for the house rule and B for the fee; A states the house rule, B does not state the fee.
 """
 
-import json
+import threading
 import time
-import types
 
 A, B, C = "a" * 16, "b" * 16, "c" * 16
 CHUNKS = {
@@ -21,46 +21,45 @@ CHUNKS = {
 HOUSE = "Bygglov is needed for a new house"
 FEE = "The fee is 12 000 kr"
 RAW = f"{HOUSE} [c:{A}]. {FEE} [c:{B}]."
-REVISED = f"{HOUSE} [c:{A}]. {FEE} [c:{C}]."
-SHORTENED = f"{HOUSE} [c:{A}]."
 
 HOUSE_SUPPORTED = {"text": HOUSE, "verdict": "supported", "chunk_ids": [A],
                    "supporting": [{"chunk_id": A, "sentence": "Bygglov krävs för nybyggnad av en byggnad."}]}
 FEE_UNSUPPORTED = {"text": FEE, "verdict": "unsupported", "chunk_ids": [B], "supporting": []}
 FEE_UNCITED = {"text": FEE, "verdict": "uncited", "chunk_ids": [], "supporting": []}
-FEE_SUPPORTED = {"text": FEE, "verdict": "supported", "chunk_ids": [C],
-                 "supporting": [{"chunk_id": C, "sentence": "Avgiften för bygglov för ett enbostadshus är 12 000 kr."}]}
-FEE_CITING_B = FEE_SUPPORTED | {"chunk_ids": [B]}
-
-
-def judged(*claims: dict) -> str:
-    """The judge's reply: JSON in the shape of the claims."""
-    return json.dumps({"claims": list(claims)}, ensure_ascii=False)
 
 
 def get_chunk(chunk_id: str) -> dict | None:
     return CHUNKS.get(chunk_id)
 
 
-class FakeClient:
-    """A Responses API client that answers with scripted replies, in order. A reply that is an exception is raised;
-    a reply that is a float is a judge that stalls that many seconds, then finds no claims."""
+class FakeJev:
+    """The decision model, scripted: `supported` maps a claim's text to the probability that its sources state it
+    (0 when absent), `needs_source` an uncited sentence's text to the probability that it needs a source (0 when
+    absent). The sentence choice picks the first sentence. `error` is raised on every call; `delay` (s) stalls each.
+    `calls` holds every (state, questions) sent."""
 
-    def __init__(self, replies: list):
-        self.replies = list(replies)
-        self.calls: list[dict] = []
-        self.responses = self
+    def __init__(self, supported=None, needs_source=None, error: BaseException | None = None, delay: float = 0.0):
+        self.supported = supported or {}
+        self.needs_source = needs_source or {}
+        self.error, self.delay = error, delay
+        self.calls: list[tuple] = []
+        self._lock = threading.Lock()
 
-    def create(self, **kwargs):
-        self.calls.append(kwargs)
-        reply = self.replies.pop(0) if self.replies else AssertionError("no more scripted replies")
-        if isinstance(reply, BaseException):
-            raise reply
-        if isinstance(reply, float):
-            time.sleep(reply)
-            reply = judged()
-        return types.SimpleNamespace(output_text=reply, output=[], usage=None)
+    def __call__(self, state, questions, timeout_s: float = 20.0) -> dict:
+        with self._lock:
+            self.calls.append((state, questions))
+        if self.delay:
+            time.sleep(self.delay)
+        if self.error:
+            raise self.error
+        if "supported" in questions:
+            answers = {"supported": {"type": "noul", "noul": self.supported.get(state["claim"], 0.0)}}
+            if "sentence" in questions:
+                answers["sentence"] = {"type": "choice", "choice": next(iter(questions["sentence"]["criteria"]))}
+            return answers
+        return {name: {"type": "noul", "noul": self.needs_source.get(state[f"sentence_{name.split('_')[1]}"], 0.0)}
+                for name in questions}
 
-    def seen(self, call: int) -> str:
-        """Everything sent to the model in one call, as text."""
-        return json.dumps(self.calls[call], default=str, ensure_ascii=False)
+    def claims_asked(self) -> list[str]:
+        """The cited claims put to the model, in no particular order."""
+        return [state["claim"] for state, questions in self.calls if "supported" in questions]
