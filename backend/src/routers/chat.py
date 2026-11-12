@@ -401,7 +401,8 @@ def chat_stream(
     until the check is done. A rewritten answer is sent as {"type": "answer_replaced", "content": <the numbered answer
     with its source list>} (only when the text changed) and saved as the message's content; the "citations" event
     numbers the final answer. The verdicts are saved as the "claim_check" pipeline event, ClaimCheck.as_event(). A
-    question back to the user (the agent's question card) is not checked and has no "claim_check" event."""
+    question back to the user (the agent's question card) and an off-topic answer (mode "off_topic", #102) are not
+    checked and have no "claim_check" event."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
@@ -504,7 +505,8 @@ def chat_stream(
                     yield _sse({"type": "response.output_text.delta", "delta": suffix})
                     citations, check = outcome["citations"], None
                     run = outcome.get("run")
-                    if not asked and run is not None:
+                    # An off-topic answer cites nothing by design (#102): the check would strip or flag it
+                    if not asked and run is not None and getattr(run, "mode", None) != "off_topic":
                         yield _sse({"type": "thinking", "label": "Checking the claims"})
                         check, rewritten = _check_claims(run)
                         if rewritten is not None:
