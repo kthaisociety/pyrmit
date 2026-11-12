@@ -27,7 +27,7 @@ import { authFetch } from '@/lib/auth';
 import ChunkCard from '@/components/ChunkCard';
 import PipelineTrace, { type PipelineEvent, type RetrievedChunk } from '@/components/PipelineTrace';
 import SourceViewer, { type Citation } from '@/components/SourceViewer';
-import CitedMarkdown from '@/components/CitedMarkdown';
+import CitedMarkdown, { type ClaimFlag } from '@/components/CitedMarkdown';
 import PlaceChip from '@/components/place/PlaceChip';
 import PlacePanel from '@/components/place/PlacePanel';
 import { placeFromHistory, placeLabel, type Pin } from '@/lib/place';
@@ -69,6 +69,7 @@ interface StreamEvent {
   message?: string;
   stage?: string;
   data?: Record<string, unknown>;
+  content?: string; // answer_replaced: the rewritten answer, whole
 }
 
 const STREAM_STALL_MS = 45_000; // no bytes for this long (keep-alives every 10 s) = dead connection
@@ -186,6 +187,25 @@ function getCitations(pipeline: PipelineEvent[]): Citation[] {
   const event = pipeline.find((item) => item.stage === 'citations');
   return ((event?.data.items as Citation[] | undefined) ?? []);
 }
+
+// The claim check of an answer (#82): null for an answer saved before the check existed, or not checked yet
+interface ClaimCheck {
+  status: 'checked' | 'failed';
+  claims: { text: string; verdict: 'supported' | 'unsupported' | 'uncited' }[];
+}
+
+function getClaimCheck(pipeline: PipelineEvent[]): ClaimCheck | null {
+  const event = pipeline.find((item) => item.stage === 'claim_check');
+  return event ? (event.data as unknown as ClaimCheck) : null;
+}
+
+function claimFlags(check: ClaimCheck | null): ClaimFlag[] {
+  return (check?.claims ?? [])
+    .filter((claim) => claim.verdict !== 'supported')
+    .map((claim) => ({ text: claim.text, verdict: claim.verdict as ClaimFlag['verdict'] }));
+}
+
+const CHECKING_LABEL = 'Checking the claims';
 
 // One row of the live process timeline: a status step ("Understanding your question") or a tool call
 interface ProcessItem {
@@ -716,6 +736,11 @@ function AssistantBubble({
   // Agent answers saved mid-run: their trace already holds the tool calls made so far
   const steps = inBackground ? stepsFromTrace(message.pipeline ?? []) : message.steps ?? [];
   const showProgress = (isStreaming || inBackground) && !hasBody && steps.length > 0;
+  const claimCheck = getClaimCheck(message.pipeline ?? []);
+  // The answer is shown before its claims are checked: say so until the check is saved
+  const checking = hasBody && !claimCheck && (
+    (isStreaming && (message.steps ?? []).some((step) => step.type === 'thinking' && step.label === CHECKING_LABEL))
+    || inBackground);
 
   return (
     <div className="relative max-w-[85%] rounded-2xl border border-zinc-200 bg-white px-5 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
@@ -733,7 +758,12 @@ function AssistantBubble({
       </div>
 
       {showProgress && <LiveProgress steps={steps} />}
-      {inBackground && hasBody && (
+      {checking ? (
+        <div className="mb-2 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+          <Loader2 size={12} className="animate-spin" />
+          Checking claims…
+        </div>
+      ) : inBackground && hasBody && (
         <div className="mb-2 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
           <Loader2 size={12} className="animate-spin" />
           Still generating, this updates automatically
@@ -743,8 +773,13 @@ function AssistantBubble({
       {hasBody ? (
         <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
           <div className="prose prose-sm max-w-none dark:prose-invert">
-            <CitedMarkdown body={body} citations={citations} onOpen={setOpenCitation} />
+            <CitedMarkdown body={body} citations={citations} onOpen={setOpenCitation} flags={claimFlags(claimCheck)} />
           </div>
+          {claimCheck?.status === 'failed' && (
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+              The claims in this answer could not be checked.
+            </p>
+          )}
         </div>
       ) : (isStreaming || inBackground) && !showProgress && (
         // Before the first step arrives (the progress panel shows the rest)
@@ -1003,6 +1038,12 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
                 steps: (msg.steps ?? []).map((s) => ({ ...s, done: true })),
                 content: msg.content + event.delta,
               }));
+            }
+            break;
+
+          case 'answer_replaced':
+            if (event.content !== undefined) {
+              updateLast((msg) => ({ ...msg, content: event.content ?? msg.content }));
             }
             break;
 

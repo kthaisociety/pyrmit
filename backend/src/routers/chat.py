@@ -447,14 +447,38 @@ def chat_stream(
                     yield emit("retrieval", agent="document", query=original_content, embedding_ok=True,
                                matches=outcome["local_rows"])
                     # The answer itself was streamed by stream_agent; append the numbered source list
-                    # [n] -> source label + cited chunks, for the clickable citations in the UI
-                    yield emit("citations", items=outcome["citations"])
-                    if outcome.get("choices") or outcome.get("offer_pin"):  # the agent asked: shown as buttons
+                    asked = bool(outcome.get("choices") or outcome.get("offer_pin"))
+                    if asked:  # the agent asked: shown as buttons
                         yield emit("choices", options=outcome.get("choices") or [],
                                    offer_pin=bool(outcome.get("offer_pin")))
                     suffix = _format_sources(outcome["sources"], numbered=True)
                     accumulated = outcome["answer"] + suffix
                     yield _sse({"type": "response.output_text.delta", "delta": suffix})
+                    citations = outcome["citations"]
+                    run = outcome.get("run")
+                    if not asked and run is not None:
+                        # Claim check (#82): judge the raw answer against its cited chunks, rewrite it once
+                        from agentic.service import CitationNumberer, get_tools
+                        from agentic.tools import resolve_cited
+
+                        yield _sse({"type": "thinking", "label": "Checking the claims"})
+                        tools = get_tools()
+
+                        def get_chunk(chunk_id: str) -> dict | None:
+                            return resolve_cited(tools.get_chunk, chunk_id, run.seen_chunks)
+
+                        verified = verify_answer(run.answer, get_chunk, list(run.seen_chunks))
+                        if verified.answer != run.answer:
+                            numberer = CitationNumberer(get_chunk)
+                            text = numberer.feed(verified.answer) + numberer.close()
+                            accumulated = text + _format_sources(numberer.labels, numbered=True)
+                            citations = numberer.citations()
+                            yield _sse({"type": "answer_replaced", "content": accumulated})
+                        # [n] -> source label + cited chunks, for the clickable citations in the UI
+                        yield emit("citations", items=citations)
+                        yield emit("claim_check", **verified.check.as_event())
+                    else:
+                        yield emit("citations", items=citations)
                     yield _sse({"type": "response.completed"})
                     yield _sse({"type": "done", "session_id": session_id})
                     return
@@ -764,6 +788,8 @@ def chat_stream(
                 kind = event.get("type")
                 if kind == "response.output_text.delta":
                     content += event.get("delta") or ""
+                elif kind == "answer_replaced":
+                    content = event.get("content") or content
                 elif kind == "token":
                     content += event.get("token") or ""
                 elif kind == "pipeline":
@@ -773,7 +799,8 @@ def chat_stream(
                     content = content or f"Error: {event.get('message')}"
                 elif kind == "done":
                     status = "done"
-                if time.monotonic() - last_save > 2:
+                # A status step can be followed by a long wait (the claim check): save what is shown before it
+                if kind == "thinking" or time.monotonic() - last_save > 2:
                     save()
                     last_save = time.monotonic()
         except Exception as exc:

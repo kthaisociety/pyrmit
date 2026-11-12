@@ -46,13 +46,36 @@ export interface ClaimFlag {
 // benchmark view. Each flag's text is marked in the answer (<mark>, titled "Not supported by the cited sources" or
 // "No source cited" by its verdict); a flag whose text is not in the answer is listed below it instead, as
 // "Unchecked claim: <text>" with the same title.
-export default function CitedMarkdown({ body, citations, onOpen }: {
+const FLAG_TITLES: Record<ClaimFlag['verdict'], string> = {
+  unsupported: 'Not supported by the cited sources',
+  uncited: 'No source cited',
+};
+
+// Each flag's text found in the body -> a link to #flag-<verdict>, rendered as a <mark>; the flags not found
+function markFlags(body: string, flags: ClaimFlag[]): { marked: string; missing: ClaimFlag[] } {
+  let marked = body;
+  const missing: ClaimFlag[] = [];
+  for (const flag of flags) {
+    const text = flag.text.trim();
+    const at = text && !/[[\]]/.test(text) ? marked.indexOf(text) : -1;
+    if (at < 0) {
+      missing.push(flag);
+      continue;
+    }
+    marked = `${marked.slice(0, at)}[${text}](#flag-${flag.verdict})${marked.slice(at + text.length)}`;
+  }
+  return { marked, missing };
+}
+
+export default function CitedMarkdown({ body, citations, onOpen, flags = [] }: {
   body: string;
   citations: Citation[];
   onOpen: (citation: Citation) => void;
   flags?: ClaimFlag[];
 }) {
+  const { marked, missing } = markFlags(citations.length > 0 ? linkCitations(body) : body, flags);
   return (
+    <>
     <ReactMarkdown
       components={{
         a: ({ href, children }) => {
@@ -71,11 +94,27 @@ export default function CitedMarkdown({ body, citations, onOpen }: {
               </button>
             );
           }
+          if (href === '#flag-unsupported' || href === '#flag-uncited') {
+            const title = FLAG_TITLES[href === '#flag-uncited' ? 'uncited' : 'unsupported'];
+            return (
+              <mark title={title} className="rounded bg-amber-100 px-0.5 text-inherit underline decoration-amber-500 decoration-wavy dark:bg-amber-900/40">
+                {children}
+              </mark>
+            );
+          }
           return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
         },
       }}
     >
-      {citations.length > 0 ? linkCitations(body) : body}
+      {marked}
     </ReactMarkdown>
+    {missing.length > 0 && (
+      <ul className="mt-2 space-y-1 text-xs text-amber-700 dark:text-amber-400">
+        {missing.map((flag) => (
+          <li key={flag.text} title={FLAG_TITLES[flag.verdict]}>Unchecked claim: {flag.text}</li>
+        ))}
+      </ul>
+    )}
+    </>
   );
 }
