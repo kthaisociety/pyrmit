@@ -1,4 +1,4 @@
-# ADR-0011: The source panel gets supporting sentences beside the citation
+# ADR-0015: The source panel gets supporting sentences beside the citation
 
 **Decision:** `SourceViewer` MUST receive the claim check's supporting sentences as its own `supporting` prop (chunk_id to sentences), and `Citation` / `CitedChunk` MUST NOT carry them.
 
