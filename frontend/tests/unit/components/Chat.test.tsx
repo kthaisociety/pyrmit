@@ -482,22 +482,70 @@ describe('the source panel of a checked answer', () => {
   });
 });
 
+// A stream whose deltas the test sends one at a time; `null` ends it
+function liveStream() {
+  let push: (event: object | null) => void = () => {};
+  server.use(http.post('*/api/chat/stream', () => {
+    const body = new ReadableStream({
+      start(controller) {
+        push = (event) => (event === null ? controller.close()
+          : controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`)));
+      },
+    });
+    return new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } });
+  }));
+  return (event: object | null) => push(event);
+}
+
+describe('typing while an answer is on its way', () => {
+  const INPUT = 'Ask about building permits...';
+
+  async function streaming() {
+    const push = liveStream();
+    chat();
+    await ask();
+    push({ type: 'session_id', session_id: 's9' });
+    push({ type: 'response.output_text.delta', delta: 'The first part.' });
+    await screen.findByText(/The first part/);
+    return push;
+  }
+
+  it('takes the next question while the answer streams', async () => {
+    /** The input stays open while an answer streams, so the next question can be written. */
+    await streaming();
+
+    await userEvent.type(screen.getByPlaceholderText(INPUT), 'And in Uppsala?');
+
+    expect(screen.getByPlaceholderText(INPUT)).toHaveValue('And in Uppsala?');
+  });
+
+  it('does not send the next question before the answer is done', async () => {
+    /** Send stays off and Enter does nothing until the answer is finished; the typed question is kept. */
+    await streaming();
+
+    await userEvent.type(screen.getByPlaceholderText(INPUT), 'And in Uppsala?{Enter}');
+
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    expect(screen.queryByText('And in Uppsala?', { selector: 'p, div' })).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText(INPUT)).toHaveValue('And in Uppsala?');
+  });
+
+  it('sends the typed question once the answer is done', async () => {
+    /** When the answer finishes, the question written meanwhile can be sent as it stands. */
+    server.use(http.get('*/api/sessions/s9', () => HttpResponse.json([])));
+    const push = await streaming();
+    await userEvent.type(screen.getByPlaceholderText(INPUT), 'And in Uppsala?');
+
+    push({ type: 'response.completed' });
+    push({ type: 'done', session_id: 's9' });
+    push(null);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled());
+  });
+});
+
 describe('scrolling while an answer streams', () => {
   const scrolled = vi.mocked(Element.prototype.scrollIntoView);
-
-  // A stream whose deltas the test sends one at a time
-  function liveStream() {
-    let push: (event: object) => void = () => {};
-    server.use(http.post('*/api/chat/stream', () => {
-      const body = new ReadableStream({
-        start(controller) {
-          push = (event) => controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`));
-        },
-      });
-      return new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } });
-    }));
-    return (event: object) => push(event);
-  }
 
   // The reader's place in the conversation: `fromBottom` px above its end (jsdom has no layout)
   function scrollTo(fromBottom: number) {
@@ -569,7 +617,7 @@ describe('scrolling while an answer streams', () => {
     );
     chat();
     await ask();
-    await waitFor(() => expect(screen.getByPlaceholderText('Ask about building permits...')).toBeEnabled());
+    await waitFor(() => expect(screen.getByPlaceholderText('Ask about building permits...').closest('form')).toHaveAttribute('aria-busy', 'false'));
     scrollTo(1500);
     liveStream();
     scrolled.mockClear();

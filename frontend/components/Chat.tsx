@@ -940,7 +940,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   // `answer`: the message answers the agent's question card (from the card, the chat input, or a pin from its button)
   const send = async (text: string, answer = false) => {
     const trimmedInput = text.trim();
-    if (!trimmedInput || loading) return;
+    // One answer at a time: the user may type the next question while one streams or is checked, but not send it
+    if (!trimmedInput || loading || streaming) return;
 
     followLatest();
     const userMsg: Message = { role: 'user', content: trimmedInput };
@@ -1229,7 +1230,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
                          onClear={clearPin} />
             </div>
           )}
-          <form onSubmit={sendMessage} className="relative shadow-lg rounded-xl">
+          <form onSubmit={sendMessage} aria-busy={loading || streaming} className="relative shadow-lg rounded-xl">
             <button
               type="button"
               onClick={() => setMapOpen((open) => !open)}
@@ -1245,7 +1246,6 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
               onChange={(e) => setInput(e.target.value)}
               placeholder={t('chat.placeholder')}
               className="w-full p-4 pl-14 pr-24 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              disabled={loading || streaming}
             />
             <button
               type="submit"
