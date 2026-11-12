@@ -147,6 +147,23 @@ def kommun_scope(tools: CorpusTools) -> str:
 
 
 @dataclass
+class AskedQuestion:
+    """One question of the agent's question card (ask_user), for a fact only the user knows that would change the
+    answer.
+
+    `question` is one short question in the answer language, never empty. `options` holds 0 to MAX_CHOICES complete
+    replies the user can click and the agent can act on without more input, trimmed, without empties or repeats; it
+    is empty for an open question, where a few likely answers do not exist (the agent decides). Every question also
+    gets a free-text "Other" field in the card, so the options never include "other" or "please provide ...".
+    """
+    question: str
+    options: list[str] = field(default_factory=list)
+
+
+MAX_QUESTIONS = 3  # questions in one card: every fact that would change the answer is asked for in one round
+
+
+@dataclass
 class AgentRun:
     answer: str = ""
     steps: list[dict] = field(default_factory=list)       # one entry per tool call
@@ -158,6 +175,9 @@ class AgentRun:
     first_token_s: float | None = None  # time until the first answer token (streamed answer)
     mode: str | None = None  # kind of question the agent chose in answer_ready (MODES)
     choices: list[str] = field(default_factory=list)  # ask_user: the options offered with the question (the answer)
+    # ask_user: the question card, 1 to MAX_QUESTIONS questions in the order asked (empty when the agent answered).
+    # `answer` then lists every question as text, so the saved message reads on its own.
+    questions: list[AskedQuestion] = field(default_factory=list)
     offer_pin: bool = False  # ask_user: also offer to pin the place on the map
     error: str | None = None
 

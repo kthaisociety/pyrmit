@@ -321,6 +321,47 @@ def grade_answer(case: dict, answer: str, tools, judge_model: str, seen=()) -> d
     return row
 
 
+# The missing-info eval (#91): should-ask cases miss a fact only the user knows that changes the answer, should-answer
+# cases are general or complete questions; each half must reach MISSING_INFO_PASS
+MISSING_INFO_PATH = Path(__file__).resolve().parent / "cases_missing_info.jsonl"
+MISSING_INFO_PASS = 0.95
+
+
+def grade_asked(case: dict, run: AgentRun, judge_model: str) -> dict:
+    """How one run of a missing-info case handled the missing facts, as stored in its result row.
+
+    A case has `expect`: "ask" (with `missing`, the facts the question leaves out, and `reply`, the scripted user
+    reply) or "answer". Returns {"expect", "lang", "asked", "ask_ok", "missing_covered", "options_ok", "questions"}:
+    - asked: the run ended in a question card (run.questions) instead of an answer.
+    - missing_covered: for an asked should-ask case, the share of `missing` the card's questions ask for (the
+      judge decides; offering to pin the place asks for the place); None otherwise.
+    - options_ok: for an asked case, the judge's view of whether each question's options fit (complete replies when
+      a few answers are likely, none for an open question); None when it did not ask. Reported, no threshold.
+    - ask_ok: a should-ask case asked and covered every missing fact; a should-answer case did not ask.
+    - questions: the card as [{"question", "options"}], [] when it answered.
+    No judge call when the run did not ask."""
+    raise NotImplementedError
+
+
+def follow_up(case: dict, asked: AgentRun, tools, model: str, effort: str = "medium",
+              explore_effort: str | None = "low", max_steps: int = 10) -> AgentRun:
+    """The agent's answer once the user has replied to its question card: a new run on the case's scripted `reply`,
+    with the case's question and the card (asked.answer) as the conversation before it, that cannot ask again.
+    Graded like any answer against the case's key points (reported, no threshold)."""
+    raise NotImplementedError
+
+
+def missing_info_summary(rows: list[dict], baseline_points: float | None = None) -> dict:
+    """The missing-info result of a benchmark run's rows (each carrying grade_asked's keys and `points`).
+
+    Returns {"ask": {"n", "rate"}, "answer": {"n", "rate", "points", "points_ok"}, "by_lang": {lang: {"ask", "answer"}},
+    "passed"}: `rate` is the share of the half's rows with ask_ok, `by_lang` the same rates per question language,
+    `points` the should-answer half's mean key-point score. `points_ok` is whether that score is not below
+    `baseline_points` (today's score on the same cases; None without one). `passed`: both rates reach
+    MISSING_INFO_PASS and points_ok is not False. A half without rows has rate None and fails."""
+    raise NotImplementedError
+
+
 def evidence_recall(case: dict, seen: list[str], tools) -> float | None:
     if not case["evidence"]:  # e.g. rulings under the old PBL: no current provision to look for
         return None
