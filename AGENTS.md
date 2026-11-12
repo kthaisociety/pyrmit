@@ -304,6 +304,7 @@ Frontend (`frontend/.env`):
 - `frontend/app/(protected)/auth/page.tsx` -- Login / signup
 - `frontend/app/(protected)/layout.tsx` -- Server-side guard: redirects to `/dev-access` without the access-gate cookie
 - `frontend/app/dev-access/` -- Access-gate password page
+- `frontend/components/QuestionCard.tsx` -- The agent's question card (`QuestionCard`, `getQuestionCard`), see Agentic RAG
 - `frontend/components/Chat.tsx` -- Message list, SSE stream consumption, session history fetch; a new chat is announced
   to the sidebar on the `session_id` event; opening another chat aborts the local stream only, and history
   messages with status "streaming" are re-fetched every 2 s until done; "Process" timeline (`LiveProgress`): one line
@@ -686,6 +687,22 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
 ---
 
 ## Agentic RAG (`CHAT_MODE=agent`)
+
+**Question card (#91).** When the conclusion turns on facts only the user can give (place, use, a size or height
+against a threshold, what is to be built, which of two places), the agent asks instead of guessing: `ask_user` takes
+1-3 `questions` (each `question` + 0-4 `options`, none for an open question) and `offer_pin`, and ends the run with
+`AgentRun.questions`. The rule is the "Asking instead of guessing" part of `MODES_GUIDE`; `ASK_LANGUAGE_REMINDER` follows
+each turn's tool results so the card stays in the user's language. The chat saves the card as the `choices` pipeline
+event `{questions, offer_pin}` (an open question too) and skips the claim check; `frontend/components/QuestionCard.tsx`
+shows it with an "Other" field per question, one reply message for the whole card, locked once answered (old saved
+`{options}` cards still read). A message typed below an open card is sent with `answer_to_question`, so the agent
+answers instead of asking again.
+Missing-info eval: `python -m agentic.bench --cases-file cases_missing_info.jsonl --explore-effort medium --repeats 2
+--baseline <dev results>` (50 should-ask and 50 should-answer cases, 25 Swedish + 25 English each, asked as the chat
+asks with nothing pinned): `grade_asked` judges whether a card asked for every `missing` fact, `follow_up` answers the
+scripted `reply` and grades it, and `missing_info_summary` passes at 95% on each half with the should-answer key points
+not below the baseline. Results of the merge run: `data/agentic/*cases_missing_info-x-run*.json` and the dev baseline
+`data/agentic/missing-info-baseline-dev-medium-20261112.json`.
 
 `agentic/agent.py` runs a Responses-API tool loop (default `openai/gpt-6-luna` via OpenRouter) with tools from
 `agentic/tools.py` (`CorpusTools` over `_DiskCorpus` (SQLite) or `_MemoryCorpus`): `find_kommun`, `search` (hybrid

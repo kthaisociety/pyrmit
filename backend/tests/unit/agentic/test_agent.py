@@ -125,7 +125,8 @@ def test_the_agent_carries_the_glossary(instructions):
 
 
 def test_ask_user_asks_in_the_users_language():
-    description = agent.ASK_USER_TOOL["parameters"]["properties"]["question"]["description"]
+    question = agent.ASK_USER_TOOL["parameters"]["properties"]["questions"]["items"]["properties"]["question"]
+    description = question["description"]
     assert "in English" not in description
 
 

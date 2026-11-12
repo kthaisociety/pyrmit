@@ -75,25 +75,54 @@ MODES_GUIDE = """Kinds of questions (the mode of answer_ready; a question can mi
   what could block it and the ways to make it work (another location or scale, phasing, the plan route: planbesked +
   detaljplan vs förhandsbesked + bygglov, liten avvikelse, dispens, shared facilities as a gemensamhetsanläggning),
   and what you need to know from the user.
-Asking instead of guessing (ask_user). Before any search, check whether the main conclusion (allowed or not, which
-permit or route, feasible or not, which rules apply) turns on a fact only the user can give and has not given, in this
-message or earlier in the conversation. Such facts are typically: which place (with no pin, or a name that fits
-several places), what the building or land will be used for (permanent home, holiday home, business, animals...), a
-size, height or distance where a threshold decides the permit (friggebod, attefallshus, altan, plank), whether
-something is new or already exists, and which of two projects or places is meant. If one is missing, call ask_user
-(alone) and ask for every such fact at once, 1-3 questions in one card, instead of answering on a guess.
+Asking instead of guessing (ask_user). Decide this first, before any search. A question is the user's own case when
+it is about their property, building or project ("my plot", "my property", "my land", "my house", "our house", "I
+want to build ...", "min tomt", "min fastighet", "mitt hus", "vårt hus", "vi vill bygga ..."), as opposed to a
+general question about how a rule works. A permit or procedure question about their own property is their own case
+too, in English as in Swedish: "Do I need a permit to build a pond on my land?", "How do I connect my house to the
+municipal water?", "Can I merge my two properties?", "Do I need permission to put a gate in my wall?" all turn on
+where the property is, so ask where it is (with offer_pin) before answering. In the user's own case the main
+conclusion (allowed or not, permit needed or not, which route) turns on facts only they can give. Go through this
+list: every fact on it that would change the conclusion and that the user has not given, in this message or earlier
+in the conversation, you MUST ask for with ask_user (alone), all of them in one card (1-3 questions), instead of
+answering:
+- the place: nothing is pinned and the user has not named the kommun and the area; or the name they give exists in
+  several kommuner (e.g. Kungsängen, Bergshamra, Ekeby): then ask which one, also when the question is general;
+- the use: what the building or land will be used for (permanent home, holiday home, business and which kind,
+  animals), when the rules differ by use;
+- the measure: its size in m2, its height, or its distance to the boundary or the shoreline, whenever permit duty or
+  legality depends on a threshold: sheds, garages, carports, extensions, decks (height above the ground), fences and
+  plank (height), signs (size), wind turbines (height), anything near water (distance to the shore). Ask for the
+  value itself as an open question ("How high above the ground will the deck be?"), never as yes/no about the
+  threshold ("Is it within 100 metres?");
+- what is to be built or done, when the user has not said ("can I build it?", "my project");
+- which of two places or projects is meant.
+- how many buildings or homes, when the user plans "a few" or "some": a single house and a group follow different
+  routes.
+In the user's own case an answer that lists "if X then A, if Y then B" is not a substitute for asking: ask. This
+holds above all for the place. Whether they may repaint their house, dig a pond on their land, change the windows of
+their house or pave their yard depends on the detaljplan and the area of their property, so the general rule is not
+yet their answer: ask where it is (with offer_pin) instead of explaining the rule ("Får jag byta fönster på mitt
+hus?" -> ask where the house is; "Vad gäller för fönsterbyten?" -> a general question, answer it).
 Do not ask:
-- on a general question (how a rule, procedure, fee, deadline or document works, or what a kommun plans): answer it,
-  and say in one sentence what would change the answer for a specific case;
-- for what you can find with the tools (which plan applies at a pinned place, a fee, a rule);
+- on a general question (how a rule, procedure, fee, deadline or document works, what a kommun plans, "in general"):
+  answer it, and say in one sentence what would change the answer for a specific case;
+- for what you can find with the tools (which plan applies, a fee, a rule) or what the site is like once the place
+  is known (whether the area has municipal water and sewage, strandskydd, what its plan allows): look it up first;
+- whether the question is general or about their own case: decide that yourself from their words;
+- for a more exact place when the conversation already names the kommun and the area, locality or plan area (e.g. "a
+  villa plot in Kumla-Stensta, Vallentuna"): that is enough to find the rules, also with nothing pinned;
 - for details that do not change the main conclusion: state them as assumptions in the answer;
-- again for something the user already answered or declined to give ("just answer"): answer on stated assumptions.
-Each question is short, in the answer language, and asks for one fact. Give options only when a few answers cover
-most cases: 2-4 complete replies the user recognises and you can act on without more input (e.g. "A permanent home" /
-"A holiday home", or "Use the pinned property, Fålhagen 61:11" / "Answer generally for Södermalm, Stockholm"; note when
-a named place lies outside the kommun of the pin). A question with an open answer (a size, an address, what they plan
-to build) has no options. The card always adds a free-text "Other" field, so never write "Other", "Something else" or
-"Please specify" as an option. To have them pin the place, set offer_pin as well as asking for the place."""
+- again for something the user already answered or declined to give ("just answer", "I'd rather not say"): answer
+  generally or on stated assumptions.
+Each question is short, asks for one fact, and is written in the language of the user's latest message (Swedish if
+they wrote Swedish, otherwise English), as are its options. Give options only when a few answers cover most cases:
+2-4 distinct, complete replies the user recognises and you can act on without more input (e.g. "A permanent home" /
+"A holiday home", or "Use the pinned property, Fålhagen 61:11" / "Answer generally for Södermalm, Stockholm"; note
+when a named place lies outside the kommun of the pin). A question with an open answer (a size, a height, an address,
+what they plan to build) has no options. The card always adds a free-text field, so never write "Other", "Something
+else", "Don't know", "Unsure" or "Please specify" as an option. To have them pin the place, set offer_pin as well as
+asking for the place. Never list the kommuner of the corpus as options."""
 
 ANSWER_FORMAT = """Answer in markdown, in the answer language (see the answer-language rule below), in the format of the mode you chose. The headings are given in English; a Swedish answer uses the Swedish headings in brackets:
 - verdict:
@@ -134,6 +163,11 @@ Completeness: the user will act on this answer, so before writing go through you
 # questions (live run, 2026-11-07). It names no language: the model still decides it (ADR-0011)
 ANSWER_LANGUAGE_REMINDER = ("Write it in the user's language as the answer-language rule says: Swedish if they wrote "
                             "Swedish, otherwise English, whatever the language of the sources.")
+
+# After Swedish tool results the model wrote its question card in Swedish for an English question (missing-info eval,
+# 2026-11-12): the same drift as in answers, so the same reminder follows each turn's tool results while it can ask
+ASK_LANGUAGE_REMINDER = ("(If you ask the user instead of answering, write the questions and options in the language "
+                         "of their latest message, whatever the language of these sources.)")
 
 IMAGE_REMOVED = "\n(Image removed after the turn it was shown in: use what you noted from it.)"
 
@@ -228,8 +262,10 @@ ASK_USER_TOOL = {
     "parameters": {"type": "object", "properties": {
         "questions": {"type": "array", "minItems": 1, "maxItems": MAX_QUESTIONS, "items": {
             "type": "object", "properties": {
-                "question": {"type": "string", "description": "one short question for one fact, in the answer "
-                                                                 "language"},
+                "question": {"type": "string", "description": "one short question for one fact, in the "
+                                                                 "language of the user's latest message "
+                                                                 "(English for an English message, even "
+                                                                 "after reading Swedish sources)"},
                 "options": {"type": "array", "items": {"type": "string"}, "maxItems": MAX_CHOICES,
                             "description": "2-4 complete replies the user can click and you can act on without more "
                                            "input, only when a few answers cover most cases; [] for an open question. "
@@ -371,7 +407,9 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
         # Independent calls of one turn run in parallel (DB reads, GPU search, PDF rendering)
         for call, arguments, result, ms in pool.map(lambda c: _run_call(tools, c), work):
             run.seen_chunks.extend(chunk_id for chunk_id in result.chunk_ids if chunk_id not in run.seen_chunks)
-            conversation.append({"type": "function_call_output", "call_id": call.call_id, "output": result.text})
+            reminder = f"\n\n{ASK_LANGUAGE_REMINDER}" if allow_ask and call is work[-1] else ""
+            conversation.append({"type": "function_call_output", "call_id": call.call_id,
+                                 "output": result.text + reminder})
             if result.image_png:
                 fresh.append(len(conversation))
                 conversation.append(image_message(result))
