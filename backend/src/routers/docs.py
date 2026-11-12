@@ -8,7 +8,7 @@ Open a cited chunk in its original document, for the clickable citations of the 
   view_pdf_page), re-rendered from the call's arguments for the pipeline inspector (traces don't store images)
 
 The page is found by searching the chunk's wording in the PDF (chunks don't store page numbers); for scanned PDFs,
-in the OCR text of each page (page only, no highlight).
+in the OCR text of each page, highlighted on the word boxes corpus.ocr stored (none in older OCR outputs).
 """
 
 import json
@@ -101,6 +101,42 @@ def _highlight(pdf, page_index: int, text: str) -> list:
     return rects
 
 
+def _word_key(text: str) -> str:
+    return re.sub(r"[^\w§]", "", text.lower())
+
+
+def _spelled_at(keys: list[str], phrase: str) -> list[int]:
+    """Positions in `keys` of every word of each run that spells `phrase`, word by word."""
+    wanted = [key for key in map(_word_key, phrase.split()) if key]
+    if not wanted:
+        return []
+    return [index for start in range(len(keys) - len(wanted) + 1) if keys[start:start + len(wanted)] == wanted
+            for index in range(start, start + len(wanted))]
+
+
+def _ocr_rects(doc_id: str, page_index: int, text: str) -> list:
+    """Boxes of the OCR words of `page_index` that spell one of the chunk's phrases; empty when the OCR output has
+    no word boxes."""
+    from corpus.pdf_files import ocr_words
+
+    words = [(rect, _word_key(word)) for rect, word in ocr_words(doc_id, page_index) or []]
+    words = [(rect, key) for rect, key in words if key]
+    keys = [key for _, key in words]
+    spelled = {index for phrase in _phrases(text) for index in _spelled_at(keys, phrase)}
+    return [words[index][0] for index in sorted(spelled)]
+
+
+def _passage_rects(pdf, page_index: int, chunk: dict, ocr) -> list:
+    """Highlight the chunk on its page, through the PDF's text layer or the OCR word boxes of a scanned PDF; the
+    highlighted rects."""
+    if ocr is None:
+        return _highlight(pdf, page_index, chunk["text"])
+    rects = _ocr_rects(chunk.get("doc_id"), page_index, chunk["text"])
+    if rects:
+        pdf[page_index].add_highlight_annot(rects)
+    return rects
+
+
 @lru_cache(maxsize=256)
 def _view(chunk_id: str) -> dict | None:
     """Zoom on the highlighted passage: Adobe/Chrome open parameters #zoom=scale,left,top (PDF points, origin
@@ -110,10 +146,10 @@ def _view(chunk_id: str) -> dict | None:
     chunk = _chunk(chunk_id)
     path, ocr = _pdf_path(chunk)
     page_index = _pdf_page(chunk_id)
-    if path is None or ocr is not None or page_index is None:
+    if path is None or page_index is None:
         return None
     with pymupdf.open(path) as pdf:
-        rects = _highlight(pdf, page_index, chunk["text"])
+        rects = _passage_rects(pdf, page_index, chunk, ocr)
         page = pdf[page_index].rect
     if not rects:
         return None
@@ -200,8 +236,8 @@ def pdf_with_highlight(chunk_id: str, _user: models.User = Depends(get_current_u
         raise HTTPException(status_code=404, detail="No PDF for this chunk")
     page_index = _pdf_page(chunk_id)
     with pymupdf.open(path) as pdf:
-        if page_index is not None and ocr is None:
-            _highlight(pdf, page_index, chunk["text"])
+        if page_index is not None:
+            _passage_rects(pdf, page_index, chunk, ocr)
         data = pdf.tobytes()
     return Response(content=data, media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="{chunk_id}.pdf"'})
