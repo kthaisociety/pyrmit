@@ -26,6 +26,44 @@ function distanceTone(distance: number): string {
   return 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300';
 }
 
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// The [start, end) ranges of `content` that hold one of the sentences, whitespace-insensitive, merged when they
+// overlap
+function underlineRanges(content: string, sentences: string[]): [number, number][] {
+  const ranges: [number, number][] = [];
+  for (const sentence of sentences) {
+    const words = sentence.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) continue;
+    const match = new RegExp(words.map(escape).join('\\s+')).exec(content);
+    if (match) ranges.push([match.index, match.index + match[0].length]);
+  }
+  ranges.sort((a, b) => a[0] - b[0]);
+  const merged: [number, number][] = [];
+  for (const [start, end] of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+    else merged.push([start, end]);
+  }
+  return merged;
+}
+
+function Underlined({ content, sentences }: { content: string; sentences: string[] }) {
+  const parts: ReactNode[] = [];
+  let pos = 0;
+  for (const [start, end] of underlineRanges(content, sentences)) {
+    parts.push(content.slice(pos, start));
+    parts.push(
+      <u key={start} title="Supports a claim in the answer" className="decoration-emerald-500 decoration-2 underline-offset-2">
+        {content.slice(start, end)}
+      </u>,
+    );
+    pos = end;
+  }
+  parts.push(content.slice(pos));
+  return <>{parts}</>;
+}
+
 export default function ChunkCard({
   source,
   chunkIndex,
@@ -35,7 +73,7 @@ export default function ChunkCard({
   rank,
   defaultOpen = false,
   actions,
-  underline = [], // stub, issue #84
+  underline = [],
 }: ChunkCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   const preview = content.replace(/\s+/g, ' ').slice(0, 220);
@@ -82,7 +120,7 @@ export default function ChunkCard({
       {actions && <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2 pl-8">{actions}</div>}
       {open && (
         <pre className="max-h-96 overflow-auto whitespace-pre-wrap border-t border-zinc-200 px-3 py-2 font-sans text-xs leading-relaxed text-zinc-700 dark:border-zinc-700 dark:text-zinc-200">
-          {content}
+          <Underlined content={content} sentences={underline} />
         </pre>
       )}
     </div>

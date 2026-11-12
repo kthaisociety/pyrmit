@@ -191,7 +191,11 @@ function getCitations(pipeline: PipelineEvent[]): Citation[] {
 // The claim check of an answer (#82): null for an answer saved before the check existed, or not checked yet
 interface ClaimCheck {
   status: 'checked' | 'failed';
-  claims: { text: string; verdict: 'supported' | 'unsupported' | 'uncited' }[];
+  claims: {
+    text: string;
+    verdict: 'supported' | 'unsupported' | 'uncited';
+    supporting?: { chunk_id: string; sentence: string }[];
+  }[];
 }
 
 function getClaimCheck(pipeline: PipelineEvent[]): ClaimCheck | null {
@@ -203,6 +207,17 @@ function claimFlags(check: ClaimCheck | null): ClaimFlag[] {
   return (check?.claims ?? [])
     .filter((claim) => claim.verdict !== 'supported')
     .map((claim) => ({ text: claim.text, verdict: claim.verdict as ClaimFlag['verdict'] }));
+}
+
+// chunk_id -> the sentences of that chunk that back a claim of the answer, for the source panel (#84)
+function supportingSentences(check: ClaimCheck | null): Record<string, string[]> {
+  const sentences: Record<string, string[]> = {};
+  for (const claim of check?.claims ?? []) {
+    for (const { chunk_id, sentence } of claim.supporting ?? []) {
+      (sentences[chunk_id] ??= []).push(sentence);
+    }
+  }
+  return sentences;
 }
 
 const CHECKING_LABEL = 'Checking the claims';
@@ -804,7 +819,9 @@ function AssistantBubble({
           onOpenCitation={setOpenCitation}
         />
       )}
-      {openCitation && <SourceViewer citation={openCitation} onClose={() => setOpenCitation(null)} />}
+      {openCitation && (
+        <SourceViewer citation={openCitation} onClose={() => setOpenCitation(null)} supporting={supportingSentences(claimCheck)} />
+      )}
     </div>
   );
 }
