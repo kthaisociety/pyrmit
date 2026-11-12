@@ -503,6 +503,14 @@ def test_the_stream_says_the_claims_are_being_checked(checked_chat, jev):
     assert {"type": "thinking", "label": "Checking the claims"} in stream_events(checked_chat)
 
 
+def test_the_citations_are_sent_before_the_claims_are_checked(checked_chat, jev):
+    """The citation chips open their sources while the check runs: the citations come before it."""
+    jev(supported={HOUSE: 0.9})
+    order = [event.get("stage") or event.get("label") for event in stream_events(checked_chat)
+             if event.get("stage") in ("citations", "claim_check") or event.get("label") == "Checking the claims"]
+    assert order == ["citations", "Checking the claims", "claim_check"]
+
+
 def test_the_answer_stays_streaming_until_the_check_is_done(checked_chat, jev):
     """An answer whose claims are still being checked is marked streaming."""
     assert while_checking(checked_chat, jev).status == "streaming"

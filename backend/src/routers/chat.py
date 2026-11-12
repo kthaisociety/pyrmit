@@ -399,7 +399,8 @@ def chat_stream(
 
     Claim check (issue #82): once the agent's answer has streamed, the stream says {"type": "thinking", "label":
     "Checking the claims"} and the decision model judges its claims (agentic.claim_check.check_claims, about a second);
-    the message stays "streaming" until the check is done. The answer is never rewritten. The verdicts are saved as
+    the message stays "streaming" until the check is done. The "citations" event comes before the check, so the
+    citation chips open their sources while it runs. The answer is never rewritten. The verdicts are saved as
     the "claim_check" pipeline event, ClaimCheck.as_event(). A question back to the user (the agent's question card) and
     an off-topic answer (mode "off_topic", #102) are not checked and have no "claim_check" event."""
     if not request.messages:
@@ -502,14 +503,11 @@ def chat_stream(
                     suffix = _format_sources(outcome["sources"], numbered=True)
                     accumulated = outcome["answer"] + suffix
                     yield _sse({"type": "response.output_text.delta", "delta": suffix})
-                    check = None
+                    yield emit("citations", items=outcome["citations"])
                     run = outcome.get("run")
                     if _makes_claims(run, asked):
                         yield _sse({"type": "thinking", "label": "Checking the claims"})
-                        check = _check_claims(run)
-                    yield emit("citations", items=outcome["citations"])
-                    if check is not None:
-                        yield emit("claim_check", **check)
+                        yield emit("claim_check", **_check_claims(run))
                     yield _sse({"type": "response.completed"})
                     yield _sse({"type": "done", "session_id": session_id})
                     return
