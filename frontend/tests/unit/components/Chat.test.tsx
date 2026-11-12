@@ -1,5 +1,5 @@
 // Unit tests for components/Chat.tsx.
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { createElement } from 'react';
@@ -486,5 +486,120 @@ describe('the source panel of a checked answer', () => {
     await openFirstChip();
 
     expect(underlined()).toEqual([]);
+  });
+});
+
+describe('scrolling while an answer streams', () => {
+  const scrolled = vi.mocked(Element.prototype.scrollIntoView);
+
+  // A stream whose deltas the test sends one at a time
+  function liveStream() {
+    let push: (event: object) => void = () => {};
+    server.use(http.post('*/api/chat/stream', () => {
+      const body = new ReadableStream({
+        start(controller) {
+          push = (event) => controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`));
+        },
+      });
+      return new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } });
+    }));
+    return (event: object) => push(event);
+  }
+
+  // The reader's place in the conversation: `fromBottom` px above its end (jsdom has no layout)
+  function scrollTo(fromBottom: number) {
+    const conversation = screen.getByRole('region', { name: 'Conversation' });
+    Object.defineProperty(conversation, 'scrollHeight', { configurable: true, value: 3000 });
+    Object.defineProperty(conversation, 'clientHeight', { configurable: true, value: 600 });
+    conversation.scrollTop = 3000 - 600 - fromBottom;
+    fireEvent.scroll(conversation);
+  }
+
+  async function streamFirstPart() {
+    const push = liveStream();
+    chat();
+    await ask();
+    push({ type: 'session_id', session_id: 's9' });
+    push({ type: 'response.output_text.delta', delta: 'The first part.' });
+    await screen.findByText(/The first part/);
+    return push;
+  }
+
+  async function nextPart(push: (event: object) => void, text: string) {
+    scrolled.mockClear();
+    push({ type: 'response.output_text.delta', delta: ` ${text}` });
+    await screen.findByText(new RegExp(text));
+  }
+
+  it('leaves the view where the reader scrolled up to', async () => {
+    /** Scrolling up during streaming is not undone by the next piece of text. */
+    const push = await streamFirstPart();
+    scrollTo(1500);
+
+    await nextPart(push, 'The second part.');
+
+    expect(scrolled).not.toHaveBeenCalled();
+  });
+
+  it('follows the new text while the reader is at the bottom', async () => {
+    /** A reader at the bottom of the conversation sees each new piece of the answer. */
+    const push = await streamFirstPart();
+    scrollTo(0);
+
+    await nextPart(push, 'The second part.');
+
+    expect(scrolled).toHaveBeenCalled();
+  });
+
+  it('follows again once the reader is back at the bottom', async () => {
+    /** Scrolling back down to the end makes the chat follow the new text again. */
+    const push = await streamFirstPart();
+    scrollTo(1500);
+    await nextPart(push, 'The second part.');
+    scrollTo(0);
+
+    await nextPart(push, 'The third part.');
+
+    expect(scrolled).toHaveBeenCalled();
+  });
+
+  it('scrolls down to a question sent while scrolled up', async () => {
+    /** Sending a question brings the reader to it even after scrolling up. */
+    server.use(
+      http.post('*/api/chat/stream', () => sse(
+        { type: 'session_id', session_id: 's9' },
+        { type: 'response.output_text.delta', delta: 'The first answer.' },
+        { type: 'response.completed' },
+        { type: 'done', session_id: 's9' },
+      )),
+      http.get('*/api/sessions/s9', () => HttpResponse.json([])),
+    );
+    chat();
+    await ask();
+    await waitFor(() => expect(screen.getByPlaceholderText('Ask about building permits...')).toBeEnabled());
+    scrollTo(1500);
+    liveStream();
+    scrolled.mockClear();
+
+    await ask();
+
+    expect(scrolled).toHaveBeenCalled();
+  });
+
+  it('opens another saved chat at its latest message after scrolling up', async () => {
+    /** A saved chat opened after scrolling up elsewhere still shows its latest message. */
+    history(answer(2, []));
+    const view = chat('s1');
+    await screen.findByText('Do I need bygglov in Ydre?');
+    scrollTo(1500);
+    server.use(http.get('*/api/sessions/s2', () => HttpResponse.json([
+      { id: 5, role: 'user', content: 'Another question', session_id: 's2', created_at: '2026-11-12T11:00:00Z' },
+    ])));
+    scrolled.mockClear();
+
+    view.rerender(createElement(Chat, { sessionId: 's2', onSessionCreated: () => undefined, user: { name: 'anna' } }));
+    await screen.findByText('Another question');
+
+    expect(scrolled).toHaveBeenCalled();
   });
 });

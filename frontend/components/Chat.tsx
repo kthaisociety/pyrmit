@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent, ReactNode, useRef } from 'react';
+import { useState, useEffect, FormEvent, ReactNode, UIEvent, useRef } from 'react';
 import Image from 'next/image';
 import {
   BookOpen,
@@ -74,6 +74,7 @@ interface StreamEvent {
 }
 
 const STREAM_STALL_MS = 45_000; // no bytes for this long (keep-alives every 10 s) = dead connection
+const FOLLOW_THRESHOLD_PX = 80; // this close to the end of the conversation counts as at the bottom
 
 interface ChatProps {
   sessionId: string | null;
@@ -869,12 +870,26 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   const sessionIdRef = useRef<string | null>(sessionId);
   sessionIdRef.current = sessionId;
 
+  // Whether new content scrolls the conversation down: while the reader is at its end, not once they scroll up
+  const followRef = useRef(true);
+
+  const onConversationScroll = (event: UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = event.currentTarget;
+    followRef.current = scrollHeight - scrollTop - clientHeight <= FOLLOW_THRESHOLD_PX;
+  };
+
+  // The conversation at its latest message, at once (ADR-0016)
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+  };
+
+  // From now on new content scrolls the conversation down, whatever the reader had scrolled to
+  const followLatest = () => {
+    followRef.current = true;
   };
 
   useEffect(() => {
-    scrollToBottom();
+    if (followRef.current) scrollToBottom();
   }, [messages]);
 
   const clearPin = () => {
@@ -908,6 +923,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   };
 
   useEffect(() => {
+    followLatest();
     if (abortRef.current && sessionId !== streamSessionRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
@@ -966,6 +982,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     const trimmedInput = text.trim();
     if (!trimmedInput || loading) return;
 
+    followLatest();
     const userMsg: Message = { role: 'user', content: trimmedInput };
     const newHistory = [...messages, userMsg];
     const placeholder: Message = { role: 'assistant', content: '', steps: [] };
@@ -1178,7 +1195,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   return (
     <div className="flex h-full w-full">
     <div className="flex flex-col h-full flex-1 min-w-0 relative">
-      <div className="flex-1 overflow-y-auto">
+      <div role="region" aria-label={t('chat.conversation')} onScroll={onConversationScroll} className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto p-4 space-y-6 pb-32 pt-10">
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center text-center p-8 mt-20">
