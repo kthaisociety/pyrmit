@@ -776,7 +776,7 @@ function AssistantBubble({
           </div>
           {claimCheck?.status === 'failed' && (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
-              The claims in this answer could not be checked.
+              {t('chat.claimsNotChecked')}
             </p>
           )}
         </div>

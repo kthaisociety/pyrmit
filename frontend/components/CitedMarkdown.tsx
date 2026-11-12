@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { Citation } from '@/components/SourceViewer';
 import { useLanguage } from '@/lib/i18n';
@@ -44,13 +45,30 @@ export interface ClaimFlag {
 }
 
 // Markdown answer whose [n] citations are chips opening the cited source (onOpen); used by the chat and the
-// benchmark view. Each flag's text is marked in the answer (<mark>, titled "Not supported by the cited sources" or
-// "No source cited" by its verdict); a flag whose text is not in the answer is listed below it instead, as
-// "Unchecked claim: <text>" with the same title.
-const FLAG_TITLES: Record<ClaimFlag['verdict'], string> = {
-  unsupported: 'Not supported by the cited sources',
-  uncited: 'No source cited',
-};
+// benchmark view. Each flag's text is marked in the answer with a dotted underline (<mark>, titled with its reason:
+// "Not supported by the cited sources" or "No source cited", in the page language) and followed by a ⚠ button that
+// shows the reason in the text, for touch screens too; a flag whose text is not in the answer is listed below it
+// instead, as "Unchecked claim: <text>". When any claim is flagged, one line under the answer says what the
+// underline means (#105).
+const FLAG_REASONS = { unsupported: 'claim.unsupported', uncited: 'claim.uncited' } as const;
+
+function FlaggedClaim({ reason, children }: { reason: string; children: ReactNode }) {
+  const { t } = useLanguage();
+  const [shown, setShown] = useState(false);
+  return (
+    <>
+      <mark title={reason}
+            className="bg-transparent text-inherit underline decoration-amber-500 decoration-dotted decoration-2 underline-offset-4">
+        {children}
+      </mark>
+      <button type="button" aria-label={t('claim.showReason')} aria-expanded={shown} onClick={() => setShown(!shown)}
+              className="ml-0.5 align-baseline text-xs text-amber-600 hover:text-amber-800 dark:text-amber-400">
+        ⚠
+      </button>
+      {shown && <span className="ml-1 text-xs text-amber-700 dark:text-amber-400">({reason})</span>}
+    </>
+  );
+}
 
 // A flag's text becomes markdown link text, which cannot hold brackets
 const canMark = (text: string) => text.length > 0 && !/[[\]]/.test(text);
@@ -100,12 +118,8 @@ export default function CitedMarkdown({ body, citations, onOpen, flags = [] }: {
             );
           }
           if (href === '#flag-unsupported' || href === '#flag-uncited') {
-            const title = FLAG_TITLES[href === '#flag-uncited' ? 'uncited' : 'unsupported'];
-            return (
-              <mark title={title} className="rounded bg-amber-100 px-0.5 text-inherit underline decoration-amber-500 decoration-wavy dark:bg-amber-900/40">
-                {children}
-              </mark>
-            );
+            const reason = t(FLAG_REASONS[href === '#flag-uncited' ? 'uncited' : 'unsupported']);
+            return <FlaggedClaim reason={reason}>{children}</FlaggedClaim>;
           }
           return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
         },
@@ -116,9 +130,14 @@ export default function CitedMarkdown({ body, citations, onOpen, flags = [] }: {
     {missing.length > 0 && (
       <ul className="mt-2 space-y-1 text-xs text-amber-700 dark:text-amber-400">
         {missing.map((flag) => (
-          <li key={flag.text} title={FLAG_TITLES[flag.verdict]}>Unchecked claim: {flag.text}</li>
+          <li key={flag.text} title={t(FLAG_REASONS[flag.verdict])}>
+            {t('claim.unchecked').replace('{text}', flag.text)}
+          </li>
         ))}
       </ul>
+    )}
+    {flags.length > 0 && (
+      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{t('claim.note')}</p>
     )}
     </>
   );

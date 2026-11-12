@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import Chat from '@/components/Chat';
 import type { PlaceMapProps } from '@/components/place/PlaceMap';
-import { LanguageProvider } from '@/lib/i18n';
+import { LANGUAGE_STORAGE_KEY, LanguageProvider } from '@/lib/i18n';
 
 import { server } from '../../mocks/server';
 
@@ -351,6 +351,57 @@ describe('claims the sources do not back', () => {
     chat('s1');
 
     expect(await screen.findByText(/Unchecked claim: Bygglov takes ten weeks/)).toBeInTheDocument();
+  });
+});
+
+describe('a flagged claim says what its marking means', () => {
+  const FLAGGED = () => history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED,
+    { text: FEE, verdict: 'uncited', chunk_ids: [], supporting: [] })]));
+
+  it('explains the dotted underline under an answer with a flagged claim', async () => {
+    /** One line under the answer says that underlined text could not be confirmed by the sources (#105). */
+    FLAGGED();
+    chat('s1');
+
+    expect(await screen.findByText(/Text with a dotted underline could not be confirmed by the sources/)).toBeInTheDocument();
+  });
+
+  it('gives no explanation when no claim is flagged', async () => {
+    /** An answer whose claims are all supported carries no note about markings. */
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED)]));
+    chat('s1');
+
+    await screen.findByText(new RegExp(HOUSE));
+    expect(screen.queryByText(/dotted underline/)).not.toBeInTheDocument();
+  });
+
+  it('shows the reason in the text when the warning sign is pressed', async () => {
+    /** The ⚠ after a flagged claim shows its reason on a press, so a touch screen gets it too. */
+    FLAGGED();
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Why is this marked?' }));
+    expect(screen.getByText('(No source cited)')).toBeInTheDocument();
+  });
+
+  it('marks a flagged claim with a dotted underline, not a highlight', async () => {
+    /** The marking reads as unconfirmed, not as a spelling error: a dotted underline and no background. */
+    FLAGGED();
+    chat('s1');
+
+    const mark = await screen.findByTitle(NO_SOURCE);
+    expect(mark.className).toContain('decoration-dotted');
+    expect(mark.className).not.toContain('decoration-wavy');
+  });
+
+  it('gives the reason in Swedish on the Swedish page', async () => {
+    /** The reason and the note follow the page language. */
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'sv');
+    FLAGGED();
+    chat('s1');
+
+    expect(await screen.findByTitle('Ingen källa angiven')).toHaveTextContent(FEE);
+    expect(screen.getByText(/Text med prickad understrykning kunde inte bekräftas av källorna/)).toBeInTheDocument();
   });
 });
 

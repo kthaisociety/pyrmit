@@ -246,3 +246,13 @@ def test_a_check_is_saved_as_its_verdicts_and_supporting_sentences():
 def test_a_failed_check_is_saved_as_failed():
     """A failed check's trace data says so, with no claims."""
     assert ClaimCheck(status="failed").as_event() == {"status": "failed", "claims": []}
+
+
+# --- what counts as a claim (#105) -------------------------------------------------------------------------------------
+
+def test_the_judge_does_not_count_a_sentence_that_sums_up_cited_points():
+    """A sentence that only introduces or sums up points the answer cites elsewhere is not flagged as a claim."""
+    from agentic import claim_check
+
+    rule = claim_check._JUDGE_INSTRUCTIONS
+    assert "a sentence that only introduces or sums up points the" in rule and "not a\nclaim of its own" in rule

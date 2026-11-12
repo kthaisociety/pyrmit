@@ -31,7 +31,9 @@ _DEFAULT_EFFORT = "low"
 
 _JUDGE_INSTRUCTIONS = """You check whether each factual claim of an answer is backed by the sources it cites.
 List the specific factual claims of the answer: rules, numbers, deadlines, fees, document facts, legal references.
-Ignore generic advice, offers, questions and headings. A claim's citations are the [c:<chunk_id>] right after it.
+Ignore generic advice, offers, questions and headings, and a sentence that only introduces or sums up points the
+answer states and cites elsewhere (e.g. "The main question is whether ..." before the cited rules): it is not a
+claim of its own. A claim's citations are the [c:<chunk_id>] right after it.
 For each claim decide:
 - "supported": a cited source states it; copy the source sentences that state it verbatim into "supporting".
 - "unsupported": it cites sources, but none of them states it.
