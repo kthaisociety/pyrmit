@@ -293,7 +293,8 @@ QUESTION = "Do I need bygglov for a house in Ydre, and what does it cost?"
 
 @pytest.fixture
 def harness(monkeypatch):
-    """The streamed chat in agent mode, with a fake agent that answers RAW and a scriptable verify_answer."""
+    """The streamed chat in agent mode, with a fake agent that answers RAW having read A, B and C. The check itself
+    runs for real: script its model with the `model` fixture."""
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     models.Base.metadata.create_all(engine, tables=[models.User.__table__, models.ChatSession.__table__,
                                                     models.ChatMessage.__table__])
@@ -301,7 +302,7 @@ def harness(monkeypatch):
     with Session() as db:
         db.add(models.User(id="u1", name="Test", email="test@example.com"))
         db.commit()
-    state = types.SimpleNamespace(choices=[], verified=None, checked=[], release=None, entered=threading.Event())
+    state = types.SimpleNamespace(choices=[])
 
     def fake_stream_agent(question, history, record, sse, flush=list, allow_ask=True):
         numberer = agentic.service.CitationNumberer(get_chunk)
@@ -311,17 +312,9 @@ def harness(monkeypatch):
         return {"answer": shown, "law_rows": [], "local_rows": [], "sources": numberer.labels,
                 "citations": numberer.citations(), "choices": list(state.choices), "offer_pin": False, "run": run}
 
-    def fake_verify_answer(answer, get_chunk_, seen_chunk_ids, timeout_s=None):
-        state.checked.append((answer, list(seen_chunk_ids)))
-        state.entered.set()
-        if state.release is not None:
-            state.release.wait(10)
-        return state.verified or VerifiedAnswer(answer=answer, check=ClaimCheck(status="checked"))
-
     monkeypatch.setattr(chat, "SessionLocal", Session)
     monkeypatch.setattr(chat, "get_openai_client", lambda: object())
     monkeypatch.setattr(chat, "agent_enabled", lambda: True)
-    monkeypatch.setattr(chat, "verify_answer", fake_verify_answer, raising=False)
     monkeypatch.setattr(agentic.service, "stream_agent", fake_stream_agent)
     monkeypatch.setattr(agentic.service, "get_tools", lambda: types.SimpleNamespace(get_chunk=get_chunk))
 
@@ -367,88 +360,100 @@ def claim_events(message: models.ChatMessage) -> list[dict]:
     return [event for event in message.trace or [] if event["stage"] == "claim_check"]
 
 
-def test_the_agents_raw_answer_is_checked(harness):
-    """The chat checks the agent's raw answer against the chunks the agent read."""
+FEE_CITING_B = FEE_SUPPORTED | {"chunk_ids": [B]}
+
+
+def test_the_agents_raw_answer_is_checked(harness, model):
+    """The chat checks the agent's raw answer, with its chunk ids, against the chunks it cites."""
+    client = model(judged(HOUSE_SUPPORTED, FEE_CITING_B))
     ask(harness)
-    assert harness.checked == [(RAW, [A, B, C])]
+    assert RAW in client.seen(0) and CHUNKS[B]["text"] in client.seen(0)
 
 
-def test_the_stream_says_the_claims_are_being_checked(harness):
+def test_the_rewrite_gets_the_chunks_the_agent_read(harness, model):
+    """In the chat, the rewrite may draw on every chunk the agent read."""
+    client = model(judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED), REVISED, judged(HOUSE_SUPPORTED, FEE_SUPPORTED))
+    ask(harness)
+    assert CHUNKS[C]["text"] in client.seen(1)
+
+
+def test_the_stream_says_the_claims_are_being_checked(harness, model):
     """While the check runs, the stream shows that the claims are being checked."""
+    model(judged(HOUSE_SUPPORTED, FEE_CITING_B))
     events = ask(harness)
     assert {"type": "thinking", "label": "Checking the claims"} in events
 
 
-def test_the_answer_stays_streaming_until_the_check_is_done(harness):
+def test_the_answer_stays_streaming_until_the_check_is_done(harness, model):
     """The streamed answer is saved, but marked streaming, while its claims are still being checked."""
-    harness.release = threading.Event()
+    client = model(3.0)  # a judge that takes 3 s
     asking = threading.Thread(target=ask, args=(harness,))
     asking.start()
     try:
-        assert harness.entered.wait(10), "the answer was never checked"
-        time.sleep(2.5)  # the worker saves every 2 s
+        deadline = time.time() + 10
+        while not client.calls and time.time() < deadline:
+            time.sleep(0.05)
+        assert client.calls, "the answer was never checked"
+        time.sleep(0.5)
         message = assistant(harness)
         assert (message.status, HOUSE in message.content) == ("streaming", True)
     finally:
-        harness.release.set()
         asking.join(10)
 
 
-def test_the_verdicts_are_saved_with_the_answer(harness):
+def test_the_verdicts_are_saved_with_the_answer(harness, model):
     """The check's verdicts and supporting sentences are saved in the answer's trace."""
-    harness.verified = VerifiedAnswer(answer=RAW, check=ClaimCheck(status="checked", claims=[
-        Claim(text=HOUSE, verdict="supported", chunk_ids=[A],
-              supporting=[Support(chunk_id=A, sentence="Bygglov krävs för nybyggnad av en byggnad.")]),
-        Claim(text=FEE, verdict="unsupported", chunk_ids=[B]),
-    ]))
+    model(judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED), RAW, judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED))
     ask(harness)
     [event] = claim_events(saved_answer(harness))
     assert event["data"] == {"status": "checked", "claims": [HOUSE_SUPPORTED, FEE_UNSUPPORTED]}
 
 
-def test_a_failed_check_is_saved_with_the_answer(harness):
+def test_a_failed_check_is_saved_with_the_answer(harness, model):
     """A check that could not run is saved as failed, and the answer is kept."""
-    harness.verified = VerifiedAnswer(answer=RAW, check=ClaimCheck(status="failed"))
+    model(RuntimeError("model down"))
     ask(harness)
     message = saved_answer(harness)
     assert [e["data"] for e in claim_events(message)] == [{"status": "failed", "claims": []}]
     assert message.content.startswith(f"{HOUSE} [1]. {FEE} [2].")
 
 
-def test_a_rewritten_answer_replaces_the_saved_text(harness):
+def test_a_rewritten_answer_replaces_the_saved_text(harness, model):
     """The saved answer is the rewritten one, numbered, with its source list."""
-    harness.verified = VerifiedAnswer(answer=SHORTENED, check=ClaimCheck(status="checked"))
+    model(judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED), SHORTENED, judged(HOUSE_SUPPORTED))
     ask(harness)
     content = saved_answer(harness).content
     assert content.startswith(f"{HOUSE} [1].") and FEE not in content
 
 
-def test_a_rewritten_answer_is_sent_to_the_open_chat(harness):
+def test_a_rewritten_answer_is_sent_to_the_open_chat(harness, model):
     """The stream sends the rewritten answer, as saved, to replace the text already shown."""
-    harness.verified = VerifiedAnswer(answer=SHORTENED, check=ClaimCheck(status="checked"))
+    model(judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED), SHORTENED, judged(HOUSE_SUPPORTED))
     events = ask(harness)
     [replaced] = [event for event in events if event["type"] == "answer_replaced"]
     assert replaced["content"] == saved_answer(harness).content
 
 
-def test_an_unchanged_answer_is_not_resent(harness):
+def test_an_unchanged_answer_is_not_resent(harness, model):
     """When the check ran and changed nothing, no replacement is sent."""
+    client = model(judged(HOUSE_SUPPORTED, FEE_CITING_B))
     events = ask(harness)
-    assert harness.checked and not [event for event in events if event["type"] == "answer_replaced"]
+    assert client.calls and not [event for event in events if event["type"] == "answer_replaced"]
 
 
-def test_the_citations_follow_the_rewritten_answer(harness):
+def test_the_citations_follow_the_rewritten_answer(harness, model):
     """After a rewrite that re-cites, the numbered sources are those of the rewritten answer."""
-    harness.verified = VerifiedAnswer(answer=REVISED, check=ClaimCheck(status="checked"))
+    model(judged(HOUSE_SUPPORTED, FEE_UNSUPPORTED), REVISED, judged(HOUSE_SUPPORTED, FEE_SUPPORTED))
     ask(harness)
     [event] = [e for e in saved_answer(harness).trace if e["stage"] == "citations"]
     assert [item["label"] for item in event["data"]["items"]] == ["PBL, 9 kap. 4 §", "Ydre – Avgifter"]
 
 
-def test_a_question_back_to_the_user_is_not_checked(harness):
+def test_a_question_back_to_the_user_is_not_checked(harness, model):
     """Of a question back to the user and an answer, only the answer is checked."""
+    client = model(judged(HOUSE_SUPPORTED, FEE_CITING_B), judged(HOUSE_SUPPORTED, FEE_CITING_B))
     harness.choices.extend(["Ydre", "Linköping"])
     ask(harness)
     harness.choices.clear()
     ask(harness)
-    assert harness.checked == [(RAW, [A, B, C])]
+    assert len(client.calls) == 1
