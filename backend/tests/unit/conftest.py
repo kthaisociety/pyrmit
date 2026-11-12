@@ -95,3 +95,20 @@ def profile_of(tmp_path):
         return build_profile(lat, lon, store=store, property_at=fake_property, plan_registry=registry,
                              ancient_remains_at=remains_at)
     return build
+
+
+@pytest.fixture
+def model(monkeypatch):
+    """Script the claim check's model: model(reply, ...) -> the fake client (tests.unit.agentic.claims.FakeClient),
+    whichever llm accessor the check reaches it through."""
+    import llm
+    import observability
+    from agentic import claim_check
+    from tests.unit.agentic.claims import FakeClient
+
+    def script(*replies) -> FakeClient:
+        client = FakeClient(list(replies))
+        for module in (llm, observability, claim_check):
+            monkeypatch.setattr(module, "get_openai_client", lambda: client, raising=False)
+        return client
+    return script
