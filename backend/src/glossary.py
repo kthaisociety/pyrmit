@@ -3,6 +3,8 @@ Swedish domain terms an English answer keeps in Swedish, each with the English e
 (PCR-0006). A term with no entry stays in Swedish without explanation.
 """
 
+import re
+
 # Term (lower case, as the sources write it) -> one-line English explanation
 GLOSSARY: dict[str, str] = {
     "detaljplan": "detailed development plan: the kommun's binding plan for what may be built where",
@@ -50,3 +52,20 @@ def glossary_prompt() -> str:
     return ("Swedish terms: in an English answer, keep these terms in Swedish and give the English explanation on "
             "first use, e.g. \"bygglov (building permit)\"; a Swedish term not listed stays in Swedish without one.\n"
             + "\n".join(lines))
+
+
+def explained(text: str) -> str:
+    """`text` with each glossary term's English explanation in parentheses after its first use, for an English text
+    the code writes (PCR-0006). A term already followed by a parenthesis keeps it; matching ignores case and takes
+    whole words only, so "strandskyddsdispens" does not match "strandskydd"."""
+    firsts = []
+    for term in sorted(GLOSSARY, key=len, reverse=True):
+        match = re.search(rf"(?<!\w){re.escape(term)}(?!\w)", text, re.IGNORECASE)
+        if not match or text[match.end():].startswith(" ("):
+            continue
+        if any(start < match.end() and match.start() < end for start, end, _ in firsts):
+            continue
+        firsts.append((match.start(), match.end(), GLOSSARY[term]))
+    for _, end, explanation in sorted(firsts, reverse=True):
+        text = f"{text[:end]} ({explanation}){text[end:]}"
+    return text

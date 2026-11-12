@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import Chat from '@/components/Chat';
 import type { PlaceMapProps } from '@/components/place/PlaceMap';
+import { LanguageProvider } from '@/lib/i18n';
 
 import { server } from '../../mocks/server';
 
@@ -27,7 +28,7 @@ vi.mock('@/components/place/PlaceMap', () => ({
 describe('map panel', () => {
   it('opens beside the conversation from the chat', async () => {
     /** The chat has a button that opens the map panel next to the messages. */
-    render(createElement(Chat, { sessionId: null, onSessionCreated: () => undefined, user: { name: 'anna' } }));
+    render(createElement(Chat, { sessionId: null, onSessionCreated: () => undefined, user: { name: 'anna' } }), { wrapper: LanguageProvider });
 
     await userEvent.click(screen.getByRole('button', { name: 'Open map' }));
 
@@ -43,7 +44,7 @@ const PLACE_EVENT = {
 };
 
 function chat(sessionId: string | null = null) {
-  return render(createElement(Chat, { sessionId, onSessionCreated: () => undefined, user: { name: 'anna' } }));
+  return render(createElement(Chat, { sessionId, onSessionCreated: () => undefined, user: { name: 'anna' } }), { wrapper: LanguageProvider });
 }
 
 async function pinKungsangen() {
