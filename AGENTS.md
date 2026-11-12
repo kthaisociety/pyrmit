@@ -737,17 +737,22 @@ each model turn and tool call is recorded for the inspector ("Explore (agent)" s
 partial `c:` ids and open `[...]` groups held back until complete, repeats merged); the numbered source list
 ("- [n] label") is appended at the end and a `citations` pipeline event maps each n to its label and cited chunks.
 Then the claim check (`agentic/claim_check.py`, `check_claims`, issue #82) runs, except on a question back to the user
-or an off-topic answer. It uses the decision model Jev (`llm.ask_decision_model`, about half a second per call), not a
-chat model. Each stretch of text followed by a citation is put to Jev with the full text of the chunks it cites, as a
-yes/no question ("does any passage state the claim?", supported from 0.5) plus a choice of the chunk sentence that
-states it (the supporting sentence). All claims are checked in parallel. A cited id that cannot be read makes the claim
-"uncited". The sentences without a citation go in one call, and only those Jev says state a rule, number, fee, deadline
-or legal reference as fact are flagged "uncited". The answer is never rewritten. The stream says "Checking the claims"
-meanwhile (the message stays `streaming`) and saves the verdicts as the `claim_check` pipeline event
-(`{status: checked | failed, claims}`, ADR-0004). The chat marks each flagged claim with a dotted underline and a ⚠ that
-shows its reason, with one line under the answer explaining the marking. It says "The claims in this answer could not
-be checked." when the check failed (decision model error, `CLAIM_CHECK_TIMEOUT_S`). Answers saved before the check show
-neither.
+or an off-topic answer. It uses the decision model Jev (`llm.ask_decision_model`, about half a second per call, one
+retry on 429/5xx), not a chat model. A claim runs from a line's start (or the previous claim) to the end of the sentence
+holding a citation group, so a citation after the full stop or mid-sentence backs the whole sentence. Each claim goes
+to Jev with the full text of its cited chunks and the pinned place's registry data (the property, plans, protected
+areas, riksintressen: the agent states site facts from it and cites the statute), as a yes/no question ("do sources
+back what claim says?", backed from 0.5) plus a choice of the chunk sentence that states it (the supporting sentence).
+The sentences without a citation go in one call, and only those Jev says state a rule, number, fee, deadline or legal
+reference as fact, and the place data does not back, are flagged "uncited". All calls run on one shared pool of 16; a
+call that fails or misses `CLAIM_CHECK_TIMEOUT_S` costs only its own claims. A cited id that cannot be read makes the
+claim "uncited". Headings, table rows and text holding brackets are not judged. The answer is never rewritten. The
+stream sends the `citations` event first (the chips work during the check), then "Checking the claims" (the message
+stays `streaming`), then the verdicts as the `claim_check` pipeline event (`{status: checked | failed, claims}`,
+ADR-0004). The chat marks each flagged claim with a dotted underline and a ⚠ that shows its reason, with one line under
+the answer explaining the marking. It says "The claims in this answer could not be checked." when no call succeeded.
+Answers saved before the check show neither. Jev's wording was chosen on 380 claim-source pairs refereed by another
+model (2026-11-12): 88 % agreement, against 86 % for the LLM judge it replaced.
 The source panel a citation chip opens underlines, in each cited chunk, the supporting sentences of every claim that
 cites it (`SourceViewer`'s `supporting` prop, ADR-0015, issue #84); an answer without a check result shows no underline.
 The answer format asks for the law reference in the sentence and `[c:id]` right after the claim, never nested.

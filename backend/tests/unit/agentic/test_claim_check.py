@@ -6,7 +6,14 @@ import time
 
 import pytest
 
-from agentic.claim_check import Claim, ClaimCheck, Support, check_claims
+from agentic.claim_check import (
+    Claim,
+    ClaimCheck,
+    Support,
+    _sentences,
+    _stretches,
+    check_claims,
+)
 from localrag.index import chunk_text
 from tests.unit.agentic.claims import (
     CHUNKS,
@@ -194,6 +201,13 @@ def test_a_model_error_fails_the_check(jev):
     assert check() == ClaimCheck(status="failed")
 
 
+def test_one_failed_call_costs_only_its_own_claim(jev):
+    """A call that fails (a rate limit, a broken reply) leaves its claim out; the other claims keep their verdicts."""
+    jev(supported={HOUSE: 0.9}, fail_on=FEE)
+    result = check()
+    assert (result.status, as_dicts(result)) == ("checked", [HOUSE_SUPPORTED])
+
+
 def test_a_check_over_its_time_fails(jev):
     jev(delay=2.0)
     assert check(timeout_s=0.2).status == "failed"
@@ -225,3 +239,57 @@ def test_a_failed_check_is_saved_as_failed():
 def test_a_claim_counts_as_supported_from_an_even_chance(jev, probability, verdict):
     jev(supported={HOUSE: probability})
     assert check(f"{HOUSE} [c:{A}].").claims[0].verdict == verdict
+
+
+# --- what a claim is, on realistic agent markdown (review of #105) ----------------------------------------------------
+
+def stretches(answer: str) -> list[tuple[str, bool]]:
+    return [(stretch.text, bool(stretch.chunk_ids)) for stretch in _stretches(answer)]
+
+
+def test_a_citation_mid_sentence_backs_the_whole_sentence():
+    """ "Strandskyddet gäller [c] 100 meter ..." is one cited claim, not a cited head and an uncited tail."""
+    assert stretches(f"Strandskyddet gäller [c:{A}] 100 meter från strandlinjen vid havet.") == [
+        ("100 meter från strandlinjen vid havet", True)]
+
+
+def test_jev_reads_the_whole_sentence_around_a_mid_sentence_citation():
+    [stretch] = _stretches(f"Strandskyddet gäller [c:{A}] 100 meter från strandlinjen.")
+    assert stretch.judged == "Strandskyddet gäller 100 meter från strandlinjen"
+
+
+def test_bold_cut_by_a_citation_is_not_part_of_the_marked_text():
+    """Marking a text that opens bold it does not close would show literal ** in the answer."""
+    [(text, _)] = stretches(f"**Byggnadshöjden får vara högst [c:{A}] 7,5 meter enligt planen.**")
+    assert "*" not in text
+
+
+@pytest.mark.parametrize("line", [f"> Det krävs bygglov för en ny byggnad [c:{A}].",
+                                  f"1) Det krävs bygglov för en ny byggnad [c:{A}]."])
+def test_a_quote_or_numbered_list_marker_is_not_part_of_the_claim(line):
+    assert stretches(line) == [("Det krävs bygglov för en ny byggnad", True)]
+
+
+def test_an_abbreviation_does_not_end_a_sentence():
+    assert stretches(f"Enligt bl.a. Boverket krävs bygglov för ett nytt hus [c:{A}].") == [
+        ("Enligt bl.a. Boverket krävs bygglov för ett nytt hus", True)]
+
+
+def test_a_cited_repeat_of_an_uncited_sentence_is_judged_as_cited():
+    """The answer-first summary often repeats a later, cited sentence: the cited one is the one judged."""
+    assert stretches(f"Bygglov krävs för ett nytt hus.\n- Bygglov krävs för ett nytt hus [c:{A}].") == [
+        ("Bygglov krävs för ett nytt hus", True)]
+
+
+def test_a_wrapped_statute_line_is_one_sentence():
+    """Hard-wrapped statute text gives whole sentences as supporting sentences, and only the title line is dropped."""
+    text = "Plan- och bygglag (2010:900), 9 kap. 2 §\nDet krävs bygglov för\nnybyggnad av ett hus.\nEnligt miljöbalken (1998:808) gäller också annat här."
+    assert _sentences(text) == ["Det krävs bygglov för nybyggnad av ett hus.",
+                                "Enligt miljöbalken (1998:808) gäller också annat här."]
+
+
+def test_the_supporting_sentence_names_the_chunk_the_id_resolved_to(jev):
+    """A shortened or miscopied id the chat resolves gets the resolved chunk's id, which the source panel looks up."""
+    jev(supported={HOUSE: 0.9})
+    result = check(f"{HOUSE} [c:{A[:10]}].", get=lambda chunk_id: CHUNKS[A] if A.startswith(chunk_id) else None)
+    assert (result.claims[0].chunk_ids, result.claims[0].supporting[0].chunk_id) == ([A], A)

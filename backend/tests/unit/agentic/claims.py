@@ -36,14 +36,16 @@ class FakeJev:
     """The decision model, scripted: `supported` maps a claim's text to the probability that its sources state it
     (0 when absent), `needs_source` an uncited sentence's text to the probability that it needs a source (0 when
     absent), `place_backs` an uncited sentence's text to the probability that the pinned place's data backs it. The
-    sentence choice picks the first sentence. `error` is raised on every call; `delay` (s) stalls each.
+    sentence choice picks the first sentence. `error` is raised on every call, and a RuntimeError on the call
+    about the claim `fail_on`; `delay` (s) stalls each.
     `calls` holds every (state, questions) sent."""
 
     def __init__(self, supported=None, needs_source=None, place_backs=None, error: BaseException | None = None,
-                 delay: float = 0.0):
+                 delay: float = 0.0, fail_on: str | None = None):
         self.supported = supported or {}
         self.needs_source = needs_source or {}
         self.place_backs = place_backs or {}
+        self.fail_on = fail_on
         self.error, self.delay = error, delay
         self.calls: list[tuple] = []
         self._lock = threading.Lock()
@@ -53,8 +55,8 @@ class FakeJev:
             self.calls.append((state, questions))
         if self.delay:
             time.sleep(self.delay)
-        if self.error:
-            raise self.error
+        if self.error or (self.fail_on is not None and state.get("claim") == self.fail_on):
+            raise self.error or RuntimeError("one call failed")
         if "supported" in questions:
             answers = {"supported": {"type": "noul", "noul": self.supported.get(state["claim"], 0.0)}}
             if "sentence" in questions:
