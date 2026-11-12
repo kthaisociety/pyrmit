@@ -67,11 +67,14 @@ function WithKommun({ text }: { text: string }) {
 
 // Side panel: the cited chunks, and the original document opened where the chunk is
 // (PDF at its page with the chunk highlighted, or the web page / statute scrolled to it by Chrome).
-// n = 0: not a citation (Database view); autoOpen: open the first chunk's document right away
-export default function SourceViewer({ citation, onClose, autoOpen = false }: {
+// n = 0: not a citation (Database view); autoOpen: open the first chunk's document right away.
+// supporting: chunk_id -> the sentences of that chunk that back a claim of the answer (claim check, issue #84),
+// underlined in that chunk's card only; a chunk missing from it, or no `supporting` at all, shows no underline
+export default function SourceViewer({ citation, onClose, autoOpen = false, supporting = {} }: {
   citation: Citation;
   onClose: () => void;
   autoOpen?: boolean;
+  supporting?: Record<string, string[]>;
 }) {
   const { t } = useLanguage();
   const [pdf, setPdf] = useState<{ blobUrl: string; url: string; page: number; note: string } | null>(null);
@@ -185,7 +188,8 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
           <div className={`space-y-3 overflow-y-auto px-5 py-4 ${pdf ? 'w-72 shrink-0 border-r border-zinc-200 dark:border-zinc-700' : ''}`}>
             {citation.chunks.map((chunk) => (
               <div key={chunk.chunk_id} className="space-y-1.5">
-                <ChunkCard source={chunk.source} chunkIndex={chunk.chunk_index} content={chunk.content} defaultOpen={!pdf} />
+                <ChunkCard source={chunk.source} chunkIndex={chunk.chunk_index} content={chunk.content} defaultOpen={!pdf}
+                  underline={supporting[chunk.chunk_id]} />
                 {hasOriginal(chunk) ? (
                   // Only this button waits: another chunk can still be opened (the latest click wins)
                   <button

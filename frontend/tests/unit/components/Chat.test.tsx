@@ -427,3 +427,64 @@ describe('while the claims are being checked', () => {
     await waitFor(() => expect(screen.queryByText(new RegExp(FEE))).not.toBeInTheDocument());
   });
 });
+
+describe('the source panel of a checked answer', () => {
+  const UNDERLINED = 'Supports a claim in the answer';
+  const NEEDED = 'Bygglov krävs för en ny byggnad.';
+  const FEE_RULE = 'Avgiften är 12 000 kr.';
+  const PANEL_CITATIONS = {
+    stage: 'citations',
+    data: {
+      items: [
+        { n: 1, label: 'PBL, 9 kap. 4 §', chunks: [{ source: 'PBL, 9 kap. 4 §', chunk_id: A,
+          content: `${NEEDED} Ansökan lämnas till byggnadsnämnden. ${FEE_RULE}` }] },
+        { n: 2, label: 'Ydre – Bygglovstaxa', chunks: [{ source: 'Ydre – Bygglovstaxa', chunk_id: B, content: 'Taxa.' }] },
+      ],
+    },
+  };
+
+  function supportedBy(text: string, sentence: string) {
+    return { text, verdict: 'supported', chunk_ids: [A], supporting: [{ chunk_id: A, sentence }] };
+  }
+
+  async function openFirstChip() {
+    chat('s1');
+    await userEvent.click((await screen.findAllByRole('button', { name: '1' }))[0]);
+  }
+
+  function underlined(): (string | null)[] {
+    return screen.queryAllByTitle(UNDERLINED).map((element) => element.textContent);
+  }
+
+  it('underlines the sentence of the cited chunk that backs a claim', async () => {
+    /** After the check, the chip's panel underlines the chunk sentence that supports the claim. */
+    history(answer(2, [PANEL_CITATIONS, checked(supportedBy(HOUSE, NEEDED))]));
+    await openFirstChip();
+
+    expect(underlined()).toEqual([NEEDED]);
+  });
+
+  it('underlines the sentences of every claim that cites the chunk', async () => {
+    /** A chunk cited by two claims underlines the supporting sentence of each. */
+    history(answer(2, [PANEL_CITATIONS, checked(supportedBy(HOUSE, NEEDED), supportedBy(FEE, FEE_RULE))]));
+    await openFirstChip();
+
+    expect(underlined()).toEqual([NEEDED, FEE_RULE]);
+  });
+
+  it('shows the chunk without underline for an answer saved before the check', async () => {
+    /** An old message with no check result opens its chunk with nothing underlined. */
+    history(answer(2, [PANEL_CITATIONS]));
+    await openFirstChip();
+
+    expect(underlined()).toEqual([]);
+  });
+
+  it('shows the chunk without underline when the check failed', async () => {
+    /** A failed check has no supporting sentences, so nothing in the chunk is underlined. */
+    history(answer(2, [PANEL_CITATIONS, { stage: 'claim_check', data: { status: 'failed', claims: [] } }]));
+    await openFirstChip();
+
+    expect(underlined()).toEqual([]);
+  });
+});

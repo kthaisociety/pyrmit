@@ -715,6 +715,8 @@ may re-cite any chunk the agent read or remove the claim, and the rewritten answ
 saves the verdicts as the `claim_check` pipeline event (`{status: checked | failed, claims}`, ADR-0004). The chat marks
 the claims still not supported, and says "The claims in this answer could not be checked." when the check failed
 (model error, `CLAIM_CHECK_TIMEOUT_S`, a cited chunk that cannot be read). Answers saved before the check show neither.
+The source panel a citation chip opens underlines, in each cited chunk, the supporting sentences of every claim that
+cites it (`SourceViewer`'s `supporting` prop, ADR-0015, issue #84); an answer without a check result shows no underline.
 The answer format asks for the law reference in the sentence and `[c:id]` right after the claim, never nested.
 `read` also takes the id as printed (`c:<id>`, `[c:<id>]`, `doc pdf:...` / `doc:pdf:...`), a doc_id passed as chunk_id, without its `pdf:` / `page:`
 prefix or reduced to its hash (`doc_ids_ending`) (before 2026-10-22, 1,845 benchmark reads failed on the `c:` prefix, 88 % never retried); `law_section` takes

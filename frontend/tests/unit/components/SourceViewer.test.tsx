@@ -185,3 +185,43 @@ describe('SourceViewer', () => {
     });
   });
 });
+
+describe('SourceViewer with supporting sentences', () => {
+  const UNDERLINED = 'Supports a claim in the answer';
+  const twoChunks: Citation = {
+    n: 1,
+    label: 'Detaljplan Kårsta',
+    chunks: [
+      { chunk_id: 'c1', source: 'Detaljplan Kårsta', chunk_index: 3, content: 'Nockhöjden får vara\nhögst 8 m. Taket ska vara rött.' },
+      { chunk_id: 'c2', source: 'Detaljplan Kårsta', chunk_index: 4, content: 'Taket ska vara rött. Fasaden är av trä.' },
+    ],
+  };
+
+  function underlined(): (string | null)[] {
+    return screen.queryAllByTitle(UNDERLINED).map((element) => element.textContent);
+  }
+
+  it('underlines a sentence whose line breaks differ from the chunk text', () => {
+    /** Whitespace in the supporting sentence need not match the chunk's line breaks. */
+    render(<SourceViewer citation={twoChunks} onClose={vi.fn()} supporting={{ c1: ['Nockhöjden får vara högst 8 m.'] }} />,
+      { wrapper: LanguageProvider });
+
+    expect(underlined().map((text) => text?.replace(/\s+/g, ' '))).toEqual(['Nockhöjden får vara högst 8 m.']);
+  });
+
+  it('skips a supporting sentence that is not in the chunk', () => {
+    /** A sentence the chunk does not hold is left out without an error; the ones it holds are underlined. */
+    render(<SourceViewer citation={twoChunks} onClose={vi.fn()}
+      supporting={{ c1: ['Byggrätten är 200 kvm.', 'Taket ska vara rött.'] }} />, { wrapper: LanguageProvider });
+
+    expect(underlined()).toEqual(['Taket ska vara rött.']);
+  });
+
+  it('underlines a sentence only in the chunk it supports', () => {
+    /** Two chunks hold the same sentence; only the chunk the claim cites underlines it. */
+    render(<SourceViewer citation={twoChunks} onClose={vi.fn()} supporting={{ c2: ['Taket ska vara rött.'] }} />,
+      { wrapper: LanguageProvider });
+
+    expect(underlined()).toEqual(['Taket ska vara rött.']);
+  });
+});
