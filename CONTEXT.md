@@ -15,6 +15,7 @@ _Avoid_: regulation, legal source (when only statutes are meant)
 **Chunk**:
 One retrievable piece of a source, stored with its embedding. Either a law chunk or a document chunk.
 _Avoid_: passage, snippet, segment
+The labels a source and a chunk carry are defined in `docs/source-chunk-schema.md`.
 
 **Law chunk**:
 A chunk of a law, split along chapter and section boundaries. Stored in `law_chunks`.

@@ -6,6 +6,7 @@ Load these only when the task needs them:
 
 - `max` plugin -- The project skills (`/max:new-ticket` and friends), use these first hand. Enabled by `.claude/settings.json`.
 - `CONTEXT.md` -- domain language: what a detaljplan, chunk, verdict etc. mean and how they connect
+- `docs/source-chunk-schema.md` -- the labels every source and chunk of the corpus carries (required / optional per kind, where each lives today)
 - `docs/pcr/` -- project-wide conventions (stack, model calls, embeddings, answer language). Binding. Read before changing code.
 - `docs/adr/` -- decisions scoped to one part of the codebase. Binding inside their scope.
 
