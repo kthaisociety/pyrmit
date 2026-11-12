@@ -696,13 +696,15 @@ each turn's tool results so the card stays in the user's language. The chat save
 event `{questions, offer_pin}` (an open question too) and skips the claim check; `frontend/components/QuestionCard.tsx`
 shows it with an "Other" field per question, one reply message for the whole card, locked once answered (old saved
 `{options}` cards still read). A message typed below an open card is sent with `answer_to_question`, so the agent
-answers instead of asking again.
+answers instead of asking again: such a run (`allow_ask=False`) gets `ANSWERED_GUIDE` in place of the asking rule `ASK_GUIDE`, since the rule alone
+made it ask again in plain text.
 Missing-info eval: `python -m agentic.bench --cases-file cases_missing_info.jsonl --explore-effort medium --repeats 2
 --baseline <dev results>` (50 should-ask and 50 should-answer cases, 25 Swedish + 25 English each, asked as the chat
 asks with nothing pinned): `grade_asked` judges whether a card asked for every `missing` fact, `follow_up` answers the
 scripted `reply` and grades it, and `missing_info_summary` passes at 95% on each half with the should-answer key points
-not below the baseline. Results of the merge run: `data/agentic/*cases_missing_info-x-run*.json` and the dev baseline
-`data/agentic/missing-info-baseline-dev-medium-20261112.json`.
+not below the baseline. Results of the merge run: `data/agentic/bench-20261112-153506-agent-medium-explore-medium-cases_missing_info-x-run6.json`
+and the dev baseline `data/agentic/missing-info-baseline-dev-medium-20261112.json` (99% / 99%, key points 0.68 vs 0.71;
+tuned on these same 100 cases, so a fresh set would show how well the rule generalises).
 
 `agentic/agent.py` runs a Responses-API tool loop (default `openai/gpt-6-luna` via OpenRouter) with tools from
 `agentic/tools.py` (`CorpusTools` over `_DiskCorpus` (SQLite) or `_MemoryCorpus`): `find_kommun`, `search` (hybrid

@@ -124,3 +124,29 @@ def test_ask_user_is_offered_to_the_model():
 def test_the_prompt_forbids_options_that_ask_for_more_input():
     """The card adds a free-text field, so an option never asks the user to type something."""
     assert '"Please specify" as an option' in agent.SYSTEM_PROMPT
+
+
+def test_a_run_that_cannot_ask_is_not_told_to_ask(monkeypatch):
+    """Once the user has answered the card, the asking rule leaves the prompt, so the agent answers instead of asking
+    again in plain text."""
+    given = []
+
+    class Client:
+        responses = SimpleNamespace(create=lambda **kwargs: (given.append(kwargs["instructions"]),
+                                                             SimpleNamespace(output=[], output_text="Answer.",
+                                                                             usage=None))[1])
+    monkeypatch.setattr(agent, "get_openai_client", lambda: Client())
+    agent.run_agent("A holiday home", tools=None, model="test/model", allow_ask=False)
+    assert agent.ASK_GUIDE not in given[0] and agent.ANSWERED_GUIDE in given[0]
+
+
+def test_a_run_that_can_ask_keeps_the_asking_rule(monkeypatch):
+    given = []
+
+    class Client:
+        responses = SimpleNamespace(create=lambda **kwargs: (given.append(kwargs["instructions"]),
+                                                             SimpleNamespace(output=[], output_text="Answer.",
+                                                                             usage=None))[1])
+    monkeypatch.setattr(agent, "get_openai_client", lambda: Client())
+    agent.run_agent("Can I build a shed?", tools=None, model="test/model")
+    assert agent.ASK_GUIDE in given[0]

@@ -60,22 +60,7 @@ PIN_GUIDE = """What a pin on the map changes. A question is specific when it is 
 - Specific, without a pin: your first call is ask_user with offer_pin, before any search: ask which place, and in the same card any other missing fact that would change the answer.
 - General, without a pin: answer with the search tools and close with one sentence's offer to pin a place for an exact answer."""
 
-MODES = ("verdict", "explain", "propose", "develop")
-
-MODES_GUIDE = """Kinds of questions (the mode of answer_ready; a question can mix them: pick the main one):
-- verdict: a defined project at a known place: is it allowed, under which rules, how to get it approved?
-- explain: how a rule, procedure, fee, deadline, map or document works; there is no project to judge.
-- propose: the place is NOT fixed: the user asks where in a kommun a project could go (or what could be done with some
-  land). This stays propose even when they also ask which approvals or studies it would take. Work fast from the
-  översiktsplan: grep the kommun for its growth wording (e.g. 'utvecklingsområde|utbyggnadsområde|nya bostäder|
-  prioriterade|serviceort|LIS'), read the 1-3 strongest passages (and its fördjupningar if listed), and note its limits
-  (strandskydd, riksintressen, jordbruksmark, VA capacity). Propose places named in those documents, never invented
-  ones, with what the documents say about each; do not research every place in depth (4-6 turns).
-- develop: the place and the idea are given (roughly) and the user asks what is missing or how to make it work: find
-  what could block it and the ways to make it work (another location or scale, phasing, the plan route: planbesked +
-  detaljplan vs förhandsbesked + bygglov, liten avvikelse, dispens, shared facilities as a gemensamhetsanläggning),
-  and what you need to know from the user.
-Asking instead of guessing (ask_user). Decide this first, before any search. A question is the user's own case when
+ASK_GUIDE = """Asking instead of guessing (ask_user). Decide this first, before any search. A question is the user's own case when
 it is about their property, building or project ("my plot", "my property", "my land", "my house", "our house", "I
 want to build ...", "min tomt", "min fastighet", "mitt hus", "vårt hus", "vi vill bygga ..."), as opposed to a
 general question about how a rule works. A permit or procedure question about their own property is their own case
@@ -123,6 +108,30 @@ when a named place lies outside the kommun of the pin). A question with an open 
 what they plan to build) has no options. The card always adds a free-text field, so never write "Other", "Something
 else", "Don't know", "Unsure" or "Please specify" as an option. To have them pin the place, set offer_pin as well as
 asking for the place. Never list the kommuner of the corpus as options."""
+
+# After the user answered the card the rule above made the agent ask again in plain text, ask_user being gone
+# (41 of 99 follow-ups in the missing-info eval, 2026-11-12): a run that cannot ask gets this instead
+ANSWERED_GUIDE = """Asking is over: the user has answered your questions (or declined to). Do not ask anything
+more, in the text or otherwise, whatever other instructions say about asking. Research their question with the
+tools as usual, using what they told you, and answer it in full in the mode's format; state as assumptions what
+is still unknown."""
+
+MODES = ("verdict", "explain", "propose", "develop")
+
+MODES_GUIDE = """Kinds of questions (the mode of answer_ready; a question can mix them: pick the main one):
+- verdict: a defined project at a known place: is it allowed, under which rules, how to get it approved?
+- explain: how a rule, procedure, fee, deadline, map or document works; there is no project to judge.
+- propose: the place is NOT fixed: the user asks where in a kommun a project could go (or what could be done with some
+  land). This stays propose even when they also ask which approvals or studies it would take. Work fast from the
+  översiktsplan: grep the kommun for its growth wording (e.g. 'utvecklingsområde|utbyggnadsområde|nya bostäder|
+  prioriterade|serviceort|LIS'), read the 1-3 strongest passages (and its fördjupningar if listed), and note its limits
+  (strandskydd, riksintressen, jordbruksmark, VA capacity). Propose places named in those documents, never invented
+  ones, with what the documents say about each; do not research every place in depth (4-6 turns).
+- develop: the place and the idea are given (roughly) and the user asks what is missing or how to make it work: find
+  what could block it and the ways to make it work (another location or scale, phasing, the plan route: planbesked +
+  detaljplan vs förhandsbesked + bygglov, liten avvikelse, dispens, shared facilities as a gemensamhetsanläggning),
+  and what you need to know from the user.
+""" + "\n" + ASK_GUIDE
 
 ANSWER_FORMAT = """Answer in markdown, in the answer language (see the answer-language rule below), in the format of the mode you chose. The headings are given in English; a Swedish answer uses the Swedish headings in brackets:
 - verdict:
@@ -343,6 +352,8 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
                + ([ASK_USER_TOOL] if allow_ask else []))
     note = f"\n\nNot available in this session: {', '.join(sorted(disabled))}." if disabled else ""
     instructions = SYSTEM_PROMPT.replace(NATIONAL_SCOPE, kommun_scope(tools)) + note
+    if not allow_ask:
+        instructions = instructions.replace(ASK_GUIDE, ANSWERED_GUIDE)
     # An image goes with the next model call only (re-sending every image each turn multiplied the input tokens):
     # `fresh` = attached, not sent yet; `shown` = sent once, replaced by text before the following call
     fresh: list[int] = []
