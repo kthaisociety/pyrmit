@@ -226,4 +226,6 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
     law_rows = [chunk_row(c) for c in chunks if c["kind"] == "law"]
     local_rows = [chunk_row(c) for c in chunks if c["kind"] != "law"]
     return {"answer": answer, "law_rows": law_rows, "local_rows": local_rows, "sources": numberer.labels,
-            "citations": numberer.citations(), "choices": list(run.choices), "offer_pin": run.offer_pin, "run": run}
+            "citations": numberer.citations(),
+            "questions": [{"question": asked.question, "options": list(asked.options)} for asked in run.questions],
+            "offer_pin": run.offer_pin, "run": run}

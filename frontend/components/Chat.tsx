@@ -27,6 +27,7 @@ import { authFetch } from '@/lib/auth';
 import { fill, type LanguageState, useLanguage } from '@/lib/i18n';
 import ChunkCard from '@/components/ChunkCard';
 import PipelineTrace, { type PipelineEvent, type RetrievedChunk } from '@/components/PipelineTrace';
+import QuestionCard, { getQuestionCard } from '@/components/QuestionCard';
 import SourceViewer, { type Citation } from '@/components/SourceViewer';
 import CitedMarkdown, { type ClaimFlag } from '@/components/CitedMarkdown';
 import PlaceChip from '@/components/place/PlaceChip';
@@ -137,55 +138,10 @@ function parseAssistantContent(content: string): { body: string; sources: string
   return { body, sources };
 }
 
-/** The options of a question the agent asked the user to choose from (its `choices` event), and whether it also
- *  offers to pin the place on the map. */
-function getChoices(pipeline: PipelineEvent[]): { options: string[]; offerPin: boolean } {
-  const data = pipeline.find((item) => item.stage === 'choices')?.data;
-  const options = Array.isArray(data?.options)
-    ? data.options.filter((option: unknown): option is string => typeof option === 'string')
-    : [];
-  return { options, offerPin: data?.offer_pin === true };
-}
-
-/** The options under the agent's question: clicking one sends it as the user's reply; "Pin it on the map" opens the
- *  map. The user can always type something else instead. */
-function Choices({ options, offerPin, onChoose, onPin, awaitingPin }: {
-  options: string[];
-  offerPin: boolean;
-  onChoose: (option: string) => void;
-  onPin?: () => void;
-  awaitingPin?: boolean; // the user clicked "Pin it on the map": the next pin answers the question
-}) {
-  const { t } = useLanguage();
-  return (
-    <div className="mt-3 space-y-2">
-    <div className="flex flex-wrap gap-2" role="group" aria-label={t('chat.answerOptions')}>
-      {offerPin && onPin && (
-        <button
-          type="button"
-          onClick={onPin}
-          className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-zinc-700 active:scale-[0.97] dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
-        >
-          <MapPin size={14} aria-hidden />
-          {t('chat.pinOnMap')}
-        </button>
-      )}
-      {options.map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onChoose(option)}
-          className="rounded-full border border-zinc-300 bg-white px-3.5 py-1.5 text-sm font-medium text-zinc-800 transition hover:border-zinc-400 hover:bg-zinc-50 active:scale-[0.97] dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-      {awaitingPin ? t('chat.pinHint') : t('chat.typeOwnAnswer')}
-    </p>
-    </div>
-  );
+/** The question card of an assistant message (its `choices` event), or null when it asked nothing. */
+function cardOf(message: Message) {
+  const data = (message.pipeline ?? []).find((item) => item.stage === 'choices')?.data;
+  return getQuestionCard(data, parseAssistantContent(message.content).body);
 }
 
 function getCitations(pipeline: PipelineEvent[]): Citation[] {
@@ -752,23 +708,25 @@ function AssistantBubble({
   isStreaming,
   onCopy,
   copied,
-  onChoose,
+  onAnswer,
   onPin,
   awaitingPin,
+  reply,
 }: {
   message: Message;
   isStreaming: boolean;
   onCopy: () => void;
   copied: boolean;
-  onChoose?: (option: string) => void; // set on the last answer only: older questions have been answered
+  onAnswer?: (reply: string) => void; // set on the last answer only: older questions have been answered
   onPin?: () => void;
   awaitingPin?: boolean;
+  reply?: string; // the user's reply to this message's question card, once given
 }) {
   const { t } = useLanguage();
   const { body, sources } = parseAssistantContent(message.content);
   const hasBody = Boolean(body.trim());
   const citations = getCitations(message.pipeline ?? []);
-  const choices = getChoices(message.pipeline ?? []);
+  const card = cardOf(message);
   const [openCitation, setOpenCitation] = useState<Citation | null>(null);
   // Answer still being generated on the server (the user left and came back): refreshed by polling
   const inBackground = !isStreaming && message.status === 'streaming';
@@ -777,6 +735,8 @@ function AssistantBubble({
   const showProgress = (isStreaming || inBackground) && !hasBody && steps.length > 0;
   const claimCheck = getClaimCheck(message.pipeline ?? []);
   const checking = hasBody && !claimCheck && (inBackground || (isStreaming && startedChecking(message.steps)));
+  // A question card replaces the text of its questions once the answer is done (the text is the same questions)
+  const showCard = card !== null && !isStreaming && !inBackground;
 
   return (
     <div className="relative max-w-[85%] rounded-2xl border border-zinc-200 bg-white px-5 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">
@@ -806,7 +766,10 @@ function AssistantBubble({
         </div>
       )}
 
-      {hasBody ? (
+      {showCard ? (
+        <QuestionCard questions={card.questions} offerPin={card.offerPin} onAnswer={onAnswer} onPin={onPin}
+                      awaitingPin={awaitingPin} reply={reply} />
+      ) : hasBody ? (
         <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
           <div className="prose prose-sm max-w-none dark:prose-invert">
             <CitedMarkdown body={body} citations={citations} onOpen={setOpenCitation} flags={claimFlags(claimCheck)} />
@@ -823,11 +786,6 @@ function AssistantBubble({
           <Loader2 size={14} className="animate-spin" />
           {inBackground ? t('chat.stillGenerating') : t('chat.starting')}
         </div>
-      )}
-
-      {onChoose && !isStreaming && !inBackground && (choices.options.length > 0 || choices.offerPin) && (
-        <Choices options={choices.options} offerPin={choices.offerPin} onChoose={onChoose} onPin={onPin}
-                 awaitingPin={awaitingPin} />
       )}
 
       {!isStreaming && !inBackground && (
@@ -964,7 +922,9 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
 
   const sendMessage = async (e: FormEvent) => {
     e.preventDefault();
-    await send(input);
+    // Typed below an open question card, the message answers it: the agent must not ask the same again
+    const last = messages.at(-1);
+    await send(input, last?.role === 'assistant' && cardOf(last) !== null);
   };
 
   // The pin set after "Pin it on the map" goes back to the agent as the answer, with the place (once it is named)
@@ -977,7 +937,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [awaitingPin, pin, pinLabel]);
 
-  // `answer`: the message answers the agent's own question (a clicked option, or a pin from its button)
+  // `answer`: the message answers the agent's question card (from the card, the chat input, or a pin from its button)
   const send = async (text: string, answer = false) => {
     const trimmedInput = text.trim();
     if (!trimmedInput || loading) return;
@@ -1241,7 +1201,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
                   isStreaming={streaming && i === lastIdx}
                   message={msg}
                   onCopy={() => handleCopy(msg.content, i)}
-                  onChoose={i === lastIdx && !loading ? (option) => void send(option, true) : undefined}
+                  onAnswer={i === lastIdx && !loading ? (answer) => void send(answer, true) : undefined}
+                  reply={messages[i + 1]?.role === 'user' ? messages[i + 1].content : undefined}
                   onPin={() => { setMapOpen(true); setAwaitingPin({ from: pin }); }}
                   awaitingPin={awaitingPin !== null && i === lastIdx}
                 />

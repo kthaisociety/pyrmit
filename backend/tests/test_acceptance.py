@@ -53,7 +53,8 @@ class AskIfAllowedClient(ScriptedClient):
     """Asks for the use whenever ask_user is offered, else answers."""
 
     def create(self, input, tools=(), stream=False, **kwargs):
-        super().create(input, tools, stream)
+        self.inputs.append(json.dumps(input, ensure_ascii=False, default=str))
+        self.tools.append([tool["name"] for tool in tools])
         if any(tool["name"] == "ask_user" for tool in tools):
             return asking({"questions": [{"question": "What will the building be used for?", "options": []}]})
         return answering("A permanent home needs bygglov.")
@@ -323,7 +324,7 @@ def test_answer_scores_on_par_with_the_baseline_pass():
 @pytest.fixture
 def cases() -> list[dict]:
     """The set, or none while it is not written."""
-    return read_jsonl(bench.MISSING_INFO_PATH) if bench.MISSING_INFO_PATH.exists() else []
+    return list(read_jsonl(bench.MISSING_INFO_PATH)) if bench.MISSING_INFO_PATH.exists() else []
 
 
 @pytest.mark.parametrize("expect", ["ask", "answer"])

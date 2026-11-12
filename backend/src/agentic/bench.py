@@ -60,6 +60,7 @@ from llm import get_openai_client, get_response_output_text, resolve_model_name
 from localrag.eval import matches
 from localrag.index import chunk_text
 from localrag.service import SWEDISH_QUERY_SUFFIX, split_rewrite
+from place.context import question_with_place
 
 CASES_PATH = Path(__file__).resolve().parent / "cases.jsonl"
 RESULTS_DIR = RESULTS_ROOT / "agentic"
@@ -327,6 +328,43 @@ MISSING_INFO_PATH = Path(__file__).resolve().parent / "cases_missing_info.jsonl"
 MISSING_INFO_PASS = 0.95
 
 
+ASK_JUDGE_INSTRUCTIONS = """You grade the clarifying questions a Swedish planning assistant asked a user instead of answering.
+Return JSON only: {"covered": [<0|1> per missing fact, in order], "options_ok": true|false, "comment": "<one sentence>"}.
+- covered: 1 if the questions ask for that fact (in any wording, or as one of the options; a button offering to pin the
+  place on the map asks for the place), else 0. Empty list when no missing facts are listed.
+- options_ok: true if every question's options fit it: either 2-4 distinct, complete replies the user could click and
+  the assistant could act on (none of them "other", "something else" or "please specify"), or no options where the
+  answer is open (a size, an address, a description); false if any question has options that are incomplete,
+  overlapping, need more input, or are missing where a few obvious answers exist."""
+
+
+def _card(run: AgentRun) -> list[dict]:
+    return [{"question": asked.question, "options": list(asked.options)} for asked in run.questions]
+
+
+def judge_card(case: dict, run: AgentRun, model: str) -> dict:
+    """The judge's view of a question card: which of the case's missing facts it asks for, and whether its options
+    fit."""
+    missing = case.get("missing") or []
+    card = "\n".join(f"- {asked.question}" + (f" Options: {' | '.join(asked.options)}" if asked.options
+                                                 else " (open question, free text)") for asked in run.questions)
+    if run.offer_pin:
+        card += "\n- (button: pin the place on the map)"
+    facts = "\n".join(f"{i + 1}. {fact}" for i, fact in enumerate(missing)) or "(none listed)"
+    response = get_openai_client().responses.create(
+        model=model, reasoning={"effort": "low"}, instructions=ASK_JUDGE_INSTRUCTIONS,
+        input=f"User's question: {case['question']}\n\nMissing facts:\n{facts}\n\nQuestions asked:\n{card}",
+    )
+    text = get_response_output_text(response).strip()
+    text = text[text.find("{"):text.rfind("}") + 1]
+    try:
+        grade = json.loads(text)
+    except json.JSONDecodeError:
+        grade = {"covered": [0] * len(missing), "options_ok": False, "comment": f"unparseable judge output: {text[:200]}"}
+    grade["judge_cost"] = float(getattr(response.usage, "cost", 0) or 0)
+    return grade
+
+
 def grade_asked(case: dict, run: AgentRun, judge_model: str) -> dict:
     """How one run of a missing-info case handled the missing facts, as stored in its result row.
 
@@ -340,7 +378,21 @@ def grade_asked(case: dict, run: AgentRun, judge_model: str) -> dict:
     - ask_ok: a should-ask case asked and covered every missing fact; a should-answer case did not ask.
     - questions: the card as [{"question", "options"}], [] when it answered.
     No judge call when the run did not ask."""
-    raise NotImplementedError
+    expect = case.get("expect", "answer")
+    asked = bool(run.questions)
+    row = {"expect": expect, "lang": case.get("lang", "en"), "asked": asked, "missing_covered": None,
+           "options_ok": None, "questions": _card(run), "ask_comment": None, "ask_judge_cost": 0.0}
+    if asked:
+        grade = judge_card(case, run, judge_model)
+        row["options_ok"] = bool(grade.get("options_ok"))
+        row["ask_comment"], row["ask_judge_cost"] = grade.get("comment"), grade.get("judge_cost", 0.0)
+        missing = case.get("missing") or []
+        if expect == "ask" and missing:
+            covered = list(grade.get("covered") or [])
+            covered = (covered + [0] * len(missing))[:len(missing)]
+            row["missing_covered"] = sum(1 for c in covered if c) / len(missing)
+    row["ask_ok"] = (asked and row["missing_covered"] == 1.0) if expect == "ask" else not asked
+    return row
 
 
 def follow_up(case: dict, asked: AgentRun, tools, model: str, effort: str = "medium",
@@ -348,7 +400,19 @@ def follow_up(case: dict, asked: AgentRun, tools, model: str, effort: str = "med
     """The agent's answer once the user has replied to its question card: a new run on the case's scripted `reply`,
     with the case's question and the card (asked.answer) as the conversation before it, that cannot ask again.
     Graded like any answer against the case's key points (reported, no threshold)."""
-    raise NotImplementedError
+    history = [*(case.get("history") or []), {"role": "user", "content": missing_info_question(case)},
+               {"role": "assistant", "content": asked.answer}]
+    return run_agent(question_with_place(case["reply"], None, answered=True), tools, history=history, model=model,
+                     effort=effort, explore_effort=explore_effort, max_steps=max_steps, allow_ask=False)
+
+
+def missing_info_question(case: dict) -> str:
+    """A missing-info case's question as the chat sends it with nothing pinned (the no-pin hint before it)."""
+    return question_with_place(case["question"], None)
+
+
+def _rate(rows: list[dict]) -> float | None:
+    return sum(1 for row in rows if row.get("ask_ok")) / len(rows) if rows else None
 
 
 def missing_info_summary(rows: list[dict], baseline_points: float | None = None) -> dict:
@@ -359,7 +423,24 @@ def missing_info_summary(rows: list[dict], baseline_points: float | None = None)
     `points` the should-answer half's mean key-point score. `points_ok` is whether that score is not below
     `baseline_points` (today's score on the same cases; None without one). `passed`: both rates reach
     MISSING_INFO_PASS and points_ok is not False. A half without rows has rate None and fails."""
-    raise NotImplementedError
+    ask = [row for row in rows if row.get("expect") == "ask"]
+    answer = [row for row in rows if row.get("expect") == "answer"]
+    scored = [row["points"] for row in answer if row.get("points") is not None]
+    points = sum(scored) / len(scored) if scored else None
+    # rounded: a mean of identical scores must not fall below the same baseline by float noise
+    points_ok = (None if baseline_points is None or points is None
+                 else round(points, 6) >= round(baseline_points, 6))
+    summary = {
+        "ask": {"n": len(ask), "rate": _rate(ask)},
+        "answer": {"n": len(answer), "rate": _rate(answer), "points": points, "points_ok": points_ok},
+        "by_lang": {lang: {"ask": _rate([r for r in ask if r.get("lang") == lang]),
+                           "answer": _rate([r for r in answer if r.get("lang") == lang])}
+                    for lang in sorted({row.get("lang", "en") for row in ask + answer})},
+    }
+    rates = (summary["ask"]["rate"], summary["answer"]["rate"])
+    summary["passed"] = (all(rate is not None and rate >= MISSING_INFO_PASS for rate in rates)
+                         and points_ok is not False)
+    return summary
 
 
 def evidence_recall(case: dict, seen: list[str], tools) -> float | None:
@@ -458,6 +539,9 @@ def main() -> None:
     parser.add_argument("--judge-model", help="grading model (default: --model), e.g. xiaomi/mimo-v2.6-flash")
     parser.add_argument("--label", help="tag appended to the result file name (-x-<label>) for experiments the name does "
                                         "not describe (another agent model or prompt), e.g. mimo-flash")
+    parser.add_argument("--baseline", type=Path,
+                        help="missing-info cases: results file of the same cases before the change; the should-answer "
+                             "half must score at least its key points")
     parser.add_argument("--leakage", action="store_true",
                         help="no LLM: print the rank of each evidence group in a plain search on the question, then exit")
     args = parser.parse_args()
@@ -495,16 +579,34 @@ def main() -> None:
         return
     print(f"{len(cases)} cases, corpus: {corpus}, model {model}, effort {args.effort}, judge {judge_model}")
 
+    explore = None if args.explore_effort == "same" else args.explore_effort
+
     def run_case(job: tuple[dict, str, int]) -> dict:
         case, system, repeat = job
+        # Missing-info cases (expect): asked as the chat asks with nothing pinned; a question card is graded on what
+        # it asks, then answered with the scripted reply and the follow-up graded on the key points
+        missing_info = "expect" in case
+        question = missing_info_question(case) if missing_info else case["question"]
         try:
             run = (run_rag(case["question"], tools, model, args.effort) if system == "rag"
-                   else run_agent(case["question"], tools, history=case.get("history"), model=model,
-                                  effort=args.effort, max_steps=args.max_steps,
-                                  explore_effort=None if args.explore_effort == "same" else args.explore_effort,
+                   else run_agent(question, tools, history=case.get("history"), model=model,
+                                  effort=args.effort, max_steps=args.max_steps, explore_effort=explore,
                                   disabled_tools=set(args.disable_tools or ())))
         except Exception as exc:  # noqa: BLE001 - keep the benchmark going; the failure is reported
             run = AgentRun(error=repr(exc))
+        asked_row: dict = {}
+        if missing_info and not run.error:
+            asked_row = grade_asked(case, run, judge_model)
+            if run.questions:  # the graded answer is the one after the user's reply
+                card_cost = run.usage["cost"]
+                try:
+                    answered = follow_up(case, run, tools, model, args.effort, explore, args.max_steps)
+                except Exception as exc:  # noqa: BLE001 - reported like a failed run
+                    answered = AgentRun(error=repr(exc))
+                answered.usage["cost"] += card_cost
+                answered.questions = run.questions
+                run = answered if case["expect"] == "ask" else AgentRun(
+                    questions=run.questions, usage=run.usage, steps=run.steps, seconds=run.seconds)
         grade = (grade_answer(case, run.answer, tools, judge_model, run.seen_chunks) if run.answer
                  else {"task": case.get("task", "verdict"), "lang": case.get("lang", "en"), "language_ok": False,
                        "quotes_ok": None, "verdict": "none",
@@ -527,7 +629,12 @@ def main() -> None:
             "cost": round(run.usage["cost"], 5), "judge_cost": grade.get("judge_cost", 0),
             "tokens_in": run.usage["input_tokens"], "tokens_out": run.usage["output_tokens"],
             "comment": grade.get("comment"), "answer": run.answer, "steps": run.steps, "error": run.error,
+            **asked_row,
         }
+        if missing_info:
+            row["judge_cost"] += row.pop("ask_judge_cost", 0.0)
+            if case["expect"] == "answer" and row.get("asked"):  # a card where an answer was due scores nothing
+                row["points"] = 0.0
         evidence = "-" if row["evidence"] is None else format(row["evidence"], ".2f")
         verdict = (f"verdict {row['verdict']:<13}{'OK ' if row['verdict_ok'] else 'NO '}" if row["verdict_ok"] is not None
                    else f"mode {row['mode'] or '-':<8}" + (f" anchors {row['anchors']:.2f}" if "anchors" in row else ""))
@@ -605,12 +712,44 @@ def main() -> None:
                     print(f"         {key:<11} per repeat: "
                           f"{', '.join('-' if v is None else f'{v:.2f}' for v in per_repeat)}")
 
+    if any("expect" in row for row in rows):
+        print_missing_info(rows, args.baseline)
+
     if any(row.get("steps") for row in rows):
         # Failed tool calls do not show in the scores (the agent works around them): flag them here
         print("\nTool health (calls that returned nothing usable):")
         print("\n".join("  " + line for line in health_lines(rows)))
 
     print(f"\nSaved {out}")
+
+
+def print_missing_info(rows: list[dict], baseline: Path | None) -> None:
+    """The missing-info eval's result per system, against MISSING_INFO_PASS (and the baseline's key points)."""
+    for system in sorted({row["system"] for row in rows if "expect" in row}):
+        mine = [row for row in rows if row["system"] == system and "expect" in row]
+        baseline_points = None
+        if baseline:
+            before = [row for row in json.loads(baseline.read_text(encoding="utf-8"))
+                      if row.get("system") == system and row.get("expect") == "answer" and not row.get("error")]
+            baseline_points = sum(row["points"] for row in before) / len(before) if before else None
+        summary = missing_info_summary(mine, baseline_points)
+
+        def pct(value: float | None) -> str:
+            return "-" if value is None else f"{value:.0%}"
+        answer = summary["answer"]
+        print(f"\nMissing-info eval, {system} (pass: {MISSING_INFO_PASS:.0%} on each half):")
+        print(f"  should ask     n {summary['ask']['n']:>3}  asked for every missing fact {pct(summary['ask']['rate'])}")
+        print(f"  should answer  n {answer['n']:>3}  answered without a card {pct(answer['rate'])}  points "
+              + ("-" if answer["points"] is None else f"{answer['points']:.2f}")
+              + ("" if baseline_points is None else f" (baseline {baseline_points:.2f}, "
+                 f"{'OK' if answer['points_ok'] else 'BELOW'})"))
+        for lang, rates in summary["by_lang"].items():
+            print(f"  {lang:<13}  should ask {pct(rates['ask'])}  should answer {pct(rates['answer'])}")
+        cards = [row for row in mine if row.get("options_ok") is not None]
+        follow = [row["points"] for row in mine if row["expect"] == "ask" and row.get("asked")]
+        print(f"  options fit {pct(sum(r['options_ok'] for r in cards) / len(cards) if cards else None)} of {len(cards)} "
+              f"cards; follow-up points {sum(follow) / len(follow) if follow else 0:.2f} over {len(follow)}")
+        print(f"  {'PASSED' if summary['passed'] else 'FAILED'}")
 
 
 if __name__ == "__main__":
