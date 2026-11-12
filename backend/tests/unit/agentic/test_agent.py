@@ -205,9 +205,16 @@ def test_an_off_topic_answer_has_no_headings_and_no_sources():
     assert "no headings" in off_topic and "no citations" in off_topic
 
 
-def test_small_talk_may_say_what_pyrmit_helps_with_and_unrelated_questions_do_not():
+def test_small_talk_and_adjacent_questions_get_a_short_answer():
+    """Small talk and an adjacent question are answered, and may end with one sentence on what Pyrmit helps with."""
+    assert "Small talk and an adjacent question get a short, direct answer" in agent.OFF_TOPIC_GUIDE
     assert "at most one sentence on what Pyrmit helps with" in agent.OFF_TOPIC_GUIDE
-    assert "an unrelated question gets none" in agent.OFF_TOPIC_GUIDE
+
+
+def test_an_unrelated_question_is_declined_politely():
+    """A question with no tie to planning or building (cats, a recipe) gets no answer, only a polite decline."""
+    assert "An unrelated question gets no answer: decline politely" in agent.OFF_TOPIC_GUIDE
+    assert "Jag svarar på frågor om bygglov, detaljplaner och markfrågor i Sverige." in agent.OFF_TOPIC_GUIDE
 
 
 def test_a_rule_question_outside_the_corpus_gets_no_answer_in_substance():

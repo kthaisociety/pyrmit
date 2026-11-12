@@ -691,7 +691,8 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
 
 **Off-topic answers (#102).** A question outside Swedish planning, building and land law (small talk, adjacent topics
 the corpus lacks, unrelated questions) gets the fifth mode, `off_topic` (`agent.OFF_TOPIC`): `answer_ready` first, no
-tools, a short answer without headings or citations, never a question card (`OFF_TOPIC_GUIDE`). A rule question the
+tools, no headings or citations, never a question card (`OFF_TOPIC_GUIDE`). Small talk and adjacent questions get a
+short answer; an unrelated question gets a polite decline ("Det ligger utanför vad jag hjälper till med ..."). A rule question the
 corpus does not cover gets no answer in substance, only who can answer it; a mixed question stays a planning answer.
 The chat skips the claim check for an `off_topic` run, as for a question card.
 
