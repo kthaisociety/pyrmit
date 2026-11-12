@@ -51,13 +51,16 @@ const FLAG_TITLES: Record<ClaimFlag['verdict'], string> = {
   uncited: 'No source cited',
 };
 
+// A flag's text becomes markdown link text, which cannot hold brackets
+const canMark = (text: string) => text.length > 0 && !/[[\]]/.test(text);
+
 // Each flag's text found in the body -> a link to #flag-<verdict>, rendered as a <mark>; the flags not found
 function markFlags(body: string, flags: ClaimFlag[]): { marked: string; missing: ClaimFlag[] } {
   let marked = body;
   const missing: ClaimFlag[] = [];
   for (const flag of flags) {
     const text = flag.text.trim();
-    const at = text && !/[[\]]/.test(text) ? marked.indexOf(text) : -1;
+    const at = canMark(text) ? marked.indexOf(text) : -1;
     if (at < 0) {
       missing.push(flag);
       continue;

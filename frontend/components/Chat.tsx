@@ -207,6 +207,11 @@ function claimFlags(check: ClaimCheck | null): ClaimFlag[] {
 
 const CHECKING_LABEL = 'Checking the claims';
 
+// Whether the live stream has said that the answer's claims are being checked
+function startedChecking(steps: Step[] | undefined): boolean {
+  return (steps ?? []).some((step) => step.type === 'thinking' && step.label === CHECKING_LABEL);
+}
+
 // One row of the live process timeline: a status step ("Understanding your question") or a tool call
 interface ProcessItem {
   kind: 'thinking' | 'tool';
@@ -737,10 +742,7 @@ function AssistantBubble({
   const steps = inBackground ? stepsFromTrace(message.pipeline ?? []) : message.steps ?? [];
   const showProgress = (isStreaming || inBackground) && !hasBody && steps.length > 0;
   const claimCheck = getClaimCheck(message.pipeline ?? []);
-  // The answer is shown before its claims are checked: say so until the check is saved
-  const checking = hasBody && !claimCheck && (
-    (isStreaming && (message.steps ?? []).some((step) => step.type === 'thinking' && step.label === CHECKING_LABEL))
-    || inBackground);
+  const checking = hasBody && !claimCheck && (inBackground || (isStreaming && startedChecking(message.steps)));
 
   return (
     <div className="relative max-w-[85%] rounded-2xl border border-zinc-200 bg-white px-5 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">

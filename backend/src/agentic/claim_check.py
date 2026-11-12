@@ -14,21 +14,22 @@ answers with the revised answer text alone.
 import json
 import logging
 import os
-import re
 import threading
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
-from typing import Literal
+from typing import Literal, get_args
 
+from agentic.service import CITATION
 from llm import get_openai_client, get_response_output_text, resolve_model_name
 
 logger = logging.getLogger(__name__)
 
 Verdict = Literal["supported", "unsupported", "uncited"]
-VERDICTS = ("supported", "unsupported", "uncited")
-CITED = re.compile(r"c:([0-9a-f]{8,16})(?![0-9a-f])")
+_VERDICTS = get_args(Verdict)
+_DEFAULT_TIMEOUT_S = "60"
+_DEFAULT_EFFORT = "low"
 
-JUDGE_INSTRUCTIONS = """You check whether each factual claim of an answer is backed by the sources it cites.
+_JUDGE_INSTRUCTIONS = """You check whether each factual claim of an answer is backed by the sources it cites.
 List the specific factual claims of the answer: rules, numbers, deadlines, fees, document facts, legal references.
 Ignore generic advice, offers, questions and headings. A claim's citations are the [c:<chunk_id>] right after it.
 For each claim decide:
@@ -41,7 +42,7 @@ Return JSON only:
 {"claims": [{"text": "<exact span>", "verdict": "supported|unsupported|uncited", "chunk_ids": ["<cited ids>"],
   "supporting": [{"chunk_id": "<id>", "sentence": "<verbatim sentence of that source>"}]}]}"""
 
-REVISE_INSTRUCTIONS = """You correct an answer whose listed claims are not backed by the sources they cite.
+_REVISE_INSTRUCTIONS = """You correct an answer whose listed claims are not backed by the sources they cite.
 For each listed claim: if one of the sources below states it, keep it and cite that source as [c:<chunk_id>] (copy the
 id exactly); otherwise remove the claim, or say that it must be checked, without stating it as a fact.
 Change nothing else: keep every other sentence, the format, the headings, the language of the answer and the other
@@ -108,29 +109,34 @@ def verify_answer(answer: str, get_chunk: Callable[[str], dict | None], seen_chu
     that `get_chunk` cannot read in step 1 gives the answer unchanged with status "failed". A failure in step 2 or 3
     keeps the answer unchanged with step 1's verdicts."""
     if timeout_s is None:
-        timeout_s = float(os.getenv("CLAIM_CHECK_TIMEOUT_S", "60"))
-    state: dict = {}
+        timeout_s = float(os.getenv("CLAIM_CHECK_TIMEOUT_S", _DEFAULT_TIMEOUT_S))
+    outcome: dict = {}
 
     def run() -> None:
         try:
-            state["first"] = _judge(answer, get_chunk)
-            if not any(claim.verdict != "supported" for claim in state["first"]):
-                return
-            revised = _revise(answer, state["first"], get_chunk, seen_chunk_ids)
-            state["final"] = (revised, _judge(revised, get_chunk))
+            outcome["first"] = _judge(answer, get_chunk)
+            unbacked = _unbacked(outcome["first"])
+            if unbacked:
+                revised = _revise(answer, unbacked, get_chunk, seen_chunk_ids)
+                outcome["revised"] = VerifiedAnswer(
+                    answer=revised, check=ClaimCheck(status="checked", claims=_judge(revised, get_chunk)))
         except Exception:
             logger.warning("Claim check failed", exc_info=True)
 
     worker = threading.Thread(target=run, name="claim-check", daemon=True)
     worker.start()
     worker.join(timeout_s)
-    # Read once: a worker past the timeout may still write
-    first, final = state.get("first"), None if worker.is_alive() else state.get("final")
+    finished = not worker.is_alive()
+    first, revised = outcome.get("first"), outcome.get("revised") if finished else None
+    if revised is not None:
+        return revised
     if first is None:
         return VerifiedAnswer(answer=answer, check=ClaimCheck(status="failed"))
-    if final is None:
-        return VerifiedAnswer(answer=answer, check=ClaimCheck(status="checked", claims=first))
-    return VerifiedAnswer(answer=final[0], check=ClaimCheck(status="checked", claims=final[1]))
+    return VerifiedAnswer(answer=answer, check=ClaimCheck(status="checked", claims=first))
+
+
+def _unbacked(claims: list[Claim]) -> list[Claim]:
+    return [claim for claim in claims if claim.verdict != "supported"]
 
 
 def _model() -> str:
@@ -142,7 +148,7 @@ def _model() -> str:
 def _ask(instructions: str, text: str) -> str:
     response = get_openai_client().responses.create(
         model=_model(), instructions=instructions, input=text,
-        reasoning={"effort": os.getenv("CLAIM_CHECK_EFFORT", "low").strip() or "low"},
+        reasoning={"effort": os.getenv("CLAIM_CHECK_EFFORT", _DEFAULT_EFFORT).strip() or _DEFAULT_EFFORT},
     )
     return get_response_output_text(response).strip()
 
@@ -163,12 +169,12 @@ def _sources(chunk_ids: list[str], get_chunk: Callable[[str], dict | None], stri
 
 
 def _judge(answer: str, get_chunk: Callable[[str], dict | None]) -> list[Claim]:
-    sources = _sources(CITED.findall(answer), get_chunk, strict=True)
-    reply = _ask(JUDGE_INSTRUCTIONS, f"Cited sources:\n\n{sources}\n\nAnswer:\n{answer}")
+    sources = _sources(CITATION.findall(answer), get_chunk, strict=True)
+    reply = _ask(_JUDGE_INSTRUCTIONS, f"Cited sources:\n\n{sources}\n\nAnswer:\n{answer}")
     parsed = json.loads(reply.strip("`").removeprefix("json").strip())
     claims = []
     for item in parsed["claims"]:
-        if item["verdict"] not in VERDICTS or not isinstance(item["text"], str):
+        if item["verdict"] not in _VERDICTS or not isinstance(item["text"], str):
             raise ValueError(f"not a claim: {item!r}")
         supporting = [Support(chunk_id=str(s["chunk_id"]), sentence=str(s["sentence"]))
                       for s in item.get("supporting") or []] if item["verdict"] == "supported" else []
@@ -177,11 +183,11 @@ def _judge(answer: str, get_chunk: Callable[[str], dict | None]) -> list[Claim]:
     return claims
 
 
-def _revise(answer: str, claims: list[Claim], get_chunk: Callable[[str], dict | None],
+def _revise(answer: str, unbacked: list[Claim], get_chunk: Callable[[str], dict | None],
             seen_chunk_ids: list[str]) -> str:
-    wrong = "\n".join(f"- {claim.text} ({claim.verdict})" for claim in claims if claim.verdict != "supported")
-    sources = _sources(CITED.findall(answer) + list(seen_chunk_ids), get_chunk, strict=False)
-    revised = _ask(REVISE_INSTRUCTIONS, f"Claims to fix:\n{wrong}\n\nSources:\n\n{sources}\n\nAnswer:\n{answer}")
+    to_fix = "\n".join(f"- {claim.text} ({claim.verdict})" for claim in unbacked)
+    sources = _sources(CITATION.findall(answer) + list(seen_chunk_ids), get_chunk, strict=False)
+    revised = _ask(_REVISE_INSTRUCTIONS, f"Claims to fix:\n{to_fix}\n\nSources:\n\n{sources}\n\nAnswer:\n{answer}")
     if not revised:
         raise ValueError("empty rewrite")
     return revised
