@@ -13,7 +13,7 @@ Load these only when the task needs them:
 
 ## Project Overview
 
-Pyrmit is a Swedish legal RAG (Retrieval-Augmented Generation) chat assistant focused on Swedish land law and urban planning regulations (*fastighetsrätt*, *Plan- och bygglagen*). Planning documents (detaljplaner as PDF) are OCR-processed (Mistral), chunked, and embedded into a PostgreSQL+pgvector database alongside chunked Swedish law texts. The chat translates the user's question to English, retrieves relevant law and document chunks, and calls an OpenAI model (directly or via Vercel AI Gateway) to answer **in English**, quoting Swedish source text verbatim. When a question contains both a location and a number of units, a multi-agent feasibility analysis runs instead of plain RAG.
+Pyrmit is a Swedish legal RAG (Retrieval-Augmented Generation) chat assistant focused on Swedish land law and urban planning regulations (*fastighetsrätt*, *Plan- och bygglagen*). Planning documents (detaljplaner as PDF) are OCR-processed (Mistral), chunked, and embedded into a PostgreSQL+pgvector database alongside chunked Swedish law texts. The chat translates the user's question to English, retrieves relevant law and document chunks, and calls an OpenAI model (directly or via Vercel AI Gateway) to answer **in the question's language** (Swedish or English, English for any other), quoting Swedish source text verbatim (PCR-0006). When a question contains both a location and a number of units, a multi-agent feasibility analysis runs instead of plain RAG.
 
 ---
 
@@ -252,6 +252,8 @@ Frontend (`frontend/.env`):
 ### Backend (Python / FastAPI)
 
 - `backend/src/main.py` -- FastAPI app entry, CORS, router registration
+- `backend/src/answer_language.py` -- the answer-language rule every answer prompt carries, and `split_language` for the rewrite's `LANG:` line (PCR-0006, ADR-0011)
+- `backend/src/glossary.py` -- Swedish domain terms an English answer keeps in Swedish, with their English explanation
 - `backend/src/llm.py` -- chat client and model name resolution (OpenAI, AI Gateway, OpenRouter), Responses API helpers, timeout and retry (PCR-0003)
 - `backend/src/embeddings.py` -- `Embedder` (openai / openrouter / a local OpenAI-compatible server / in-process sentence-transformers), `get_embedder()` from `EMBEDDING_*`; the vector column dimension is `EMBEDDING_DIM`; `main.py` logs an error when the tables were embedded with another model (PCR-0003, PCR-0004)
 - `backend/src/pipeline_trace.py` -- `CallRecorder` + `recorded_chat_completion` / `recorded_embedding`: prompts, outputs, token usage, cost and timings of every call, for the pipeline inspector
@@ -408,9 +410,9 @@ The frontend uses `POST /api/chat/stream` (SSE); `POST /api/chat` runs the same 
 
 1. Access-gate middleware, then `get_current_user` checks the bearer JWT and its login session.
 2. The chat session is created or looked up; the user message and an empty assistant message (status `streaming`) are saved. The answer is generated in a background thread independent of the HTTP connection: the response only relays its events, so closing the tab or opening another chat neither stops nor loses the answer.
-3. A model call rewrites the latest message as a standalone English query (location, units and project type from the last 5 messages).
+3. A model call rewrites the latest message as a standalone English query (location, units and project type from the last 5 messages) and decides the answer language on a first `LANG: sv|en` line (`answer_language.split_language`, ADR-0011).
 4. `parse_query` extracts location, units and project type by regex.
-5. Location or units missing: general RAG, the query embedded once, the top `RAG_TOP_K` law and document chunks, an answer in English markdown quoting Swedish verbatim (PCR-0006) and a Sources list. Both present: `Orchestrator.analyze` runs LawAgent and DocumentAgent in parallel and applies fixed rules for the verdict.
+5. Location or units missing: general RAG, the query embedded once, the top `RAG_TOP_K` law and document chunks, an answer in markdown in the question's language, given the question as the user wrote it, quoting Swedish verbatim (PCR-0006), and a Sources list. Both present: `Orchestrator.analyze` runs LawAgent and DocumentAgent in parallel and applies fixed rules for the verdict; its texts and `format_response` follow the decided language.
 6. SSE events: `session_id`, `thinking`, `tool_call` / `tool_result`, `pipeline`, `response.output_text.delta`, `answer_replaced` (agent mode: the answer rewritten by the claim check, whole), `response.completed`, `done` (or `error`). `relay()` sends a `: keep-alive` comment after 10 s idle (`SSE_HEARTBEAT_S`), since the Next.js dev proxy drops a stream idle for 30 s; the frontend aborts after 45 s without bytes (`STREAM_STALL_MS`) and reloads the session.
 7. The worker updates the assistant message from the events: partial content every 2 s, then the final content, its `trace` (every pipeline event) and status `done` (or `error`).
 
@@ -779,7 +781,7 @@ Tasks beyond the verdict (the product vision: also explain rules, propose projec
 bench and the Benchmark view): `verdicts` are optional (`verdict_ok` null without them); propose cases carry `anchors`
 (places the plans designate, scored by whole-word string match, `min_anchors` needed) and the judge lists the answer's
 `proposals` (sourced or not); develop key points are prefixed "Obstacle:" / "Lever:" / "Ask:" (scored per kind); agent rows
-get `mode` / `mode_ok`. `agentic/cases_tasks.jsonl` = 10 hand-written seeds (Vallentuna, Norrtälje, Uppsala, Gotland,
+get `mode` / `mode_ok`. Every row has `lang`, `language_ok` (answer in the case's language) and `quotes_ok` (Swedish quotes verbatim in the cited chunks). `agentic/cases_bilingual.jsonl` = the 24 cases of `cases.jsonl` + `cases_tasks.jsonl` in Swedish and English (`pair`, `lang`) plus 10 `hard` cases (mixed language, "ja" with `history`, other languages, a lone term), reported per language: `bench --cases-file cases_bilingual.jsonl` (bar: `language_ok` and `quotes_ok` >= 0.98 on sv and en, points within 0.05 and verdict_ok within 5 points between them). `agentic/cases_tasks.jsonl` = 10 hand-written seeds (Vallentuna, Norrtälje, Uppsala, Gotland,
 verbatim evidence); `python -m agentic.cases_from_corpus` drafts more from corpus documents (guidance pages / ÖP growth
 passages / rural + VA passages + statutes) with **MiMo v2.6 Flash** (another model family than the agent), keeps only
 points whose quote is found verbatim (`longest_phrase`), drafts cached in `data/agentic/task_drafts.jsonl` ->

@@ -16,12 +16,14 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 
 from agentic.tools import TOOL_SCHEMAS, CorpusTools, image_message, run_tool
+from answer_language import LANGUAGE_RULE
+from glossary import glossary_prompt
 from llm import get_openai_client, resolve_model_name
 from localrag.gazetteer import kommun_label
 
 DEFAULT_MODEL = "openai/gpt-6-luna"
 
-ROLE = """You are Pyrmit, an expert in Swedish land law and municipal planning (PBL, miljöbalken, jordabalken, fastighetsbildning, VA). Users (landowners, farmers, architects, developers, eco-village groups) ask in English about building and land projects in Swedish kommuner: whether a defined project is feasible, how a rule or procedure works, where a project could go, or how to turn a project idea into something that can be approved. Be a constructive advisor: besides the limits, point out the options that the rules and the kommun's plans leave open."""
+ROLE = """You are Pyrmit, an expert in Swedish land law and municipal planning (PBL, miljöbalken, jordabalken, fastighetsbildning, VA). Users (landowners, farmers, architects, developers, eco-village groups) ask in Swedish or English about building and land projects in Swedish kommuner: whether a defined project is feasible, how a rule or procedure works, where a project could go, or how to turn a project idea into something that can be approved. Be a constructive advisor: besides the limits, point out the options that the rules and the kommun's plans leave open."""
 
 TOOLS_GUIDE = """You have tools over an offline corpus:
 - Swedish statutes, one chunk per paragraph (§): PBL, PBF, MB, JB, FBL, BRL, anläggningslag, FMH (enskilt avlopp), LAV (vattentjänster), kulturmiljölag, ...
@@ -80,33 +82,33 @@ the user recognises it (e.g. "Use the pinned property, Fålhagen 61:11" / "Answe
 note when a named place lies outside the kommun of the pin). Never an option that asks the user to provide or type
 something: they can always type. To have them pin a place, set offer_pin instead of writing it as an option."""
 
-ANSWER_FORMAT = """Answer in English, in markdown, in the format of the mode you chose:
+ANSWER_FORMAT = """Answer in markdown, in the answer language (see the answer-language rule below), in the format of the mode you chose. The headings are given in English; a Swedish answer uses the Swedish headings in brackets:
 - verdict:
-  **Verdict:** one of Feasible / Feasible with conditions / Not feasible as described / Unclear, followed by one sentence.
-  **Key rules and constraints:** bullets.
-  **Process and next steps:** permits/notifications needed, who to contact at the kommun, fees and processing times when found.
-  **Uncertainties:** what the corpus did not show and what the user must check (e.g. the exact detaljplan for their property).
+  **Verdict:** [**Bedömning:**] one of Feasible / Feasible with conditions / Not feasible as described / Unclear [Genomförbart / Genomförbart med villkor / Inte genomförbart som beskrivet / Oklart], followed by one sentence.
+  **Key rules and constraints:** [**Regler och begränsningar:**] bullets.
+  **Process and next steps:** [**Process och nästa steg:**] permits/notifications needed, who to contact at the kommun, fees and processing times when found.
+  **Uncertainties:** [**Osäkerheter:**] what the corpus did not show and what the user must check (e.g. the exact detaljplan for their property).
 - explain:
-  **Answer:** two or three sentences.
-  **How it works:** numbered steps or bullets, each with its rule or document.
-  **In <kommun>:** local specifics (pages, fees, processing times, contacts), when the question names a kommun.
-  **Uncertainties:** as above.
+  **Answer:** [**Svar:**] two or three sentences.
+  **How it works:** [**Så fungerar det:**] numbered steps or bullets, each with its rule or document.
+  **In <kommun>:** [**I <kommun>:**] local specifics (pages, fees, processing times, contacts), when the question names a kommun.
+  **Uncertainties:** [**Osäkerheter:**] as above.
 - propose:
-  **Options:** 2-4 options, each a short paragraph: the place as the documents name it, what could be built there, why
+  **Options:** [**Alternativ:**] 2-4 options, each a short paragraph: the place as the documents name it, what could be built there, why
   it fits (what the plan says), its main constraints, and the first step (planbesked, förhandsbesked, bygglov).
-  **What decides between them:** the constraints and choices that matter most.
-  **Questions for you:** what would narrow the options.
-  **Uncertainties:** as above.
+  **What decides between them:** [**Vad som avgör mellan dem:**] the constraints and choices that matter most.
+  **Questions for you:** [**Frågor till dig:**] what would narrow the options.
+  **Uncertainties:** [**Osäkerheter:**] as above.
 - develop:
-  **Your project as understood:** one or two sentences.
-  **What could block it:** bullets, each with its rule.
-  **Ways to make it work:** concrete options (location, scale, plan route, shared facilities, phasing), each with the
+  **Your project as understood:** [**Ditt projekt som vi förstår det:**] one or two sentences.
+  **What could block it:** [**Vad som kan stoppa det:**] bullets, each with its rule.
+  **Ways to make it work:** [**Sätt att få det att fungera:**] concrete options (location, scale, plan route, shared facilities, phasing), each with the
   rule or plan statement that allows it.
-  **Suggested path:** ordered next steps.
-  **Questions for you:** the missing facts that change the answer.
-  **Uncertainties:** as above.
-In explain / propose / develop, add a **Verdict:** line only if the user asks whether something is allowed.
-Citations: name the law reference (e.g. PBL 9 kap. 4 §) or document in the sentence, and put the source id right after the claim as [c:<chunk_id>] (several: [c:<id>; c:<id>]). Copy ids exactly (16 characters) and never nest brackets: write "PBL 9 kap. 4 § allows … [c:<id>]", not "[PBL 9 kap. 4 § [c:<id>]]". Quote decisive Swedish wording briefly with an English gloss.
+  **Suggested path:** [**Föreslagen väg:**] ordered next steps.
+  **Questions for you:** [**Frågor till dig:**] the missing facts that change the answer.
+  **Uncertainties:** [**Osäkerheter:**] as above.
+In explain / propose / develop, add a **Verdict:** [**Bedömning:**] line only if the user asks whether something is allowed.
+Citations: name the law reference (e.g. PBL 9 kap. 4 §) or document in the sentence, and put the source id right after the claim as [c:<chunk_id>] (several: [c:<id>; c:<id>]). Copy ids exactly (16 characters) and never nest brackets: write "PBL 9 kap. 4 § allows … [c:<id>]", not "[PBL 9 kap. 4 § [c:<id>]]". Quote decisive Swedish wording verbatim, as the answer-language rule says.
 Grounding rules: every rule, number, fee, deadline or document fact must carry the [c:<chunk_id>] of a tool result
 that states it (tool results show these ids). If you did not read it in a tool result, do not state it, or say it
 must be checked.
@@ -115,9 +117,15 @@ Completeness: the user will act on this answer, so before writing go through you
 # its answer; +0.03 / +0.05 key points (MiMo / Luna judge) on the 52 dev cases, same latency and cost (benchmark
 # report 2.9, with the rejected variants: per-mode recipes + site checklist, MiMo Flash as the agent)
 
+# Repeated where the answer is written: after many Swedish tool results the model drifted into Swedish for English
+# questions (live run, 2026-11-07). It names no language: the model still decides it (ADR-0011)
+ANSWER_LANGUAGE_REMINDER = ("Write it in the user's language as the answer-language rule says: Swedish if they wrote "
+                            "Swedish, otherwise English, whatever the language of the sources.")
+
 IMAGE_REMOVED = "\n(Image removed after the turn it was shown in: use what you noted from it.)"
 
-SYSTEM_PROMPT = f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{PIN_GUIDE}\n\n{MODES_GUIDE}\n\n{ANSWER_FORMAT}"
+SYSTEM_PROMPT = (f"{ROLE}\n\n{TOOLS_GUIDE}\n\n{PIN_GUIDE}\n\n{MODES_GUIDE}\n\n{ANSWER_FORMAT}\n\n{LANGUAGE_RULE}\n\n"
+                 f"{glossary_prompt()}")
 
 # The corpus line of TOOLS_GUIDE about the kommuner: true of the national corpus only. On a snapshot (data/small's
 # few kommuner, the Neon demo's three) the agent answered "all 290 kommuner" from it; kommun_scope replaces it
@@ -185,10 +193,11 @@ ASK_USER_TOOL = {
     "description": "Call (alone) instead of answering when only the user can settle what the answer depends on "
                    "(e.g. which place they mean). The question becomes the reply; the options are shown as buttons.",
     "parameters": {"type": "object", "properties": {
-        "question": {"type": "string", "description": "one short question, in English"},
+        "question": {"type": "string", "description": "one short question, in Swedish if the user wrote Swedish, "
+                                                         "otherwise English"},
         "options": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": MAX_CHOICES,
-                    "description": "1-4 complete replies the user can click and you can act on without more input "
-                                   "(never 'please provide ...')"},
+                    "description": "1-4 complete replies the user can click and you can act on without more input, "
+                                   "in the answer language (never 'please provide ...')"},
         "offer_pin": {"type": "boolean", "description": "also show a button that opens the map to pin the place"},
     }, "required": ["question", "options"]},
 }
@@ -293,7 +302,7 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
             run.mode = mode if mode in MODES else None
             fmt = f"the {run.mode} format" if run.mode else "the required format"
             conversation.append({"type": "function_call_output", "call_id": call.call_id,
-                                 "output": f"Write the final answer now, in {fmt}."})
+                                 "output": f"Write the final answer now, in {fmt}. {ANSWER_LANGUAGE_REMINDER}"})
             asked_for_answer = True
         work = [c for c in calls if c.name not in ("answer_ready", "ask_user")]
         for call in work:
@@ -320,8 +329,8 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
     if not run.answer:
         # The final answer, streamed: the only turn that uses the answer effort
         if not asked_for_answer:
-            conversation.append({"role": "user", "content": "Tool budget reached: answer now with the evidence you "
-                                                            "have, in the required format."})
+            conversation.append({"role": "user", "content": "Tool budget reached: answer now with the evidence you have, "
+                                                            f"in the required format. {ANSWER_LANGUAGE_REMINDER}"})
         turn_started = time.perf_counter()
         send_images_once()
         stream = client.responses.create(model=model, instructions=instructions, input=conversation,

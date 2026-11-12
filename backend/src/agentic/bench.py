@@ -53,7 +53,9 @@ from agentic.agent import (
 from agentic.health import health_lines
 from agentic.run import build_tools
 from agentic.tools import resolve_cited
+from answer_language import LANGUAGE_RULE
 from corpus.common import RESULTS_ROOT, read_jsonl
+from glossary import glossary_prompt
 from llm import get_openai_client, get_response_output_text, resolve_model_name
 from localrag.eval import matches
 from localrag.index import chunk_text
@@ -69,7 +71,11 @@ chunk id [c:<id>]; cite it like that.
 
 {MODES_GUIDE}
 
-{ANSWER_FORMAT}"""
+{ANSWER_FORMAT}
+
+{LANGUAGE_RULE}
+
+{glossary_prompt()}"""
 
 JUDGE_INSTRUCTIONS = """You grade answers of a Swedish planning assistant against a reference.
 Return JSON only: {"verdict": "<feasible|conditional|not_feasible|unclear>", "points": [<0|1|2> per key point, in order], "unsupported_claims": <int>, "comment": "<one sentence>"}.
@@ -115,6 +121,8 @@ Return JSON only: {{"verdict": "<...|none>", "proposals": [{{"place": "<as the a
 # Every cited chunk, whole: with 15 x 1500 chars, a quarter of the agent answers had cited facts the judge never saw
 # (counted as unsupported)
 MAX_JUDGE_SOURCES, MAX_SOURCE_CHARS = 40, 3000
+_SOURCES_SEPARATOR = "\n---\n"  # the chat's source list follows the answer after this rule
+_CITED_ID = re.compile(r"c:([0-9a-f]{8,16})(?![0-9a-f])")
 MAP_TOOLS = {"view_map_area", "view_pdf_page"}
 POINT_KINDS = ("Obstacle", "Lever", "Ask")
 
@@ -160,7 +168,7 @@ def run_rag(question: str, tools, model: str, effort: str, k: int = 10) -> Agent
 def cited_sources(answer: str, tools, seen=()) -> str:
     """The text of the chunks the answer cites ([c:<id>]), so the judge can tell sourced facts from invented ones;
     `seen` (the chunks the system was shown) resolves miscopied ids as in the chat."""
-    ids = list(dict.fromkeys(re.findall(r"c:([0-9a-f]{8,16})(?![0-9a-f])", answer)))[:MAX_JUDGE_SOURCES]
+    ids = list(dict.fromkeys(_CITED_ID.findall(answer)))[:MAX_JUDGE_SOURCES]
     chunks = [(chunk_id, resolve_cited(tools.get_chunk, chunk_id, seen)) for chunk_id in ids]
     return "\n\n".join(f"[c:{chunk_id}] {chunk_text(chunk)[:MAX_SOURCE_CHARS]}" for chunk_id, chunk in chunks if chunk)
 
@@ -199,6 +207,79 @@ def anchor_hits(case: dict, answer: str) -> list[str]:
     return hits
 
 
+# Function words that tell Swedish from English text: domain terms are Swedish in both kinds of answer, so they do not count
+_SWEDISH_WORDS = frozenset(["och", "att", "det", "är", "en", "i", "för", "ett", "på", "som", "med", "av", "till", "du", "jag", "inte", "kan", "har", "om", "den", "de", "eller", "men", "från", "vid", "ska", "måste", "behöver", "enligt", "finns", "vad", "när", "så", "också", "får", "inom", "eftersom", "detta", "denna", "dessa", "sin", "sitt", "sina", "din", "ditt", "dina", "vi", "man", "där", "här", "än", "efter", "under", "hur", "bara", "redan", "alltså"])
+_ENGLISH_WORDS = frozenset(["the", "and", "to", "of", "is", "for", "you", "in", "that", "a", "an", "on", "with", "are", "be", "can", "not", "or", "this", "it", "must", "need", "your", "if", "as", "by", "from", "what", "when", "also", "may", "within", "because", "these", "those", "its", "we", "there", "here", "than", "after", "under", "how", "only", "already", "so", "which", "would", "should", "does", "do"])
+_MIN_QUOTE_WORDS = 3  # shorter quoted text is a term ("byggnadsarea"), not a quote of a source
+# Swedish and English answers measured 30-50% function words, German ones 1-2%: below this share it is another language
+_MIN_FUNCTION_WORD_SHARE = 0.1
+_QUOTED = re.compile(r'["“”]([^"“”\n]+)["“”]')
+_BLOCK_QUOTE = re.compile(r"^\s*>\s?(.*)$", re.MULTILINE)
+_QUOTE_EDGE = re.compile(r'^["“”]|["“”]\s*(\([^)]*\))?\s*$')
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"[a-zåäöéüßàâçèêëîïôûñ]+", text.lower())
+
+
+def _word_counts(text: str) -> tuple[int, int]:
+    """(Swedish function words, English function words) in the text."""
+    words = _words(text)
+    return sum(word in _SWEDISH_WORDS for word in words), sum(word in _ENGLISH_WORDS for word in words)
+
+
+def _tokens(text: str) -> list[str]:
+    return re.findall(r"\w+", text.lower())
+
+
+def _quotes(answer: str) -> list[str]:
+    """The quoted passages of an answer: text in quotation marks, and block quote lines without a pair of their own,
+    each without a quotation mark it opens or closes and a reference after it (a quote spanning lines
+    `> "...` / `> ..." (PBL 9 kap. 4 §)`)."""
+    quotes = [match.group(1) for match in _QUOTED.finditer(answer)]
+    for line in _BLOCK_QUOTE.findall(answer):
+        if not _QUOTED.search(line):
+            line = _QUOTE_EDGE.sub("", re.sub(r"^\*\*[^*]+:\*\*\s*", "", line.strip()))
+            quotes.append(line)
+    return quotes
+
+
+def _cited_texts(answer: str, tools, seen=()) -> list[str]:
+    """The full text of every chunk the answer cites ([c:<id>])."""
+    ids = dict.fromkeys(_CITED_ID.findall(answer))
+    chunks = (resolve_cited(tools.get_chunk, chunk_id, seen) for chunk_id in ids)
+    return [chunk_text(chunk) for chunk in chunks if chunk]
+
+
+def answer_language_ok(case: dict, answer: str) -> bool:
+    """The answer is written in the case's language (`lang`, "sv" or "en"; "en" when absent), read from its own words:
+    quoted source text, citation ids and the source list are left out, so an English answer quoting Swedish law is
+    still English. An empty answer, or one in any other language, is never ok. String matching only, no model call."""
+    own_words = _QUOTED.sub(" ", _BLOCK_QUOTE.sub(" ", answer.split(_SOURCES_SEPARATOR)[0]))
+    own_words = re.sub(r"\[c:[^\]]*\]", " ", own_words)
+    swedish, english = _word_counts(own_words)
+    words = len(_words(own_words))
+    if not words or max(swedish, english) < _MIN_FUNCTION_WORD_SHARE * words:
+        return False
+    return ("sv" if swedish > english else "en") == case.get("lang", "en")
+
+
+def quotes_verbatim(answer: str, sources: list[str]) -> bool:
+    """Every Swedish quote in the answer appears word for word in one of the source texts (case, whitespace and
+    punctuation ignored). A quote is text inside quotation marks ("…", “…”, ”…”) or a markdown block quote line without
+    quotation marks of its own; quotes that contain no Swedish word, such as an English translation, are not checked.
+    True when the answer quotes nothing. String matching only, no model call."""
+    haystack = [f" {' '.join(_tokens(source))} " for source in sources]
+    for quote in _quotes(answer):
+        swedish, english = _word_counts(quote)
+        words = _tokens(quote)
+        if len(words) < _MIN_QUOTE_WORDS or swedish <= english:
+            continue  # a quoted term or an English translation: nothing to check against the sources
+        if not any(f" {' '.join(words)} " in source for source in haystack):
+            return False
+    return True
+
+
 def mode_ok(case: dict, mode: str | None) -> bool:
     """The agent's mode (answer_ready) is one the case accepts: `modes` when a question mixes kinds (e.g. a
     verdict case asking "how does that work?"), else its task."""
@@ -206,12 +287,18 @@ def mode_ok(case: dict, mode: str | None) -> bool:
 
 
 def grade_answer(case: dict, answer: str, tools, judge_model: str, seen=()) -> dict:
-    """The task-dependent scores of one answer (LLM judge + string matching), as stored in a result row."""
+    """The task-dependent scores of one answer (LLM judge + string matching), as stored in a result row.
+
+    Every row also carries `lang` (the case's language), `language_ok` (answer_language_ok) and `quotes_ok`
+    (quotes_verbatim against the text of the chunks the answer cites)."""
     grade = judge(case, answer, judge_model, cited_sources(answer, tools, seen))
     scores = grade.get("points") or []
     scores = (list(scores) + [0] * len(case["key_points"]))[:len(case["key_points"])]  # judge returned too few / many
     row = {
         "task": case.get("task", "verdict"),
+        "lang": case.get("lang", "en"),
+        "language_ok": answer_language_ok(case, answer),
+        "quotes_ok": quotes_verbatim(answer, _cited_texts(answer, tools, seen)),
         "verdict": grade.get("verdict"),
         "verdict_ok": grade.get("verdict") in case["verdicts"] if case.get("verdicts") else None,
         "points": sum(scores) / (2 * len(case["key_points"])),
@@ -371,17 +458,19 @@ def main() -> None:
         case, system, repeat = job
         try:
             run = (run_rag(case["question"], tools, model, args.effort) if system == "rag"
-                   else run_agent(case["question"], tools, model=model, effort=args.effort, max_steps=args.max_steps,
+                   else run_agent(case["question"], tools, history=case.get("history"), model=model,
+                                  effort=args.effort, max_steps=args.max_steps,
                                   explore_effort=None if args.explore_effort == "same" else args.explore_effort,
                                   disabled_tools=set(args.disable_tools or ())))
         except Exception as exc:  # noqa: BLE001 - keep the benchmark going; the failure is reported
             run = AgentRun(error=repr(exc))
         grade = (grade_answer(case, run.answer, tools, judge_model, run.seen_chunks) if run.answer
-                 else {"task": case.get("task", "verdict"), "verdict": "none",
+                 else {"task": case.get("task", "verdict"), "lang": case.get("lang", "en"), "language_ok": False,
+                       "quotes_ok": None, "verdict": "none",
                        "verdict_ok": False if case.get("verdicts") else None, "points": 0.0, "unsupported": 0,
                        "comment": run.error, "judge_cost": 0, "judge_model": judge_model})
         row = {
-            "case": case["id"], "system": system, "model": model,
+            "case": case["id"], "system": system, "model": model, "hard": bool(case.get("hard")),
             "repeat": repeat, "effort": args.effort,
             "explore_effort": args.explore_effort,
             **{key: value for key, value in grade.items() if key not in ("comment", "judge_cost")},
@@ -457,6 +546,14 @@ def main() -> None:
                 print(f"         {task:<8} n {len(rows_task):>3}  points {mean('points', rows_task):.2f}  "
                       f"evidence {shown('evidence', rows_task)}  mode_ok {shown('mode_ok', rows_task)}  "
                       + "  ".join(f"{key} {shown(key, rows_task)}" for key in extra))
+        if any(row.get("lang") == "sv" for row in mine):  # bilingual cases: the scores per question language
+            for label, subset in (("sv", [r for r in mine if r.get("lang") == "sv" and not r.get("hard")]),
+                                  ("en", [r for r in mine if r.get("lang", "en") == "en" and not r.get("hard")]),
+                                  ("hard", [r for r in mine if r.get("hard")])):
+                if subset:
+                    print(f"         {label:<8} n {len(subset):>3}  language_ok {shown('language_ok', subset)}  "
+                          f"quotes_ok {shown('quotes_ok', subset)}  verdict_ok {shown('verdict_ok', subset)}  "
+                          f"points {mean('points', subset):.2f}")
         if args.repeats > 1:  # spread of the per-repeat means: how much of a difference is noise
             for key in ("verdict_ok", "points", "evidence"):
                 per_repeat = []

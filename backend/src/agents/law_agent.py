@@ -8,36 +8,32 @@ import logging
 from openai import OpenAI
 from sqlalchemy.orm import Session
 
-from agents.base import BaseRAGAgent, _TRANSLATION_INSTRUCTION
+from agents.base import LANGUAGE_INSTRUCTION, LANGUAGE_NAME, QUOTE_FORMAT, BaseRAGAgent
+from answer_language import Language
 from pipeline_trace import CallRecorder
 from models import LawChunk
 from observability import start_observation
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = (
-    "You are a legal expert specializing in zoning and land use law. "
-    + _TRANSLATION_INSTRUCTION
-)
+_ROLE = "You are a legal expert specializing in zoning and land use law. "
 
 _USER_TEMPLATE = """Based ONLY on the following legal documents (which may be in Swedish):
 
 {context}
 
-Answer this question in English:
+Answer this question in {language_name}:
 What are the legal requirements for building {units} units of {project_type} in {location}?
 
-When citing Swedish source text, use this format:
-> **English:** [your English interpretation]
-> **Original (Swedish):** [exact Swedish text from the source]
+{quote_format}
 
 Provide your answer in JSON format:
 {{
     "max_units_allowed": <number or "varies">,
-    "base_zoning": "<description in English>",
+    "base_zoning": "<description in {language_name}>",
     "applicable_laws": ["<law1>", "<law2>"],
-    "conditions": ["<condition1 in English>", "<condition2 in English>"],
-    "special_provisions": "<any density bonuses, exemptions, etc — in English>",
+    "conditions": ["<condition1 in {language_name}>", "<condition2 in {language_name}>"],
+    "special_provisions": "<any density bonuses, exemptions, etc — in {language_name}>",
     "confidence": <0.0 to 1.0>
 }}
 
@@ -52,7 +48,9 @@ class LawAgent(BaseRAGAgent):
     def __init__(self, db: Session, openai_client: OpenAI, recorder: CallRecorder | None = None):
         super().__init__(db, openai_client, LawChunk, "Law Agent", recorder)
 
-    def query(self, location: str, project_type: str, units: int) -> dict:
+    def query(self, location: str, project_type: str, units: int, language: Language = "en") -> dict:
+        """The structured reading, its text fields written in `language` with Swedish quotes kept verbatim
+        (PCR-0006)."""
         logger.debug("Searching regulations for %d %s units in %s", units, project_type, location)
 
         search_query = f"{location} zoning {project_type} density {units} units maximum allowed"
@@ -76,9 +74,10 @@ class LawAgent(BaseRAGAgent):
         context = "\n\n".join(f"Document {i + 1}:\n{content}" for i, (content, _) in enumerate(docs))
 
         user_prompt = _USER_TEMPLATE.format(
-            context=context, location=location, project_type=project_type, units=units
+            context=context, location=location, project_type=project_type, units=units,
+            language_name=LANGUAGE_NAME[language], quote_format=QUOTE_FORMAT[language],
         )
-        response_text = self._call_llm(_SYSTEM_PROMPT, user_prompt)
+        response_text = self._call_llm(_ROLE + LANGUAGE_INSTRUCTION[language], user_prompt)
         retrieval = {"query": search_query, "matches": self._trace_rows(debug_rows)}
 
         try:

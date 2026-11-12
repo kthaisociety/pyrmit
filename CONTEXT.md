@@ -40,6 +40,13 @@ _Avoid_: assessment, evaluation
 **Verdict**:
 The feasibility status the orchestrator returns, always paired with a confidence.
 
+**Answer language**:
+The language an answer is written in: the question's, Swedish or English, English for any other language. The model decides it from the user's own words (earlier messages, then the share of Swedish words, when the message alone does not settle it). Swedish sources are quoted verbatim in either; an English answer adds a translation after each quote.
+_Avoid_: page language (the UI's language choice, which never affects the answer)
+
+**Glossary**:
+The Swedish domain terms an English answer keeps in Swedish (bygglov, strandskydd, detaljplan, ...), each explained in English on first use. A term not in it stays in Swedish without explanation.
+
 **Law agent**:
 The agent that retrieves law chunks and asks the model for a structured reading of the statutes.
 
