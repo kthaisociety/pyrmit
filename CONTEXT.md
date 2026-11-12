@@ -154,7 +154,7 @@ One factual statement of a chat answer (a rule, number, deadline, fee, document 
 _Avoid_: statement, fact (when one claim of an answer is meant)
 
 **Claim check**:
-The live check of an agent answer once it has streamed: each **Claim** gets a claim verdict against the full text of the chunks it cites, *supported* (with the sentences that back it), *unsupported* or *uncited*. What is not supported goes back once to be re-cited or removed; what is still not supported is flagged in the answer. A check that could not run leaves the answer with a notice.
+The live check of an agent answer once it has streamed: each **Claim** gets a claim verdict against the full text of the chunks it cites, *supported* (with the sentences that back it), *unsupported* or *uncited*. What is not supported goes back once to be re-cited or removed; what is still not supported is flagged in the answer. A check that could not run leaves the answer with a notice. The sentences that back a claim are underlined in the cited chunk when its source panel opens.
 _Avoid_: verdict (alone: that is the feasibility **Verdict**), grounding (the benchmark's offline judge)
 
 **Text report**:

@@ -26,21 +26,23 @@ function distanceTone(distance: number): string {
   return 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300';
 }
 
-const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const UNDERLINE_TITLE = 'Supports a claim in the answer';
 
-// The [start, end) ranges of `content` that hold one of the sentences, whitespace-insensitive, merged when they
-// overlap
-function underlineRanges(content: string, sentences: string[]): [number, number][] {
-  const ranges: [number, number][] = [];
-  for (const sentence of sentences) {
-    const words = sentence.trim().split(/\s+/).filter(Boolean);
-    if (words.length === 0) continue;
-    const match = new RegExp(words.map(escape).join('\\s+')).exec(content);
-    if (match) ranges.push([match.index, match.index + match[0].length]);
-  }
-  ranges.sort((a, b) => a[0] - b[0]);
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// The [start, end) range of `content` that holds the sentence, with any run of whitespace matching any other; null
+// when the content does not hold it
+function findSentence(content: string, sentence: string): [number, number] | null {
+  const words = sentence.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return null;
+  const match = new RegExp(words.map(escapeRegExp).join('\\s+')).exec(content);
+  return match ? [match.index, match.index + match[0].length] : null;
+}
+
+// The ranges sorted by start, overlapping ones joined into one
+function mergeOverlapping(ranges: [number, number][]): [number, number][] {
   const merged: [number, number][] = [];
-  for (const [start, end] of ranges) {
+  for (const [start, end] of [...ranges].sort((a, b) => a[0] - b[0])) {
     const last = merged[merged.length - 1];
     if (last && start <= last[1]) last[1] = Math.max(last[1], end);
     else merged.push([start, end]);
@@ -48,13 +50,15 @@ function underlineRanges(content: string, sentences: string[]): [number, number]
   return merged;
 }
 
+// `content` with each of the sentences it holds underlined
 function Underlined({ content, sentences }: { content: string; sentences: string[] }) {
+  const found = sentences.map((sentence) => findSentence(content, sentence)).filter((range) => range !== null);
   const parts: ReactNode[] = [];
   let pos = 0;
-  for (const [start, end] of underlineRanges(content, sentences)) {
+  for (const [start, end] of mergeOverlapping(found)) {
     parts.push(content.slice(pos, start));
     parts.push(
-      <u key={start} title="Supports a claim in the answer" className="decoration-emerald-500 decoration-2 underline-offset-2">
+      <u key={start} title={UNDERLINE_TITLE} className="decoration-emerald-500 decoration-2 underline-offset-2">
         {content.slice(start, end)}
       </u>,
     );
