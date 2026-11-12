@@ -69,6 +69,8 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
   const [loading, setLoading] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null); // what the open click is waiting for
   const [error, setError] = useState<string | null>(null);
+  // locate found the chunk's wording on no page of its PDF: the notice, and the PDF to open from page 1 on request
+  const [notFound, setNotFound] = useState<{ chunkId: string; pdfUrl: string } | null>(null);
 
   // The latest click: a slower earlier request (or one for the previous citation) must not replace its result
   const request = useRef(0);
@@ -78,6 +80,7 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
     request.current += 1;
     setPdf(null);
     setError(null);
+    setNotFound(null);
     setLoading(null);
   }, [citation]);
   useEffect(() => () => { if (pdf) URL.revokeObjectURL(pdf.blobUrl); }, [pdf]);
@@ -88,46 +91,28 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const open = async (chunk: CitedChunk) => {
+  // Fetched with the auth header, shown from a blob URL: the browser's PDF viewer opens it at #page
+  const showPdf = async (pdfUrl: string, page: number, view: Location['view'], note: string, mine: number) => {
+    setStatus('Opening the PDF…');
+    const file = await authFetch(pdfUrl);
+    if (!file.ok) throw new Error(`PDF failed (${file.status})`);
+    const blob = await file.blob();
+    if (mine !== request.current) return;
+    const blobUrl = URL.createObjectURL(blob);
+    const zoom = view ? `&zoom=${view.zoom},${view.left},${view.top}` : '';
+    // no thumbnail pane: more room for the page
+    setPdf({ blobUrl, url: `${blobUrl}#page=${page}${zoom}&navpanes=0`, page, note });
+  };
+
+  // Runs one open request: the latest click wins, the button of `chunkId` waits meanwhile
+  const run = async (chunkId: string, work: (mine: number) => Promise<void>) => {
     const mine = ++request.current;
-    setLoading(chunk.chunk_id);
+    setLoading(chunkId);
     setStatus(null);
     setError(null);
+    setNotFound(null);
     try {
-      // First ask without downloading: an install without the crawled PDFs (corpus on Neon) fetches the PDF from
-      // the kommun's site, which can take seconds, so the viewer says so before the download starts
-      let location = await locateChunk(chunk.chunk_id, false);
-      if (mine !== request.current) return;
-      if (location.needs_download) {
-        setStatus(`Downloading the PDF from ${location.source_host ?? "the kommun's website"} (first time only, then kept)…`);
-        location = await locateChunk(chunk.chunk_id);
-        if (mine !== request.current) return;
-      }
-      if (location.type === 'pdf' && location.pdf_url) {
-        setStatus('Opening the PDF…');
-        // Fetched with the auth header, shown from a blob URL: the browser's PDF viewer opens it at #page
-        const file = await authFetch(location.pdf_url);
-        if (!file.ok) throw new Error(`PDF failed (${file.status})`);
-        const blob = await file.blob();
-        if (mine !== request.current) return;
-        const blobUrl = URL.createObjectURL(blob);
-        const page = location.page ?? 1;
-        const zoom = location.view ? `&zoom=${location.view.zoom},${location.view.left},${location.view.top}` : '';
-        setPdf({
-          blobUrl,
-          url: `${blobUrl}#page=${page}${zoom}&navpanes=0`, // no thumbnail pane: more room for the page
-          page,
-          note: !location.found
-            ? 'Passage not located in the PDF: opened at the first page.'
-            : location.highlighted
-              ? `Page ${page}, cited passage highlighted.`
-              : `Page ${page} (scanned document: no highlight).`,
-        });
-      } else if (location.type === 'url' && location.url) {
-        window.open(location.url, '_blank', 'noopener,noreferrer');
-      } else {
-        setError('No original document is available for this source.');
-      }
+      await work(mine);
     } catch (exc) {
       if (mine === request.current) setError(exc instanceof Error ? exc.message : String(exc));
     } finally {
@@ -137,6 +122,34 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
       }
     }
   };
+
+  const openFromStart = (chunkId: string, pdfUrl: string) => run(chunkId, (mine) =>
+    showPdf(pdfUrl, 1, null, 'Page 1: the cited passage was not found in this PDF.', mine));
+
+  const open = (chunk: CitedChunk) => run(chunk.chunk_id, async (mine) => {
+    // First ask without downloading: an install without the crawled PDFs (corpus on Neon) fetches the PDF from
+      // the kommun's site, which can take seconds, so the viewer says so before the download starts
+      let location = await locateChunk(chunk.chunk_id, false);
+      if (mine !== request.current) return;
+      if (location.needs_download) {
+        setStatus(`Downloading the PDF from ${location.source_host ?? "the kommun's website"} (first time only, then kept)…`);
+        location = await locateChunk(chunk.chunk_id);
+        if (mine !== request.current) return;
+      }
+      if (location.type === 'pdf' && location.pdf_url && location.found === false) {
+        // Page 1 holds nothing the citation points at: say so, and open the PDF only when asked
+        setNotFound({ chunkId: chunk.chunk_id, pdfUrl: location.pdf_url });
+      } else if (location.type === 'pdf' && location.pdf_url) {
+        const page = location.page ?? 1;
+        await showPdf(location.pdf_url, page, location.view ?? null, location.highlighted
+          ? `Page ${page}, cited passage highlighted.`
+          : `Page ${page} (no highlight: the passage's position on the page is unknown).`, mine);
+      } else if (location.type === 'url' && location.url) {
+        window.open(location.url, '_blank', 'noopener,noreferrer');
+      } else {
+        setError('No original document is available for this source.');
+      }
+  });
 
   useEffect(() => {
     if (autoOpen && citation.chunks.length > 0) open(citation.chunks[0]);
@@ -191,6 +204,17 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
                   >
                     <ExternalLink size={12} /> On the kommun&apos;s website
                   </a>
+                )}
+                {notFound?.chunkId === chunk.chunk_id && (
+                  <div role="alert" className="space-y-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+                    <p>The cited passage was not found in this PDF.</p>
+                    <button
+                      onClick={() => openFromStart(notFound.chunkId, notFound.pdfUrl)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 px-2.5 py-1 hover:border-amber-500 dark:border-amber-700"
+                    >
+                      <FileText size={12} /> Open the PDF from page 1
+                    </button>
+                  </div>
                 )}
                 {loading === chunk.chunk_id && status && (
                   <p role="status" className="text-xs text-zinc-500 dark:text-zinc-400">{status}</p>
