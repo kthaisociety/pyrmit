@@ -11,6 +11,7 @@ import {
   COVERAGE_COLOURS, MATCH_COLOURS, fetchPlaceCoverage, fetchPlaceProfile, fetchPlansInView, fetchReviewCoverage,
   type Pin, type PlaceProfile, type PlaceSearchResult, type ReviewCoverage, type ReviewPlans,
 } from '@/lib/place';
+import { fill, useLanguage } from '@/lib/i18n';
 
 export interface PlacePanelProps {
   pin: Pin | null;
@@ -47,6 +48,7 @@ function sheetCover(hasCard: boolean, expanded: boolean): number {
 function ProposalCard({ proposal, onCancel, onConfirm }: {
   proposal: PlaceSearchResult; onCancel: () => void; onConfirm: () => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div className={`flex items-center gap-2 rounded-xl px-3 py-2 ${GLASS}`}>
       <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-zinc-900 dark:text-zinc-50">
@@ -57,14 +59,14 @@ function ProposalCard({ proposal, onCancel, onConfirm }: {
         onClick={onCancel}
         className="rounded-lg px-2 py-1 text-[13px] text-zinc-600 transition-transform duration-100 hover:bg-black/5 active:scale-95 dark:text-zinc-300"
       >
-        Cancel
+        {t('place.cancel')}
       </button>
       <button
         type="button"
         onClick={onConfirm}
         className="rounded-lg bg-blue-500 px-3 py-1 text-[13px] font-semibold text-white shadow-sm transition-transform duration-100 hover:bg-blue-600 active:scale-95"
       >
-        Pin here
+        {t('place.pinHere')}
       </button>
     </div>
   );
@@ -83,31 +85,32 @@ function LegendRow({ colour, label }: { colour: string; label: string }) {
 function ReviewCard({ coverage, plans, zoomedIn, error }: {
   coverage: ReviewCoverage | null; plans: ReviewPlans | null; zoomedIn: boolean; error: string | null;
 }) {
+  const { t } = useLanguage();
   const covered = coverage?.features.filter((kommun) => kommun.properties.covered).length ?? 0;
   return (
     <div className={`space-y-1 rounded-xl px-3 py-2 text-[12px] text-zinc-700 dark:text-zinc-200 ${GLASS}`}>
       {coverage && (
         <p className="font-semibold text-zinc-900 dark:text-zinc-50">
-          {`${covered} of ${coverage.features.length} kommuner with plan polygons`}
+          {fill(t('place.kommunerWithPolygons'), { covered: String(covered), total: String(coverage.features.length) })}
         </p>
       )}
       {error && <p role="alert" className="text-red-600 dark:text-red-400">{error}</p>}
       {zoomedIn ? (
-        <ul aria-label="Match levels" className="flex flex-wrap gap-x-3">
-          <LegendRow colour={MATCH_COLOURS.link} label="Link" />
-          <LegendRow colour={MATCH_COLOURS.akt} label="Akt" />
-          <LegendRow colour={MATCH_COLOURS.name} label="Name" />
-          <LegendRow colour={MATCH_COLOURS.none} label="No document" />
+        <ul aria-label={t('place.matchLevels')} className="flex flex-wrap gap-x-3">
+          <LegendRow colour={MATCH_COLOURS.link} label={t('place.matchLink')} />
+          <LegendRow colour={MATCH_COLOURS.akt} label={t('place.matchAkt')} />
+          <LegendRow colour={MATCH_COLOURS.name} label={t('place.matchName')} />
+          <LegendRow colour={MATCH_COLOURS.none} label={t('place.matchNone')} />
         </ul>
       ) : (
-        <ul aria-label="Coverage" className="flex flex-wrap gap-x-3">
-          <LegendRow colour={COVERAGE_COLOURS.covered} label="Has polygons" />
-          <LegendRow colour={COVERAGE_COLOURS.not_covered} label="None" />
+        <ul aria-label={t('place.coverage')} className="flex flex-wrap gap-x-3">
+          <LegendRow colour={COVERAGE_COLOURS.covered} label={t('place.hasPolygons')} />
+          <LegendRow colour={COVERAGE_COLOURS.not_covered} label={t('place.coverageNone')} />
         </ul>
       )}
-      {!zoomedIn && <p className="text-zinc-500 dark:text-zinc-400">Zoom in on a kommun to see its plans.</p>}
+      {!zoomedIn && <p className="text-zinc-500 dark:text-zinc-400">{t('place.zoomInOnKommun')}</p>}
       {zoomedIn && plans?.truncated && (
-        <p className="text-amber-700 dark:text-amber-400">More plans here than are drawn: zoom in to see every plan.</p>
+        <p className="text-amber-700 dark:text-amber-400">{t('place.plansTruncated')}</p>
       )}
     </div>
   );
@@ -126,6 +129,7 @@ function union(boxes: [number, number, number, number][]): [number, number, numb
  * the pin is fetched and shown in a sheet over the map, with the property, plans and zones outlined on it.
  */
 export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: PlacePanelProps) {
+  const { language, t } = useLanguage();
   const [lookup, setLookup] = useState<Lookup | null>(null);
   const onProfileRef = useRef(onProfile);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
@@ -137,6 +141,7 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
   const [view, setView] = useState<MapView | null>(null);
   const [coverage, setCoverage] = useState<ReviewCoverage | null>(null);
   const [plans, setPlans] = useState<ReviewPlans | null>(null);
+  // The backend's error messages; the panel words them in the page language when it shows them
   const [coverageError, setCoverageError] = useState<string | null>(null);
   const [plansError, setPlansError] = useState<string | null>(null);
 
@@ -154,7 +159,7 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
   useEffect(() => {
     if (!pin) return;
     let current = true;
-    fetchPlaceProfile(pin)
+    fetchPlaceProfile(pin, language)
       .then((profile) => {
         if (!current) return;
         setLookup({ pin, profile, error: null });
@@ -164,7 +169,7 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
     return () => {
       current = false;
     };
-  }, [pin]);
+  }, [pin, language]);
 
   useEffect(() => {
     if (!reviewOn) return;
@@ -175,7 +180,7 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
         setCoverage(found);
         setCoverageError(null);
       })
-      .catch((err: Error) => current && setCoverageError(`Could not fetch the coverage: ${err.message}`));
+      .catch((err: Error) => current && setCoverageError(err.message));
     return () => {
       current = false;
     };
@@ -192,7 +197,7 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
         setPlans(found);
         setPlansError(null);
       })
-      .catch((err: Error) => current && setPlansError(`Could not fetch the plans: ${err.message}`));
+      .catch((err: Error) => current && setPlansError(err.message));
     return () => {
       current = false;
     };
@@ -205,10 +210,13 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
   const shown = pin ? lookup : null; // keep the previous card, dimmed, while the next one loads
   const outlines = useMemo(() => outlinesOf(shown?.profile ?? null), [shown]);
   const hasCard = Boolean(pin);
+  let reviewError: string | null = null;
+  if (coverageError !== null) reviewError = fill(t('place.coverageError'), { error: coverageError });
+  else if (plansBox && plansError !== null) reviewError = fill(t('place.plansError'), { error: plansError });
 
   return (
     <aside
-      aria-label="Map"
+      aria-label={t('place.map')}
       className={`place-map relative h-full w-[440px] shrink-0 overflow-hidden border-l border-zinc-200 bg-zinc-100 ${SYSTEM_FONT} motion-safe:animate-[slide-in-right_280ms_cubic-bezier(0.32,0.72,0,1)] dark:border-zinc-800 dark:bg-zinc-900`}
     >
       <div className="absolute inset-0">
@@ -233,16 +241,16 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
       {reviewOn && (
         <div className={`absolute left-3 right-14 z-10 ${proposal ? 'top-[112px]' : 'top-[84px]'}`}>
           <ReviewCard coverage={coverage} plans={plans} zoomedIn={plansBox !== null}
-                      error={coverageError ?? (plansBox ? plansError : null)} />
+                      error={reviewError} />
         </div>
       )}
 
       <button
         type="button"
         onClick={() => setReviewOn((on) => !on)}
-        aria-label="Review plan coverage"
+        aria-label={t('place.reviewCoverage')}
         aria-pressed={reviewOn}
-        title="Review plan coverage"
+        title={t('place.reviewCoverage')}
         className={`absolute right-3 top-[132px] z-10 grid size-8 place-items-center rounded-full transition-transform duration-100 active:scale-90 ${
           reviewOn ? 'bg-blue-500 text-white shadow-sm' : `text-zinc-600 dark:text-zinc-300 ${GLASS}`
         }`}
@@ -253,7 +261,7 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
       <button
         type="button"
         onClick={onClose}
-        aria-label="Close map"
+        aria-label={t('place.closeMap')}
         className={`absolute right-3 top-3 z-10 grid size-8 place-items-center rounded-full text-zinc-600 transition-transform duration-100 active:scale-90 dark:text-zinc-300 ${GLASS}`}
       >
         <X size={16} strokeWidth={2.5} />
@@ -268,7 +276,7 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
           type="button"
           onClick={() => setExpanded((open) => !open)}
           disabled={!hasCard}
-          aria-label={expanded ? 'Collapse place card' : 'Expand place card'}
+          aria-label={expanded ? t('place.collapseCard') : t('place.expandCard')}
           aria-expanded={expanded}
           className="flex shrink-0 justify-center pb-1 pt-2 disabled:cursor-default"
         >
@@ -276,15 +284,15 @@ export default function PlacePanel({ pin, onPinChange, onClose, onProfile }: Pla
         </button>
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
           {!pin && (
-            <p className="py-1 text-[13px] text-zinc-500 dark:text-zinc-400">Click the map to pin a place in Uppsala.</p>
+            <p className="py-1 text-[13px] text-zinc-500 dark:text-zinc-400">{t('place.clickToPin')}</p>
           )}
           {pin && !settled && (
             <p role="status" className="mb-3 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-              <Loader2 size={12} className="animate-spin" aria-hidden /> Looking up the place…
+              <Loader2 size={12} className="animate-spin" aria-hidden /> {t('place.lookingUp')}
             </p>
           )}
           {shown?.error && settled && (
-            <p role="alert" className="text-[13px] text-red-600 dark:text-red-400">{`Could not look up this place: ${shown.error}`}</p>
+            <p role="alert" className="text-[13px] text-red-600 dark:text-red-400">{fill(t('place.lookupError'), { error: shown.error })}</p>
           )}
           {shown?.profile && (
             <div className={settled ? '' : 'opacity-50 transition-opacity'}>

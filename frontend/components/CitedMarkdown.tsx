@@ -2,6 +2,7 @@
 
 import ReactMarkdown from 'react-markdown';
 import type { Citation } from '@/components/SourceViewer';
+import { useLanguage } from '@/lib/i18n';
 
 // "[1]", "[2; 4]", "[1, 3]" -> one markdown link per number (#cite-n), rendered as clickable chips.
 // The agent also mixes law references into the group, sometimes nested: "[2; MB 7 kap. 15 §]",
@@ -77,6 +78,7 @@ export default function CitedMarkdown({ body, citations, onOpen, flags = [] }: {
   flags?: ClaimFlag[];
 }) {
   const { marked, missing } = markFlags(citations.length > 0 ? linkCitations(body) : body, flags);
+  const { t } = useLanguage();
   return (
     <>
     <ReactMarkdown
@@ -90,7 +92,7 @@ export default function CitedMarkdown({ body, citations, onOpen, flags = [] }: {
                 type="button"
                 onClick={() => citation && onOpen(citation)}
                 disabled={!citation}
-                title={citation?.label ?? 'Source details not available'}
+                title={citation?.label ?? t('source.detailsUnavailable')}
                 className="mx-px inline-flex min-w-[1.25rem] translate-y-[-1px] items-center justify-center rounded bg-blue-100 px-1 align-baseline text-[10px] font-semibold leading-4 text-blue-700 no-underline hover:bg-blue-200 disabled:cursor-default disabled:bg-zinc-100 disabled:text-zinc-500 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900"
               >
                 {children}

@@ -1,7 +1,7 @@
 """
 The map's place lookups (no LLM, see place/):
 
-- GET /api/place/profile?lat=..&lon=..  -> the place profile of a pinned point (place.profile.build_profile)
+- GET /api/place/profile?lat=..&lon=..&language=sv|en -> the place profile of a pinned point (place.profile.build_profile)
 - GET /api/place/coverage               -> the pilot kommuner with a snapshot, for the map's first view
 - GET /api/place/search?q=..            -> Swedish addresses and place names for the map's search (Nominatim)
 - GET /api/place/review/coverage        -> every kommun's outline, coloured by whether it has plan polygons
@@ -9,7 +9,7 @@ The map's place lookups (no LLM, see place/):
 """
 
 from collections.abc import Callable
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -64,11 +64,14 @@ def place_profile(lat: Annotated[float, Query(ge=-90, le=90)], lon: Annotated[fl
                   plan_registry: Annotated[Callable, Depends(get_plan_registry)],
                   ancient_remains_at: Annotated[Callable, Depends(get_ancient_remains_lookup)],
                   corpus_documents: Annotated[Callable, Depends(get_corpus_documents)],
-                  user: Annotated[models.User, Depends(get_current_user)]) -> dict:
-    """The place profile of the point (see build_profile). 422 when lat or lon is missing or out of range."""
+                  user: Annotated[models.User, Depends(get_current_user)],
+                  language: Literal["sv", "en"] = "en") -> dict:
+    """The place profile of the point (see build_profile), its notes and permits in `language`, the page language.
+    422 when lat or lon is missing or out of range, or language is neither sv nor en."""
     try:
         return profile.build_profile(lat, lon, store=store, property_at=property_at, plan_registry=plan_registry,
-                                     ancient_remains_at=ancient_remains_at, corpus_documents=corpus_documents)
+                                     ancient_remains_at=ancient_remains_at, corpus_documents=corpus_documents,
+                                     language=language)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 

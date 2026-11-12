@@ -138,11 +138,12 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | POST   | `/api/benchmark/run`               | Run the agent on a case now (chat settings) and grade it; background job (spends credits) |
 | GET    | `/api/benchmark/run/{job_id}`      | Progress and result of that job (polled) |
 | GET    | `/api/pipeline`                    | Measures of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency) read from the files the steps write; cached until one changes. Without a corpus: the national snapshot `data/agentic/pipeline-national.json` |
-| GET    | `/api/place/profile?lat=&lon=`     | Place profile of a pinned point: property (live), plans with their documents, zones, plans in progress, inside / outside detaljplan (no model call, ADR-0003) |
+| GET    | `/api/place/profile?lat=&lon=&language=` | Place profile of a pinned point, its notes and permits in the page language (`sv`/`en`, default `en`, ADR-0013): property (live), plans with their documents, zones, plans in progress, inside / outside detaljplan (no model call, ADR-0003) |
 | GET    | `/api/place/coverage`              | Every kommun with a snapshot, pilot or plan-layer (code, name, bbox, fetch date), for the map's first view |
 | GET    | `/api/place/review/coverage`       | Every registry kommun and snapshot as a GeoJSON outline: covered, polygons, matched, fetch date, why not (review mode) |
 | GET    | `/api/place/review/plans?bbox=`    | The plan polygons in a box of at most 2° by 1°, at most 4,000, with their match level and `truncated`; 422 for a wider or malformed box (ADR-0008) |
 | GET    | `/api/place/search?q=`             | Address / place search for the map (the pilot kommun's address register, else Nominatim at 1 request/s); 503 when Nominatim is down |
+| GET    | `/api/glossary`                    | The shared glossary, {term: English explanation}, for the page's tooltips; no sign-in (still behind the access gate, ADR-0014) |
 
 ---
 
@@ -253,7 +254,8 @@ Frontend (`frontend/.env`):
 
 - `backend/src/main.py` -- FastAPI app entry, CORS, router registration
 - `backend/src/answer_language.py` -- the answer-language rule every answer prompt carries, and `split_language` for the rewrite's `LANG:` line (PCR-0006, ADR-0011)
-- `backend/src/glossary.py` -- Swedish domain terms an English answer keeps in Swedish, with their English explanation
+- `backend/src/glossary.py` -- Swedish domain terms an English text keeps in Swedish, with their English explanation; `explained` adds them in parentheses to the place card's English texts
+- `backend/src/routers/glossary.py` -- `GET /api/glossary`
 - `backend/src/llm.py` -- chat client and model name resolution (OpenAI, AI Gateway, OpenRouter), Responses API helpers, timeout and retry (PCR-0003)
 - `backend/src/embeddings.py` -- `Embedder` (openai / openrouter / a local OpenAI-compatible server / in-process sentence-transformers), `get_embedder()` from `EMBEDDING_*`; the vector column dimension is `EMBEDDING_DIM`; `main.py` logs an error when the tables were embedded with another model (PCR-0003, PCR-0004)
 - `backend/src/pipeline_trace.py` -- `CallRecorder` + `recorded_chat_completion` / `recorded_embedding`: prompts, outputs, token usage, cost and timings of every call, for the pipeline inspector
@@ -293,6 +295,10 @@ Frontend (`frontend/.env`):
 
 - `frontend/next.config.js` -- `/api/*` rewrite to the backend
 - `frontend/lib/auth.ts` -- Token storage (localStorage), `authFetch`, access-gate redirect
+- `frontend/lib/i18n.tsx` -- `LanguageProvider` (page language, remembered in localStorage `pyrmit.language`, glossary fetched once), `useLanguage().t`, `fill` for `{name}` placeholders (ADR-0012)
+- `frontend/lib/messages.ts` -- the page's texts, `en` and `sv`, one key per text
+- `frontend/components/LanguageSwitch.tsx` -- SV / EN switch, on the access gate, the sign-in page and in the sidebar footer
+- `frontend/components/Term.tsx` -- a Swedish domain term, with its glossary explanation as tooltip on the English page (ADR-0014)
 - `frontend/lib/dev-access.ts`, `frontend/lib/access-gate-server.ts` -- Access-gate cookie helpers
 - `frontend/app/(protected)/page.tsx` -- Main page: Sidebar + Chat
 - `frontend/app/(protected)/auth/page.tsx` -- Login / signup
