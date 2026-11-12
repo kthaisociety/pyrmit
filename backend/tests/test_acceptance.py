@@ -38,14 +38,28 @@ def _ocr_words(page: int, text: str, line: tuple) -> list[list]:
             for i, word in enumerate(words)]
 
 
+PAGE_TEXTS = ["PLANBESTÄMMELSER", f"Utformning\n{PASSAGE}", "Genomförandetid"]
+
+
 @pytest.fixture
 def scanned(tmp_path, monkeypatch):
     """A cited chunk of a scanned PDF whose OCR output holds `PASSAGE` on page 2; returns the chunk id."""
+    ocr = {"engine": "rapid-v6-medium", "text_from": "words", "word_coordinates": "pdf points, unrotated page",
+           "pages": PAGE_TEXTS,
+           "words": _ocr_words(0, "PLANBESTÄMMELSER", (200, 80, 400, 96)) + _ocr_words(1, PASSAGE, LINE)}
+    return _serve(tmp_path, monkeypatch, ocr)
+
+
+@pytest.fixture
+def scanned_without_positions(tmp_path, monkeypatch):
+    """The same cited chunk, but its OCR output (EasyOCR, before 2026-10-23) has page texts and no word boxes."""
+    return _serve(tmp_path, monkeypatch, {"engine": "easyocr sv+en", "dpi": 200, "pages": PAGE_TEXTS})
+
+
+def _serve(tmp_path, monkeypatch, ocr: dict) -> str:
+    """Serve a scanned PDF and `ocr` as the original of a fresh cited chunk holding `PASSAGE`; its chunk id."""
     pdf_file = tmp_path / "scan.pdf"
     _scan(pdf_file)
-    ocr = {"engine": "rapid-v6-medium", "text_from": "words", "word_coordinates": "pdf points, unrotated page",
-           "pages": ["PLANBESTÄMMELSER", f"Utformning\n{PASSAGE}", "Genomförandetid"],
-           "words": _ocr_words(0, "PLANBESTÄMMELSER", (200, 80, 400, 96)) + _ocr_words(1, PASSAGE, LINE)}
     ocr_file = tmp_path / "scan.json"
     ocr_file.write_text(json.dumps(ocr, ensure_ascii=False), encoding="utf-8")
 
@@ -97,3 +111,15 @@ def test_scanned_pdf_highlight_stays_off_the_other_pages(scanned):
     with pymupdf.open(stream=response.body, filetype="pdf") as pdf:
         assert list(pdf[1].annots())  # the cited page is highlighted ...
         assert not list(pdf[0].annots())  # ... and the page before it is not
+
+
+def test_scanned_pdf_without_word_positions_opens_at_the_cited_page(scanned_without_positions):
+    """A scanned PDF whose OCR output has no word boxes still opens at the page that holds the passage."""
+    location = docs.locate(chunk_id=scanned_without_positions, download=True, _user=None)
+    assert location["page"] == 2
+
+
+def test_scanned_pdf_without_word_positions_opens_without_highlight(scanned_without_positions):
+    """A scanned PDF whose OCR output has no word boxes opens with no highlight."""
+    location = docs.locate(chunk_id=scanned_without_positions, download=True, _user=None)
+    assert location["highlighted"] is False
