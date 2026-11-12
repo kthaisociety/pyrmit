@@ -22,6 +22,7 @@ from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_INSTRUCTION, Languag
 from glossary import glossary_prompt
 from db.database import SessionLocal, get_db
 from dependencies import get_current_user
+from agentic.claim_check import verify_answer
 from agentic.service import agent_enabled
 from localrag.service import SWEDISH_QUERY_SUFFIX, local_backend_enabled, retrieve as local_retrieve, split_rewrite
 from llm import (
@@ -88,6 +89,26 @@ def _format_sources(sources: list[str], numbered: bool = False) -> str:
 
 def _sse(event: dict) -> str:
     return f"data: {json.dumps(event, default=str)}\n\n"
+
+
+def _check_claims(run) -> tuple[dict, tuple[str, list[dict]] | None]:
+    """The claim check of an agent run's answer (agentic.claim_check.verify_answer, issue #82): the data of its
+    "claim_check" pipeline event, and, when the check rewrote the answer, the rewritten answer as the user sees it
+    (citations numbered, source list appended) with its "citations" items; else None."""
+    from agentic.service import CitationNumberer, get_tools
+    from agentic.tools import resolve_cited
+
+    tools = get_tools()
+
+    def get_chunk(chunk_id: str) -> dict | None:
+        return resolve_cited(tools.get_chunk, chunk_id, run.seen_chunks)
+
+    verified = verify_answer(run.answer, get_chunk, list(run.seen_chunks))
+    if verified.answer == run.answer:
+        return verified.check.as_event(), None
+    numberer = CitationNumberer(get_chunk)
+    shown = numberer.feed(verified.answer) + numberer.close() + _format_sources(numberer.labels, numbered=True)
+    return verified.check.as_event(), (shown, numberer.citations())
 
 
 def _agent_output_for_trace(output: dict) -> dict:
@@ -373,7 +394,14 @@ def chat_stream(
     """The chat's streamed answer (SSE). In the agent mode a pinned place (request.place) is the place the question
     is about: its place profile goes before the question (place.context.question_with_place) and is saved as the "place"
     pipeline event of the answer's trace, {"pin": {"lat", "lon", "label"}, "profile": compact_profile}, which is how
-    the chat session keeps its place (ADR-0004). Without a pin the question gets place.context.NO_PIN_HINT."""
+    the chat session keeps its place (ADR-0004). Without a pin the question gets place.context.NO_PIN_HINT.
+
+    Claim check (issue #82): once the agent's answer has streamed, the stream says {"type": "thinking", "label":
+    "Checking the claims"} and the answer goes through agentic.claim_check.verify_answer; the message stays "streaming"
+    until the check is done. A rewritten answer is sent as {"type": "answer_replaced", "content": <the numbered answer
+    with its source list>} (only when the text changed) and saved as the message's content; the "citations" event
+    numbers the final answer. The verdicts are saved as the "claim_check" pipeline event, ClaimCheck.as_event(). A
+    question back to the user (the agent's choices or offer_pin) is not checked and has no "claim_check" event."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
@@ -466,14 +494,24 @@ def chat_stream(
                     yield emit("retrieval", agent="document", query=original_content, embedding_ok=True,
                                matches=outcome["local_rows"])
                     # The answer itself was streamed by stream_agent; append the numbered source list
-                    # [n] -> source label + cited chunks, for the clickable citations in the UI
-                    yield emit("citations", items=outcome["citations"])
-                    if outcome.get("choices") or outcome.get("offer_pin"):  # the agent asked: shown as buttons
+                    asked = bool(outcome.get("choices") or outcome.get("offer_pin"))
+                    if asked:  # the agent asked: shown as buttons
                         yield emit("choices", options=outcome.get("choices") or [],
                                    offer_pin=bool(outcome.get("offer_pin")))
                     suffix = _format_sources(outcome["sources"], numbered=True)
                     accumulated = outcome["answer"] + suffix
                     yield _sse({"type": "response.output_text.delta", "delta": suffix})
+                    citations, check = outcome["citations"], None
+                    run = outcome.get("run")
+                    if not asked and run is not None:
+                        yield _sse({"type": "thinking", "label": "Checking the claims"})
+                        check, rewritten = _check_claims(run)
+                        if rewritten is not None:
+                            accumulated, citations = rewritten
+                            yield _sse({"type": "answer_replaced", "content": accumulated})
+                    yield emit("citations", items=citations)
+                    if check is not None:
+                        yield emit("claim_check", **check)
                     yield _sse({"type": "response.completed"})
                     yield _sse({"type": "done", "session_id": session_id})
                     return
@@ -772,6 +810,8 @@ def chat_stream(
                 kind = event.get("type")
                 if kind == "response.output_text.delta":
                     content += event.get("delta") or ""
+                elif kind == "answer_replaced":
+                    content = event.get("content") or content
                 elif kind == "token":
                     content += event.get("token") or ""
                 elif kind == "pipeline":
@@ -781,7 +821,8 @@ def chat_stream(
                     content = content or f"Error: {event.get('message')}"
                 elif kind == "done":
                     status = "done"
-                if time.monotonic() - last_save > 2:
+                starts_a_long_step = kind == "thinking"
+                if starts_a_long_step or time.monotonic() - last_save > 2:
                     save()
                     last_save = time.monotonic()
         except Exception as exc:

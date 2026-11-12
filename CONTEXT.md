@@ -160,6 +160,14 @@ A question about one place: it names an address, a property designation, a plan 
 **Read together**:
 An amendment (tillägg) and the plan it amends are read as one: the plan its row names ("Gäller tillsammans med ..."), else the older plans at the pin. A plan naming an amendment that does not cover the pin does not bring it in.
 
+**Claim**:
+One factual statement of a chat answer (a rule, number, deadline, fee, document fact or legal reference), as the **Claim check** lists it. Generic advice is not a claim.
+_Avoid_: statement, fact (when one claim of an answer is meant)
+
+**Claim check**:
+The live check of an agent answer once it has streamed: each **Claim** gets a claim verdict against the full text of the chunks it cites, *supported* (with the sentences that back it), *unsupported* or *uncited*. What is not supported goes back once to be re-cited or removed; what is still not supported is flagged in the answer. A check that could not run leaves the answer with a notice.
+_Avoid_: verdict (alone: that is the feasibility **Verdict**), grounding (the benchmark's offline judge)
+
 **Text report**:
 `data/geo/<code>/plan_text_report.md`, written by a match against the hosted corpus: the share of a kommun's plan polygons with documents, and for each of the others why it has none.
 
@@ -181,5 +189,6 @@ A switch on the map panel, off by default, for checking the plan layers and thei
 - A **Pin** in a **Pilot kommun** gives a **Property** (looked up live) and a **Place profile** (from the **Snapshot**): its **Detaljplaner**, **Land-use zones**, **Plans in progress**, **Protected areas** and **National interests**, plus the **Ancient remains** on it (looked up live). The **Likely permits** follow from that profile. The **Place card** shows all of it.
 - A **Pin** in a **Plan-layer kommun** gives a **Place profile** with the **Detaljplaner** at the point from the kommun's **Snapshot**, each with its aktbeteckning, page and document links and licence, and nothing else. The **Plan source** says how the **Snapshot** was read; the **Coverage report** says how well.
 - Every **Detaljplan** polygon in a **Snapshot** is matched to its documents in the document store by **Match level**, giving **Plan-document links** that the **Place profile** carries; the polygons without one go to the **Fetch list**.
+- An agent answer goes through the **Claim check** before it is final: its **Claims** are judged against the chunks they cite, rewritten once and flagged when still not supported, and the verdicts are saved with the **Chat message**.
 - The **Page language** decides every text the page shows, the **Place card** included; the **Answer language** decides each answer on its own, so a Swedish page can hold an English answer.
 - A question asked with a **Pin** is answered from its **Place profile**, and the answer keeps that **Pin**: reopening the **Chat session** brings back its **Place chip**.
