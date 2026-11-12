@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowLeft, LogOut, Trash2, Check, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
+import { useLanguage } from '@/lib/i18n';
 
 interface User {
   id: string;
@@ -21,6 +22,7 @@ interface SettingsProps {
 }
 
 export default function Settings({ user, onBack, onLogout, logoutLoading, logoutError, onUserUpdated, onAllChatsCleared }: SettingsProps) {
+  const { t } = useLanguage();
   const [name, setName] = useState(user.name);
   const [nameLoading, setNameLoading] = useState(false);
   const [nameSuccess, setNameSuccess] = useState(false);
@@ -51,7 +53,7 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.detail || 'Failed to update name');
+        throw new Error(data.detail || t('settings.updateNameFailed'));
       }
       const updated = await res.json();
       onUserUpdated({ ...user, name: updated.name });
@@ -79,7 +81,7 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.detail || 'Failed to change password');
+        throw new Error(data.detail || t('settings.changePasswordFailed'));
       }
       setCurrentPassword('');
       setNewPassword('');
@@ -118,7 +120,7 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-semibold">Settings</h1>
+        <h1 className="text-lg font-semibold">{t('settings.title')}</h1>
       </div>
 
       {/* Content */}
@@ -127,7 +129,7 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
 
           {/* Account Info */}
           <section>
-            <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">Account</h2>
+            <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">{t('settings.account')}</h2>
             <div className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
               <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-lg">
                 {user.name.charAt(0).toUpperCase()}
@@ -141,7 +143,7 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
 
           {/* Change Name */}
           <section>
-            <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">Display Name</h2>
+            <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">{t('settings.displayName')}</h2>
             <form onSubmit={handleUpdateName} className="space-y-3">
               <input
                 type="text"
@@ -162,19 +164,19 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
                 {nameSuccess ? (
                   <>
                     <Check size={14} />
-                    Saved
+                    {t('settings.saved')}
                   </>
-                ) : nameLoading ? 'Saving...' : 'Update Name'}
+                ) : nameLoading ? t('settings.saving') : t('settings.updateName')}
               </button>
             </form>
           </section>
 
           {/* Change Password */}
           <section>
-            <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">Change Password</h2>
+            <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">{t('settings.changePasswordHeading')}</h2>
             <form onSubmit={handleChangePassword} className="space-y-3">
               <div>
-                <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">Current password</label>
+                <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">{t('settings.currentPassword')}</label>
                 <input
                   type="password"
                   value={currentPassword}
@@ -184,7 +186,7 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
                 />
               </div>
               <div>
-                <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">New password</label>
+                <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">{t('settings.newPassword')}</label>
                 <input
                   type="password"
                   value={newPassword}
@@ -204,22 +206,22 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
                 {passwordSuccess ? (
                   <>
                     <Check size={14} />
-                    Changed
+                    {t('settings.changed')}
                   </>
-                ) : passwordLoading ? 'Changing...' : 'Change Password'}
+                ) : passwordLoading ? t('settings.changing') : t('settings.changePassword')}
               </button>
             </form>
           </section>
 
           {/* Danger Zone */}
           <section>
-            <h2 className="text-sm font-semibold text-red-500 uppercase tracking-wider mb-4">Danger Zone</h2>
+            <h2 className="text-sm font-semibold text-red-500 uppercase tracking-wider mb-4">{t('settings.dangerZone')}</h2>
             <div className="space-y-3 p-4 border border-red-200 dark:border-red-900 rounded-xl">
               {/* Clear All Chats */}
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Clear all chats</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Permanently delete all your chat history</p>
+                  <p className="text-sm font-medium">{t('settings.clearAllChats')}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('settings.clearAllChatsHint')}</p>
                 </div>
                 {confirmClear ? (
                   <div className="flex items-center gap-2">
@@ -228,7 +230,7 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
                       disabled={clearLoading}
                       className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
                     >
-                      {clearLoading ? 'Clearing...' : 'Confirm'}
+                      {clearLoading ? t('settings.clearing') : t('settings.confirm')}
                     </button>
                     <button
                       onClick={() => setConfirmClear(false)}
@@ -244,7 +246,7 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
                   >
                     <span className="flex items-center gap-1.5">
                       <Trash2 size={12} />
-                      Clear All
+                      {t('settings.clearAll')}
                     </span>
                   </button>
                 )}
@@ -256,8 +258,8 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
               {/* Sign Out */}
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Sign out</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Sign out of your account on this device</p>
+                  <p className="text-sm font-medium">{t('settings.signOutHeading')}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('settings.signOutHint')}</p>
                 </div>
                 <button
                   onClick={onLogout}
@@ -266,7 +268,7 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
                 >
                   <span className="flex items-center gap-1.5">
                     <LogOut size={12} />
-                    {logoutLoading ? 'Signing out…' : 'Sign Out'}
+                    {logoutLoading ? t('settings.signingOut') : t('settings.signOut')}
                   </span>
                 </button>
               </div>

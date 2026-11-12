@@ -2,6 +2,7 @@
 
 import pytest
 
+from glossary import GLOSSARY
 from place.profile import build_profile
 from tests.unit.place.snapshot import (
     EMPTY_LOT,
@@ -22,6 +23,10 @@ def store(tmp_path):
 def profile(store, at=PIN, **kwargs):
     return build_profile(*at, store=store, property_at=fake_property, plan_registry=registry,
                          ancient_remains_at=kwargs.pop("ancient_remains_at", remains_at), **kwargs)
+
+
+def bygglov(result):
+    return next(p for p in result["permits"] if p["key"] == "bygglov")
 
 
 def permit(result, word):
@@ -93,3 +98,26 @@ def test_an_uncovered_place_has_no_permits(store):
     result = profile(store, at=OUTSIDE)
     assert result["permits"] == []
     assert set(result["section_status"].values()) == {"not_covered"}
+
+
+def test_swedish_permits_keep_the_same_keys(store):
+    """Language "sv" changes how the permits are worded, not which permits there are."""
+    english, swedish = profile(store)["permits"], profile(store, language="sv")["permits"]
+    assert [p["key"] for p in swedish] == [p["key"] for p in english]
+
+
+def test_permit_reasons_are_in_swedish_when_asked(store):
+    """With language "sv" every permit's reason is worded differently from its English one."""
+    english, swedish = profile(store)["permits"], profile(store, language="sv")["permits"]
+    assert all(sv["reason"] != en["reason"] for sv, en in zip(swedish, english))
+
+
+def test_swedish_bygglov_title_carries_no_english_explanation(store):
+    """In Swedish the bygglov is titled "Bygglov", with no English explanation in parentheses."""
+    assert bygglov(profile(store, language="sv"))["title"] == "Bygglov"
+
+
+def test_english_permit_reason_explains_a_glossary_term_on_first_use(store):
+    """In English a glossary term in a permit's reason keeps its Swedish form, followed by its explanation."""
+    reason = bygglov(profile(store, at=EMPTY_LOT))["reason"]
+    assert f"förhandsbesked ({GLOSSARY['förhandsbesked']})" in reason

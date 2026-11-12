@@ -41,6 +41,20 @@ def test_profile_endpoint_returns_the_profile(client):
     assert response.json()["property"]["designation"] == "Uppsala Kungsängen 7:8"
 
 
+def test_profile_endpoint_answers_in_the_asked_language(client):
+    """With language=sv the profile's notes are worded differently from the default English ones."""
+    params = {"lat": PIN[0], "lon": PIN[1]}
+    english = client.get("/api/place/profile", params=params).json()["notes"]
+    swedish = client.get("/api/place/profile", params=params | {"language": "sv"}).json()["notes"]
+    assert swedish[0] != english[0]
+
+
+def test_profile_endpoint_rejects_an_unknown_language(client):
+    """A language other than sv or en is a 422."""
+    params = {"lat": PIN[0], "lon": PIN[1], "language": "de"}
+    assert client.get("/api/place/profile", params=params).status_code == 422
+
+
 def test_profile_endpoint_rejects_bad_coordinates(client):
     """A latitude out of range is a 422."""
     assert client.get("/api/place/profile", params={"lat": 123, "lon": 17.6}).status_code == 422

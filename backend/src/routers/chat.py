@@ -18,6 +18,8 @@ from agents.document_agent import DocumentAgent
 from agents.law_agent import LawAgent
 from agents.orchestrator import Orchestrator
 from agents.parsers import format_response, parse_query
+from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_INSTRUCTION, Language, split_language
+from glossary import glossary_prompt
 from db.database import SessionLocal, get_db
 from dependencies import get_current_user
 from agentic.service import agent_enabled
@@ -99,6 +101,42 @@ def _response_input_with_user_prompt(
     response_input = build_responses_input(messages[:-1][-5:])
     response_input.append({"role": "user", "content": user_prompt})
     return response_input
+
+
+def _rag_instructions() -> str:
+    """The RAG answer's instructions: the answer follows the question's language (PCR-0006, ADR-0011)."""
+    return ("You are a Swedish land law and urban planning expert. Answer based on the provided Swedish legal "
+            f"sources.\n\n{LANGUAGE_RULE}\n\n{glossary_prompt()}\n\nUse markdown formatting for clarity.")
+
+
+def _rag_user_prompt(context: str, question: str, search_query: str) -> str:
+    """The RAG answer's last user turn: the user's question as written (it decides the answer language) and the
+    standalone search query rewritten from it."""
+    return (f"Based on these sources:\n\n{context}\n\nAnswer the user's question, as they wrote it, in Swedish if they "
+            f"wrote Swedish and otherwise in English, whatever the language of the sources: {question}\n\n"
+            f"(Standalone search query used for the sources: {search_query})")
+
+
+_CLARIFYING_PROMPT: dict[str, str] = {
+    "en": (
+        "I need a bit more information to run a full feasibility analysis.\n\n"
+        "Please provide:\n"
+        "- **Location** — e.g. Södermalm, Vasastan, Kungsholmen\n"
+        "- **Number of units** — e.g. 20 apartments\n\n"
+        "Example: \"Can I build 20 apartments in Södermalm?\""
+    ),
+    "sv": (
+        "Jag behöver lite mer information för att kunna göra en fullständig bedömning.\n\n"
+        "Ange gärna:\n"
+        "- **Plats** — t.ex. Södermalm, Vasastan, Kungsholmen\n"
+        "- **Antal bostäder** — t.ex. 20 lägenheter\n\n"
+        "Exempel: \"Kan jag bygga 20 lägenheter på Södermalm?\""
+    ),
+}
+
+
+def _clarifying_prompt(language: Language) -> str:
+    return _CLARIFYING_PROMPT[language]
 
 
 @router.get("/sessions", response_model=list[schemas.ChatSession])
@@ -212,7 +250,9 @@ Conversation History:
 Latest User Message: {original_content}"""
         else:
             context_prompt = f"Translate the following user message to English (return only the translation, no explanation): {original_content}"
+        context_prompt = REWRITE_LANGUAGE_INSTRUCTION + "\n\n" + context_prompt
 
+        language: Language = "en"
         try:
             translation_response = create_chat_completion(
                 client,
@@ -221,7 +261,8 @@ Latest User Message: {original_content}"""
                 temperature=0,
                 name="chat.query_translation",
             )
-            translated_content = get_response_output_text(translation_response).strip() or original_content
+            translated_content, language = split_language(get_response_output_text(translation_response))
+            translated_content = translated_content.strip() or original_content
         except Exception:
             logger.warning("Translation failed, using original content", exc_info=True)
             translated_content = original_content
@@ -281,30 +322,16 @@ Latest User Message: {original_content}"""
                     rag_response = create_chat_completion(
                         client,
                         model=resolve_model_name(OPENAI_CHAT_MODEL),
-                        instructions=(
-                            "You are a Swedish land law and urban planning expert. "
-                            "Answer in English based on the provided Swedish legal sources. "
-                            "When quoting Swedish source text directly, use this format:\n"
-                            "> **English:** [your English interpretation]\n"
-                            "> **Original (Swedish):** [exact Swedish text]\n"
-                            "Use markdown formatting for clarity."
-                        ),
+                        instructions=_rag_instructions(),
                         input=_response_input_with_user_prompt(
-                            request.messages,
-                            f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated_content}",
+                            request.messages, _rag_user_prompt(context, original_content, translated_content),
                         ),
                         temperature=0,
                         name="chat.general_rag_answer",
                     )
                     ai_response_content = get_response_output_text(rag_response) + _format_sources(sources)
                 else:
-                    ai_response_content = (
-                        "I need a bit more information to run a full feasibility analysis.\n\n"
-                        "Please provide:\n"
-                        "- **Location** — e.g. Södermalm, Vasastan, Kungsholmen\n"
-                        "- **Number of units** — e.g. 20 apartments\n\n"
-                        "Example: \"Can I build 20 apartments in Södermalm?\""
-                    )
+                    ai_response_content = _clarifying_prompt(language)
             except Exception as e:
                 logger.error("General RAG failed", exc_info=True)
                 raise HTTPException(status_code=500, detail=str(e))
@@ -315,8 +342,8 @@ Latest User Message: {original_content}"""
                 law_agent = LawAgent(db, client)
                 document_agent = DocumentAgent(db, client)
                 orchestrator = Orchestrator(law_agent, document_agent)
-                result = orchestrator.analyze(location, project_type, units)
-                ai_response_content = format_response(result) + _format_sources(result.get("sources", []))
+                result = orchestrator.analyze(location, project_type, units, language=language)
+                ai_response_content = format_response(result, language) + _format_sources(result.get("sources", []))
             except Exception as e:
                 logger.error("Multi-agent analysis failed", exc_info=True)
                 raise HTTPException(status_code=500, detail=str(e))
@@ -473,6 +500,8 @@ def chat_stream(
                         f"(return only the translation, no explanation): {original_content}"
                     )
 
+                context_prompt = REWRITE_LANGUAGE_INSTRUCTION + "\n\n" + context_prompt
+                language: Language = "en"
                 query_sv = None
                 if local_backend_enabled():
                     # The local corpus is Swedish: get the Swedish search query from the same call
@@ -486,7 +515,8 @@ def chat_stream(
                         input=context_prompt,
                         temperature=0,
                     )
-                    translated = get_response_output_text(tr).strip() or original_content
+                    translated, language = split_language(get_response_output_text(tr))
+                    translated = translated.strip() or original_content
                     if local_backend_enabled():
                         translated, query_sv = split_rewrite(translated, original_content)
                 except Exception:
@@ -615,13 +645,7 @@ def chat_stream(
                         pass
 
                     if not all_chunks:
-                        fallback = (
-                            "I need a bit more information to run a full feasibility analysis.\n\n"
-                            "Please provide:\n"
-                            "- **Location** — e.g. Södermalm, Vasastan, Kungsholmen\n"
-                            "- **Number of units** — e.g. 20 apartments\n\n"
-                            'Example: "Can I build 20 apartments in Södermalm?"'
-                        )
+                        fallback = _clarifying_prompt(language)
                         accumulated = fallback
                         yield _sse({"type": "response.output_text.delta", "delta": fallback})
                     else:
@@ -629,17 +653,9 @@ def chat_stream(
                         yield _sse({"type": "thinking", "label": "Composing answer"})
                         answer_request = {
                             "model": resolve_model_name(OPENAI_CHAT_MODEL),
-                            "instructions": (
-                                "You are a Swedish land law and urban planning expert. "
-                                "Answer in English based on the provided Swedish legal sources. "
-                                "When quoting Swedish source text directly, use this format:\n"
-                                "> **English:** [your English interpretation]\n"
-                                "> **Original (Swedish):** [exact Swedish text]\n"
-                                "Use markdown formatting for clarity."
-                            ),
+                            "instructions": _rag_instructions(),
                             "input": _response_input_with_user_prompt(
-                                messages_snapshot,
-                                f"Based on these sources:\n\n{context}\n\nAnswer this question: {translated}",
+                                messages_snapshot, _rag_user_prompt(context, original_content, translated),
                             ),
                             "temperature": 0,
                         }
@@ -687,7 +703,7 @@ def chat_stream(
                     orchestrator = Orchestrator(law_agent, document_agent)
 
                     yield _sse({"type": "tool_call", "name": "document_agent", "input": f"location={location}"})
-                    result = orchestrator.analyze(location, project_type, units)
+                    result = orchestrator.analyze(location, project_type, units, language=language)
                     yield _sse({"type": "tool_result", "name": "law_agent",
                                 "result": f"confidence={result.get('confidence', '?')}%"})
                     yield _sse({"type": "tool_result", "name": "document_agent",
@@ -712,7 +728,7 @@ def chat_stream(
                     )
 
                     yield _sse({"type": "thinking", "label": "Formatting analysis"})
-                    full_text = format_response(result) + _format_sources(result.get("sources", []))
+                    full_text = format_response(result, language) + _format_sources(result.get("sources", []))
 
                     # Emit word-by-word so the frontend renders progressively
                     words = full_text.split(" ")

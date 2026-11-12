@@ -1,6 +1,7 @@
 // Place lookups for the chat's map pin: the place profile of a point and the kommuner the map covers
 // (backend/place/, GET /api/place/*).
 import { authFetch } from '@/lib/auth';
+import type { Language } from '@/lib/i18n';
 
 export interface Pin {
   lat: number;
@@ -110,9 +111,12 @@ async function getJson<T>(url: string): Promise<T> {
   return response.json();
 }
 
-/** The place profile of a pinned point. Throws an Error with the backend's message when the lookup fails. */
-export async function fetchPlaceProfile(pin: Pin): Promise<PlaceProfile> {
-  const query = new URLSearchParams({ lat: String(pin.lat), lon: String(pin.lon) });
+/**
+ * The place profile of a pinned point, its notes and permits in `language` (the page language, sent as the
+ * `language` query parameter). Throws an Error with the backend's message when the lookup fails.
+ */
+export async function fetchPlaceProfile(pin: Pin, language: Language = 'en'): Promise<PlaceProfile> {
+  const query = new URLSearchParams({ lat: String(pin.lat), lon: String(pin.lon), language });
   return getJson<PlaceProfile>(`/api/place/profile?${query}`);
 }
 

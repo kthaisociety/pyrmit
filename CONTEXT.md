@@ -40,6 +40,17 @@ _Avoid_: assessment, evaluation
 **Verdict**:
 The feasibility status the orchestrator returns, always paired with a confidence.
 
+**Answer language**:
+The language an answer is written in: the question's, Swedish or English, English for any other language. The model decides it from the user's own words (earlier messages, then the share of Swedish words, when the message alone does not settle it). Swedish sources are quoted verbatim in either; an English answer adds a translation after each quote.
+_Avoid_: page language (the UI's language choice, which never affects the answer)
+
+**Glossary**:
+The Swedish domain terms an English text keeps in Swedish (bygglov, strandskydd, detaljplan, ...), each explained in English on first use: in an answer by the model, in the **Place card**'s notes and permits in parentheses, and on the English page as a tooltip. A term not in it stays in Swedish without explanation.
+
+**Page language**:
+The language of the page's own texts, Swedish or English, chosen with the language switch and remembered per browser; a first visit follows the browser's preferred language (Swedish for sv, else English). It also sets the language of the **Place card**, but never that of an answer.
+_Avoid_: answer language (decided per question by the model)
+
 **Law agent**:
 The agent that retrieves law chunks and asks the model for a structured reading of the statutes.
 
@@ -170,4 +181,5 @@ A switch on the map panel, off by default, for checking the plan layers and thei
 - A **Pin** in a **Pilot kommun** gives a **Property** (looked up live) and a **Place profile** (from the **Snapshot**): its **Detaljplaner**, **Land-use zones**, **Plans in progress**, **Protected areas** and **National interests**, plus the **Ancient remains** on it (looked up live). The **Likely permits** follow from that profile. The **Place card** shows all of it.
 - A **Pin** in a **Plan-layer kommun** gives a **Place profile** with the **Detaljplaner** at the point from the kommun's **Snapshot**, each with its aktbeteckning, page and document links and licence, and nothing else. The **Plan source** says how the **Snapshot** was read; the **Coverage report** says how well.
 - Every **Detaljplan** polygon in a **Snapshot** is matched to its documents in the document store by **Match level**, giving **Plan-document links** that the **Place profile** carries; the polygons without one go to the **Fetch list**.
+- The **Page language** decides every text the page shows, the **Place card** included; the **Answer language** decides each answer on its own, so a Swedish page can hold an English answer.
 - A question asked with a **Pin** is answered from its **Place profile**, and the answer keeps that **Pin**: reopening the **Chat session** brings back its **Place chip**.

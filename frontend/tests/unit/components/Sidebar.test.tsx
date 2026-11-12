@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
 import Sidebar from '@/components/Sidebar';
+import { LanguageProvider } from '@/lib/i18n';
 
 import { server } from '../../mocks/server';
 
@@ -21,7 +22,7 @@ function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> = {}) {
     onOpenPipeline: vi.fn(),
     ...overrides,
   };
-  render(<Sidebar {...props} />);
+  render(<Sidebar {...props} />, { wrapper: LanguageProvider });
   return props;
 }
 
@@ -101,5 +102,22 @@ describe('Sidebar', () => {
 
     expect(props.onOpenBenchmark).toHaveBeenCalled();
     await screen.findByText('Bygglov Storgatan 3');
+  });
+
+  it('carries the language switch', () => {
+    /** The sidebar has the Svenska / English switch. */
+    renderSidebar();
+
+    expect(screen.getByRole('button', { name: 'Svenska' })).toBeInTheDocument();
+  });
+
+  it('shows its texts in Swedish once Svenska is chosen', async () => {
+    /** Choosing Svenska in the sidebar turns its texts Swedish. */
+    server.use(http.get('*/api/sessions', () => HttpResponse.json([])));
+    renderSidebar();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Svenska' }));
+
+    expect(await screen.findByRole('button', { name: 'Ny chatt' })).toBeInTheDocument();
   });
 });

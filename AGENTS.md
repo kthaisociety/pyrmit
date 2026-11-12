@@ -13,7 +13,7 @@ Load these only when the task needs them:
 
 ## Project Overview
 
-Pyrmit is a Swedish legal RAG (Retrieval-Augmented Generation) chat assistant focused on Swedish land law and urban planning regulations (*fastighetsrätt*, *Plan- och bygglagen*). Planning documents (detaljplaner as PDF) are OCR-processed (Mistral), chunked, and embedded into a PostgreSQL+pgvector database alongside chunked Swedish law texts. The chat translates the user's question to English, retrieves relevant law and document chunks, and calls an OpenAI model (directly or via Vercel AI Gateway) to answer **in English**, quoting Swedish source text verbatim. When a question contains both a location and a number of units, a multi-agent feasibility analysis runs instead of plain RAG.
+Pyrmit is a Swedish legal RAG (Retrieval-Augmented Generation) chat assistant focused on Swedish land law and urban planning regulations (*fastighetsrätt*, *Plan- och bygglagen*). Planning documents (detaljplaner as PDF) are OCR-processed (Mistral), chunked, and embedded into a PostgreSQL+pgvector database alongside chunked Swedish law texts. The chat translates the user's question to English, retrieves relevant law and document chunks, and calls an OpenAI model (directly or via Vercel AI Gateway) to answer **in the question's language** (Swedish or English, English for any other), quoting Swedish source text verbatim (PCR-0006). When a question contains both a location and a number of units, a multi-agent feasibility analysis runs instead of plain RAG.
 
 ---
 
@@ -138,11 +138,12 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | POST   | `/api/benchmark/run`               | Run the agent on a case now (chat settings) and grade it; background job (spends credits) |
 | GET    | `/api/benchmark/run/{job_id}`      | Progress and result of that job (polled) |
 | GET    | `/api/pipeline`                    | Measures of each corpus-building step (crawl coverage, PDF filter errors, OCR benchmark, checks, retrieval eval, plans, tool latency) read from the files the steps write; cached until one changes. Without a corpus: the national snapshot `data/agentic/pipeline-national.json` |
-| GET    | `/api/place/profile?lat=&lon=`     | Place profile of a pinned point: property (live), plans with their documents, zones, plans in progress, inside / outside detaljplan (no model call, ADR-0003) |
+| GET    | `/api/place/profile?lat=&lon=&language=` | Place profile of a pinned point, its notes and permits in the page language (`sv`/`en`, default `en`, ADR-0013): property (live), plans with their documents, zones, plans in progress, inside / outside detaljplan (no model call, ADR-0003) |
 | GET    | `/api/place/coverage`              | Every kommun with a snapshot, pilot or plan-layer (code, name, bbox, fetch date), for the map's first view |
 | GET    | `/api/place/review/coverage`       | Every registry kommun and snapshot as a GeoJSON outline: covered, polygons, matched, fetch date, why not (review mode) |
 | GET    | `/api/place/review/plans?bbox=`    | The plan polygons in a box of at most 2° by 1°, at most 4,000, with their match level and `truncated`; 422 for a wider or malformed box (ADR-0008) |
 | GET    | `/api/place/search?q=`             | Address / place search for the map (the pilot kommun's address register, else Nominatim at 1 request/s); 503 when Nominatim is down |
+| GET    | `/api/glossary`                    | The shared glossary, {term: English explanation}, for the page's tooltips; no sign-in (still behind the access gate, ADR-0014) |
 
 ---
 
@@ -251,6 +252,9 @@ Frontend (`frontend/.env`):
 ### Backend (Python / FastAPI)
 
 - `backend/src/main.py` -- FastAPI app entry, CORS, router registration
+- `backend/src/answer_language.py` -- the answer-language rule every answer prompt carries, and `split_language` for the rewrite's `LANG:` line (PCR-0006, ADR-0011)
+- `backend/src/glossary.py` -- Swedish domain terms an English text keeps in Swedish, with their English explanation; `explained` adds them in parentheses to the place card's English texts
+- `backend/src/routers/glossary.py` -- `GET /api/glossary`
 - `backend/src/llm.py` -- chat client and model name resolution (OpenAI, AI Gateway, OpenRouter), Responses API helpers, timeout and retry (PCR-0003)
 - `backend/src/embeddings.py` -- `Embedder` (openai / openrouter / a local OpenAI-compatible server / in-process sentence-transformers), `get_embedder()` from `EMBEDDING_*`; the vector column dimension is `EMBEDDING_DIM`; `main.py` logs an error when the tables were embedded with another model (PCR-0003, PCR-0004)
 - `backend/src/pipeline_trace.py` -- `CallRecorder` + `recorded_chat_completion` / `recorded_embedding`: prompts, outputs, token usage, cost and timings of every call, for the pipeline inspector
@@ -290,6 +294,10 @@ Frontend (`frontend/.env`):
 
 - `frontend/next.config.js` -- `/api/*` rewrite to the backend
 - `frontend/lib/auth.ts` -- Token storage (localStorage), `authFetch`, access-gate redirect
+- `frontend/lib/i18n.tsx` -- `LanguageProvider` (page language, remembered in localStorage `pyrmit.language`, glossary fetched once), `useLanguage().t`, `fill` for `{name}` placeholders (ADR-0012)
+- `frontend/lib/messages.ts` -- the page's texts, `en` and `sv`, one key per text
+- `frontend/components/LanguageSwitch.tsx` -- SV / EN switch, on the access gate, the sign-in page and in the sidebar footer
+- `frontend/components/Term.tsx` -- a Swedish domain term, with its glossary explanation as tooltip on the English page (ADR-0014)
 - `frontend/lib/dev-access.ts`, `frontend/lib/access-gate-server.ts` -- Access-gate cookie helpers
 - `frontend/app/(protected)/page.tsx` -- Main page: Sidebar + Chat
 - `frontend/app/(protected)/auth/page.tsx` -- Login / signup
@@ -407,9 +415,9 @@ The frontend uses `POST /api/chat/stream` (SSE); `POST /api/chat` runs the same 
 
 1. Access-gate middleware, then `get_current_user` checks the bearer JWT and its login session.
 2. The chat session is created or looked up; the user message and an empty assistant message (status `streaming`) are saved. The answer is generated in a background thread independent of the HTTP connection: the response only relays its events, so closing the tab or opening another chat neither stops nor loses the answer.
-3. A model call rewrites the latest message as a standalone English query (location, units and project type from the last 5 messages).
+3. A model call rewrites the latest message as a standalone English query (location, units and project type from the last 5 messages) and decides the answer language on a first `LANG: sv|en` line (`answer_language.split_language`, ADR-0011).
 4. `parse_query` extracts location, units and project type by regex.
-5. Location or units missing: general RAG, the query embedded once, the top `RAG_TOP_K` law and document chunks, an answer in English markdown quoting Swedish verbatim (PCR-0006) and a Sources list. Both present: `Orchestrator.analyze` runs LawAgent and DocumentAgent in parallel and applies fixed rules for the verdict.
+5. Location or units missing: general RAG, the query embedded once, the top `RAG_TOP_K` law and document chunks, an answer in markdown in the question's language, given the question as the user wrote it, quoting Swedish verbatim (PCR-0006), and a Sources list. Both present: `Orchestrator.analyze` runs LawAgent and DocumentAgent in parallel and applies fixed rules for the verdict; its texts and `format_response` follow the decided language.
 6. SSE events: `session_id`, `thinking`, `tool_call` / `tool_result`, `pipeline`, `response.output_text.delta`, `response.completed`, `done` (or `error`). `relay()` sends a `: keep-alive` comment after 10 s idle (`SSE_HEARTBEAT_S`), since the Next.js dev proxy drops a stream idle for 30 s; the frontend aborts after 45 s without bytes (`STREAM_STALL_MS`) and reloads the session.
 7. The worker updates the assistant message from the events: partial content every 2 s, then the final content, its `trace` (every pipeline event) and status `done` (or `error`).
 
@@ -770,7 +778,7 @@ Tasks beyond the verdict (the product vision: also explain rules, propose projec
 bench and the Benchmark view): `verdicts` are optional (`verdict_ok` null without them); propose cases carry `anchors`
 (places the plans designate, scored by whole-word string match, `min_anchors` needed) and the judge lists the answer's
 `proposals` (sourced or not); develop key points are prefixed "Obstacle:" / "Lever:" / "Ask:" (scored per kind); agent rows
-get `mode` / `mode_ok`. `agentic/cases_tasks.jsonl` = 10 hand-written seeds (Vallentuna, Norrtälje, Uppsala, Gotland,
+get `mode` / `mode_ok`. Every row has `lang`, `language_ok` (answer in the case's language) and `quotes_ok` (Swedish quotes verbatim in the cited chunks). `agentic/cases_bilingual.jsonl` = the 24 cases of `cases.jsonl` + `cases_tasks.jsonl` in Swedish and English (`pair`, `lang`) plus 10 `hard` cases (mixed language, "ja" with `history`, other languages, a lone term), reported per language: `bench --cases-file cases_bilingual.jsonl` (bar: `language_ok` and `quotes_ok` >= 0.98 on sv and en, points within 0.05 and verdict_ok within 5 points between them). `agentic/cases_tasks.jsonl` = 10 hand-written seeds (Vallentuna, Norrtälje, Uppsala, Gotland,
 verbatim evidence); `python -m agentic.cases_from_corpus` drafts more from corpus documents (guidance pages / ÖP growth
 passages / rural + VA passages + statutes) with **MiMo v2.6 Flash** (another model family than the agent), keeps only
 points whose quote is found verbatim (`longest_phrase`), drafts cached in `data/agentic/task_drafts.jsonl` ->

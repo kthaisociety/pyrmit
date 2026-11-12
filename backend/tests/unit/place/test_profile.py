@@ -213,6 +213,17 @@ def test_says_registry_data_not_a_decision(store):
     assert profile(store)["notes"][0] == NOT_A_DECISION
 
 
+def test_swedish_profile_has_as_many_notes_as_the_english_one(store):
+    """Language "sv" changes how the notes are worded, not which notes there are."""
+    assert len(profile(store, language="sv")["notes"]) == len(profile(store)["notes"])
+
+
+def test_notes_are_in_swedish_when_asked(store):
+    """With language "sv" every note is worded differently from its English one."""
+    english, swedish = profile(store)["notes"], profile(store, language="sv")["notes"]
+    assert all(sv != en for sv, en in zip(swedish, english))
+
+
 def test_lists_the_layers_consulted_with_their_status(tmp_path):
     """A layer without its snapshot file is reported as unavailable."""
     store = write_snapshot(tmp_path, missing=("plans_pending",))

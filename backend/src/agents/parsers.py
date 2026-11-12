@@ -4,6 +4,8 @@ Utilities for parsing user queries and formatting agent responses.
 
 import re
 
+from answer_language import Language
+
 
 def parse_query(query: str) -> dict:
     """
@@ -51,38 +53,59 @@ def parse_query(query: str) -> dict:
     return parsed
 
 
-def format_response(response: dict) -> str:
+_LABELS: dict[str, dict[str, str]] = {
+    "en": {"title": "Feasibility Analysis", "feasibility": "Feasibility", "confidence": "Confidence",
+           "summary": "Summary", "law": "Law Findings", "cases": "Historical Precedent", "requirements": "Requirements",
+           "timeline": "Estimated Timeline", "months": "months", "next_steps": "Recommended Next Steps"},
+    "sv": {"title": "Bedömning av genomförbarhet", "feasibility": "Genomförbarhet", "confidence": "Säkerhet",
+           "summary": "Sammanfattning", "law": "Lagstiftning", "cases": "Tidigare ärenden", "requirements": "Krav",
+           "timeline": "Beräknad tid", "months": "månader", "next_steps": "Rekommenderade nästa steg"},
+}
+_STATUS_LABELS: dict[str, dict[str, str]] = {
+    "en": {},
+    "sv": {"HIGHLY FEASIBLE": "MYCKET GENOMFÖRBART", "FEASIBLE WITH CHALLENGES": "GENOMFÖRBART MED UTMANINGAR",
+           "NOT FEASIBLE": "INTE GENOMFÖRBART", "UNCERTAIN": "OSÄKERT"},
+}
+
+
+def format_response(response: dict, language: Language = "en") -> str:
     """
     Format the orchestrator response for human readability (Markdown).
 
     Args:
         response: Response dictionary from orchestrator
+        language: the answer's language (answer_language). "sv" writes every heading and label in Swedish
+            ("## Bedömning av genomförbarhet", "**Genomförbarhet:**", "**Säkerhet:**", "### Sammanfattning",
+            "### Lagstiftning", "### Tidigare ärenden", "### Krav", "**Beräknad tid:** <n> månader",
+            "### Rekommenderade nästa steg") and the feasibility status as a Swedish label; "en" is unchanged.
 
     Returns:
         Markdown-formatted string
     """
+    labels = _LABELS[language]
     output = []
-    output.append("## Feasibility Analysis")
-    output.append(f"\n**Feasibility:** {response['feasibility']}")
-    output.append(f"**Confidence:** {response['confidence']}%")
-    output.append(f"\n### Summary\n{response['summary']}")
+    output.append(f"## {labels['title']}")
+    status = response["feasibility"]
+    output.append(f"\n**{labels['feasibility']}:** {_STATUS_LABELS[language].get(status, status)}")
+    output.append(f"**{labels['confidence']}:** {response['confidence']}%")
+    output.append(f"\n### {labels['summary']}\n{response['summary']}")
 
     if response.get("law_findings"):
-        output.append(f"\n### Law Findings\n{response['law_findings']}")
+        output.append(f"\n### {labels['law']}\n{response['law_findings']}")
 
     if response.get("case_findings"):
-        output.append(f"\n### Historical Precedent\n{response['case_findings']}")
+        output.append(f"\n### {labels['cases']}\n{response['case_findings']}")
 
     if response.get("requirements"):
-        output.append("\n### Requirements")
+        output.append(f"\n### {labels['requirements']}")
         for req in response["requirements"]:
             output.append(f"- {req}")
 
     if response.get("timeline"):
-        output.append(f"\n**Estimated Timeline:** {response['timeline']} months")
+        output.append(f"\n**{labels['timeline']}:** {response['timeline']} {labels['months']}")
 
     if response.get("next_steps"):
-        output.append("\n### Recommended Next Steps")
+        output.append(f"\n### {labels['next_steps']}")
         for i, step in enumerate(response["next_steps"], 1):
             output.append(f"{i}. {step}")
 

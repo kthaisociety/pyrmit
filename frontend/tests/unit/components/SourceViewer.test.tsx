@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SourceViewer, { Citation } from '@/components/SourceViewer';
+import { LanguageProvider } from '@/lib/i18n';
 
 import { server } from '../../mocks/server';
 
@@ -28,7 +29,7 @@ beforeEach(() => {
 });
 
 const openThePassage = async (shown: Citation = citation) => {
-  render(<SourceViewer citation={shown} onClose={vi.fn()} />);
+  render(<SourceViewer citation={shown} onClose={vi.fn()} />, { wrapper: LanguageProvider });
   await userEvent.click(screen.getAllByRole('button', { name: /Open the PDF at this passage/ })[0]);
 };
 
@@ -90,13 +91,13 @@ describe('SourceViewer', () => {
   describe('a document kept without its original', () => {
     /** The early prototype's "legacy:" documents have no file or URL: a button would only end in an error. */
     it('offers no open button', () => {
-      render(<SourceViewer citation={legacy} onClose={vi.fn()} />);
+      render(<SourceViewer citation={legacy} onClose={vi.fn()} />, { wrapper: LanguageProvider });
 
       expect(screen.getAllByRole('button', { name: /Open the/ })).toHaveLength(1); // the statute only
     });
 
     it('says no original was kept', () => {
-      render(<SourceViewer citation={legacy} onClose={vi.fn()} />);
+      render(<SourceViewer citation={legacy} onClose={vi.fn()} />, { wrapper: LanguageProvider });
 
       expect(screen.getByText(/No original kept/)).toBeInTheDocument();
     });
