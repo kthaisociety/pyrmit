@@ -69,6 +69,21 @@ def test_a_server_error_status_is_asked_again_too(monkeypatch):
     assert live.property_at("0380", 17.6052, 59.8522)["designation"] == "Uppsala Flogsta 11:1"
 
 
+def test_the_property_survives_every_other_call_failing(monkeypatch):
+    """On 2026-11-12 the service failed every other call: the point and the whole property are both found."""
+    monkeypatch.setattr(live.httpx, "get", service(ERROR, features(PARCEL), ERROR, features(PARCEL)))
+    assert live.property_at("0380", 17.6055, 59.8525)["designation"] == "Uppsala Flogsta 11:1"
+
+
+def test_the_point_hit_stands_in_when_the_whole_property_fails(monkeypatch):
+    """The parts of the property are a refinement: when they fail, the parcel at the point is the property."""
+    get = service(features(PARCEL), *[ERROR] * live.PROPERTY_TRIES)
+    monkeypatch.setattr(live.httpx, "get", get)
+    found = live.property_at("0380", 17.6056, 59.8526)
+    assert found["designation"] == "Uppsala Flogsta 11:1"
+    assert found["geometry"]["type"] == "Polygon"
+
+
 def test_a_service_that_keeps_erroring_is_unavailable(monkeypatch):
     """After PROPERTY_TRIES failures the lookup gives up, so a dead service does not hang a pin."""
     get = service(*[ERROR] * live.PROPERTY_TRIES)
