@@ -21,8 +21,9 @@ UPPSALA_PROPERTY_LAYER = 51  # Fastighetsgränser: one polygon per part of a pro
 UPPSALA_ADDRESS_LAYER = 11   # Adresser: the kommun's belägenhetsadresser, one point per entrance
 TIMEOUT_S = 15
 # Uppsala's property layer answered a point query with "Error performing query operation" in about half the calls on
-# 2026-11-05 while the plan layers answered every time: one more try catches most of them
-PROPERTY_TRIES = 2
+# 2026-11-05 while the plan layers answered every time. On 2026-11-12 every other call failed, on every layer, so
+# other users' calls in between can make two tries fail: four bring a pin's failure odds near 1/16
+PROPERTY_TRIES = 4
 COORDINATE_DECIMALS = 6      # ~0.1 m: pins closer than that share a cached lookup
 # Every kind of lämning in the register, from fornlämning to "ingen antikvarisk bedömning"
 RAA_LAYERS = "fornlamning,mojligfornlamning,ovrkulthistlamning,ingenantikvariskbedomning,ejkulthistlamning"
@@ -98,7 +99,10 @@ def _uppsala_property(kommun: str, lon: float, lat: float) -> dict | None:
         return None
     fastighet = hits[0]["properties"]["fastighet"]
     escaped = fastighet.replace("'", "''")
-    parts = _query({"where": f"fastighet = '{escaped}'"}) or hits
+    try:
+        parts = _query({"where": f"fastighet = '{escaped}'"}) or hits
+    except PlaceSourceUnavailable:
+        parts = hits  # the parcel at the point: a property in several parts shows only this one
     geometry = unary_union([shape(part["geometry"]) for part in parts])
     return {"designation": _designation(kommun, fastighet), "geometry": mapping(geometry),
             "addresses": _addresses_on(geometry), "source": "Uppsala kommun", "fetched": today()}
