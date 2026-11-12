@@ -47,7 +47,7 @@ def analyze(
     document_agent = DocumentAgent(db, client)
     orchestrator = Orchestrator(law_agent, document_agent)
 
-    result = orchestrator.analyze(location, project_type, units)
+    result = orchestrator.analyze(location, project_type, units, language=request.language)
 
     return schemas.AnalyzeResponse(
         feasibility=result["feasibility"],

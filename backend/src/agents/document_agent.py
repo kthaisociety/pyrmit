@@ -8,28 +8,24 @@ import logging
 from openai import OpenAI
 from sqlalchemy.orm import Session
 
-from agents.base import BaseRAGAgent, _TRANSLATION_INSTRUCTION
+from agents.base import LANGUAGE_INSTRUCTION, LANGUAGE_NAME, QUOTE_FORMAT, BaseRAGAgent
+from answer_language import Language
 from pipeline_trace import CallRecorder
 from models import DocumentChunk
 from observability import start_observation
 
 logger = logging.getLogger(__name__)
 
-_SYSTEM_PROMPT = (
-    "You are a permit analyst specializing in development project outcomes. "
-    + _TRANSLATION_INSTRUCTION
-)
+_ROLE = "You are a permit analyst specializing in development project outcomes. "
 
 _USER_TEMPLATE = """Based ONLY on the following historical documents (which may be in Swedish):
 
 {context}
 
-Answer this question in English:
+Answer this question in {language_name}:
 What happened when people tried to build similar {project_type} projects (around {units} units) in {location}?
 
-When citing Swedish source text, use this format:
-> **English:** [your English interpretation]
-> **Original (Swedish):** [exact Swedish text from the source]
+{quote_format}
 
 Provide your answer in JSON format:
 {{
@@ -39,13 +35,13 @@ Provide your answer in JSON format:
             "units": <number>,
             "outcome": "APPROVED" or "DENIED",
             "year": <year>,
-            "conditions": ["<condition1 in English>", "<condition2 in English>"]
+            "conditions": ["<condition1 in {language_name}>", "<condition2 in {language_name}>"]
         }}
     ],
     "approval_rate": "<percentage>",
-    "common_requirements": ["<requirement1 in English>", "<requirement2 in English>"],
+    "common_requirements": ["<requirement1 in {language_name}>", "<requirement2 in {language_name}>"],
     "typical_timeline_months": <number>,
-    "political_climate": "<assessment in English>",
+    "political_climate": "<assessment in {language_name}>",
     "confidence": <0.0 to 1.0>
 }}
 
@@ -60,7 +56,9 @@ class DocumentAgent(BaseRAGAgent):
     def __init__(self, db: Session, openai_client: OpenAI, recorder: CallRecorder | None = None):
         super().__init__(db, openai_client, DocumentChunk, "Document Agent", recorder)
 
-    def query(self, location: str, project_type: str, units: int) -> dict:
+    def query(self, location: str, project_type: str, units: int, language: Language = "en") -> dict:
+        """The structured reading, its text fields written in `language` with Swedish quotes kept verbatim
+        (PCR-0006)."""
         logger.debug("Searching documents for %d %s units in %s", units, project_type, location)
 
         search_query = f"{location} {project_type} {units} units approved denied outcome"
@@ -84,9 +82,10 @@ class DocumentAgent(BaseRAGAgent):
         context = "\n\n".join(f"Document {i + 1}:\n{content}" for i, (content, _) in enumerate(docs))
 
         user_prompt = _USER_TEMPLATE.format(
-            context=context, location=location, project_type=project_type, units=units
+            context=context, location=location, project_type=project_type, units=units,
+            language_name=LANGUAGE_NAME[language], quote_format=QUOTE_FORMAT[language],
         )
-        response_text = self._call_llm(_SYSTEM_PROMPT, user_prompt)
+        response_text = self._call_llm(_ROLE + LANGUAGE_INSTRUCTION[language], user_prompt)
         retrieval = {"query": search_query, "matches": self._trace_rows(debug_rows)}
 
         try:
