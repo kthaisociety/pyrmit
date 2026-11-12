@@ -1,0 +1,877 @@
+import json
+import logging
+import os
+import queue
+import re
+import threading
+import time
+import uuid
+from typing import Generator
+
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
+
+from agents.base import OPENAI_CHAT_MODEL
+from agents.document_agent import DocumentAgent
+from agents.law_agent import LawAgent
+from agents.orchestrator import Orchestrator
+from agents.parsers import format_response, parse_query
+from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_INSTRUCTION, Language, split_language
+from glossary import glossary_prompt
+from db.database import SessionLocal, get_db
+from dependencies import get_current_user
+from agentic.claim_check import verify_answer
+from agentic.service import agent_enabled
+from localrag.service import SWEDISH_QUERY_SUFFIX, local_backend_enabled, retrieve as local_retrieve, split_rewrite
+from llm import (
+    build_responses_input,
+    get_response_output_text,
+    resolve_model_name,
+)
+import models
+from observability import (
+    create_chat_completion,
+    get_openai_client,
+    propagate_trace_attributes,
+    reasoning_effort,
+    start_observation,
+)
+from pipeline_trace import CallRecorder, recorded_chat_completion, response_usage
+from place.context import compact_profile, question_with_place
+import schemas
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+
+def get_place_profile():
+    """The place-profile builder of a pinned question: lat, lon -> place.profile.build_profile (overridden in
+    tests)."""
+    from place.profile import build_profile
+
+    return build_profile
+
+def get_law_text():
+    """The statute lookup of a pinned question's permits: (law, section) -> the section's text tagged [c:<chunk id>],
+    or None; the agent's corpus tools, loaded on first use (overridden in tests)."""
+    def law_text(law: str, section: str) -> str | None:
+        from agentic.service import get_tools
+
+        result = get_tools().law_section(law, section)
+        return result.text if result.chunk_ids else None
+    return law_text
+
+# Chunks per pool (laws / documents) given to the answer model; the local eval reaches ~0.93 recall at 10
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "10"))
+SSE_HEARTBEAT_S = 10  # idle stream -> keep-alive comment, well under proxy idle timeouts
+
+
+def _get_user_session(session_id: str, user_id: str, db: Session) -> models.ChatSession:
+    session = db.query(models.ChatSession).filter(
+        models.ChatSession.id == session_id,
+        models.ChatSession.user_id == user_id,
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
+def _format_sources(sources: list[str], numbered: bool = False) -> str:
+    """The source list appended to the answer; numbered ("- [1] label") when the answer cites [n]."""
+    if not sources:
+        return ""
+    items = "\n".join(f"- [{i}] {s}" if numbered else f"- {s}" for i, s in enumerate(sources, start=1))
+    return f"\n\n---\n**Sources**\n{items}"
+
+
+def _sse(event: dict) -> str:
+    return f"data: {json.dumps(event, default=str)}\n\n"
+
+
+def _check_claims(run) -> tuple[dict, tuple[str, list[dict]] | None]:
+    """The claim check of an agent run's answer (agentic.claim_check.verify_answer, issue #82): the data of its
+    "claim_check" pipeline event, and, when the check rewrote the answer, the rewritten answer as the user sees it
+    (citations numbered, source list appended) with its "citations" items; else None."""
+    from agentic.service import CitationNumberer, get_tools
+    from agentic.tools import resolve_cited
+
+    tools = get_tools()
+
+    def get_chunk(chunk_id: str) -> dict | None:
+        return resolve_cited(tools.get_chunk, chunk_id, run.seen_chunks)
+
+    verified = verify_answer(run.answer, get_chunk, list(run.seen_chunks))
+    if verified.answer == run.answer:
+        return verified.check.as_event(), None
+    numberer = CitationNumberer(get_chunk)
+    shown = numberer.feed(verified.answer) + numberer.close() + _format_sources(numberer.labels, numbered=True)
+    return verified.check.as_event(), (shown, numberer.citations())
+
+
+def _agent_output_for_trace(output: dict) -> dict:
+    return {key: value for key, value in output.items() if key not in {"retrieval", "sources"}}
+
+
+def _response_input_with_user_prompt(
+        messages: list[schemas.ChatMessage],
+        user_prompt: str,
+) -> list[dict[str, str]]:
+    response_input = build_responses_input(messages[:-1][-5:])
+    response_input.append({"role": "user", "content": user_prompt})
+    return response_input
+
+
+def _rag_instructions() -> str:
+    """The RAG answer's instructions: the answer follows the question's language (PCR-0006, ADR-0011)."""
+    return ("You are a Swedish land law and urban planning expert. Answer based on the provided Swedish legal "
+            f"sources.\n\n{LANGUAGE_RULE}\n\n{glossary_prompt()}\n\nUse markdown formatting for clarity.")
+
+
+def _rag_user_prompt(context: str, question: str, search_query: str) -> str:
+    """The RAG answer's last user turn: the user's question as written (it decides the answer language) and the
+    standalone search query rewritten from it."""
+    return (f"Based on these sources:\n\n{context}\n\nAnswer the user's question, as they wrote it, in Swedish if they "
+            f"wrote Swedish and otherwise in English, whatever the language of the sources: {question}\n\n"
+            f"(Standalone search query used for the sources: {search_query})")
+
+
+_CLARIFYING_PROMPT: dict[str, str] = {
+    "en": (
+        "I need a bit more information to run a full feasibility analysis.\n\n"
+        "Please provide:\n"
+        "- **Location** — e.g. Södermalm, Vasastan, Kungsholmen\n"
+        "- **Number of units** — e.g. 20 apartments\n\n"
+        "Example: \"Can I build 20 apartments in Södermalm?\""
+    ),
+    "sv": (
+        "Jag behöver lite mer information för att kunna göra en fullständig bedömning.\n\n"
+        "Ange gärna:\n"
+        "- **Plats** — t.ex. Södermalm, Vasastan, Kungsholmen\n"
+        "- **Antal bostäder** — t.ex. 20 lägenheter\n\n"
+        "Exempel: \"Kan jag bygga 20 lägenheter på Södermalm?\""
+    ),
+}
+
+
+def _clarifying_prompt(language: Language) -> str:
+    return _CLARIFYING_PROMPT[language]
+
+
+@router.get("/sessions", response_model=list[schemas.ChatSession])
+def get_sessions(db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    return db.query(models.ChatSession).filter(models.ChatSession.user_id == user.id).order_by(
+        models.ChatSession.updated_at.desc()).all()
+
+
+@router.get("/sessions/{session_id}", response_model=list[schemas.MessageResponse])
+def get_session_history(session_id: str, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    _get_user_session(session_id, user.id, db)
+    return db.query(models.ChatMessage).filter(models.ChatMessage.session_id == session_id).order_by(
+        models.ChatMessage.created_at).all()
+
+
+@router.delete("/sessions")
+def delete_all_sessions(db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    session_ids = [s.id for s in db.query(models.ChatSession.id).filter(models.ChatSession.user_id == user.id).all()]
+    if session_ids:
+        db.query(models.ChatMessage).filter(models.ChatMessage.session_id.in_(session_ids)).delete(
+            synchronize_session=False)
+        count = db.query(models.ChatSession).filter(models.ChatSession.id.in_(session_ids)).delete(
+            synchronize_session=False)
+        db.commit()
+    else:
+        count = 0
+    return {"status": "deleted", "count": count}
+
+
+@router.delete("/sessions/{session_id}")
+def delete_session(session_id: str, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    session = _get_user_session(session_id, user.id, db)
+    db.delete(session)
+    db.commit()
+    return {"status": "deleted"}
+
+
+@router.patch("/sessions/{session_id}", response_model=schemas.ChatSession)
+def update_session(session_id: str, request: schemas.UpdateSessionRequest, db: Session = Depends(get_db),
+                   user: models.User = Depends(get_current_user)):
+    session = _get_user_session(session_id, user.id, db)
+    session.title = request.title
+    db.commit()
+    db.refresh(session)
+    return session
+
+
+@router.post("/chat", response_model=schemas.MessageResponse)
+def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    if not request.messages:
+        raise HTTPException(status_code=400, detail="No messages provided")
+
+    client = get_openai_client()
+
+    # Handle Session
+    session_id = request.session_id or str(uuid.uuid4())
+
+    with start_observation(
+            "chat.request",
+            input={
+                "message_count": len(request.messages),
+                "last_message": request.messages[-1].content,
+            },
+            metadata={"route": "/api/chat"},
+    ) as chat_obs, propagate_trace_attributes(
+        user_id=user.id,
+        session_id=session_id,
+        metadata={"route": "chat"},
+    ):
+        if not request.session_id:
+            # Create new session with title from first message
+            first_msg_content = request.messages[-1].content
+            title = (first_msg_content[:30] + '...') if len(first_msg_content) > 30 else first_msg_content
+            new_session = models.ChatSession(id=session_id, title=title, user_id=user.id)
+            db.add(new_session)
+            db.commit()
+            db.refresh(new_session)
+        else:
+            session = _get_user_session(session_id, user.id, db)
+            session.updated_at = func.now()
+
+        last_message = request.messages[-1]
+
+        # Save user message
+        user_message = models.ChatMessage(
+            role=last_message.role,
+            content=last_message.content,
+            session_id=session_id,
+        )
+        db.add(user_message)
+        db.commit()
+        db.refresh(user_message)
+
+        # Translate and contextualize user message based on chat history
+        original_content = last_message.content
+
+        if len(request.messages) > 1:
+            # Build chat history for context (last 5 messages, excluding the current one)
+            history_msgs = request.messages[:-1][-5:]
+            history_str = "\n".join([f"{msg.role}: {msg.content}" for msg in history_msgs])
+
+            context_prompt = f"""
+Given the following conversation history and the latest user message, rewrite the latest user message into a standalone query in English. 
+Ensure any location, number of units, or project type implicitly mentioned in the history is explicitly included in the standalone query.
+If the latest message is a completely new topic or just greetings, simply translate it to English.
+Return ONLY the standalone English query, without any prefix or explanation.
+
+Conversation History:
+{history_str}
+
+Latest User Message: {original_content}"""
+        else:
+            context_prompt = f"Translate the following user message to English (return only the translation, no explanation): {original_content}"
+        context_prompt = REWRITE_LANGUAGE_INSTRUCTION + "\n\n" + context_prompt
+
+        language: Language = "en"
+        try:
+            translation_response = create_chat_completion(
+                client,
+                model=resolve_model_name(OPENAI_CHAT_MODEL),
+                input=context_prompt,
+                temperature=0,
+                name="chat.query_translation",
+            )
+            translated_content, language = split_language(get_response_output_text(translation_response))
+            translated_content = translated_content.strip() or original_content
+        except Exception:
+            logger.warning("Translation failed, using original content", exc_info=True)
+            translated_content = original_content
+
+        # Parse the (translated) user query for location, units, project_type
+        parsed = parse_query(translated_content)
+        location = parsed.get("location")
+        units = parsed.get("units")
+        project_type = parsed.get("project_type") or "residential"
+
+        chat_obs.update(
+            metadata={
+                "translated_content": translated_content,
+                "parsed_location": location,
+                "parsed_units": units,
+                "parsed_project_type": project_type,
+            }
+        )
+
+        if not location or not units:
+            logger.info("Missing location or units — falling back to general RAG")
+            # General RAG fallback: answer using retrieved law + document chunks
+            try:
+                law_agent = LawAgent(db, client)
+                document_agent = DocumentAgent(db, client)
+                embedding = law_agent._embed(translated_content)
+
+                law_debug_rows = law_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
+                doc_debug_rows = document_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
+                law_agent._log_retrieval(translated_content, law_debug_rows)
+                document_agent._log_retrieval(translated_content, doc_debug_rows)
+
+                law_results = law_agent._retrieve_with_meta_from_embedding(embedding, k=RAG_TOP_K)
+                doc_results = document_agent._retrieve_with_meta_from_embedding(embedding, k=RAG_TOP_K)
+                all_chunks = [c for c, _ in law_results] + [c for c, _ in doc_results]
+                sources = list(dict.fromkeys(
+                    [label for _, label in law_results] + [label for _, label in doc_results]
+                ))
+
+                with start_observation(
+                        "chat.general_rag_retrieval",
+                        metadata={
+                            "query": translated_content,
+                            "law_matches": [{key: value for key, value in row.items() if key != "content"} for row in
+                                            law_debug_rows],
+                            "document_matches": [{key: value for key, value in row.items() if key != "content"} for row
+                                                 in doc_debug_rows],
+                        },
+                ):
+                    pass
+
+                if all_chunks:
+                    context = "\n\n".join(
+                        f"Source {i + 1}:\n{chunk}" for i, chunk in enumerate(all_chunks)
+                    )
+
+                    rag_response = create_chat_completion(
+                        client,
+                        model=resolve_model_name(OPENAI_CHAT_MODEL),
+                        instructions=_rag_instructions(),
+                        input=_response_input_with_user_prompt(
+                            request.messages, _rag_user_prompt(context, original_content, translated_content),
+                        ),
+                        temperature=0,
+                        name="chat.general_rag_answer",
+                    )
+                    ai_response_content = get_response_output_text(rag_response) + _format_sources(sources)
+                else:
+                    ai_response_content = _clarifying_prompt(language)
+            except Exception as e:
+                logger.error("General RAG failed", exc_info=True)
+                raise HTTPException(status_code=500, detail=str(e))
+        else:
+            logger.info("Running multi-agent analysis: location=%s units=%s type=%s", location, units, project_type)
+            # Run full multi-agent feasibility analysis
+            try:
+                law_agent = LawAgent(db, client)
+                document_agent = DocumentAgent(db, client)
+                orchestrator = Orchestrator(law_agent, document_agent)
+                result = orchestrator.analyze(location, project_type, units, language=language)
+                ai_response_content = format_response(result, language) + _format_sources(result.get("sources", []))
+            except Exception as e:
+                logger.error("Multi-agent analysis failed", exc_info=True)
+                raise HTTPException(status_code=500, detail=str(e))
+
+        # Save AI response
+        ai_message = models.ChatMessage(
+            role="assistant",
+            content=ai_response_content,
+            session_id=session_id
+        )
+        db.add(ai_message)
+        db.commit()
+        db.refresh(ai_message)
+
+        chat_obs.update(output={"session_id": session_id})
+        return ai_message
+
+
+@router.post("/chat/stream")
+def chat_stream(
+        request: schemas.ChatRequest,
+        place_profile=Depends(get_place_profile),
+        law_text=Depends(get_law_text),
+        db: Session = Depends(get_db),
+        user: models.User = Depends(get_current_user),
+):
+    """The chat's streamed answer (SSE). In the agent mode a pinned place (request.place) is the place the question
+    is about: its place profile goes before the question (place.context.question_with_place) and is saved as the "place"
+    pipeline event of the answer's trace, {"pin": {"lat", "lon", "label"}, "profile": compact_profile}, which is how
+    the chat session keeps its place (ADR-0004). Without a pin the question gets place.context.NO_PIN_HINT.
+
+    Claim check (issue #82): once the agent's answer has streamed, the stream says {"type": "thinking", "label":
+    "Checking the claims"} and the answer goes through agentic.claim_check.verify_answer; the message stays "streaming"
+    until the check is done. A rewritten answer is sent as {"type": "answer_replaced", "content": <the numbered answer
+    with its source list>} (only when the text changed) and saved as the message's content; the "citations" event
+    numbers the final answer. The verdicts are saved as the "claim_check" pipeline event, ClaimCheck.as_event(). A
+    question back to the user (the agent's question card) is not checked and has no "claim_check" event."""
+    if not request.messages:
+        raise HTTPException(status_code=400, detail="No messages provided")
+
+    # All setup done eagerly so HTTPException can still be raised before streaming
+    client = get_openai_client()
+
+    session_id = request.session_id
+    is_new_session = not session_id
+    if is_new_session:
+        session_id = str(uuid.uuid4())
+        first_msg_content = request.messages[-1].content
+        title = (first_msg_content[:30] + "...") if len(first_msg_content) > 30 else first_msg_content
+        new_session = models.ChatSession(id=session_id, title=title, user_id=user.id)
+        db.add(new_session)
+        db.commit()
+    else:
+        session = _get_user_session(session_id, user.id, db)
+        session.updated_at = func.now()
+        db.commit()
+
+    last_message = request.messages[-1]
+    user_message = models.ChatMessage(role=last_message.role, content=last_message.content, session_id=session_id)
+    db.add(user_message)
+    db.commit()
+    # The answer is in the history from the start: it is filled while generating, even if the user leaves
+    assistant_message = models.ChatMessage(role="assistant", content="", session_id=session_id, status="streaming")
+    db.add(assistant_message)
+    db.commit()
+    assistant_id = assistant_message.id
+
+    # Capture for use inside generator
+    messages_snapshot = list(request.messages)
+    original_content = last_message.content
+    pinned = request.place
+
+    def generate(db: Session) -> Generator[str, None, None]:
+        with start_observation(
+                "chat.stream",
+                input={"last_message": original_content},
+                metadata={"stream": True}
+        ) as stream_obs, propagate_trace_attributes(
+            user_id=user.id,
+            session_id=session_id,
+        ):
+            accumulated = ""
+            # Pipeline inspector: every event is streamed live and saved with the answer
+            recorder = CallRecorder()
+            trace: list[dict] = []
+
+            def emit(stage: str, **data) -> str:
+                event = {"stage": stage, "data": data}
+                trace.append(event)
+                return _sse({"type": "pipeline", **event})
+
+            def emit_calls() -> Generator[str, None, None]:
+                for call in recorder.drain():
+                    yield emit("call", **call)
+
+            yield ": connected\n\n"
+
+            if is_new_session:
+                yield _sse({"type": "session_id", "session_id": session_id})
+
+            try:
+                if agent_enabled():
+                    # ── Agentic path: the model explores the local corpus with tools ──
+                    from agentic.service import stream_agent
+
+                    yield _sse({"type": "thinking", "label": "Exploring the documents"})
+                    yield emit("intent", location=None, units=None, project_type=None, route="agent")
+                    history = [{"role": m.role, "content": m.content} for m in messages_snapshot[:-1][-6:]
+                               if m.role in ("user", "assistant") and m.content]
+
+                    def record(**call):
+                        recorder.record(**call)
+
+                    answered = request.answer_to_question
+                    question = question_with_place(original_content, None, answered=answered)
+                    if pinned:
+                        yield _sse({"type": "thinking", "label": "Looking up the pinned place"})
+                        profile = place_profile(pinned.lat, pinned.lon)
+                        yield emit("place", pin=pinned.model_dump(), profile=compact_profile(profile))
+                        question = question_with_place(original_content, profile, law_text, answered=answered)
+
+                    outcome = yield from stream_agent(question, history, record, _sse,
+                                                      flush=lambda: list(emit_calls()), allow_ask=not answered)
+                    yield from emit_calls()
+                    yield emit("retrieval", agent="law", query=original_content, embedding_ok=True,
+                               matches=outcome["law_rows"])
+                    yield emit("retrieval", agent="document", query=original_content, embedding_ok=True,
+                               matches=outcome["local_rows"])
+                    # The answer itself was streamed by stream_agent; append the numbered source list
+                    # The agent asked instead of answering: its question card, also for open questions (no options)
+                    asked = bool(outcome.get("questions") or outcome.get("offer_pin"))
+                    if asked:
+                        yield emit("choices", questions=outcome.get("questions") or [],
+                                   offer_pin=bool(outcome.get("offer_pin")))
+                    suffix = _format_sources(outcome["sources"], numbered=True)
+                    accumulated = outcome["answer"] + suffix
+                    yield _sse({"type": "response.output_text.delta", "delta": suffix})
+                    citations, check = outcome["citations"], None
+                    run = outcome.get("run")
+                    if not asked and run is not None:
+                        yield _sse({"type": "thinking", "label": "Checking the claims"})
+                        check, rewritten = _check_claims(run)
+                        if rewritten is not None:
+                            accumulated, citations = rewritten
+                            yield _sse({"type": "answer_replaced", "content": accumulated})
+                    yield emit("citations", items=citations)
+                    if check is not None:
+                        yield emit("claim_check", **check)
+                    yield _sse({"type": "response.completed"})
+                    yield _sse({"type": "done", "session_id": session_id})
+                    return
+
+                # ── Step 1: translate / contextualize ──────────────────────────
+                yield _sse({"type": "thinking", "label": "Understanding your question"})
+
+                if len(messages_snapshot) > 1:
+                    history_msgs = messages_snapshot[:-1][-5:]
+                    history_str = "\n".join(f"{m.role}: {m.content}" for m in history_msgs)
+                    context_prompt = (
+                        "Given the following conversation history and the latest user message, "
+                        "rewrite the latest user message into a standalone query in English. "
+                        "Ensure any location, number of units, or project type implicitly mentioned "
+                        "in the history is explicitly included in the standalone query. "
+                        "If the latest message is a completely new topic or just greetings, simply translate it. "
+                        "Return ONLY the standalone English query, no prefix or explanation.\n\n"
+                        f"Conversation History:\n{history_str}\n\n"
+                        f"Latest User Message: {original_content}"
+                    )
+                else:
+                    context_prompt = (
+                        f"Translate the following user message to English "
+                        f"(return only the translation, no explanation): {original_content}"
+                    )
+
+                context_prompt = REWRITE_LANGUAGE_INSTRUCTION + "\n\n" + context_prompt
+                language: Language = "en"
+                query_sv = None
+                if local_backend_enabled():
+                    # The local corpus is Swedish: get the Swedish search query from the same call
+                    context_prompt += "\n\n" + SWEDISH_QUERY_SUFFIX
+                try:
+                    tr = recorded_chat_completion(
+                        recorder,
+                        client,
+                        name="Query rewrite / translation",
+                        model=resolve_model_name(OPENAI_CHAT_MODEL),
+                        input=context_prompt,
+                        temperature=0,
+                    )
+                    translated, language = split_language(get_response_output_text(tr))
+                    translated = translated.strip() or original_content
+                    if local_backend_enabled():
+                        translated, query_sv = split_rewrite(translated, original_content)
+                except Exception:
+                    logger.warning("Translation failed, using original", exc_info=True)
+                    translated = original_content
+
+                yield from emit_calls()
+                yield emit(
+                    "translation",
+                    original=original_content,
+                    translated=translated,
+                    used_history=len(messages_snapshot) > 1,
+                )
+
+                # ── Step 2: parse intent ───────────────────────────────────────
+                yield _sse({"type": "thinking", "label": "Parsing intent"})
+                parsed = parse_query(translated)
+                location = parsed.get("location")
+                units = parsed.get("units")
+                project_type = parsed.get("project_type") or "residential"
+
+                stream_obs.update(metadata={"location": location, "units": units, "translated": translated})
+                yield emit(
+                    "intent",
+                    location=location,
+                    units=units,
+                    project_type=project_type,
+                    route="feasibility" if location and units else "general_rag",
+                )
+
+                if not location or not units:
+                    # ── General RAG path ───────────────────────────────────────
+                    law_agent = LawAgent(db, client, recorder)
+                    document_agent = DocumentAgent(db, client, recorder)
+                    if local_backend_enabled():
+                        # Local corpus: BM25 and the dense model use the Swedish query (see localrag/eval.py)
+                        yield _sse({"type": "tool_call", "name": "retrieve_local_corpus", "input": f"k={RAG_TOP_K}"})
+                        law_debug_rows, doc_debug_rows, kommuner = local_retrieve(translated, query_sv, k=RAG_TOP_K,
+                                                                                  recorder=recorder)
+                        embedding_ok = True
+                        from localrag.gazetteer import kommun_label  # local deps only when the local backend is on
+
+                        yield emit("local_query", query_sv=query_sv, kommuner=[kommun_label(code) for code in kommuner])
+                    else:
+                        yield _sse({"type": "tool_call", "name": "embed_query", "input": translated})
+                        embedding = law_agent._embed(translated)
+                        embedding_ok = embedding is not None
+                        yield _sse({"type": "tool_result", "name": "embed_query",
+                                    "result": "Embedding computed" if embedding_ok else "Embedding failed"})
+
+                        yield _sse({"type": "tool_call", "name": "retrieve_law_chunks", "input": f"k={RAG_TOP_K}"})
+                        law_debug_rows = law_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
+                        doc_debug_rows = document_agent._retrieve_debug_rows_from_embedding(embedding, k=RAG_TOP_K)
+
+                    law_agent._log_retrieval(translated, law_debug_rows)
+                    document_agent._log_retrieval(translated, doc_debug_rows)
+
+                    with start_observation(
+                            "law_agent.retrieval",
+                            input={"query": translated},
+                            metadata={
+                                "matches": [
+                                    {key: value for key, value in row.items() if key != "content"} for row in
+                                    law_debug_rows
+                                ],
+                            },
+                    ):
+                        pass
+
+                    with start_observation(
+                            "document_agent.retrieval",
+                            input={"query": translated},
+                            metadata={
+                                "matches": [
+                                    {key: value for key, value in row.items() if key != "content"} for row in
+                                    doc_debug_rows
+                                ],
+                            },
+                    ):
+                        pass
+
+                    law_results = [(row["content"], row["source"]) for row in law_debug_rows]
+                    yield _sse(
+                        {"type": "tool_result", "name": "retrieve_law_chunks", "result": f"{len(law_results)} chunks"})
+
+                    yield _sse({"type": "tool_call", "name": "retrieve_document_chunks", "input": f"k={RAG_TOP_K}"})
+                    doc_results = [(row["content"], row["source"]) for row in doc_debug_rows]
+                    yield _sse({"type": "tool_result", "name": "retrieve_document_chunks",
+                                "result": f"{len(doc_results)} chunks"})
+
+                    all_chunks = [c for c, _ in law_results] + [c for c, _ in doc_results]
+                    sources = list(dict.fromkeys(
+                        [label for _, label in law_results] + [label for _, label in doc_results]
+                    ))
+
+                    yield from emit_calls()
+                    yield emit(
+                        "retrieval",
+                        agent="law",
+                        query=translated,
+                        embedding_ok=embedding_ok,
+                        matches=law_agent._trace_rows(law_debug_rows),
+                    )
+                    yield emit(
+                        "retrieval",
+                        agent="document",
+                        query=translated,
+                        embedding_ok=embedding_ok,
+                        matches=document_agent._trace_rows(doc_debug_rows),
+                    )
+
+                    with start_observation(
+                            "chat.general_rag_retrieval",
+                            metadata={
+                                "query": translated,
+                                "law_matches": [
+                                    {key: value for key, value in row.items() if key != "content"} for row in
+                                    law_debug_rows
+                                ],
+                                "document_matches": [
+                                    {key: value for key, value in row.items() if key != "content"} for row in
+                                    doc_debug_rows
+                                ],
+                            },
+                    ):
+                        pass
+
+                    if not all_chunks:
+                        fallback = _clarifying_prompt(language)
+                        accumulated = fallback
+                        yield _sse({"type": "response.output_text.delta", "delta": fallback})
+                    else:
+                        context = "\n\n".join(f"Source {i + 1}:\n{c}" for i, c in enumerate(all_chunks))
+                        yield _sse({"type": "thinking", "label": "Composing answer"})
+                        answer_request = {
+                            "model": resolve_model_name(OPENAI_CHAT_MODEL),
+                            "instructions": _rag_instructions(),
+                            "input": _response_input_with_user_prompt(
+                                messages_snapshot, _rag_user_prompt(context, original_content, translated),
+                            ),
+                            "temperature": 0,
+                        }
+                        started = time.perf_counter()
+                        usage = None
+                        stream = create_chat_completion(
+                            client,
+                            **answer_request,
+                            stream=True,
+                            name="chat.stream.rag_answer"
+                        )
+                        for event in stream:
+                            if event.type == "response.output_text.delta" and event.delta:
+                                accumulated += event.delta
+                                yield _sse({"type": event.type, "delta": event.delta})
+                            elif event.type == "response.completed":
+                                usage = response_usage(event.response)
+                            elif event.type == "response.failed":
+                                raise RuntimeError("Model response failed")
+                            elif event.type == "error":
+                                raise RuntimeError(event.message)
+
+                        recorder.record(
+                            kind="llm",
+                            name="Answer generation (streamed)",
+                            **answer_request,
+                            reasoning_effort=reasoning_effort("chat.stream.rag_answer") or None,
+                            output=accumulated,
+                            usage=usage,
+                            duration_ms=round((time.perf_counter() - started) * 1000),
+                        )
+                        yield from emit_calls()
+
+                        suffix = _format_sources(sources)
+                        if suffix:
+                            accumulated += suffix
+                            yield _sse({"type": "response.output_text.delta", "delta": suffix})
+
+                else:
+                    # ── Multi-agent feasibility path ───────────────────────────
+                    yield _sse({"type": "tool_call", "name": "law_agent",
+                                "input": f"location={location}, units={units}, type={project_type}"})
+                    law_agent = LawAgent(db, client, recorder)
+                    document_agent = DocumentAgent(db, client, recorder)
+                    orchestrator = Orchestrator(law_agent, document_agent)
+
+                    yield _sse({"type": "tool_call", "name": "document_agent", "input": f"location={location}"})
+                    result = orchestrator.analyze(location, project_type, units, language=language)
+                    yield _sse({"type": "tool_result", "name": "law_agent",
+                                "result": f"confidence={result.get('confidence', '?')}%"})
+                    yield _sse({"type": "tool_result", "name": "document_agent",
+                                "result": result.get("feasibility", "unknown")})
+
+                    yield from emit_calls()
+                    for agent_name, output in result.get("agent_outputs", {}).items():
+                        retrieval = output.get("retrieval", {})
+                        yield emit(
+                            "retrieval",
+                            agent=agent_name,
+                            query=retrieval.get("query"),
+                            embedding_ok=None,
+                            matches=retrieval.get("matches", []),
+                        )
+                        yield emit("agent_output", agent=agent_name, output=_agent_output_for_trace(output))
+                    yield emit(
+                        "verdict",
+                        feasibility=result.get("feasibility"),
+                        confidence=result.get("confidence"),
+                        summary=result.get("summary"),
+                    )
+
+                    yield _sse({"type": "thinking", "label": "Formatting analysis"})
+                    full_text = format_response(result, language) + _format_sources(result.get("sources", []))
+
+                    # Emit word-by-word so the frontend renders progressively
+                    words = full_text.split(" ")
+                    for i, word in enumerate(words):
+                        token = word if i == len(words) - 1 else word + " "
+                        accumulated += token
+                        yield _sse({"type": "response.output_text.delta", "delta": token})
+
+            except Exception as e:
+                logger.error("Stream generation failed", exc_info=True)
+                yield _sse({"type": "error", "message": str(e)})
+                return
+
+            # The background worker below persists the message from the streamed events
+            stream_obs.update(output={"length": len(accumulated)})
+            yield _sse({"type": "response.completed"})
+            yield _sse({"type": "done", "session_id": session_id})
+
+    events: queue.Queue[str | None] = queue.Queue()
+
+    def run_in_background() -> None:
+        """Generate the answer whatever happens to the HTTP connection (tab closed, other chat opened), and keep
+        the assistant message up to date in the DB: partial text every 2 s, final text + trace + status at the end."""
+        worker_db = SessionLocal()
+        content, trace, status, last_save = "", [], "streaming", time.monotonic()
+
+        def save(final_status: str | None = None) -> None:
+            message = worker_db.get(models.ChatMessage, assistant_id)
+            if message is not None:
+                message.content = content
+                message.trace = json.loads(json.dumps(trace, default=str))
+                message.status = final_status or "streaming"
+                worker_db.commit()
+
+        try:
+            for chunk in generate(worker_db):
+                events.put(chunk)
+                if not chunk.startswith("data: "):
+                    continue
+                event = json.loads(chunk[len("data: "):])
+                kind = event.get("type")
+                if kind == "response.output_text.delta":
+                    content += event.get("delta") or ""
+                elif kind == "answer_replaced":
+                    content = event.get("content") or content
+                elif kind == "token":
+                    content += event.get("token") or ""
+                elif kind == "pipeline":
+                    trace.append({"stage": event.get("stage"), "data": event.get("data")})
+                elif kind == "error":
+                    status = "error"
+                    content = content or f"Error: {event.get('message')}"
+                elif kind == "done":
+                    status = "done"
+                starts_a_long_step = kind == "thinking"
+                if starts_a_long_step or time.monotonic() - last_save > 2:
+                    save()
+                    last_save = time.monotonic()
+        except Exception as exc:
+            logger.error("Background answer generation failed", exc_info=True)
+            status = "error"
+            content = content or f"Error: {exc}"
+            events.put(_sse({"type": "error", "message": str(exc)}))
+        finally:
+            try:
+                save(status if status != "streaming" else "error")
+            except Exception:
+                logger.error("Could not save the assistant message", exc_info=True)
+            worker_db.close()
+            events.put(None)
+
+    threading.Thread(target=run_in_background, name=f"chat-{assistant_id}", daemon=True).start()
+
+    def relay() -> Generator[str, None, None]:
+        # If the client disconnects, this generator just stops; the worker keeps going
+        while True:
+            try:
+                chunk = events.get(timeout=SSE_HEARTBEAT_S)
+            except queue.Empty:
+                # A comment line: proxies drop idle streams (the Next.js dev rewrite after 30 s), and an
+                # agent turn or the corpus preload can send nothing for longer than that
+                yield ": keep-alive\n\n"
+                continue
+            if chunk is None:
+                return
+            yield chunk
+
+    return StreamingResponse(
+        relay(),
+        media_type="text/event-stream",
+        headers={
+            "X-Accel-Buffering": "no",
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+@router.get("/history", response_model=list[schemas.MessageResponse])
+def get_history(db: Session = Depends(get_db), _user: models.User = Depends(get_current_user)):
+    return (
+        db.query(models.ChatMessage)
+        .join(models.ChatSession, models.ChatSession.id == models.ChatMessage.session_id)
+        .filter(models.ChatSession.user_id == _user.id)
+        .order_by(models.ChatMessage.created_at)
+        .all()
+    )

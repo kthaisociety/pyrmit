@@ -1,0 +1,4808 @@
+{
+ "corpus": "data",
+ "steps": [
+  {
+   "id": "crawl",
+   "step": 1,
+   "title": "Collect: crawl the kommun websites",
+   "what": "A crawler visits the website of each of Sweden's 290 kommuner, one request per second, and keeps the pages about planning and building plus the PDFs they link to (plans, permit guidance, fees...). Limits per kommun: 1,000 pages, 3,000 PDFs, 40 MB per PDF, 15,000 requests.",
+   "measure": "Coverage: for a sample of kommuner we fetch the list of plans in force that the kommun publishes and count how many of those plans have their PDFs in our corpus. It shows what the crawl misses, which no other test can see.",
+   "status": {
+    "level": "warning",
+    "label": "Mostly complete",
+    "note": "1 kommuner without data, 8 at the PDF limit"
+   },
+   "flow": {
+    "value": 84631,
+    "caption": "PDFs and 31,079 web pages from 289 kommuner"
+   },
+   "tiles": [
+    {
+     "label": "Kommun websites with data",
+     "value": "289 / 290"
+    },
+    {
+     "label": "Web pages kept",
+     "value": 31079
+    },
+    {
+     "label": "PDFs downloaded",
+     "value": 84631
+    },
+    {
+     "label": "Published plans found",
+     "value": "91 %",
+     "hint": "plans with at least one PDF in the corpus, 202 plans of 13 kommuner checked"
+    }
+   ],
+   "sections": [
+    {
+     "title": "Coverage of the plans the kommuner publish",
+     "summary": "91 % of the checked plans have at least one PDF in the corpus, 88 % have all of them",
+     "text": "Before the large crawl of October 2026 the crawler stopped at 30 PDFs per kommun: a quarter of the plans were found. Kommuner whose plans sit in a map or search application cannot be checked this way (listed below the table).",
+     "table": {
+      "columns": [
+       "Run",
+       "Plans checked",
+       "Kommuner",
+       "At least one PDF",
+       "All PDFs"
+      ],
+      "rows": [
+       [
+        "20261022-before-recrawl",
+        202,
+        13,
+        "24 %",
+        "14 %"
+       ],
+       [
+        "20261023-pass1",
+        202,
+        13,
+        "76 %",
+        "51 %"
+       ],
+       [
+        "20261024",
+        202,
+        13,
+        "76 %",
+        "51 %"
+       ],
+       [
+        "20261025",
+        202,
+        13,
+        "78 %",
+        "53 %"
+       ],
+       [
+        "20261026",
+        202,
+        13,
+        "91 %",
+        "88 %"
+       ]
+      ],
+      "highlight": 4
+     }
+    },
+    {
+     "title": "Coverage per kommun (latest run)",
+     "summary": "13 kommuner measurable, 16 not",
+     "table": {
+      "columns": [
+       "Kommun",
+       "Plans checked",
+       "At least one PDF",
+       "PDFs found"
+      ],
+      "rows": [
+       [
+        "Arvika",
+        5,
+        "60 %",
+        "60 %"
+       ],
+       [
+        "Färgelanda",
+        20,
+        "100 %",
+        "100 %"
+       ],
+       [
+        "Hallsberg",
+        20,
+        "95 %",
+        "95 %"
+       ],
+       [
+        "Haparanda",
+        8,
+        "100 %",
+        "100 %"
+       ],
+       [
+        "Härjedalen",
+        20,
+        "100 %",
+        "99 %"
+       ],
+       [
+        "Kalix",
+        6,
+        "100 %",
+        "100 %"
+       ],
+       [
+        "Kinda",
+        15,
+        "100 %",
+        "99 %"
+       ],
+       [
+        "Mullsjö",
+        18,
+        "100 %",
+        "100 %"
+       ],
+       [
+        "Norrtälje",
+        20,
+        "45 %",
+        "36 %"
+       ],
+       [
+        "Södertälje",
+        10,
+        "90 %",
+        "97 %"
+       ],
+       [
+        "Vimmerby",
+        20,
+        "95 %",
+        "96 %"
+       ],
+       [
+        "Örebro",
+        20,
+        "100 %",
+        "99 %"
+       ],
+       [
+        "Östhammar",
+        20,
+        "85 %",
+        "89 %"
+       ]
+      ]
+     },
+     "examples": [
+      "Bjuv: no plan with a PDF reachable from the list page (map or search application)",
+      "Göteborg: list page unreachable",
+      "Hallstahammar: only 1 plan(s) with a PDF reachable from the list page",
+      "Hässleholm: no plan with a PDF reachable from the list page (map or search application)",
+      "Höör: no plan with a PDF reachable from the list page (map or search application)",
+      "Laholm: no plan with a PDF reachable from the list page (map or search application)",
+      "Lerum: no plan with a PDF reachable from the list page (map or search application)",
+      "Munkedal: only 1 plan(s) with a PDF reachable from the list page",
+      "Mölndal: no plan with a PDF reachable from the list page (map or search application)",
+      "Ockelbo: no plan with a PDF reachable from the list page (map or search application)",
+      "Sjöbo: no plan with a PDF reachable from the list page (map or search application)",
+      "Solna: only 1 plan(s) with a PDF reachable from the list page",
+      "Sunne: only 2 plan(s) with a PDF reachable from the list page",
+      "Timrå: no plan with a PDF reachable from the list page (map or search application)",
+      "Tjörn: no plan with a PDF reachable from the list page (map or search application)",
+      "Värmdö: no plan with a PDF reachable from the list page (map or search application)"
+     ]
+    },
+    {
+     "title": "Why listed plan PDFs are missing",
+     "summary": "79 PDFs, by cause",
+     "text": "Read from each kommun's crawl record. The crawler now handles the first two causes (it goes one link deeper from a plan page and takes every on-topic PDF of a plan page, whatever its name): a re-crawl and rebuild bring these PDFs in. Kommuner that publish their plans only in a map need another source (their map service or Lantmäteriet's digital plans), or a browser agent that goes through their map once and lists the plans for the crawler.",
+     "table": {
+      "columns": [
+       "Cause",
+       "PDFs",
+       "Kommuner"
+      ],
+      "rows": [
+       [
+        "The plan's page was never visited (most likely one link deeper than the crawler goes)",
+        66,
+        "Norrtälje 57, Östhammar 7, Södertälje 2"
+       ],
+       [
+        "Link seen, not followed: its name (a place, \"Lagakraftbevis\") does not say it is a plan document",
+        9,
+        "Arvika 2, Norrtälje 2, Vimmerby 2, Härjedalen 1, Kinda 1, Östhammar 1"
+       ],
+       [
+        "not_extracted",
+        3,
+        "Hallsberg 1, Norrtälje 1, Örebro 1"
+       ],
+       [
+        "Removed by the PDF filter (step 2)",
+        1,
+        "Norrtälje 1"
+       ]
+      ]
+     }
+    },
+    {
+     "title": "Every kommun crawled",
+     "summary": "290 kommuner; problems: Karlskrona, Ale, Huddinge, Norrköping, Tanum, Uddevalla, Umeå, Uppsala, Västerås",
+     "table": {
+      "columns": [
+       "Kommun",
+       "Web pages",
+       "PDFs",
+       "GB of PDFs",
+       "Requests",
+       "Notes"
+      ],
+      "rows": [
+       [
+        "Huddinge",
+        307,
+        3000,
+        "6.3",
+        8860,
+        "PDF limit reached (3,000)"
+       ],
+       [
+        "Västerås",
+        367,
+        3000,
+        "9.3",
+        3731,
+        "PDF limit reached (3,000)"
+       ],
+       [
+        "Malmö",
+        479,
+        2175,
+        "3.9",
+        4864,
+        "+93 PDFs on the revisit"
+       ],
+       [
+        "Kalmar",
+        205,
+        2049,
+        "6.4",
+        2527,
+        "+281 PDFs on the revisit"
+       ],
+       [
+        "Järfälla",
+        224,
+        1831,
+        "5.5",
+        1761,
+        "+437 PDFs on the revisit"
+       ],
+       [
+        "Danderyd",
+        223,
+        1760,
+        "3.2",
+        3704,
+        "+99 PDFs on the revisit"
+       ],
+       [
+        "Kiruna",
+        239,
+        1473,
+        "3.3",
+        1817,
+        "+128 PDFs on the revisit"
+       ],
+       [
+        "Hylte",
+        136,
+        1434,
+        "1.4",
+        3106,
+        ""
+       ],
+       [
+        "Östersund",
+        334,
+        1344,
+        "3.2",
+        2066,
+        "+151 PDFs on the revisit"
+       ],
+       [
+        "Norrköping",
+        247,
+        1248,
+        "5.5",
+        1406,
+        "PDF limit reached (1,000); +438 PDFs on the revisit"
+       ],
+       [
+        "Umeå",
+        506,
+        1241,
+        "4.0",
+        1897,
+        "PDF limit reached (1,000); +416 PDFs on the revisit"
+       ],
+       [
+        "Uppsala",
+        624,
+        1210,
+        "2.9",
+        3514,
+        "PDF limit reached (1,000); +225 PDFs on the revisit"
+       ],
+       [
+        "Örebro",
+        302,
+        1152,
+        "3.9",
+        2898,
+        ""
+       ],
+       [
+        "Uddevalla",
+        289,
+        1112,
+        "2.1",
+        1242,
+        "PDF limit reached (1,000); +444 PDFs on the revisit"
+       ],
+       [
+        "Tanum",
+        267,
+        1072,
+        "3.3",
+        1339,
+        "PDF limit reached (1,000); +277 PDFs on the revisit"
+       ],
+       [
+        "Ale",
+        385,
+        1001,
+        "3.0",
+        1344,
+        "PDF limit reached (1,000); +147 PDFs on the revisit"
+       ],
+       [
+        "Trollhättan",
+        321,
+        927,
+        "3.4",
+        1814,
+        "+32 PDFs on the revisit"
+       ],
+       [
+        "Kalix",
+        85,
+        916,
+        "1.3",
+        1132,
+        ""
+       ],
+       [
+        "Växjö",
+        279,
+        906,
+        "2.1",
+        1103,
+        "+245 PDFs on the revisit"
+       ],
+       [
+        "Vaxholm",
+        77,
+        873,
+        "2.3",
+        1141,
+        "+61 PDFs on the revisit"
+       ],
+       [
+        "Vallentuna",
+        76,
+        863,
+        "1.6",
+        1020,
+        "+50 PDFs on the revisit"
+       ],
+       [
+        "Solna",
+        137,
+        855,
+        "4.0",
+        1121,
+        "+484 PDFs on the revisit"
+       ],
+       [
+        "Höganäs",
+        111,
+        831,
+        "1.7",
+        1075,
+        "+61 PDFs on the revisit"
+       ],
+       [
+        "Upplands-Bro",
+        113,
+        823,
+        "3.7",
+        1016,
+        "+41 PDFs on the revisit"
+       ],
+       [
+        "Strömstad",
+        326,
+        796,
+        "2.0",
+        1336,
+        "+8 PDFs on the revisit"
+       ],
+       [
+        "Luleå",
+        210,
+        796,
+        "1.9",
+        1148,
+        "+101 PDFs on the revisit"
+       ],
+       [
+        "Upplands Väsby",
+        76,
+        751,
+        "3.6",
+        1106,
+        "+72 PDFs on the revisit"
+       ],
+       [
+        "Södertälje",
+        164,
+        751,
+        "3.6",
+        1300,
+        ""
+       ],
+       [
+        "Malung-Sälen",
+        146,
+        708,
+        "1.3",
+        871,
+        "+56 PDFs on the revisit"
+       ],
+       [
+        "Botkyrka",
+        396,
+        694,
+        "3.0",
+        1090,
+        "+196 PDFs on the revisit"
+       ],
+       [
+        "Borås",
+        618,
+        670,
+        "2.0",
+        1476,
+        "+193 PDFs on the revisit"
+       ],
+       [
+        "Haparanda",
+        57,
+        665,
+        "1.0",
+        743,
+        ""
+       ],
+       [
+        "Sundbyberg",
+        179,
+        640,
+        "1.9",
+        824,
+        "+140 PDFs on the revisit"
+       ],
+       [
+        "Falu",
+        470,
+        624,
+        "1.5",
+        1368,
+        "+132 PDFs on the revisit"
+       ],
+       [
+        "Norrtälje",
+        247,
+        619,
+        "1.5",
+        1099,
+        ""
+       ],
+       [
+        "Ronneby",
+        177,
+        603,
+        "1.9",
+        1062,
+        "+77 PDFs on the revisit"
+       ],
+       [
+        "Vänersborg",
+        140,
+        597,
+        "2.3",
+        944,
+        "+177 PDFs on the revisit"
+       ],
+       [
+        "Kungälv",
+        159,
+        566,
+        "2.6",
+        902,
+        "+152 PDFs on the revisit"
+       ],
+       [
+        "Nacka",
+        203,
+        554,
+        "1.6",
+        1076,
+        "+54 PDFs on the revisit"
+       ],
+       [
+        "Kristianstad",
+        118,
+        549,
+        "1.5",
+        872,
+        "+144 PDFs on the revisit"
+       ],
+       [
+        "Östhammar",
+        251,
+        545,
+        "1.0",
+        1233,
+        ""
+       ],
+       [
+        "Varberg",
+        166,
+        530,
+        "2.2",
+        923,
+        "+154 PDFs on the revisit"
+       ],
+       [
+        "Knivsta",
+        27,
+        504,
+        "1.0",
+        848,
+        "+138 PDFs on the revisit"
+       ],
+       [
+        "Kristinehamn",
+        133,
+        499,
+        "1.4",
+        833,
+        "+109 PDFs on the revisit"
+       ],
+       [
+        "Nykvarn",
+        55,
+        492,
+        "1.2",
+        602,
+        "+104 PDFs on the revisit"
+       ],
+       [
+        "Västervik",
+        200,
+        488,
+        "1.4",
+        976,
+        "+38 PDFs on the revisit"
+       ],
+       [
+        "Gällivare",
+        82,
+        471,
+        "1.4",
+        773,
+        ""
+       ],
+       [
+        "Täby",
+        220,
+        456,
+        "1.4",
+        705,
+        "+175 PDFs on the revisit"
+       ],
+       [
+        "Askersund",
+        74,
+        456,
+        "0.8",
+        568,
+        "+43 PDFs on the revisit"
+       ],
+       [
+        "Söderköping",
+        109,
+        450,
+        "1.1",
+        818,
+        "+12 PDFs on the revisit"
+       ],
+       [
+        "Ovanåker",
+        60,
+        435,
+        "0.5",
+        699,
+        "+8 PDFs on the revisit"
+       ],
+       [
+        "Strängnäs",
+        101,
+        401,
+        "1.5",
+        641,
+        "+108 PDFs on the revisit"
+       ],
+       [
+        "Tyresö",
+        657,
+        383,
+        "1.3",
+        1043,
+        "+120 PDFs on the revisit"
+       ],
+       [
+        "Håbo",
+        135,
+        379,
+        "1.2",
+        654,
+        "+114 PDFs on the revisit"
+       ],
+       [
+        "Krokom",
+        195,
+        374,
+        "0.7",
+        734,
+        "+20 PDFs on the revisit"
+       ],
+       [
+        "Kumla",
+        128,
+        370,
+        "1.0",
+        768,
+        "+54 PDFs on the revisit"
+       ],
+       [
+        "Gagnef",
+        60,
+        365,
+        "1.2",
+        348,
+        "+206 PDFs on the revisit"
+       ],
+       [
+        "Ulricehamn",
+        65,
+        359,
+        "1.0",
+        479,
+        "+89 PDFs on the revisit"
+       ],
+       [
+        "Falkenberg",
+        192,
+        357,
+        "1.0",
+        826,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Säter",
+        214,
+        357,
+        "0.5",
+        693,
+        "+43 PDFs on the revisit"
+       ],
+       [
+        "Osby",
+        35,
+        356,
+        "0.6",
+        465,
+        "+12 PDFs on the revisit"
+       ],
+       [
+        "Timrå",
+        75,
+        355,
+        "0.8",
+        416,
+        "+92 PDFs on the revisit"
+       ],
+       [
+        "Härjedalen",
+        153,
+        350,
+        "1.0",
+        674,
+        ""
+       ],
+       [
+        "Borlänge",
+        251,
+        348,
+        "1.1",
+        775,
+        "+36 PDFs on the revisit"
+       ],
+       [
+        "Helsingborg",
+        660,
+        344,
+        "1.9",
+        1226,
+        "+110 PDFs on the revisit"
+       ],
+       [
+        "Ängelholm",
+        248,
+        343,
+        "1.4",
+        633,
+        "+102 PDFs on the revisit"
+       ],
+       [
+        "Härnösand",
+        78,
+        341,
+        "0.8",
+        569,
+        "+84 PDFs on the revisit"
+       ],
+       [
+        "Skellefteå",
+        195,
+        341,
+        "0.8",
+        1101,
+        "+18 PDFs on the revisit"
+       ],
+       [
+        "Piteå",
+        83,
+        340,
+        "0.7",
+        747,
+        "+69 PDFs on the revisit"
+       ],
+       [
+        "Skövde",
+        93,
+        328,
+        "1.8",
+        720,
+        "+26 PDFs on the revisit"
+       ],
+       [
+        "Mora",
+        46,
+        328,
+        "1.0",
+        548,
+        "+26 PDFs on the revisit"
+       ],
+       [
+        "Katrineholm",
+        22,
+        317,
+        "0.9",
+        544,
+        "+48 PDFs on the revisit"
+       ],
+       [
+        "Mjölby",
+        71,
+        313,
+        "1.3",
+        495,
+        "+83 PDFs on the revisit"
+       ],
+       [
+        "Grästorp",
+        85,
+        303,
+        "0.8",
+        431,
+        "+84 PDFs on the revisit"
+       ],
+       [
+        "Kungsbacka",
+        199,
+        302,
+        "1.3",
+        1495,
+        "+15 PDFs on the revisit"
+       ],
+       [
+        "Partille",
+        129,
+        302,
+        "0.9",
+        525,
+        "+10 PDFs on the revisit"
+       ],
+       [
+        "Värnamo",
+        172,
+        301,
+        "0.8",
+        848,
+        "+64 PDFs on the revisit"
+       ],
+       [
+        "Åtvidaberg",
+        47,
+        299,
+        "1.0",
+        431,
+        "+85 PDFs on the revisit"
+       ],
+       [
+        "Vimmerby",
+        150,
+        299,
+        "0.6",
+        613,
+        ""
+       ],
+       [
+        "Mariestad",
+        87,
+        299,
+        "1.1",
+        389,
+        "+98 PDFs on the revisit"
+       ],
+       [
+        "Gislaved",
+        155,
+        295,
+        "0.7",
+        523,
+        "+37 PDFs on the revisit"
+       ],
+       [
+        "Lerum",
+        71,
+        295,
+        "1.5",
+        1433,
+        "+69 PDFs on the revisit"
+       ],
+       [
+        "Hallsberg",
+        64,
+        293,
+        "0.6",
+        412,
+        ""
+       ],
+       [
+        "Markaryd",
+        77,
+        291,
+        "0.3",
+        512,
+        "+22 PDFs on the revisit"
+       ],
+       [
+        "Ljusdal",
+        46,
+        291,
+        "0.6",
+        463,
+        "+21 PDFs on the revisit"
+       ],
+       [
+        "Sölvesborg",
+        61,
+        290,
+        "0.6",
+        387,
+        "+72 PDFs on the revisit"
+       ],
+       [
+        "Sotenäs",
+        63,
+        290,
+        "0.6",
+        546,
+        ""
+       ],
+       [
+        "Kinda",
+        62,
+        282,
+        "0.7",
+        407,
+        ""
+       ],
+       [
+        "Finspång",
+        98,
+        281,
+        "0.8",
+        419,
+        "+93 PDFs on the revisit"
+       ],
+       [
+        "Orust",
+        97,
+        280,
+        "0.9",
+        515,
+        "+3 PDFs on the revisit"
+       ],
+       [
+        "Alingsås",
+        155,
+        276,
+        "1.2",
+        674,
+        "+81 PDFs on the revisit"
+       ],
+       [
+        "Oxelösund",
+        66,
+        273,
+        "0.3",
+        418,
+        "+30 PDFs on the revisit"
+       ],
+       [
+        "Svalöv",
+        34,
+        269,
+        "0.7",
+        279,
+        "+56 PDFs on the revisit"
+       ],
+       [
+        "Mark",
+        89,
+        269,
+        "0.6",
+        474,
+        "+3 PDFs on the revisit"
+       ],
+       [
+        "Bollebygd",
+        52,
+        267,
+        "0.8",
+        413,
+        "+61 PDFs on the revisit"
+       ],
+       [
+        "Tierp",
+        133,
+        262,
+        "0.4",
+        453,
+        "+38 PDFs on the revisit"
+       ],
+       [
+        "Åmål",
+        46,
+        260,
+        "0.4",
+        489,
+        "+5 PDFs on the revisit"
+       ],
+       [
+        "Värmdö",
+        184,
+        258,
+        "0.6",
+        526,
+        "+20 PDFs on the revisit"
+       ],
+       [
+        "Vaggeryd",
+        12,
+        251,
+        "0.6",
+        408,
+        "+91 PDFs on the revisit"
+       ],
+       [
+        "Gnesta",
+        166,
+        250,
+        "0.9",
+        551,
+        "+67 PDFs on the revisit"
+       ],
+       [
+        "Lindesberg",
+        98,
+        249,
+        "0.5",
+        404,
+        "+57 PDFs on the revisit"
+       ],
+       [
+        "Mörbylånga",
+        156,
+        248,
+        "0.9",
+        510,
+        "+95 PDFs on the revisit"
+       ],
+       [
+        "Nybro",
+        55,
+        248,
+        "0.9",
+        340,
+        "+131 PDFs on the revisit"
+       ],
+       [
+        "Götene",
+        109,
+        242,
+        "0.8",
+        361,
+        "+77 PDFs on the revisit"
+       ],
+       [
+        "Enköping",
+        60,
+        241,
+        "0.4",
+        379,
+        "+13 PDFs on the revisit"
+       ],
+       [
+        "Kävlinge",
+        58,
+        241,
+        "1.0",
+        385,
+        "+38 PDFs on the revisit"
+       ],
+       [
+        "Lilla Edet",
+        63,
+        241,
+        "0.8",
+        333,
+        "+92 PDFs on the revisit"
+       ],
+       [
+        "Vårgårda",
+        90,
+        240,
+        "0.8",
+        297,
+        "+68 PDFs on the revisit"
+       ],
+       [
+        "Stenungsund",
+        63,
+        232,
+        "0.8",
+        468,
+        "+5 PDFs on the revisit"
+       ],
+       [
+        "Borgholm",
+        54,
+        229,
+        "0.6",
+        626,
+        "+99 PDFs on the revisit"
+       ],
+       [
+        "Östra Göinge",
+        69,
+        227,
+        "0.6",
+        378,
+        "+11 PDFs on the revisit"
+       ],
+       [
+        "Öckerö",
+        29,
+        226,
+        "0.5",
+        292,
+        "+24 PDFs on the revisit"
+       ],
+       [
+        "Ekerö",
+        57,
+        225,
+        "0.8",
+        360,
+        "+28 PDFs on the revisit"
+       ],
+       [
+        "Söderhamn",
+        51,
+        222,
+        "0.3",
+        399,
+        "+27 PDFs on the revisit"
+       ],
+       [
+        "Svenljunga",
+        122,
+        221,
+        "0.5",
+        450,
+        "+62 PDFs on the revisit"
+       ],
+       [
+        "Älvdalen",
+        66,
+        219,
+        "0.6",
+        290,
+        "+53 PDFs on the revisit"
+       ],
+       [
+        "Simrishamn",
+        23,
+        218,
+        "0.6",
+        219,
+        "+69 PDFs on the revisit"
+       ],
+       [
+        "Tranås",
+        51,
+        217,
+        "0.5",
+        291,
+        "+10 PDFs on the revisit"
+       ],
+       [
+        "Landskrona",
+        81,
+        213,
+        "0.9",
+        350,
+        "+55 PDFs on the revisit"
+       ],
+       [
+        "Lysekil",
+        87,
+        205,
+        "0.5",
+        561,
+        "+4 PDFs on the revisit"
+       ],
+       [
+        "Ludvika",
+        55,
+        201,
+        "0.7",
+        396,
+        "+48 PDFs on the revisit"
+       ],
+       [
+        "Eslöv",
+        116,
+        199,
+        "0.4",
+        502,
+        "+17 PDFs on the revisit"
+       ],
+       [
+        "Örkelljunga",
+        55,
+        197,
+        "0.6",
+        325,
+        "+13 PDFs on the revisit"
+       ],
+       [
+        "Älvkarleby",
+        51,
+        196,
+        "0.3",
+        325,
+        "+18 PDFs on the revisit"
+       ],
+       [
+        "Åstorp",
+        36,
+        196,
+        "0.8",
+        285,
+        "+46 PDFs on the revisit"
+       ],
+       [
+        "Torsby",
+        59,
+        196,
+        "0.4",
+        269,
+        "+33 PDFs on the revisit"
+       ],
+       [
+        "Kramfor",
+        60,
+        189,
+        "0.6",
+        509,
+        "+44 PDFs on the revisit"
+       ],
+       [
+        "Laholm",
+        60,
+        188,
+        "0.3",
+        320,
+        "+23 PDFs on the revisit"
+       ],
+       [
+        "Motala",
+        157,
+        187,
+        "0.6",
+        515,
+        "+14 PDFs on the revisit"
+       ],
+       [
+        "Hörby",
+        101,
+        187,
+        "0.4",
+        357,
+        "+65 PDFs on the revisit"
+       ],
+       [
+        "Bjuv",
+        34,
+        186,
+        "0.6",
+        198,
+        "+57 PDFs on the revisit"
+       ],
+       [
+        "Båstad",
+        100,
+        185,
+        "0.6",
+        258,
+        "+56 PDFs on the revisit"
+       ],
+       [
+        "Vindeln",
+        28,
+        184,
+        "0.3",
+        268,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Nordanstig",
+        59,
+        180,
+        "0.4",
+        308,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Tomelilla",
+        94,
+        176,
+        "0.3",
+        329,
+        "+3 PDFs on the revisit"
+       ],
+       [
+        "Sunne",
+        86,
+        176,
+        "0.4",
+        408,
+        ""
+       ],
+       [
+        "Vännäs",
+        37,
+        176,
+        "0.5",
+        238,
+        "+6 PDFs on the revisit"
+       ],
+       [
+        "Svedala",
+        107,
+        175,
+        "0.4",
+        480,
+        "+35 PDFs on the revisit"
+       ],
+       [
+        "Oskarshamn",
+        130,
+        172,
+        "0.3",
+        631,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Vellinge",
+        117,
+        172,
+        "0.8",
+        292,
+        "+47 PDFs on the revisit"
+       ],
+       [
+        "Hässleholm",
+        149,
+        172,
+        "0.6",
+        416,
+        "+55 PDFs on the revisit"
+       ],
+       [
+        "Nynäshamn",
+        102,
+        164,
+        "0.7",
+        232,
+        "+66 PDFs on the revisit"
+       ],
+       [
+        "Pajala",
+        43,
+        162,
+        "0.6",
+        183,
+        "+42 PDFs on the revisit"
+       ],
+       [
+        "Eskilstuna",
+        90,
+        161,
+        "1.2",
+        616,
+        "+12 PDFs on the revisit"
+       ],
+       [
+        "Ånge",
+        62,
+        160,
+        "0.2",
+        206,
+        "+39 PDFs on the revisit"
+       ],
+       [
+        "Salem",
+        50,
+        157,
+        "0.7",
+        228,
+        "+31 PDFs on the revisit"
+       ],
+       [
+        "Gotland",
+        467,
+        154,
+        "0.6",
+        1007,
+        "+5 PDFs on the revisit"
+       ],
+       [
+        "Burlöv",
+        59,
+        154,
+        "0.7",
+        190,
+        "+62 PDFs on the revisit"
+       ],
+       [
+        "Färgelanda",
+        33,
+        154,
+        "0.3",
+        240,
+        ""
+       ],
+       [
+        "Töreboda",
+        60,
+        149,
+        "0.3",
+        263,
+        "+19 PDFs on the revisit"
+       ],
+       [
+        "Hudiksvall",
+        180,
+        148,
+        "0.4",
+        443,
+        ""
+       ],
+       [
+        "Haninge",
+        135,
+        147,
+        "0.2",
+        364,
+        "+7 PDFs on the revisit"
+       ],
+       [
+        "Essunga",
+        68,
+        147,
+        "0.4",
+        256,
+        "+11 PDFs on the revisit"
+       ],
+       [
+        "Sala",
+        43,
+        147,
+        "0.3",
+        336,
+        "+7 PDFs on the revisit"
+       ],
+       [
+        "Sävsjö",
+        136,
+        146,
+        "0.3",
+        488,
+        "+15 PDFs on the revisit"
+       ],
+       [
+        "Säffle",
+        52,
+        145,
+        "0.3",
+        276,
+        "+4 PDFs on the revisit"
+       ],
+       [
+        "Ljungby",
+        149,
+        144,
+        "0.3",
+        409,
+        "+25 PDFs on the revisit"
+       ],
+       [
+        "Filipstad",
+        50,
+        144,
+        "0.3",
+        194,
+        "+26 PDFs on the revisit"
+       ],
+       [
+        "Mölndal",
+        174,
+        143,
+        "0.5",
+        606,
+        "+3 PDFs on the revisit"
+       ],
+       [
+        "Falköping",
+        134,
+        143,
+        "0.2",
+        738,
+        ""
+       ],
+       [
+        "Tjörn",
+        59,
+        142,
+        "0.1",
+        490,
+        "+5 PDFs on the revisit"
+       ],
+       [
+        "Emmaboda",
+        46,
+        138,
+        "0.3",
+        266,
+        "+28 PDFs on the revisit"
+       ],
+       [
+        "Alvesta",
+        189,
+        136,
+        "0.3",
+        1131,
+        "+21 PDFs on the revisit"
+       ],
+       [
+        "Lidköping",
+        130,
+        136,
+        "0.5",
+        528,
+        "+11 PDFs on the revisit"
+       ],
+       [
+        "Bengtsfor",
+        82,
+        134,
+        "0.3",
+        275,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Orsa",
+        38,
+        134,
+        "0.3",
+        231,
+        "+19 PDFs on the revisit"
+       ],
+       [
+        "Lund",
+        129,
+        132,
+        "0.5",
+        508,
+        "+9 PDFs on the revisit"
+       ],
+       [
+        "Valdemarsvik",
+        169,
+        129,
+        "0.2",
+        394,
+        "+12 PDFs on the revisit"
+       ],
+       [
+        "Avesta",
+        48,
+        129,
+        "0.4",
+        270,
+        "+6 PDFs on the revisit"
+       ],
+       [
+        "Hammarö",
+        76,
+        128,
+        "0.4",
+        308,
+        "+14 PDFs on the revisit"
+       ],
+       [
+        "Vingåker",
+        15,
+        127,
+        "0.3",
+        136,
+        "+22 PDFs on the revisit"
+       ],
+       [
+        "Ystad",
+        141,
+        127,
+        "0.5",
+        382,
+        "+12 PDFs on the revisit"
+       ],
+       [
+        "Leksand",
+        25,
+        127,
+        "0.3",
+        396,
+        "+24 PDFs on the revisit"
+       ],
+       [
+        "Sollefteå",
+        37,
+        127,
+        "0.3",
+        307,
+        "+44 PDFs on the revisit"
+       ],
+       [
+        "Klippan",
+        47,
+        126,
+        "0.3",
+        174,
+        "+41 PDFs on the revisit"
+       ],
+       [
+        "Vetlanda",
+        39,
+        124,
+        "0.2",
+        322,
+        "+6 PDFs on the revisit"
+       ],
+       [
+        "Gullspång",
+        61,
+        122,
+        "0.1",
+        240,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Sandviken",
+        238,
+        122,
+        "0.4",
+        1437,
+        "+32 PDFs on the revisit"
+       ],
+       [
+        "Dals-Ed",
+        60,
+        121,
+        "0.2",
+        283,
+        "+14 PDFs on the revisit"
+       ],
+       [
+        "Sjöbo",
+        103,
+        118,
+        "0.5",
+        259,
+        "+40 PDFs on the revisit"
+       ],
+       [
+        "Hedemora",
+        94,
+        118,
+        "0.3",
+        354,
+        "+26 PDFs on the revisit"
+       ],
+       [
+        "Heby",
+        21,
+        116,
+        "0.2",
+        144,
+        "+14 PDFs on the revisit"
+       ],
+       [
+        "Bräcke",
+        49,
+        116,
+        "0.1",
+        219,
+        "+7 PDFs on the revisit"
+       ],
+       [
+        "Bjurholm",
+        45,
+        114,
+        "0.2",
+        299,
+        "+13 PDFs on the revisit"
+       ],
+       [
+        "Kil",
+        72,
+        113,
+        "0.2",
+        321,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Bollnäs",
+        56,
+        113,
+        "0.2",
+        262,
+        "+37 PDFs on the revisit"
+       ],
+       [
+        "Tranemo",
+        35,
+        112,
+        "0.2",
+        255,
+        "+4 PDFs on the revisit"
+       ],
+       [
+        "Mullsjö",
+        50,
+        108,
+        "0.2",
+        271,
+        ""
+       ],
+       [
+        "Hallstahammar",
+        88,
+        105,
+        "0.3",
+        244,
+        "+9 PDFs on the revisit"
+       ],
+       [
+        "Sundsvall",
+        145,
+        105,
+        "0.3",
+        497,
+        ""
+       ],
+       [
+        "Boden",
+        38,
+        104,
+        "0.3",
+        258,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Smedjebacken",
+        39,
+        102,
+        "0.2",
+        134,
+        "+22 PDFs on the revisit"
+       ],
+       [
+        "Stockholm",
+        82,
+        101,
+        "0.5",
+        278,
+        "+4 PDFs on the revisit"
+       ],
+       [
+        "Vilhelmina",
+        32,
+        98,
+        "0.2",
+        206,
+        "+31 PDFs on the revisit"
+       ],
+       [
+        "Uppvidinge",
+        34,
+        97,
+        "0.2",
+        157,
+        "+6 PDFs on the revisit"
+       ],
+       [
+        "Berg",
+        78,
+        97,
+        "0.2",
+        257,
+        "+13 PDFs on the revisit"
+       ],
+       [
+        "Karlshamn",
+        63,
+        95,
+        "0.3",
+        654,
+        "+6 PDFs on the revisit"
+       ],
+       [
+        "Bromölla",
+        42,
+        94,
+        "0.3",
+        252,
+        "+5 PDFs on the revisit"
+       ],
+       [
+        "Sorsele",
+        19,
+        94,
+        "0.2",
+        125,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Flen",
+        101,
+        93,
+        "0.2",
+        298,
+        "+9 PDFs on the revisit"
+       ],
+       [
+        "Mellerud",
+        49,
+        93,
+        "0.3",
+        196,
+        "+18 PDFs on the revisit"
+       ],
+       [
+        "Åre",
+        73,
+        92,
+        "0.3",
+        273,
+        "+14 PDFs on the revisit"
+       ],
+       [
+        "Österåker",
+        70,
+        91,
+        "0.3",
+        194,
+        "+27 PDFs on the revisit"
+       ],
+       [
+        "Härryda",
+        32,
+        90,
+        "0.5",
+        100,
+        "+39 PDFs on the revisit"
+       ],
+       [
+        "Sollentuna",
+        87,
+        89,
+        "0.3",
+        306,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Halmstad",
+        145,
+        84,
+        "0.4",
+        346,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Örnsköldsvik",
+        58,
+        84,
+        "0.2",
+        266,
+        "+6 PDFs on the revisit"
+       ],
+       [
+        "Sigtuna",
+        149,
+        83,
+        "0.4",
+        382,
+        "+7 PDFs on the revisit"
+       ],
+       [
+        "Tingsryd",
+        101,
+        82,
+        "0.2",
+        213,
+        "+26 PDFs on the revisit"
+       ],
+       [
+        "Arvika",
+        48,
+        82,
+        "0.1",
+        241,
+        ""
+       ],
+       [
+        "Vansbro",
+        111,
+        82,
+        "0.1",
+        269,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Älmhult",
+        63,
+        81,
+        "0.5",
+        230,
+        "+16 PDFs on the revisit"
+       ],
+       [
+        "Skinnskatteberg",
+        41,
+        81,
+        "0.7",
+        143,
+        "+38 PDFs on the revisit"
+       ],
+       [
+        "Vadstena",
+        62,
+        80,
+        "0.2",
+        286,
+        "+7 PDFs on the revisit"
+       ],
+       [
+        "Perstorp",
+        19,
+        80,
+        "0.1",
+        101,
+        "+20 PDFs on the revisit"
+       ],
+       [
+        "Nyköping",
+        150,
+        78,
+        "0.2",
+        566,
+        "+3 PDFs on the revisit"
+       ],
+       [
+        "Ydre",
+        26,
+        78,
+        "0.1",
+        166,
+        "+13 PDFs on the revisit"
+       ],
+       [
+        "Lessebo",
+        47,
+        77,
+        "0.2",
+        157,
+        "+13 PDFs on the revisit"
+       ],
+       [
+        "Olofström",
+        23,
+        77,
+        "0.2",
+        156,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Gnosjö",
+        77,
+        75,
+        "0.1",
+        228,
+        "+5 PDFs on the revisit"
+       ],
+       [
+        "Högsby",
+        33,
+        75,
+        "0.1",
+        178,
+        "+15 PDFs on the revisit"
+       ],
+       [
+        "Karlskoga",
+        68,
+        75,
+        "0.2",
+        275,
+        "+30 PDFs on the revisit"
+       ],
+       [
+        "Nora",
+        86,
+        75,
+        "0.3",
+        236,
+        "+22 PDFs on the revisit"
+       ],
+       [
+        "Övertorneå",
+        36,
+        73,
+        "0.1",
+        225,
+        "+3 PDFs on the revisit"
+       ],
+       [
+        "Torsås",
+        18,
+        72,
+        "0.1",
+        165,
+        "+18 PDFs on the revisit"
+       ],
+       [
+        "Jokkmokk",
+        35,
+        72,
+        "0.1",
+        174,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Karlsborg",
+        85,
+        69,
+        "0.3",
+        230,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Mönsterås",
+        96,
+        67,
+        "0.2",
+        246,
+        "+14 PDFs on the revisit"
+       ],
+       [
+        "Munkedal",
+        77,
+        67,
+        "0.2",
+        243,
+        "+10 PDFs on the revisit"
+       ],
+       [
+        "Årjäng",
+        49,
+        67,
+        "0.2",
+        142,
+        "+5 PDFs on the revisit"
+       ],
+       [
+        "Habo",
+        143,
+        66,
+        "0.2",
+        314,
+        ""
+       ],
+       [
+        "Skurup",
+        42,
+        63,
+        "0.1",
+        166,
+        "+10 PDFs on the revisit"
+       ],
+       [
+        "Hultsfred",
+        75,
+        62,
+        "0.1",
+        741,
+        "+14 PDFs on the revisit"
+       ],
+       [
+        "Eksjö",
+        20,
+        61,
+        "0.3",
+        162,
+        ""
+       ],
+       [
+        "Hjo",
+        48,
+        61,
+        "0.2",
+        237,
+        ""
+       ],
+       [
+        "Ockelbo",
+        56,
+        59,
+        "0.1",
+        153,
+        "+6 PDFs on the revisit"
+       ],
+       [
+        "Robertsfor",
+        54,
+        58,
+        "0.2",
+        140,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Nässjö",
+        29,
+        57,
+        "0.2",
+        347,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Rättvik",
+        42,
+        56,
+        "0.1",
+        306,
+        "+6 PDFs on the revisit"
+       ],
+       [
+        "Tibro",
+        90,
+        54,
+        "0.1",
+        255,
+        ""
+       ],
+       [
+        "Eda",
+        61,
+        53,
+        "0.2",
+        261,
+        ""
+       ],
+       [
+        "Hofor",
+        58,
+        52,
+        "0.1",
+        164,
+        "+3 PDFs on the revisit"
+       ],
+       [
+        "Nordmaling",
+        53,
+        52,
+        "0.1",
+        165,
+        "+6 PDFs on the revisit"
+       ],
+       [
+        "Strömsund",
+        28,
+        51,
+        "0.1",
+        194,
+        ""
+       ],
+       [
+        "Skara",
+        68,
+        49,
+        "0.2",
+        213,
+        "+3 PDFs on the revisit"
+       ],
+       [
+        "Arboga",
+        31,
+        45,
+        "0.1",
+        116,
+        ""
+       ],
+       [
+        "Vara",
+        117,
+        44,
+        "0.3",
+        253,
+        "+4 PDFs on the revisit"
+       ],
+       [
+        "Munkfor",
+        53,
+        44,
+        "0.1",
+        156,
+        ""
+       ],
+       [
+        "Ödeshög",
+        70,
+        43,
+        "0.1",
+        158,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Lomma",
+        31,
+        43,
+        "0.2",
+        108,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Storuman",
+        27,
+        43,
+        "0.1",
+        127,
+        ""
+       ],
+       [
+        "Dorotea",
+        46,
+        43,
+        "0.2",
+        103,
+        "+7 PDFs on the revisit"
+       ],
+       [
+        "Norsjö",
+        40,
+        41,
+        "0.1",
+        164,
+        "+6 PDFs on the revisit"
+       ],
+       [
+        "Norberg",
+        2,
+        38,
+        "0.0",
+        57,
+        ""
+       ],
+       [
+        "Grum",
+        28,
+        36,
+        "0.0",
+        86,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Ragunda",
+        15,
+        36,
+        "0.1",
+        80,
+        ""
+       ],
+       [
+        "Surahammar",
+        21,
+        35,
+        "0.1",
+        100,
+        "+4 PDFs on the revisit"
+       ],
+       [
+        "Hällefor",
+        61,
+        34,
+        "0.1",
+        168,
+        "+13 PDFs on the revisit"
+       ],
+       [
+        "Degerfor",
+        40,
+        33,
+        "0.1",
+        82,
+        "+11 PDFs on the revisit"
+       ],
+       [
+        "Arvidsjaur",
+        26,
+        31,
+        "0.1",
+        90,
+        "+5 PDFs on the revisit"
+       ],
+       [
+        "Överkalix",
+        9,
+        30,
+        "0.1",
+        53,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Tidaholm",
+        82,
+        29,
+        "0.1",
+        125,
+        "+11 PDFs on the revisit"
+       ],
+       [
+        "Lycksele",
+        20,
+        29,
+        "0.0",
+        80,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Storfor",
+        14,
+        28,
+        "0.1",
+        59,
+        "+3 PDFs on the revisit"
+       ],
+       [
+        "Åsele",
+        57,
+        28,
+        "0.0",
+        108,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Lekeberg",
+        27,
+        23,
+        "0.3",
+        77,
+        "+4 PDFs on the revisit"
+       ],
+       [
+        "Laxå",
+        37,
+        22,
+        "0.0",
+        96,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Forshaga",
+        54,
+        21,
+        "0.1",
+        97,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Hagfor",
+        23,
+        21,
+        "0.2",
+        75,
+        "+6 PDFs on the revisit"
+       ],
+       [
+        "Boxholm",
+        26,
+        20,
+        "0.0",
+        139,
+        ""
+       ],
+       [
+        "Malå",
+        34,
+        19,
+        "0.1",
+        68,
+        ""
+       ],
+       [
+        "Herrljunga",
+        47,
+        18,
+        "0.0",
+        128,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Fagersta",
+        3,
+        16,
+        "0.0",
+        28,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Jönköping",
+        7,
+        14,
+        "0.0",
+        38,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Köping",
+        22,
+        13,
+        "0.0",
+        52,
+        ""
+       ],
+       [
+        "Kungsör",
+        28,
+        12,
+        "0.0",
+        47,
+        ""
+       ],
+       [
+        "Aneby",
+        10,
+        11,
+        "0.0",
+        37,
+        ""
+       ],
+       [
+        "Älvsbyn",
+        19,
+        9,
+        "0.0",
+        185,
+        ""
+       ],
+       [
+        "Ljusnarsberg",
+        63,
+        8,
+        "0.0",
+        155,
+        ""
+       ],
+       [
+        "Trelleborg",
+        129,
+        7,
+        "0.1",
+        580,
+        "+1 PDFs on the revisit"
+       ],
+       [
+        "Göteborg",
+        63,
+        6,
+        "0.0",
+        83,
+        "old crawl kept: site unreachable on the last one"
+       ],
+       [
+        "Karlstad",
+        174,
+        5,
+        "0.0",
+        594,
+        ""
+       ],
+       [
+        "Höör",
+        98,
+        3,
+        "0.0",
+        339,
+        "+2 PDFs on the revisit"
+       ],
+       [
+        "Trosa",
+        91,
+        2,
+        "0.0",
+        348,
+        ""
+       ],
+       [
+        "Linköping",
+        230,
+        2,
+        "0.0",
+        357,
+        ""
+       ],
+       [
+        "Gävle",
+        195,
+        2,
+        "0.0",
+        587,
+        ""
+       ],
+       [
+        "Lidingö",
+        45,
+        0,
+        "0.0",
+        128,
+        ""
+       ],
+       [
+        "Karlskrona",
+        0,
+        0,
+        "0.0",
+        1,
+        "site answered nothing"
+       ],
+       [
+        "Staffanstorp",
+        86,
+        0,
+        "0.0",
+        296,
+        ""
+       ],
+       [
+        "Arjeplog",
+        9,
+        0,
+        "0.0",
+        72,
+        ""
+       ]
+      ],
+      "limit": 10,
+      "search": true
+     }
+    },
+    {
+     "title": "Links skipped as obvious noise",
+     "summary": "440 PDF links",
+     "text": "Only unmistakable noise is skipped at this stage (annual reports, alcohol licences, estate notices, school health...). Everything else is downloaded and judged by the filter (step 2), which never removes a document without a second opinion."
+    },
+    {
+     "title": "Automatic checks",
+     "summary": "1 error(s), 4 warning(s), 5 passed (corpus.check, 2026-10-26 10:22)",
+     "text": "Each line states what should hold; the icon says whether it does (error, warning, information, passed). Click a line to see the cases behind it.",
+     "checks": [
+      {
+       "section": "Crawl (raw/web/*/manifest.jsonl)",
+       "level": "ERROR",
+       "message": "no municipality without pages or PDFs",
+       "examples": [
+        "Karlskrona"
+       ],
+       "count": 1
+      },
+      {
+       "section": "Crawl (raw/web/*/manifest.jsonl)",
+       "level": "WARN",
+       "message": "no municipality with fewer than 15 items",
+       "examples": [
+        "Arjeplog: 9 pages, 0 PDFs"
+       ],
+       "count": 1
+      },
+      {
+       "section": "Crawl (raw/web/*/manifest.jsonl)",
+       "level": "WARN",
+       "message": "no municipality at the PDF cap (8 are: more PDFs were left)",
+       "examples": [
+        "Huddinge",
+        "Uppsala",
+        "Norrköping",
+        "Tanum",
+        "Ale",
+        "Uddevalla",
+        "Västerås",
+        "Umeå"
+       ],
+       "count": 8
+      },
+      {
+       "section": "Crawl (raw/web/*/manifest.jsonl)",
+       "level": "WARN",
+       "message": "one set of caps for all municipalities: {(1000, 1000, 40, 6000): 235, (1000, 3000, 40, 15000): 54, (250, 30, None, None): 1}",
+       "examples": [
+        "(pages, PDFs, MB, requests) (1000, 1000, 40, 6000): 235 municipalities",
+        "(pages, PDFs, MB, requests) (1000, 3000, 40, 15000): 54 municipalities",
+        "(pages, PDFs, MB, requests) (250, 30, None, None): 1 municipalities"
+       ],
+       "count": 3
+      },
+      {
+       "section": "Crawl (raw/web/*/manifest.jsonl)",
+       "level": "WARN",
+       "message": "every PDF on disk is in a manifest (373 are not, 1.3 GB)",
+       "examples": [
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\01495cf8e49991dc.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\070c1528a193886d.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\074a2e15e12d8c21.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\0a1fab3859fd1849.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\0e1b9b6295c146a0.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\1720dbdecb946629.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\1889a9148c9feecc.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\18f5b3e35c80f09c.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\20db089c1008fdee.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\21fc8d085672665d.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\24a1cbe226548337.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\24d148f5ecd7ebec.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\2a00e32c8413cb46.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\2a7e4e415ad46644.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\2acdb6159fc2f0e6.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\2e5636e6f168e7c0.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\344967d66d233575.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\3a6547f14212ff55.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\3dd8f62f0a431a81.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\3e73f9702a87ad50.pdf"
+       ],
+       "count": 373
+      },
+      {
+       "section": "Crawl (raw/web/*/manifest.jsonl)",
+       "level": "OK",
+       "message": "290 of 290 municipalities with a website crawled",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Crawl (raw/web/*/manifest.jsonl)",
+       "level": "OK",
+       "message": "every manifest ends with its done line",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Crawl (raw/web/*/manifest.jsonl)",
+       "level": "OK",
+       "message": "no crawl left half-way (manifest.jsonl.part)",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Crawl (raw/web/*/manifest.jsonl)",
+       "level": "OK",
+       "message": "no municipality at the request cap (0 are)",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Crawl (raw/web/*/manifest.jsonl)",
+       "level": "OK",
+       "message": "no municipality lost half of its items since the last check",
+       "examples": [],
+       "count": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "filter",
+   "step": 2,
+   "title": "Filter: remove the PDFs that are not about building",
+   "what": "A kommun website also links documents unrelated to building: HR policies, school menus, alcohol licences, meeting minutes on other topics. Each PDF is judged in up to three stages: keyword rules on its title and file name, a small classifier trained on those rules, and for every proposed removal a second opinion from an LLM (MiMo Flash, about $0.0001 per PDF). Some were read by hand. No PDF is removed on a rule or the classifier alone: losing a useful document is worse than keeping noise.",
+   "measure": "Removed PDFs drawn at random and read by hand: how many were useful after all.",
+   "sections": [
+    {
+     "title": "How each PDF was decided",
+     "summary": "78,978 kept, 7,999 removed",
+     "bars": [
+      {
+       "label": "Kept: the title or file name names a planning document",
+       "value": 66155
+      },
+      {
+       "label": "Kept: the classifier is sure it is about planning or building",
+       "value": 5583
+      },
+      {
+       "label": "Kept: the classifier was unsure, the LLM said relevant",
+       "value": 2643
+      },
+      {
+       "label": "Kept for now: waiting for the LLM (pending)",
+       "value": 2042
+      },
+      {
+       "label": "Kept: the classifier flagged it, the LLM disagreed",
+       "value": 1681
+      },
+      {
+       "label": "Kept: a keyword rule flagged it, the LLM disagreed",
+       "value": 751
+      },
+      {
+       "label": "Kept after reading by hand",
+       "value": 123
+      },
+      {
+       "label": "Removed: the classifier flagged it and the LLM agreed",
+       "value": 4460
+      },
+      {
+       "label": "Removed: a keyword rule flagged it and the LLM agreed",
+       "value": 2499
+      },
+      {
+       "label": "Removed: the classifier was unsure, the LLM said off topic",
+       "value": 898
+      },
+      {
+       "label": "Removed after reading by hand",
+       "value": 117
+      },
+      {
+       "label": "Kept for now: waiting for the LLM (sure-rule)",
+       "value": 25
+      }
+     ]
+    },
+    {
+     "title": "Examples of removed PDFs",
+     "summary": "12 drawn at random, with the reason given",
+     "examples": [
+      "Valdemarsvik: Riktlinjer för handläggning av ekonomiskt bistånd (why: social care assistance guidelines)",
+      "Örnsköldsvik: Anmälan av föreståndare, deltagare och personer med betydande inflytande över ve (why: explosives permit, outside planning scope)",
+      "Ystad: Anmälan om fastighetsnära insamling av förpackningar hos samlokaliserade verksam (why: waste collection outside scope)",
+      "Laholm: Tjänsteskrivelse (why: archive administration, out of scope)",
+      "Malmö: Yttrande (why: minority action plan, culture policy)",
+      "Nässjö: Avfallstaxa (why: waste fees outside planning scope)",
+      "Vänersborg: Taxa Brandskyddskontroll från och med 2025-09-01 (why: fire safety fees outside planning scope)",
+      "Borås: Bilaga 2 - Tilläggsyrkande M+KD+SD Riktlinjer för inköp inom Borås Stads nämnder (why: procurement policy, outside scope)",
+      "Malmö: Tjänsteskrivelse (why: Crisis preparedness policy, outside planning scope)",
+      "Järfälla: VA-taxa för Järfälla kommun (why: water fee schedule outside scope)",
+      "Töreboda: Riktlinjer mot spelmissbruk (why: gambling policy, outside planning scope)",
+      "Norberg: Riktlinjer för färdtjänst (why: transport policy, not planning)"
+     ]
+    },
+    {
+     "title": "Errors: useful documents among the removed ones",
+     "summary": "2 useful in 120 read by hand",
+     "text": "Removed PDFs are drawn at random and read by hand (corpus/pdf_filter_eval.jsonl). The two useful ones were fee schedules under the Environmental Code, which give the permit fee for a private sewage system: that type of document is now always kept.",
+     "table": {
+      "columns": [
+       "Which drops",
+       "Read by hand",
+       "Useful",
+       "95 % confidence"
+      ],
+      "rows": [
+       [
+        "All removed PDFs",
+        120,
+        2,
+        "0 % to 6 %"
+       ],
+       [
+        "Removed then, kept by the current rules",
+        3,
+        2,
+        "21 % to 94 %"
+       ],
+       [
+        "model+llm",
+        79,
+        0,
+        "0 % to 5 %"
+       ],
+       [
+        "rule+llm",
+        26,
+        0,
+        "0 % to 13 %"
+       ],
+       [
+        "uncertain+llm",
+        12,
+        0,
+        "0 % to 24 %"
+       ]
+      ]
+     }
+    }
+   ],
+   "status": {
+    "level": "warning",
+    "label": "Check",
+    "note": "at most 6 % of the removed PDFs may be useful"
+   },
+   "flow": {
+    "value": -7999,
+    "caption": "7,999 off-topic PDFs removed"
+   },
+   "tiles": [
+    {
+     "label": "PDFs judged",
+     "value": 86977
+    },
+    {
+     "label": "Removed as off topic",
+     "value": 7999,
+     "hint": "9 %"
+    },
+    {
+     "label": "Useful among removed (hand check)",
+     "value": "2 / 120",
+     "hint": "95 % confidence: 0 % to 6 %"
+    },
+    {
+     "label": "Waiting for the LLM",
+     "value": 2042,
+     "hint": "kept meanwhile"
+    }
+   ]
+  },
+  {
+   "id": "ocr",
+   "step": 3,
+   "title": "Read: extract the text, OCR the scans",
+   "what": "Web pages and PDFs with a text layer are read directly. Scanned PDFs, mostly old plans from the 1950s to the 1990s, are images: they need OCR (optical character recognition) before their text can be searched. The OCR also records where each word sits on the page, so that a property number can be found on a scanned plan map.",
+   "measure": "OCR engines compared on plan pages: crops of real old scans typed out by hand, and recent plans rendered as images and degraded like a scan (their text layer is the answer key). Score = share of the words read exactly; property numbers like 3:204 are counted apart, they identify a plot.",
+   "status": {
+    "level": "info",
+    "label": "In progress",
+    "note": "11,448 of 15,013 scanned PDFs read; then the corpus is rebuilt"
+   },
+   "flow": {
+    "value": 3543,
+    "caption": "3,543 scanned PDFs waiting for OCR"
+   },
+   "tiles": [
+    {
+     "label": "Scanned PDFs (no text yet)",
+     "value": 3543,
+     "hint": "invisible to search until OCR"
+    },
+    {
+     "label": "Of which detaljplaner",
+     "value": 99
+    },
+    {
+     "label": "Read by the OCR so far",
+     "value": 11448,
+     "hint": "of 15,013 queued"
+    },
+    {
+     "label": "Words read on real scanned maps",
+     "value": "87 %",
+     "hint": "PP-OCRv6 medium; EasyOCR, used before: 69 %"
+    }
+   ],
+   "sections": [
+    {
+     "title": "Progress",
+     "summary": "11,448 of 15,013 scanned PDFs",
+     "meter": {
+      "value": 11448,
+      "total": 15013,
+      "label": "scanned PDFs read"
+     }
+    },
+    {
+     "title": "Scanned PDFs by document type",
+     "summary": "3,543 in total",
+     "bars": [
+      {
+       "label": "Other",
+       "value": 3074,
+       "hint": "Other: decisions, investigations, guidance kept by the filter"
+      },
+      {
+       "label": "Översiktsplan",
+       "value": 186,
+       "hint": "Översiktsplan: comprehensive plan of the whole kommun"
+      },
+      {
+       "label": "Detaljplan",
+       "value": 99,
+       "hint": "Detaljplan: detailed development plan (plan map, description, consultation documents, studies)"
+      },
+      {
+       "label": "Avlopp",
+       "value": 81,
+       "hint": "Avlopp: water and sewage (private sewage permits)"
+      },
+      {
+       "label": "Bygglov",
+       "value": 55,
+       "hint": "Bygglov: building permits (how to apply, rules, forms)"
+      },
+      {
+       "label": "Taxa",
+       "value": 32,
+       "hint": "Taxa: fee schedules"
+      },
+      {
+       "label": "Strandskydd",
+       "value": 16,
+       "hint": "Strandskydd: shore protection (building near water)"
+      }
+     ]
+    },
+    {
+     "title": "Which OCR engine",
+     "summary": "benchmark 20261024",
+     "text": "PP-OCRv6 medium reads 87 % of the words of real scanned plan maps (EasyOCR 69 %) and 8 of 13 property numbers (EasyOCR none: it reads the colon of 3:204 as a dot). It runs free on the laptop's GPU, 5 to 35 s per plan map in the full run. Small text under 12 pixels (zone codes such as e1, b1) stays hard for every engine. Columns: share of the words read exactly, except property numbers.",
+     "table": {
+      "columns": [
+       "Engine",
+       "Real scanned maps",
+       "Property numbers",
+       "Rendered maps",
+       "Rendered text pages",
+       "Real typed page"
+      ],
+      "rows": [
+       [
+        "EasyOCR (used before)",
+        "69 %",
+        "0 of 13",
+        "45 %",
+        "92 %",
+        "55 %"
+       ],
+       [
+        "PP-OCRv6 small",
+        "84 %",
+        "6 of 13",
+        "49 %",
+        "88 %",
+        "68 %"
+       ],
+       [
+        "PP-OCRv6 medium (chosen)",
+        "87 %",
+        "8 of 13",
+        "52 %",
+        "93 %",
+        "73 %"
+       ]
+      ],
+      "highlight": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "documents",
+   "step": 4,
+   "title": "Index: cut into passages, make them searchable",
+   "what": "Each document is cut into passages of about 1,500 characters (a law: one section per passage), with a header naming the kommun and the document. Each passage gets a vector, a numeric fingerprint of its meaning, so that a question finds passages by meaning; a keyword index finds exact words. Passages repeated across the corpus (standard plan wording) are kept once.",
+   "measure": "Automatic checks after every rebuild: garbled text, missing law chapters, documents filed under the wrong kommun, passages without a vector, a search store behind the corpus.",
+   "status": {
+    "level": "good",
+    "label": "Checks pass",
+    "note": "0 error(s), 4 warning(s), 11 passed (corpus.check, 2026-10-26 10:22)"
+   },
+   "flow": {
+    "value": 2390696,
+    "caption": "113,031 documents, 2,390,696 passages"
+   },
+   "tiles": [
+    {
+     "label": "Documents",
+     "value": 113031,
+     "hint": "77,631 PDFs, 35,385 web pages, 15 laws"
+    },
+    {
+     "label": "Passages (chunks)",
+     "value": 2390696
+    },
+    {
+     "label": "Documents per kommun",
+     "value": "228",
+     "hint": "median, scanned PDFs included; the largest: Uppsala 6,848, Västerås 3,364, Huddinge 3,283"
+    },
+    {
+     "label": "Law sections",
+     "value": 3651,
+     "hint": "15 laws"
+    }
+   ],
+   "sections": [
+    {
+     "title": "Why so many documents",
+     "summary": "289 kommuner × a median of 228 documents",
+     "text": "Plans dominate: a detaljplan is published as a plan map, a description and, for recent plans, consultation reports and studies (noise, traffic, soil...), and many kommun sites also have a web page per plan. Web pages are short (permit guidance, sewage, shore protection); PDFs carry most of the text. Scanned PDFs count as documents but have no passages until the OCR.",
+     "bars": [
+      {
+       "label": "Detaljplan",
+       "value": 55202,
+       "hint": "Detaljplan: detailed development plan (plan map, description, consultation documents, studies) - 45,764 PDFs, 9,438 web pages"
+      },
+      {
+       "label": "Översiktsplan",
+       "value": 9862,
+       "hint": "Översiktsplan: comprehensive plan of the whole kommun - 5,083 PDFs, 4,779 web pages"
+      },
+      {
+       "label": "Bygglov",
+       "value": 9947,
+       "hint": "Bygglov: building permits (how to apply, rules, forms) - 3,030 PDFs, 6,917 web pages"
+      },
+      {
+       "label": "Strandskydd",
+       "value": 655,
+       "hint": "Strandskydd: shore protection (building near water) - 211 PDFs, 444 web pages"
+      },
+      {
+       "label": "Avlopp",
+       "value": 9775,
+       "hint": "Avlopp: water and sewage (private sewage permits) - 3,753 PDFs, 6,022 web pages"
+      },
+      {
+       "label": "Taxa",
+       "value": 3303,
+       "hint": "Taxa: fee schedules - 2,425 PDFs, 878 web pages"
+      },
+      {
+       "label": "Other",
+       "value": 24272,
+       "hint": "Other: decisions, investigations, guidance kept by the filter - 17,365 PDFs, 6,907 web pages"
+      }
+     ]
+    },
+    {
+     "title": "Documents per kommun",
+     "summary": "median 228",
+     "table": {
+      "columns": [
+       "Kommun",
+       "Documents"
+      ],
+      "rows": [
+       [
+        "Uppsala",
+        6848
+       ],
+       [
+        "Västerås",
+        3364
+       ],
+       [
+        "Huddinge",
+        3283
+       ],
+       [
+        "Malmö",
+        2315
+       ],
+       [
+        "Järfälla",
+        1889
+       ],
+       [
+        "Kalmar",
+        1736
+       ],
+       [
+        "Danderyd",
+        1720
+       ],
+       [
+        "Kiruna",
+        1603
+       ],
+       [
+        "Umeå",
+        1567
+       ],
+       [
+        "Östersund",
+        1491
+       ],
+       [
+        "Ale",
+        1362
+       ],
+       [
+        "Uddevalla",
+        1334
+       ],
+       [
+        "Norrköping",
+        1327
+       ],
+       [
+        "Borås",
+        1283
+       ],
+       [
+        "Tanum",
+        1270
+       ],
+       [
+        "Örebro",
+        1248
+       ],
+       [
+        "Trollhättan",
+        1201
+       ],
+       [
+        "Strömstad",
+        1195
+       ],
+       [
+        "Hylte",
+        1103
+       ],
+       [
+        "Växjö",
+        1093
+       ],
+       [
+        "Tyresö",
+        1014
+       ],
+       [
+        "Falu",
+        992
+       ],
+       [
+        "Helsingborg",
+        986
+       ],
+       [
+        "Botkyrka",
+        983
+       ],
+       [
+        "Solna",
+        966
+       ],
+       [
+        "Norrtälje",
+        966
+       ],
+       [
+        "Kalix",
+        949
+       ],
+       [
+        "Luleå",
+        935
+       ],
+       [
+        "Södertälje",
+        899
+       ],
+       [
+        "Vaxholm",
+        874
+       ],
+       [
+        "Malung-Sälen",
+        863
+       ],
+       [
+        "Upplands-Bro",
+        842
+       ],
+       [
+        "Höganäs",
+        833
+       ],
+       [
+        "Vallentuna",
+        785
+       ],
+       [
+        "Sundbyberg",
+        775
+       ],
+       [
+        "Östhammar",
+        768
+       ],
+       [
+        "Haparanda",
+        723
+       ],
+       [
+        "Ronneby",
+        714
+       ],
+       [
+        "Kungälv",
+        712
+       ],
+       [
+        "Borlänge",
+        680
+       ],
+       [
+        "Nacka",
+        678
+       ],
+       [
+        "Västervik",
+        669
+       ],
+       [
+        "Upplands Väsby",
+        661
+       ],
+       [
+        "Vänersborg",
+        654
+       ],
+       [
+        "Varberg",
+        651
+       ],
+       [
+        "Kristinehamn",
+        626
+       ],
+       [
+        "Täby",
+        618
+       ],
+       [
+        "Gotland",
+        602
+       ],
+       [
+        "Kristianstad",
+        592
+       ],
+       [
+        "Ängelholm",
+        565
+       ],
+       [
+        "Säter",
+        556
+       ],
+       [
+        "Askersund",
+        554
+       ],
+       [
+        "Gällivare",
+        550
+       ],
+       [
+        "Skellefteå",
+        549
+       ],
+       [
+        "Krokom",
+        547
+       ],
+       [
+        "Ovanåker",
+        542
+       ],
+       [
+        "Falkenberg",
+        533
+       ],
+       [
+        "Håbo",
+        504
+       ],
+       [
+        "Söderköping",
+        501
+       ],
+       [
+        "Kungsbacka",
+        501
+       ],
+       [
+        "Nykvarn",
+        493
+       ],
+       [
+        "Knivsta",
+        469
+       ],
+       [
+        "Härjedalen",
+        455
+       ],
+       [
+        "Värmdö",
+        450
+       ],
+       [
+        "Värnamo",
+        450
+       ],
+       [
+        "Timrå",
+        444
+       ],
+       [
+        "Kumla",
+        443
+       ],
+       [
+        "Hässleholm",
+        441
+       ],
+       [
+        "Strängnäs",
+        430
+       ],
+       [
+        "Gagnef",
+        420
+       ],
+       [
+        "Partille",
+        407
+       ],
+       [
+        "Alingsås",
+        406
+       ],
+       [
+        "Vimmerby",
+        404
+       ],
+       [
+        "Orust",
+        404
+       ],
+       [
+        "Mörbylånga",
+        400
+       ],
+       [
+        "Kinda",
+        398
+       ],
+       [
+        "Sandviken",
+        398
+       ],
+       [
+        "Skövde",
+        392
+       ],
+       [
+        "Ulricehamn",
+        390
+       ],
+       [
+        "Mjölby",
+        388
+       ],
+       [
+        "Härnösand",
+        383
+       ],
+       [
+        "Gislaved",
+        379
+       ],
+       [
+        "Tierp",
+        365
+       ],
+       [
+        "Mariestad",
+        358
+       ],
+       [
+        "Finspång",
+        354
+       ],
+       [
+        "Gnesta",
+        346
+       ],
+       [
+        "Lerum",
+        346
+       ],
+       [
+        "Götene",
+        346
+       ],
+       [
+        "Osby",
+        342
+       ],
+       [
+        "Motala",
+        339
+       ],
+       [
+        "Hudiksvall",
+        334
+       ],
+       [
+        "Åtvidaberg",
+        333
+       ],
+       [
+        "Hallsberg",
+        326
+       ],
+       [
+        "Alvesta",
+        316
+       ],
+       [
+        "Sävsjö",
+        312
+       ],
+       [
+        "Sölvesborg",
+        312
+       ],
+       [
+        "Grästorp",
+        312
+       ],
+       [
+        "Vårgårda",
+        311
+       ],
+       [
+        "Svenljunga",
+        310
+       ],
+       [
+        "Oxelösund",
+        308
+       ],
+       [
+        "Karlstad",
+        306
+       ],
+       [
+        "Mora",
+        300
+       ],
+       [
+        "Sotenäs",
+        295
+       ],
+       [
+        "Ljungby",
+        293
+       ],
+       [
+        "Mölndal",
+        291
+       ],
+       [
+        "Mark",
+        291
+       ],
+       [
+        "Lindesberg",
+        291
+       ],
+       [
+        "Ljusdal",
+        291
+       ],
+       [
+        "Båstad",
+        286
+       ],
+       [
+        "Haninge",
+        285
+       ],
+       [
+        "Oskarshamn",
+        285
+       ],
+       [
+        "Vellinge",
+        285
+       ],
+       [
+        "Nybro",
+        281
+       ],
+       [
+        "Bollebygd",
+        281
+       ],
+       [
+        "Markaryd",
+        279
+       ],
+       [
+        "Valdemarsvik",
+        278
+       ],
+       [
+        "Landskrona",
+        278
+       ],
+       [
+        "Kävlinge",
+        276
+       ],
+       [
+        "Hörby",
+        276
+       ],
+       [
+        "Katrineholm",
+        275
+       ],
+       [
+        "Nynäshamn",
+        274
+       ],
+       [
+        "Älvdalen",
+        272
+       ],
+       [
+        "Piteå",
+        268
+       ],
+       [
+        "Östra Göinge",
+        265
+       ],
+       [
+        "Svalöv",
+        262
+       ],
+       [
+        "Borgholm",
+        261
+       ],
+       [
+        "Svedala",
+        261
+       ],
+       [
+        "Hallstahammar",
+        260
+       ],
+       [
+        "Eslöv",
+        258
+       ],
+       [
+        "Lilla Edet",
+        256
+       ],
+       [
+        "Ystad",
+        254
+       ],
+       [
+        "Ekerö",
+        252
+       ],
+       [
+        "Enköping",
+        251
+       ],
+       [
+        "Flen",
+        250
+       ],
+       [
+        "Sunne",
+        243
+       ],
+       [
+        "Lidköping",
+        242
+       ],
+       [
+        "Vaggeryd",
+        238
+       ],
+       [
+        "Lysekil",
+        238
+       ],
+       [
+        "Linköping",
+        237
+       ],
+       [
+        "Stenungsund",
+        236
+       ],
+       [
+        "Torsby",
+        234
+       ],
+       [
+        "Ludvika",
+        234
+       ],
+       [
+        "Söderhamn",
+        234
+       ],
+       [
+        "Tomelilla",
+        233
+       ],
+       [
+        "Halmstad",
+        228
+       ],
+       [
+        "Nyköping",
+        227
+       ],
+       [
+        "Åmål",
+        227
+       ],
+       [
+        "Örkelljunga",
+        226
+       ],
+       [
+        "Sjöbo",
+        224
+       ],
+       [
+        "Simrishamn",
+        224
+       ],
+       [
+        "Sundsvall",
+        224
+       ],
+       [
+        "Sigtuna",
+        222
+       ],
+       [
+        "Öckerö",
+        220
+       ],
+       [
+        "Vetlanda",
+        216
+       ],
+       [
+        "Bjuv",
+        216
+       ],
+       [
+        "Nordanstig",
+        216
+       ],
+       [
+        "Kramfor",
+        216
+       ],
+       [
+        "Ånge",
+        215
+       ],
+       [
+        "Lund",
+        214
+       ],
+       [
+        "Bengtsfor",
+        211
+       ],
+       [
+        "Åstorp",
+        210
+       ],
+       [
+        "Bollnäs",
+        210
+       ],
+       [
+        "Tranås",
+        207
+       ],
+       [
+        "Burlöv",
+        206
+       ],
+       [
+        "Filipstad",
+        206
+       ],
+       [
+        "Pajala",
+        205
+       ],
+       [
+        "Habo",
+        204
+       ],
+       [
+        "Eskilstuna",
+        200
+       ],
+       [
+        "Gävle",
+        197
+       ],
+       [
+        "Karlskoga",
+        192
+       ],
+       [
+        "Salem",
+        189
+       ],
+       [
+        "Kil",
+        189
+       ],
+       [
+        "Hedemora",
+        189
+       ],
+       [
+        "Stockholm",
+        185
+       ],
+       [
+        "Vindeln",
+        184
+       ],
+       [
+        "Vansbro",
+        183
+       ],
+       [
+        "Tingsryd",
+        182
+       ],
+       [
+        "Avesta",
+        179
+       ],
+       [
+        "Falköping",
+        178
+       ],
+       [
+        "Vännäs",
+        177
+       ],
+       [
+        "Essunga",
+        174
+       ],
+       [
+        "Hammarö",
+        173
+       ],
+       [
+        "Laholm",
+        172
+       ],
+       [
+        "Tjörn",
+        171
+       ],
+       [
+        "Sala",
+        169
+       ],
+       [
+        "Örnsköldsvik",
+        169
+       ],
+       [
+        "Vara",
+        168
+       ],
+       [
+        "Klippan",
+        166
+       ],
+       [
+        "Dals-Ed",
+        166
+       ],
+       [
+        "Älvkarleby",
+        164
+       ],
+       [
+        "Munkedal",
+        163
+       ],
+       [
+        "Berg",
+        163
+       ],
+       [
+        "Emmaboda",
+        162
+       ],
+       [
+        "Bräcke",
+        161
+       ],
+       [
+        "Nora",
+        159
+       ],
+       [
+        "Mönsterås",
+        158
+       ],
+       [
+        "Sollentuna",
+        157
+       ],
+       [
+        "Österåker",
+        156
+       ],
+       [
+        "Säffle",
+        156
+       ],
+       [
+        "Åre",
+        155
+       ],
+       [
+        "Trelleborg",
+        154
+       ],
+       [
+        "Färgelanda",
+        154
+       ],
+       [
+        "Karlsborg",
+        152
+       ],
+       [
+        "Nässjö",
+        151
+       ],
+       [
+        "Hofor",
+        151
+       ],
+       [
+        "Orsa",
+        148
+       ],
+       [
+        "Tibro",
+        144
+       ],
+       [
+        "Gnosjö",
+        143
+       ],
+       [
+        "Töreboda",
+        143
+       ],
+       [
+        "Leksand",
+        142
+       ],
+       [
+        "Älmhult",
+        139
+       ],
+       [
+        "Mullsjö",
+        138
+       ],
+       [
+        "Forshaga",
+        136
+       ],
+       [
+        "Sollefteå",
+        132
+       ],
+       [
+        "Boden",
+        131
+       ],
+       [
+        "Vadstena",
+        130
+       ],
+       [
+        "Arvika",
+        129
+       ],
+       [
+        "Rättvik",
+        126
+       ],
+       [
+        "Uppvidinge",
+        124
+       ],
+       [
+        "Mellerud",
+        124
+       ],
+       [
+        "Smedjebacken",
+        123
+       ],
+       [
+        "Hultsfred",
+        122
+       ],
+       [
+        "Karlshamn",
+        120
+       ],
+       [
+        "Härryda",
+        120
+       ],
+       [
+        "Eksjö",
+        119
+       ],
+       [
+        "Skara",
+        119
+       ],
+       [
+        "Vilhelmina",
+        117
+       ],
+       [
+        "Skinnskatteberg",
+        115
+       ],
+       [
+        "Lessebo",
+        114
+       ],
+       [
+        "Ockelbo",
+        113
+       ],
+       [
+        "Hjo",
+        112
+       ],
+       [
+        "Eda",
+        112
+       ],
+       [
+        "Ljusnarsberg",
+        111
+       ],
+       [
+        "Bjurholm",
+        111
+       ],
+       [
+        "Heby",
+        110
+       ],
+       [
+        "Tidaholm",
+        109
+       ],
+       [
+        "Tranemo",
+        107
+       ],
+       [
+        "Gullspång",
+        107
+       ],
+       [
+        "Högsby",
+        105
+       ],
+       [
+        "Höör",
+        104
+       ],
+       [
+        "Robertsfor",
+        103
+       ],
+       [
+        "Vingåker",
+        101
+       ],
+       [
+        "Skurup",
+        101
+       ],
+       [
+        "Perstorp",
+        99
+       ],
+       [
+        "Ydre",
+        96
+       ],
+       [
+        "Ödeshög",
+        95
+       ],
+       [
+        "Olofström",
+        95
+       ],
+       [
+        "Bromölla",
+        95
+       ],
+       [
+        "Årjäng",
+        95
+       ],
+       [
+        "Hällefor",
+        94
+       ],
+       [
+        "Trosa",
+        92
+       ],
+       [
+        "Jokkmokk",
+        88
+       ],
+       [
+        "Laxå",
+        87
+       ],
+       [
+        "Staffanstorp",
+        86
+       ],
+       [
+        "Nordmaling",
+        86
+       ],
+       [
+        "Dorotea",
+        83
+       ],
+       [
+        "Norsjö",
+        81
+       ],
+       [
+        "Åsele",
+        81
+       ],
+       [
+        "Övertorneå",
+        80
+       ],
+       [
+        "Degerfor",
+        78
+       ],
+       [
+        "Munkfor",
+        77
+       ],
+       [
+        "Lomma",
+        74
+       ],
+       [
+        "Grum",
+        73
+       ],
+       [
+        "Torsås",
+        71
+       ],
+       [
+        "Göteborg",
+        66
+       ],
+       [
+        "Herrljunga",
+        65
+       ],
+       [
+        "Arboga",
+        62
+       ],
+       [
+        "Strömsund",
+        62
+       ],
+       [
+        "Sorsele",
+        61
+       ],
+       [
+        "Hagfor",
+        59
+       ],
+       [
+        "Storuman",
+        57
+       ],
+       [
+        "Arvidsjaur",
+        57
+       ],
+       [
+        "Surahammar",
+        56
+       ],
+       [
+        "Storfor",
+        53
+       ],
+       [
+        "Lidingö",
+        51
+       ],
+       [
+        "Kungsör",
+        51
+       ],
+       [
+        "Lekeberg",
+        50
+       ],
+       [
+        "Malå",
+        48
+       ],
+       [
+        "Lycksele",
+        46
+       ],
+       [
+        "Boxholm",
+        44
+       ],
+       [
+        "Överkalix",
+        35
+       ],
+       [
+        "Köping",
+        30
+       ],
+       [
+        "Ragunda",
+        27
+       ],
+       [
+        "Älvsbyn",
+        25
+       ],
+       [
+        "Aneby",
+        19
+       ],
+       [
+        "Jönköping",
+        13
+       ],
+       [
+        "Norberg",
+        12
+       ],
+       [
+        "Fagersta",
+        12
+       ],
+       [
+        "Arjeplog",
+        9
+       ]
+      ],
+      "limit": 10,
+      "search": true
+     }
+    },
+    {
+     "title": "Automatic checks",
+     "summary": "0 error(s), 4 warning(s), 11 passed (corpus.check, 2026-10-26 10:22)",
+     "text": "Each line states what should hold; the icon says whether it does (error, warning, information, passed). Click a line to see the cases behind it.",
+     "checks": [
+      {
+       "section": "Documents (documents.jsonl)",
+       "level": "WARN",
+       "message": "documents naming only other municipalities than their site's (shared administrations, neighbours' plans; filed under the site's): 756",
+       "examples": [
+        "Askersund -> Laxå: 101",
+        "Askersund -> Lekeberg: 45",
+        "Avesta -> Fagersta: 30",
+        "Sandviken -> Ockelbo: 21",
+        "Falu -> Borlänge: 20",
+        "Vimmerby -> Hultsfred: 19",
+        "Gullspång -> Mariestad: 16",
+        "Huddinge -> Stockholm: 13",
+        "Järfälla -> Stockholm: 11",
+        "Ovanåker -> Bollnäs: 11",
+        "Töreboda -> Mariestad: 10",
+        "Valdemarsvik -> Söderköping: 9",
+        "Avesta -> Norberg: 8",
+        "Täby -> Danderyd: 8",
+        "Lindesberg -> Ljusnarsberg: 8",
+        "Sandviken -> Hofor: 8",
+        "Knivsta -> Uppsala: 7",
+        "Uppsala -> Sala: 7",
+        "Grästorp -> Lidköping: 7",
+        "Solna -> Stockholm: 5"
+       ],
+       "count": 312
+      },
+      {
+       "section": "Documents (documents.jsonl)",
+       "level": "WARN",
+       "message": "no title or text with replacement characters (�): 106",
+       "examples": [
+        "page:0687:bd940872e76c599a: Tranås översiktsplan (40 in the text)",
+        "page:2029:3848c6983210402c: Leksands Översiktsplan (63 in the text)",
+        "pdf:0123:b64386f9e5c9711f: Planbeskrivning (327 in the text)",
+        "pdf:0123:48f07274b272b971: Järfälla kommuns arkitekturpolicy 2022 (835 in the text)",
+        "pdf:0123:d810620a28a32314: Arkeologisk undersökning (600 in the text)",
+        "pdf:0125:caa5b219f33734f9: Kulturmiljöutredning pdf, 23.7 MB. (562 in the text)",
+        "pdf:0126:448841fa58e40eda: Antikvarisk förundersökning granskning (1872 in the text)",
+        "pdf:0127:a74dfb0f1c20e612: Program till detaljplan Hallundavägen (6182 in the text)",
+        "pdf:0127:3d88c7a2c46bc6db: Detaljplaneprogram för centrala Tullinge (7591 in the text)",
+        "pdf:0127:985d496624287c5f: Planprogram Kassmyraåsen-komprimerad (1) (5476 in the text)",
+        "pdf:0127:b594cead0afc2c08: Kassmyraåsen förslag till planprogram (5476 in the text)",
+        "pdf:0127:90fcb96213d3fdb6: Kassmyraåsen förslag planprogram 2022 (5476 in the text)",
+        "pdf:0128:bd2a81d3952fb4e7: Planbeskrivning_antagande_2026_05_05_ÄndringMossbergaHilsta (3123 in the text)",
+        "pdf:0128:7d502c8a81fdf1be: Markanvisningspolicy_antagen20251106 (3268 in the text)",
+        "pdf:0138:d12f5dfb3c1529ee: framsida_planunderlag_grönstuktur (25 in the text)",
+        "pdf:0184:376f5c5ee9ea6025: Kulturmiljöanalys Stallmästaregården (1005 in the text)",
+        "pdf:0184:4195df51a97f96d5: Gestaltningsprogram.pdf Pdf, 28 MB. (2297 in the text)",
+        "pdf:0184:218c73275fa9d7f3: Trafikutredning.pdf Pdf, 9 MB. (2170 in the text)",
+        "pdf:0184:67c7418f5be4545a: Antikvarisk konsekvensanalys Stallmästaregården (321 in the text)",
+        "pdf:0188:4447bc7b7bf13b27: Särskild arkeologisk utredning (Branten och Månsjön) (466 in the text)"
+       ],
+       "count": 106
+      },
+      {
+       "section": "Documents (documents.jsonl)",
+       "level": "WARN",
+       "message": "every PDF judged by corpus.pdf_filter (features, classify, llm, classify, apply): 2035 are not",
+       "examples": [
+        "pdf:0114:a369f76829006f28: 21_1_Optimus_Kompletterande konsekvensanalys BHF_20240701.pdf Pdf, 846",
+        "pdf:0114:0f46ae26125fd45a: Platsanalys Älvsunda 7.8 m fl..pdf Pdf, 4 MB.",
+        "pdf:0115:13dd0b686f8ee1de: Entreprenörsrapport 1",
+        "pdf:0115:79dd6c69d6ae6818: Rapport KBN0025 Gustavslund Groddjursinventering 2024 Pdf, 5.2 MB, öpp",
+        "pdf:0117:b45f6fbd4d339e8d: Transportstrategi , 16.8 MB.",
+        "pdf:0117:3c3320cd194135c3: Länk till filtypen pdf Bilaga 1. Hållbarhetsbedömning samt särskild sa",
+        "pdf:0117:78243a4dc8971429: Länk till filtypen pdf Bilaga 4 - Styrmedel 117 kB",
+        "pdf:0117:041d88e240aabcfe: Länk till filtypen pdf Bilaga 4. Särskild sammanställning 265.7 kB",
+        "pdf:0117:d770c8e56338054e: Länk till filtypen pdf Armaturförslag - Puck 389.3 kB",
+        "pdf:0117:18fe96a351343380: Länk till filtypen pdf Armaturförslag - Saturn II 257.6 kB",
+        "pdf:0117:baaaee147766fc54: Länk till filtypen pdf Armaturförslag - Link 300 kB",
+        "pdf:0117:4fe5835e365b9e55: Länk till filtypen pdf Armaturförslag - Stockholmslyktan 385.2 kB",
+        "pdf:0117:6a3736522a9e7110: Product Familiy Leaflet: Iridium² Medium",
+        "pdf:0117:693091bc6f0b951e: Länk till filtypen pdf Bilaga 8 - Ordlista 122.2 kB",
+        "pdf:0117:2b26c946e7b5dcd6: Länk till filtypen pdf Bilaga 3 - Framtida insamlingssystem och avfall",
+        "pdf:0117:9329e0fc334722dd: Microsoft Word - Policy för lekplatser (2).docx",
+        "pdf:0117:563a991dc00c8ae0: Product Familiy Leaflet: CitySoul",
+        "pdf:0117:1143376be3dc776d: Länk till filtypen pdf Belysningsstrategi 7.3 MB",
+        "pdf:0117:11f1cd9551ba5535: Länk till filtypen pdf Strategi för de gröna frågorna i Österåker 3.4 ",
+        "pdf:0120:5276756ba9b8bd8f: Ishallsprojektet"
+       ],
+       "count": 2035
+      },
+      {
+       "section": "Documents (documents.jsonl)",
+       "level": "WARN",
+       "message": "no document without text (other than scanned PDFs): 5",
+       "examples": [
+        "pdf:0767:6708cd991b134af5",
+        "pdf:1662:213a0993abf4bc61",
+        "pdf:1980:6fe3708a355d7ecd",
+        "pdf:1980:661d721e586560f2",
+        "pdf:1980:e780a59c779c9f30"
+       ],
+       "count": 5
+      },
+      {
+       "section": "Documents (documents.jsonl)",
+       "level": "INFO",
+       "message": "3543 scanned PDFs waiting for OCR (no text, invisible to search): {'other': 3074, 'detaljplan': 99, 'avlopp': 81, 'oversiktsplan': 186, 'taxa': 32, 'bygglov': 55, 'strandskydd': 16}",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Index and store (st-arctic-l-v2)",
+       "level": "INFO",
+       "message": "87580 vectors of chunks no longer in the corpus (dropped by localrag.store)",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Documents (documents.jsonl)",
+       "level": "OK",
+       "message": "no garbled title (UTF-8 read as Latin-1): 0",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Documents (documents.jsonl)",
+       "level": "OK",
+       "message": "no script artefacts in page text (org.mozilla.javascript...): 0",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Documents (documents.jsonl)",
+       "level": "OK",
+       "message": "no duplicate text within a municipality: 0 groups",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Statutes (law chunks)",
+       "level": "OK",
+       "message": "15 statutes chunked, 15 downloaded",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Statutes (law chunks)",
+       "level": "OK",
+       "message": "sections in order within each statute (0 go backwards)",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Statutes (law chunks)",
+       "level": "OK",
+       "message": "every chapter heading of the raw text has chunks (0 missing)",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Index and store (st-arctic-l-v2)",
+       "level": "OK",
+       "message": "2390696 chunks, unique ids (0 duplicates)",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Index and store (st-arctic-l-v2)",
+       "level": "OK",
+       "message": "every chunk has a context header (0 without)",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Index and store (st-arctic-l-v2)",
+       "level": "OK",
+       "message": "every chunk's document is in documents.jsonl (0 not)",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Index and store (st-arctic-l-v2)",
+       "level": "OK",
+       "message": "every chunk has a vector (0 missing: run localrag.index)",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Index and store (st-arctic-l-v2)",
+       "level": "OK",
+       "message": "the store has the chunks of chunks.jsonl (2390696 vs 2390696: rebuild with localrag.store, then restart the backend)",
+       "examples": [],
+       "count": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "plans",
+   "step": 5,
+   "title": "Plan registry: one record per detaljplan, with its rules",
+   "what": "Groups the documents of each detaljplan into one plan (name, number, status, documents) and extracts the coded rules printed on the plan (for example e1 = largest building area, h1 = highest building height), so the agent can answer what a plan allows on a plot.",
+   "measure": "Counts only for now: plans found, plans with their rules extracted. Rules printed only as a map (which zone carries which code) are read by the agent with the image tools.",
+   "status": {
+    "level": "info",
+    "label": "Counts only",
+    "note": "rules extracted for 29 % of the plans"
+   },
+   "flow": {
+    "value": 38664,
+    "caption": "38,664 plans"
+   },
+   "tiles": [
+    {
+     "label": "Plans",
+     "value": 38664
+    },
+    {
+     "label": "In force",
+     "value": 22252
+    },
+    {
+     "label": "With rules extracted",
+     "value": 11200,
+     "hint": "97,496 rules in total"
+    },
+    {
+     "label": "Known only from a web page",
+     "value": 4310,
+     "hint": "no document of the plan in the corpus"
+    }
+   ],
+   "sections": [
+    {
+     "title": "Plan status",
+     "summary": "22,252 in force",
+     "bars": [
+      {
+       "label": "In force (laga kraft)",
+       "value": 22252
+      },
+      {
+       "label": "Status not found",
+       "value": 7966
+      },
+      {
+       "label": "Being drawn up",
+       "value": 5129
+      },
+      {
+       "label": "In consultation (samråd)",
+       "value": 1515
+      },
+      {
+       "label": "In review (granskning)",
+       "value": 1135
+      },
+      {
+       "label": "Adopted, not yet in force",
+       "value": 667
+      }
+     ]
+    },
+    {
+     "title": "Documents per plan",
+     "summary": "most plans have a single document in the corpus",
+     "bars": [
+      {
+       "label": "0 documents",
+       "value": 4310
+      },
+      {
+       "label": "1 document",
+       "value": 27656
+      },
+      {
+       "label": "2 documents",
+       "value": 4998
+      },
+      {
+       "label": "3 documents",
+       "value": 857
+      },
+      {
+       "label": "4 documents",
+       "value": 356
+      },
+      {
+       "label": "5 or more documents",
+       "value": 487
+      }
+     ]
+    },
+    {
+     "title": "Automatic checks",
+     "summary": "0 error(s), 0 warning(s), 2 passed (corpus.check, 2026-10-26 10:22)",
+     "text": "Each line states what should hold; the icon says whether it does (error, warning, information, passed). Click a line to see the cases behind it.",
+     "checks": [
+      {
+       "section": "Plan registry (plans.jsonl)",
+       "level": "INFO",
+       "message": "11200 plans with extracted provisions (29%)",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Plan registry (plans.jsonl)",
+       "level": "OK",
+       "message": "38664 plans, 4310 (11%) without any document in the corpus",
+       "examples": [],
+       "count": 0
+      },
+      {
+       "section": "Plan registry (plans.jsonl)",
+       "level": "OK",
+       "message": "no plan name with replacement characters (0)",
+       "examples": [],
+       "count": 0
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tools",
+   "step": 6,
+   "title": "Search: the agent's tools on the corpus",
+   "what": "The agent answers by exploring the corpus with tools: search by meaning, grep for exact words, read a document, open a law section, list a kommun's documents or plans (each tool in the table below). Their speed sets most of the waiting time outside the model.",
+   "measure": "Every tool call stored from past benchmark runs is replayed on the current corpus: a call must not fail on something the corpus has, and its time is measured. Times: median (typical call) and 95th percentile (the slow ones).",
+   "status": {
+    "level": "good",
+    "label": "Works",
+    "note": "search – s, grep 0.40 s typical"
+   },
+   "flow": {
+    "value": "– s",
+    "caption": "typical search time; grep 0.40 s"
+   },
+   "tiles": [
+    {
+     "label": "Search, typical time",
+     "value": "– s",
+     "hint": "slow calls – s"
+    },
+    {
+     "label": "Grep, typical time",
+     "value": "0.40 s",
+     "hint": "slow calls 2.88 s"
+    },
+    {
+     "label": "Calls replayed",
+     "value": 12397
+    },
+    {
+     "label": "Failures on data the corpus has",
+     "value": 0
+    }
+   ],
+   "sections": [
+    {
+     "title": "Time per tool (seconds)",
+     "summary": "replay 20261026",
+     "table": {
+      "columns": [
+       "Tool",
+       "What it does",
+       "Calls",
+       "Typical",
+       "Slow (95 %)",
+       "Slowest"
+      ],
+      "rows": [
+       [
+        "read",
+        "opens a passage or a whole document",
+        7270,
+        "0.00",
+        "0.61",
+        "1.62"
+       ],
+       [
+        "grep",
+        "finds an exact word or pattern in a kommun's documents or in the laws",
+        2901,
+        "0.40",
+        "2.88",
+        "17"
+       ],
+       [
+        "list_documents",
+        "lists a kommun's documents by title",
+        974,
+        "0.03",
+        "0.18",
+        "1.25"
+       ],
+       [
+        "law_section",
+        "opens a law section, e.g. PBL 9 kap. 31 §",
+        574,
+        "0.01",
+        "0.03",
+        "0.08"
+       ],
+       [
+        "plans",
+        "lists a kommun's plans from the plan registry",
+        236,
+        "0.01",
+        "0.01",
+        "1.33"
+       ],
+       [
+        "find_kommun",
+        "tells which kommun a place name belongs to",
+        233,
+        "0.06",
+        "0.48",
+        "10"
+       ],
+       [
+        "plan_rules",
+        "gives the coded rules of one plan",
+        209,
+        "0.01",
+        "0.01",
+        "0.36"
+       ]
+      ]
+     }
+    },
+    {
+     "title": "Earlier runs (typical / slow, seconds)",
+     "summary": "the corpus grew 5x between the small runs and 20261024",
+     "table": {
+      "columns": [
+       "Run",
+       "search",
+       "grep",
+       "read"
+      ],
+      "rows": [
+       [
+        "20261023-small",
+        "0.14 / 0.39",
+        "0.11 / 0.62",
+        "0.00 / 0.05"
+       ],
+       [
+        "20261024",
+        "0.11 / 0.21",
+        "0.31 / 1.23",
+        "0.00 / 0.23"
+       ],
+       [
+        "20261025",
+        "0.12 / 0.22",
+        "0.24 / 1.15",
+        "0.00 / 0.23"
+       ],
+       [
+        "20261026",
+        "– / –",
+        "0.40 / 2.88",
+        "0.00 / 0.61"
+       ]
+      ],
+      "highlight": 3
+     }
+    },
+    {
+     "title": "Search quality (retrieval evaluation)",
+     "summary": "recall@5 88 % on the national corpus, 94 % on the 2026-10-22 one",
+     "text": "45 questions written for real use cases (4 kommuner), each labelled with the passages that answer it: recall@5 = share of the expected passages in the first 5 results. The national corpus has three times more passages for these kommuner: no expected passage is missing, but some fall to ranks 7-12 behind other documents of the same kommun (the statutes are unchanged). hybrid-sv-stem is the agent's search.",
+     "table": {
+      "columns": [
+       "Model | setup",
+       "Corpus",
+       "Recall@1",
+       "Recall@5",
+       "Recall@10"
+      ],
+      "rows": [
+       [
+        "st-arctic-l-v2 | dense-sv",
+        "national",
+        "73 %",
+        "88 %",
+        "93 %"
+       ],
+       [
+        "st-arctic-l-v2 | hybrid-sv-stem",
+        "national",
+        "57 %",
+        "83 %",
+        "91 %"
+       ],
+       [
+        "- | bm25-sv-stem",
+        "national",
+        "41 %",
+        "68 %",
+        "77 %"
+       ],
+       [
+        "st-arctic-l-v2 | dense-sv",
+        "2026-10-22",
+        "83 %",
+        "94 %",
+        "96 %"
+       ],
+       [
+        "st-arctic-l-v2 | hybrid-sv-stem",
+        "2026-10-22",
+        "61 %",
+        "89 %",
+        "93 %"
+       ],
+       [
+        "- | bm25-sv-stem",
+        "2026-10-22",
+        "46 %",
+        "68 %",
+        "79 %"
+       ],
+       [
+        "st-arctic-l-v2 | dense-sv",
+        "October runs",
+        "82 %",
+        "92 %",
+        "93 %"
+       ],
+       [
+        "st-arctic-l-v2 | dense-sv +rerank",
+        "October runs",
+        "73 %",
+        "88 %",
+        "93 %"
+       ],
+       [
+        "st-arctic-l-v2 | hybrid-sv",
+        "October runs",
+        "69 %",
+        "87 %",
+        "89 %"
+       ],
+       [
+        "st-arctic-l-v2 | hybrid-sv +rerank",
+        "October runs",
+        "73 %",
+        "88 %",
+        "92 %"
+       ],
+       [
+        "st-bge-m3 | dense-sv",
+        "October runs",
+        "78 %",
+        "91 %",
+        "91 %"
+       ],
+       [
+        "st-bge-m3 | dense-sv +rerank",
+        "October runs",
+        "73 %",
+        "88 %",
+        "92 %"
+       ]
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "snapshot": {
+  "built": "2026-11-01",
+  "corpus": "data"
+ }
+}

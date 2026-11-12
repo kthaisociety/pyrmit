@@ -1,0 +1,123 @@
+// Component tests for components/Sidebar.tsx.
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { describe, expect, it, vi } from 'vitest';
+
+import Sidebar from '@/components/Sidebar';
+import { LanguageProvider } from '@/lib/i18n';
+
+import { server } from '../../mocks/server';
+
+function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> = {}) {
+  const props = {
+    currentSessionId: null,
+    onSelectSession: vi.fn(),
+    onNewChat: vi.fn(),
+    refreshTrigger: 0,
+    user: { id: 'u1', name: 'anna', email: 'anna@example.com' },
+    onOpenSettings: vi.fn(),
+    onOpenDatabase: vi.fn(),
+    onOpenBenchmark: vi.fn(),
+    onOpenPipeline: vi.fn(),
+    ...overrides,
+  };
+  render(<Sidebar {...props} />, { wrapper: LanguageProvider });
+  return props;
+}
+
+describe('Sidebar', () => {
+  it('closes from its menu button', async () => {
+    /** The menu button at the top hides the sidebar. */
+    const onClose = vi.fn();
+    renderSidebar({ onClose });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close sidebar' }));
+
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('lists the sessions from the backend, with a fallback title for untitled ones', async () => {
+    renderSidebar();
+
+    expect(await screen.findByText('Bygglov Storgatan 3')).toBeInTheDocument();
+    expect(screen.getAllByText('New Chat')).toHaveLength(2); // the button and the untitled session
+  });
+
+  it('shows an empty state when there are no sessions', async () => {
+    server.use(http.get('*/api/sessions', () => HttpResponse.json([])));
+    renderSidebar();
+
+    expect(await screen.findByText('No chat history')).toBeInTheDocument();
+  });
+
+  it('selects a session when it is clicked', async () => {
+    const props = renderSidebar();
+
+    await userEvent.click(await screen.findByText('Bygglov Storgatan 3'));
+
+    expect(props.onSelectSession).toHaveBeenCalledWith('s1');
+  });
+
+  it('deletes the current session after confirmation and starts a new chat', async () => {
+    let deletedId: string | undefined;
+    server.use(
+      http.delete('*/api/sessions/:sessionId', ({ params }) => {
+        deletedId = params.sessionId as string;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const props = renderSidebar({ currentSessionId: 's1' });
+    await screen.findByText('Bygglov Storgatan 3');
+
+    await userEvent.click(screen.getAllByTitle('Delete')[0]);
+    await userEvent.click(screen.getByTitle('Confirm delete'));
+
+    await waitFor(() => expect(screen.queryByText('Bygglov Storgatan 3')).not.toBeInTheDocument());
+    expect(deletedId).toBe('s1');
+    expect(props.onNewChat).toHaveBeenCalled();
+  });
+
+  it('shows the user initial and email', async () => {
+    renderSidebar();
+
+    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.getByText('anna@example.com')).toBeInTheDocument();
+    await screen.findByText('Bygglov Storgatan 3');
+  });
+
+  it('opens the Database view from the sidebar', async () => {
+    const props = renderSidebar();
+
+    await userEvent.click(screen.getByRole('button', { name: /Database/ }));
+
+    expect(props.onOpenDatabase).toHaveBeenCalled();
+    await screen.findByText('Bygglov Storgatan 3');
+  });
+
+  it('opens the Benchmark view from the sidebar', async () => {
+    const props = renderSidebar();
+
+    await userEvent.click(screen.getByRole('button', { name: /Benchmark/ }));
+
+    expect(props.onOpenBenchmark).toHaveBeenCalled();
+    await screen.findByText('Bygglov Storgatan 3');
+  });
+
+  it('carries the language switch', () => {
+    /** The sidebar has the Svenska / English switch. */
+    renderSidebar();
+
+    expect(screen.getByRole('button', { name: 'Svenska' })).toBeInTheDocument();
+  });
+
+  it('shows its texts in Swedish once Svenska is chosen', async () => {
+    /** Choosing Svenska in the sidebar turns its texts Swedish. */
+    server.use(http.get('*/api/sessions', () => HttpResponse.json([])));
+    renderSidebar();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Svenska' }));
+
+    expect(await screen.findByRole('button', { name: 'Ny chatt' })).toBeInTheDocument();
+  });
+});

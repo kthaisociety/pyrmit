@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pyrmit: architecture, needs and workflows</title>
+<style>
+@page { size: A4; margin: 15mm 14mm 15mm 14mm; }
+body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10pt; line-height: 1.45; color: #1f2937; }
+h1 { font-size: 22pt; margin: 0 0 4pt; color: #111827; }
+h2 { font-size: 14pt; margin: 18pt 0 6pt; padding-bottom: 3pt; border-bottom: 2px solid #534AB7; color: #111827;
+     break-after: avoid; }
+h3 { font-size: 11pt; margin: 10pt 0 4pt; color: #3C3489; break-after: avoid; }
+p { margin: 4pt 0; } ul, ol { margin: 3pt 0 3pt 16pt; padding: 0; } li { margin: 1.5pt 0; }
+.sub { color: #6b7280; font-size: 10pt; margin-bottom: 10pt; }
+.box { background: #EEEDFE; border-left: 4px solid #534AB7; padding: 7pt 10pt; margin: 8pt 0; break-inside: avoid; }
+table { border-collapse: collapse; width: 100%; margin: 6pt 0; font-size: 8.6pt; break-inside: avoid; }
+th, td { border: 1px solid #e5e7eb; padding: 3pt 5pt; text-align: left; vertical-align: top; }
+th { background: #f3f4f6; font-weight: 600; }
+code, pre { font-family: Consolas, monospace; font-size: 8.4pt; }
+code { background: #f3f4f6; padding: 0 2pt; border-radius: 2pt; }
+pre { background: #f8f8f6; border: 1px solid #e5e7eb; border-radius: 4pt; padding: 6pt 8pt; white-space: pre-wrap;
+      break-inside: avoid; }
+figure { margin: 8pt 0 10pt; break-inside: avoid; }
+figcaption { font-size: 8.8pt; color: #6b7280; margin-top: 3pt; }
+svg { width: 100%; height: auto; display: block; }
+svg text { font-family: "Segoe UI", Arial, sans-serif; }
+svg .g { fill: none; stroke: #B4B2A9; stroke-width: 1.2; stroke-dasharray: 6 5; }
+svg .gl { font-size: 14px; fill: #5F5E5A; }
+svg .p { fill: #EEEDFE; stroke: #7F77DD; stroke-width: 1.2; }
+svg .pt { font-size: 15px; fill: #3C3489; font-weight: 600; } svg .ps { font-size: 12px; fill: #534AB7; }
+svg .s { fill: #E1F5EE; stroke: #1D9E75; stroke-width: 1.2; }
+svg .st { font-size: 15px; fill: #085041; font-weight: 600; } svg .ss { font-size: 12px; fill: #0F6E56; }
+svg .e { fill: #F1EFE8; stroke: #888780; stroke-width: 1.2; }
+svg .et { font-size: 15px; fill: #2C2C2A; font-weight: 600; } svg .es { font-size: 12px; fill: #5F5E5A; }
+svg .d { fill: #E6F1FB; stroke: #378ADD; stroke-width: 1.2; }
+svg .dt { font-size: 15px; fill: #0C447C; font-weight: 600; } svg .ds { font-size: 12px; fill: #185FA5; }
+svg .c { text-anchor: middle; }
+svg .ar { stroke: #888780; stroke-width: 1.6; fill: none; }
+svg .dash { stroke-dasharray: 5 4; }
+svg .mb { fill: #FAEEDA; stroke: #BA7517; stroke-width: 1.2; }
+svg .mt { font-size: 13px; fill: #854F0B; font-weight: 700; text-anchor: middle; }
+svg .small { font-size: 11px; fill: #5F5E5A; }
+svg .item { fill: #ffffff; stroke: #D3D1C7; stroke-width: 1; }
+svg .it { font-size: 12.5px; fill: #2C2C2A; font-weight: 600; } svg .id { font-size: 11px; fill: #5F5E5A; }
+svg .chip { fill: #ffffff; stroke: #9FE1CB; stroke-width: 1; } svg .ct { font-size: 11px; fill: #0F6E56; }
+.legend span { display: inline-block; width: 9pt; height: 9pt; border-radius: 2pt; vertical-align: -1pt; margin: 0 3pt 0 9pt; }
+</style>
+</head>
+<body>
+
+<h1>Pyrmit: architecture, needs and workflows</h1>
+<div class="sub">October 25, 2026. How the project runs today, what it needs, where money is needed, and how a team of
+people and coding agents can share the same corpus, databases and budget. Current stack: GitHub, Linear, Neon, plus
+OpenRouter for the LLM and one development PC with a GPU. Sizes and timings were measured on that PC on October 25;
+prices come from the hosting report of October 9 (third-party trackers, to check before paying).</div>
+
+<div class="box"><b>Summary</b>
+<ul>
+<li><b>Today one PC does everything</b>: the offline pipeline (crawl, OCR, indexing) and the app. Neon holds users and
+chats, OpenRouter the LLM. GitHub has the code, Linear the issues. CI runs only the frontend lint.</li>
+<li><b>The data grew past a laptop</b>: 1.9M chunks, a 7.4 GB corpus store and 194 GB of crawled PDFs, 5 to 10× the
+October 9 figures. It should live in object storage and travel as <b>versioned corpus snapshots</b>, built once on the
+GPU machine and pulled by everyone else.</li>
+<li><b>Money goes to</b> LLM tokens first (about $10 per 1,000 answers, $2–3 per benchmark round), then object storage
+(about $3 a month for the PDFs), a server (CPU, price to check) and optional GPU rental for peaks. Neon, GitHub and
+Linear stay on their current plans.</li>
+<li><b>Pool what is expensive or slow</b>: one corpus build shared as snapshots, one LLM account with a capped key per
+person, agent and environment, one GPU queue that runs at night, one Neon project with a branch per PR and worktree.</li>
+<li><b>Two kinds of data, never mixed</b>: mutable app state (Neon, branched per environment) and immutable corpus
+snapshots (files, pinned per environment, promoted after checks).</li>
+<li><b>Worktrees</b>: each gets its branch, its Neon branch and its ports, and all share one read-only data folder. Only
+one backend can hold the full store on the 8 GB GPU; the others run on the CPU or on the small corpus.</li>
+<li><b>First steps cost nothing</b>: backend tests in CI, Neon branches per PR, capped OpenRouter keys. Then snapshots
+on R2 and a staging server.</li>
+</ul></div>
+
+<h2>1. The system today</h2>
+<figure>
+<svg viewBox="0 0 960 520" role="img" aria-label="Current system">
+<defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#888780"/></marker></defs>
+<rect class="g" x="20" y="20" width="620" height="300" rx="14"/>
+<text class="gl" x="40" y="46">Online: the app (on the dev PC today)</text>
+<rect class="p" x="40" y="66" width="160" height="64" rx="10"/>
+<text class="pt c" x="120" y="93">Browser</text><text class="ps c" x="120" y="113">chat, views, inspector</text>
+<rect class="p" x="240" y="66" width="160" height="64" rx="10"/>
+<text class="pt c" x="320" y="93">Next.js frontend</text><text class="ps c" x="320" y="113">port 3000, proxies /api</text>
+<rect class="p" x="440" y="56" width="180" height="84" rx="10"/>
+<text class="pt c" x="530" y="82">FastAPI backend</text><text class="ps c" x="530" y="102">agent loop + tools</text>
+<text class="ps c" x="530" y="121">GPU: model + store, 6.5 GB</text>
+<line class="ar" x1="200" y1="98" x2="238" y2="98" marker-end="url(#a1)"/>
+<line class="ar" x1="400" y1="98" x2="438" y2="98" marker-end="url(#a1)"/>
+<path class="ar" d="M530,140 V168 M125,168 H525"/>
+<line class="ar" x1="125" y1="168" x2="125" y2="198" marker-end="url(#a1)"/>
+<line class="ar" x1="320" y1="168" x2="320" y2="198" marker-end="url(#a1)"/>
+<line class="ar" x1="525" y1="168" x2="525" y2="198" marker-end="url(#a1)"/>
+<rect class="d" x="40" y="200" width="170" height="78" rx="10"/>
+<text class="dt c" x="125" y="225">Neon Postgres</text><text class="ds c" x="125" y="245">users, chats, traces</text>
+<text class="ds c" x="125" y="263">73 MB on Oct 9</text>
+<rect class="d" x="230" y="200" width="180" height="78" rx="10"/>
+<text class="dt c" x="320" y="225">Corpus store</text><text class="ds c" x="320" y="245">SQLite 4.0 GB + vectors 3.9 GB</text>
+<text class="ds c" x="320" y="263">1.9M chunks</text>
+<rect class="d" x="430" y="200" width="190" height="78" rx="10"/>
+<text class="dt c" x="525" y="225">Raw PDFs + OCR</text><text class="ds c" x="525" y="245">73.5k PDFs, 194 GB</text>
+<text class="ds c" x="525" y="263">OCR text 0.2 GB</text>
+<rect class="g" x="660" y="20" width="280" height="300" rx="14"/>
+<text class="gl" x="680" y="46">External services</text>
+<rect class="s" x="680" y="60" width="240" height="64" rx="10"/>
+<text class="st c" x="800" y="87">OpenRouter</text><text class="ss c" x="800" y="107">agent LLM, judges, PDF filter</text>
+<circle class="mb" cx="910" cy="68" r="11"/><text class="mt" x="910" y="73">$</text>
+<rect class="s" x="680" y="142" width="240" height="64" rx="10"/>
+<text class="st c" x="800" y="169">Hugging Face</text><text class="ss c" x="800" y="189">embedding model weights</text>
+<rect class="e" x="680" y="224" width="240" height="64" rx="10"/>
+<text class="et c" x="800" y="251">290 kommun websites</text><text class="es c" x="800" y="271">crawled at 1 request/s per site</text>
+<line class="ar" x1="620" y1="92" x2="678" y2="92" marker-end="url(#a1)"/>
+<rect class="g" x="20" y="350" width="920" height="150" rx="14"/>
+<text class="gl" x="40" y="376">Offline pipeline: dev PC, RTX 4060 8 GB, run at night with the app stopped</text>
+<g>
+<rect class="e" x="40" y="396" width="84" height="58" rx="8"/><text class="et c" x="82" y="420" style="font-size:13px">Crawl</text><text class="es c" x="82" y="438" style="font-size:10.5px">kommun sites</text>
+<rect class="e" x="140" y="396" width="84" height="58" rx="8"/><text class="et c" x="182" y="420" style="font-size:13px">OCR</text><text class="es c" x="182" y="438" style="font-size:10.5px">PP-OCRv6, GPU</text>
+<rect class="e" x="240" y="396" width="84" height="58" rx="8"/><text class="et c" x="282" y="420" style="font-size:13px">Extract</text><text class="es c" x="282" y="438" style="font-size:10.5px">95k documents</text>
+<rect class="e" x="340" y="396" width="84" height="58" rx="8"/><text class="et c" x="382" y="420" style="font-size:13px">Filter</text><text class="es c" x="382" y="438" style="font-size:10.5px">rules + LLM</text>
+<rect class="e" x="440" y="396" width="84" height="58" rx="8"/><text class="et c" x="482" y="420" style="font-size:13px">Chunk</text><text class="es c" x="482" y="438" style="font-size:10.5px">1.9M chunks</text>
+<rect class="e" x="540" y="396" width="84" height="58" rx="8"/><text class="et c" x="582" y="420" style="font-size:13px">Embed</text><text class="es c" x="582" y="438" style="font-size:10.5px">arctic, GPU</text>
+<rect class="e" x="640" y="396" width="84" height="58" rx="8"/><text class="et c" x="682" y="420" style="font-size:13px">Store</text><text class="es c" x="682" y="438" style="font-size:10.5px">SQLite + vectors</text>
+<rect class="e" x="740" y="396" width="84" height="58" rx="8"/><text class="et c" x="782" y="420" style="font-size:13px">Plans</text><text class="es c" x="782" y="438" style="font-size:10.5px">33k plans</text>
+<rect class="e" x="840" y="396" width="84" height="58" rx="8"/><text class="et c" x="882" y="420" style="font-size:13px">Checks</text><text class="es c" x="882" y="438" style="font-size:10.5px">check, replay</text>
+<line class="ar" x1="124" y1="425" x2="138" y2="425" marker-end="url(#a1)"/><line class="ar" x1="224" y1="425" x2="238" y2="425" marker-end="url(#a1)"/>
+<line class="ar" x1="324" y1="425" x2="338" y2="425" marker-end="url(#a1)"/><line class="ar" x1="424" y1="425" x2="438" y2="425" marker-end="url(#a1)"/>
+<line class="ar" x1="524" y1="425" x2="538" y2="425" marker-end="url(#a1)"/><line class="ar" x1="624" y1="425" x2="638" y2="425" marker-end="url(#a1)"/>
+<line class="ar" x1="724" y1="425" x2="738" y2="425" marker-end="url(#a1)"/><line class="ar" x1="824" y1="425" x2="838" y2="425" marker-end="url(#a1)"/>
+</g>
+<line class="ar dash" x1="320" y1="350" x2="320" y2="280" marker-end="url(#a1)"/><text class="small" x="328" y="320">writes</text>
+<line class="ar dash" x1="525" y1="350" x2="525" y2="280" marker-end="url(#a1)"/><text class="small" x="533" y="320">writes</text>
+<text class="small" x="40" y="490">Last night: OCR 10.7k pages in 7 h 45; rebuild from extraction to checks in 1 h 15. GitHub (code) and Linear (issues) sit beside all this.</text>
+</svg>
+<figcaption>Figure 1. The system on October 25, 2026. <span class="legend"><span style="background:#FAEEDA;border:1px solid #BA7517"></span>money is spent here</span></figcaption>
+</figure>
+
+<table>
+<tr><th>Part</th><th>Size or need (measured Oct 25)</th><th>Where it lives</th></tr>
+<tr><td>Corpus store (<code>data/index/store/st-arctic-l-v2/</code>)</td><td>corpus.sqlite 4.0 GB + vectors.npy 3.9 GB (1.9M × 1024 float16); read-only, built by the pipeline</td><td>dev PC disk; copied to the GPU at backend start</td></tr>
+<tr><td>Raw data (<code>data/corpus/raw/web/</code>)</td><td>73.5k PDFs, 194 GB; 41k web pages 0.1 GB; OCR outputs 0.2 GB</td><td>dev PC disk</td></tr>
+<tr><td>Rebuild inputs</td><td>documents.jsonl 2.2 GB, chunks.jsonl 2.7 GB, dense index 6.1 GB</td><td>dev PC disk</td></tr>
+<tr><td>Small corpus (<code>data/small</code>)</td><td>the October 22 corpus, 3.6 GB (PDFs shared with the full one)</td><td>dev PC disk</td></tr>
+<tr><td>App data</td><td>users, chats, traces (73 MB on Oct 9; 20–60 KB per answer)</td><td>Neon</td></tr>
+<tr><td>Backend at runtime</td><td>about 6.5 GB of the 8 GB GPU; on a CPU the ONNX int8 query encoder (34 ms, 0.9 GB RAM)</td><td>dev PC</td></tr>
+<tr><td>CI</td><td>frontend lint on pushes and PRs to main; no backend tests</td><td>GitHub Actions</td></tr>
+</table>
+
+<h2>2. Target organisation</h2>
+<p>The draft below keeps four layers. Planning decides what is done, development does it (people and agents, in
+parallel), shared services are pooled across everyone, and environments run the result. The dollar badges mark where
+money is spent.</p>
+<figure>
+<svg viewBox="0 0 960 650" role="img" aria-label="Target layers">
+<defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#888780"/></marker></defs>
+<rect class="g" x="20" y="20" width="920" height="122" rx="14"/><text class="gl" x="40" y="46">1 · Planning</text>
+<rect class="p" x="60" y="58" width="380" height="68" rx="10"/>
+<text class="pt c" x="250" y="86">Linear</text><text class="ps c" x="250" y="107">issues, priorities, assignment to people or agents</text>
+<rect class="p" x="520" y="58" width="380" height="68" rx="10"/>
+<text class="pt c" x="710" y="86">GitHub</text><text class="ps c" x="710" y="107">code, PRs, CI, releases, reports, benchmark results</text>
+<line class="ar" x1="442" y1="92" x2="518" y2="92" marker-start="url(#a2)" marker-end="url(#a2)"/>
+<line class="ar" x1="480" y1="142" x2="480" y2="164" marker-end="url(#a2)"/>
+<rect class="g" x="20" y="166" width="920" height="138" rx="14"/><text class="gl" x="40" y="192">2 · Development</text>
+<rect class="p" x="40" y="204" width="280" height="84" rx="10"/>
+<text class="pt c" x="180" y="232">Workstations</text><text class="ps c" x="180" y="253">interactive worktrees</text><text class="ps c" x="180" y="271">CPU, or a small GPU</text>
+<rect class="p" x="340" y="204" width="280" height="84" rx="10"/>
+<text class="pt c" x="480" y="232">Shared GPU box</text><text class="ps c" x="480" y="253">long jobs: crawl, OCR, rebuild,</text><text class="ps c" x="480" y="271">embeddings, benchmarks (nights)</text>
+<rect class="p" x="640" y="204" width="280" height="84" rx="10"/>
+<text class="pt c" x="780" y="232">Cloud coding agents</text><text class="ps c" x="780" y="253">issues assigned in Linear</text><text class="ps c" x="780" y="271">one branch + one PR each</text>
+<line class="ar" x1="480" y1="304" x2="480" y2="326" marker-end="url(#a2)"/>
+<rect class="g" x="20" y="328" width="920" height="150" rx="14"/><text class="gl" x="40" y="354">3 · Shared services (pooled)</text>
+<rect class="s" x="41" y="366" width="212" height="96" rx="10"/>
+<text class="st c" x="147" y="393">LLM gateway</text><text class="ss c" x="147" y="414">OpenRouter: one key per</text><text class="ss c" x="147" y="431">person, agent, env</text><text class="ss c" x="147" y="448">each with a cap</text>
+<circle class="mb" cx="240" cy="374" r="11"/><text class="mt" x="240" y="379">$</text>
+<rect class="s" x="263" y="366" width="212" height="96" rx="10"/>
+<text class="st c" x="369" y="393">Postgres (Neon)</text><text class="ss c" x="369" y="414">prod main, staging,</text><text class="ss c" x="369" y="431">a branch per PR</text><text class="ss c" x="369" y="448">and per worktree</text>
+<rect class="s" x="485" y="366" width="212" height="96" rx="10"/>
+<text class="st c" x="591" y="393">Object storage (R2)</text><text class="ss c" x="591" y="414">raw PDFs (194 GB),</text><text class="ss c" x="591" y="431">versioned corpus</text><text class="ss c" x="591" y="448">snapshots</text>
+<circle class="mb" cx="684" cy="374" r="11"/><text class="mt" x="684" y="379">$</text>
+<rect class="s" x="707" y="366" width="212" height="96" rx="10"/>
+<text class="st c" x="813" y="393">GPU batch</text><text class="ss c" x="813" y="414">the GPU box at night,</text><text class="ss c" x="813" y="431">or a rented GPU by</text><text class="ss c" x="813" y="448">the hour for peaks</text>
+<circle class="mb" cx="906" cy="374" r="11"/><text class="mt" x="906" y="379">$</text>
+<line class="ar" x1="480" y1="478" x2="480" y2="500" marker-end="url(#a2)"/>
+<rect class="g" x="20" y="502" width="920" height="130" rx="14"/><text class="gl" x="40" y="528">4 · Environments, deployed by CI</text>
+<rect class="e" x="60" y="542" width="250" height="74" rx="10"/>
+<text class="et c" x="185" y="569">Preview, per PR</text><text class="es c" x="185" y="589">Neon branch + small corpus</text><text class="es c" x="185" y="605">tests, no paid calls</text>
+<rect class="e" x="355" y="542" width="250" height="74" rx="10"/>
+<text class="et c" x="480" y="569">Staging</text><text class="es c" x="480" y="589">next corpus snapshot (N+1)</text><text class="es c" x="480" y="605">benchmarks run here</text>
+<rect class="e" x="650" y="542" width="250" height="74" rx="10"/>
+<text class="et c" x="775" y="569">Production</text><text class="es c" x="775" y="589">pinned snapshot N</text><text class="es c" x="775" y="605">N−1 kept for rollback</text>
+<circle class="mb" cx="888" cy="550" r="11"/><text class="mt" x="888" y="555">$</text>
+<line class="ar" x1="310" y1="579" x2="353" y2="579" marker-end="url(#a2)"/>
+<line class="ar" x1="605" y1="579" x2="648" y2="579" marker-end="url(#a2)"/>
+</svg>
+<figcaption>Figure 2. Target layers (from the team's draft). Production costs a server plus the LLM tokens of its users.</figcaption>
+</figure>
+<ul>
+<li><b>Planning</b>: Linear holds every task, including those given to agents. The Linear–GitHub integration links
+branches and PRs to issues and moves their status, so a PR is always traceable to a decision.</li>
+<li><b>Development</b>: people work interactively in worktrees; long jobs (crawl, OCR, rebuild, re-embedding, paid
+benchmarks) never run on laptops but on the shared GPU box, at night; cloud agents take well-scoped issues and open
+PRs that a person reviews.</li>
+<li><b>Shared services</b>: one account each, split by keys, branches and folders rather than duplicated per person.</li>
+<li><b>Environments</b>: previews prove the code, staging proves the next corpus, production only changes through
+these two.</li>
+</ul>
+
+<h2>3. Needs, and where money is needed</h2>
+<figure>
+<svg viewBox="0 0 960 680" role="img" aria-label="Needs map">
+<rect class="g" x="20" y="20" width="295" height="316" rx="14"/><text class="gl" x="36" y="47" style="font-weight:600">AI / LLM</text>
+<rect class="g" x="333" y="20" width="295" height="316" rx="14"/><text class="gl" x="349" y="47" style="font-weight:600">Compute (GPU)</text>
+<rect class="g" x="646" y="20" width="295" height="316" rx="14"/><text class="gl" x="662" y="47" style="font-weight:600">Serving the app</text>
+<rect class="g" x="20" y="352" width="295" height="266" rx="14"/><text class="gl" x="36" y="379" style="font-weight:600">Storage</text>
+<rect class="g" x="333" y="352" width="295" height="266" rx="14"/><text class="gl" x="349" y="379" style="font-weight:600">Databases</text>
+<rect class="g" x="646" y="352" width="295" height="266" rx="14"/><text class="gl" x="662" y="379" style="font-weight:600">Tooling</text>
+<!-- AI / LLM -->
+<rect class="item" x="32" y="62" width="271" height="46" rx="7"/><rect x="32" y="62" width="6" height="46" rx="3" fill="#7F77DD"/>
+<text class="it" x="46" y="81">Agent answers (users)</text><text class="id" x="46" y="98">$0.007–0.011 each, ~$10 per 1,000</text>
+<rect class="item" x="32" y="114" width="271" height="46" rx="7"/><rect x="32" y="114" width="6" height="46" rx="3" fill="#7F77DD"/>
+<text class="it" x="46" y="133">Benchmarks + LLM judges</text><text class="id" x="46" y="150">~$1.6–2.9 per evaluation round</text>
+<rect class="item" x="32" y="166" width="271" height="46" rx="7"/><rect x="32" y="166" width="6" height="46" rx="3" fill="#7F77DD"/>
+<text class="it" x="46" y="185">PDF filter, second opinion</text><text class="id" x="46" y="202">~$0.0001 per uncertain PDF</text>
+<rect class="item" x="32" y="218" width="271" height="46" rx="7"/><rect x="32" y="218" width="6" height="46" rx="3" fill="#D85A30"/>
+<text class="it" x="46" y="237">Coding agents</text><text class="id" x="46" y="254">seats or API use, per person: to decide</text>
+<rect class="item" x="32" y="270" width="271" height="46" rx="7"/><rect x="32" y="270" width="6" height="46" rx="3" fill="#BA7517"/>
+<text class="it" x="46" y="289">Map-application crawl agent</text><text class="id" x="46" y="306">once per map-only kommun: to measure</text>
+<!-- Compute -->
+<rect class="item" x="345" y="62" width="271" height="46" rx="7"/><rect x="345" y="62" width="6" height="46" rx="3" fill="#1D9E75"/>
+<text class="it" x="359" y="81">OCR backlog</text><text class="id" x="359" y="98">3,947 scans, 40k pages: ~3–4 nights</text>
+<rect class="item" x="345" y="114" width="271" height="46" rx="7"/><rect x="345" y="114" width="6" height="46" rx="3" fill="#1D9E75"/>
+<text class="it" x="359" y="133">OCR of new crawls</text><text class="id" x="359" y="150">after each crawl or revisit</text>
+<rect class="item" x="345" y="166" width="271" height="46" rx="7"/><rect x="345" y="166" width="6" height="46" rx="3" fill="#1D9E75"/>
+<text class="it" x="359" y="185">Nightly rebuild</text><text class="id" x="359" y="202">extraction to checks: 1 h 15 last night</text>
+<rect class="item" x="345" y="218" width="271" height="46" rx="7"/><rect x="345" y="218" width="6" height="46" rx="3" fill="#BA7517"/>
+<text class="it" x="359" y="237">Full re-embedding</text><text class="id" x="359" y="254">1.9M chunks, ~6 h of GPU (model change)</text>
+<rect class="item" x="345" y="270" width="271" height="46" rx="7"/><rect x="345" y="270" width="6" height="46" rx="3" fill="#7F77DD"/>
+<text class="it" x="359" y="289">Rented GPU (optional)</text><text class="id" x="359" y="306">RTX 4090 ~$0.34 per hour, not tried</text>
+<!-- Serving -->
+<rect class="item" x="658" y="62" width="271" height="46" rx="7"/><rect x="658" y="62" width="6" height="46" rx="3" fill="#D85A30"/>
+<text class="it" x="672" y="81">Backend server</text><text class="id" x="672" y="98">CPU, 16 GB RAM, ~250 GB disk: to price</text>
+<rect class="item" x="658" y="114" width="271" height="46" rx="7"/><rect x="658" y="114" width="6" height="46" rx="3" fill="#1D9E75"/>
+<text class="it" x="672" y="133">Query embedding on CPU</text><text class="id" x="672" y="150">ONNX int8: 34 ms, 0.9 GB RAM</text>
+<rect class="item" x="658" y="166" width="271" height="46" rx="7"/><rect x="658" y="166" width="6" height="46" rx="3" fill="#BA7517"/>
+<text class="it" x="672" y="185">Nationwide search on CPU</text><text class="id" x="672" y="202">13–16 s: needs an ANN index or a GPU</text>
+<rect class="item" x="658" y="218" width="271" height="46" rx="7"/><rect x="658" y="218" width="6" height="46" rx="3" fill="#1D9E75"/>
+<text class="it" x="672" y="237">Frontend</text><text class="id" x="672" y="254">Vercel Hobby, or the same server</text>
+<rect class="item" x="658" y="270" width="271" height="46" rx="7"/><rect x="658" y="270" width="6" height="46" rx="3" fill="#7F77DD"/>
+<text class="it" x="672" y="289">Users' LLM tokens</text><text class="id" x="672" y="306">the main running cost (see AI / LLM)</text>
+<!-- Storage -->
+<rect class="item" x="32" y="394" width="271" height="46" rx="7"/><rect x="32" y="394" width="6" height="46" rx="3" fill="#D85A30"/>
+<text class="it" x="46" y="413">Raw PDFs + OCR text</text><text class="id" x="46" y="430">194 GB on R2: ~$2.8 per month</text>
+<rect class="item" x="32" y="446" width="271" height="46" rx="7"/><rect x="32" y="446" width="6" height="46" rx="3" fill="#D85A30"/>
+<text class="it" x="46" y="465">Corpus snapshots</text><text class="id" x="46" y="482">7.4 GB each: ~$0.11 per month</text>
+<rect class="item" x="32" y="498" width="271" height="46" rx="7"/><rect x="32" y="498" width="6" height="46" rx="3" fill="#D85A30"/>
+<text class="it" x="46" y="517">Rebuild inputs</text><text class="id" x="46" y="534">documents, chunks, index: 11 GB</text>
+<rect class="item" x="32" y="550" width="271" height="46" rx="7"/><rect x="32" y="550" width="6" height="46" rx="3" fill="#1D9E75"/>
+<text class="it" x="46" y="569">A full local copy</text><text class="id" x="46" y="586">~215 GB of disk: only on the GPU box</text>
+<!-- Databases -->
+<rect class="item" x="345" y="394" width="271" height="46" rx="7"/><rect x="345" y="394" width="6" height="46" rx="3" fill="#1D9E75"/>
+<text class="it" x="359" y="413">App database (Neon)</text><text class="id" x="359" y="430">users, chats, traces; free tier 0.5 GB</text>
+<rect class="item" x="345" y="446" width="271" height="46" rx="7"/><rect x="345" y="446" width="6" height="46" rx="3" fill="#1D9E75"/>
+<text class="it" x="359" y="465">Branch per PR and worktree</text><text class="id" x="359" y="482">Neon branching: check the plan's limits</text>
+<rect class="item" x="345" y="498" width="271" height="46" rx="7"/><rect x="345" y="498" width="6" height="46" rx="3" fill="#1D9E75"/>
+<text class="it" x="359" y="517">Corpus store</text><text class="id" x="359" y="534">files (SQLite + vectors), no DB server</text>
+<rect class="item" x="345" y="550" width="271" height="46" rx="7"/><rect x="345" y="550" width="6" height="46" rx="3" fill="#D85A30"/>
+<text class="it" x="359" y="569">Corpus in pgvector (later)</text><text class="id" x="359" y="586">~8–11 GB: ~$3–4/month + porting work</text>
+<!-- Tooling -->
+<rect class="item" x="658" y="394" width="271" height="46" rx="7"/><rect x="658" y="394" width="6" height="46" rx="3" fill="#888780"/>
+<text class="it" x="672" y="413">GitHub</text><text class="id" x="672" y="430">code, PRs, Actions (lint only today)</text>
+<rect class="item" x="658" y="446" width="271" height="46" rx="7"/><rect x="658" y="446" width="6" height="46" rx="3" fill="#888780"/>
+<text class="it" x="672" y="465">Linear</text><text class="id" x="672" y="482">issues, assignment to agents</text>
+<rect class="item" x="658" y="498" width="271" height="46" rx="7"/><rect x="658" y="498" width="6" height="46" rx="3" fill="#888780"/>
+<text class="it" x="672" y="517">CI minutes</text><text class="id" x="672" y="534">backend tests on the small corpus</text>
+<rect class="item" x="658" y="550" width="271" height="46" rx="7"/><rect x="658" y="550" width="6" height="46" rx="3" fill="#1D9E75"/>
+<text class="it" x="672" y="569">Secrets</text><text class="id" x="672" y="586">one key per person, agent and env</text>
+<!-- legend -->
+<rect x="40" y="642" width="12" height="12" rx="3" fill="#7F77DD"/><text class="small" x="58" y="652">pay per use</text>
+<rect x="170" y="642" width="12" height="12" rx="3" fill="#D85A30"/><text class="small" x="188" y="652">monthly</text>
+<rect x="280" y="642" width="12" height="12" rx="3" fill="#BA7517"/><text class="small" x="298" y="652">one-off (money or work)</text>
+<rect x="470" y="642" width="12" height="12" rx="3" fill="#1D9E75"/><text class="small" x="488" y="652">own hardware or free tier</text>
+<rect x="680" y="642" width="12" height="12" rx="3" fill="#888780"/><text class="small" x="698" y="652">current plan, no change</text>
+</svg>
+<figcaption>Figure 3. Needs grouped by kind, coloured by how they are paid.</figcaption>
+</figure>
+
+<table>
+<tr><th>Item</th><th>Estimate</th><th>Basis</th></tr>
+<tr><td>LLM, users' answers</td><td>~$10 per 1,000 answers</td><td>$0.007–0.011 per agent answer (GPT-6 Luna via OpenRouter, benchmark data)</td></tr>
+<tr><td>LLM, evaluation</td><td>~$1.6–2.9 per round (dev set × 3 passes + second judge)</td><td>the optimisation and bug rounds of Oct 21–22</td></tr>
+<tr><td>Object storage</td><td>~$2.8/month for 194 GB of PDFs; ~$0.11 per 7.4 GB snapshot</td><td>Cloudflare R2: $0.015 per GB-month after 10 GB free, no egress fee</td></tr>
+<tr><td>Server</td><td>to price: CPU, 16 GB RAM, ~250 GB disk (or PDFs read from R2 and ~40 GB disk)</td><td>the Oct 9 estimate (€7–15/month) was for 8 GB RAM and a 1.5 GB store; the store is now 7.4 GB</td></tr>
+<tr><td>GPU</td><td>own PC: the OCR backlog takes ~3–4 nights; rented: a few dollars per backlog</td><td>last night's 10.7k pages in 7 h 45; RTX 4090 ~$0.34/h quoted, not tried</td></tr>
+<tr><td>Corpus in pgvector (option)</td><td>~8–11 GB, ~$3–4/month of storage on Neon Launch, plus compute</td><td>the Oct 9 footprint (1.5–2 GB for 348k chunks) scaled to 1.9M; estimate</td></tr>
+</table>
+
+<h2>4. Pooling the needs</h2>
+<p>The expensive or slow things are built once and shared; the cheap things are split per person by keys, branches and
+folders, never by copying the whole stack.</p>
+<figure>
+<svg viewBox="0 0 960 470" role="img" aria-label="Pooling">
+<defs><marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#888780"/></marker></defs>
+<text class="gl" x="40" y="32" style="font-weight:600">Shared pool, and who uses it</text>
+<text class="gl c" x="800" y="32" style="font-weight:600">Provider and cost</text>
+<!-- row 0 -->
+<rect class="s" x="40" y="48" width="560" height="94" rx="10"/>
+<text class="st" x="58" y="74">Corpus snapshots: build once, pull everywhere</text>
+<text class="ss" x="58" y="94">immutable, versioned by date and model, checked before release</text>
+<rect class="chip" x="58" y="106" width="90" height="22" rx="11"/><text class="ct c" x="103" y="121">worktrees</text>
+<rect class="chip" x="156" y="106" width="104" height="22" rx="11"/><text class="ct c" x="208" y="121">cloud agents</text>
+<rect class="chip" x="268" y="106" width="128" height="22" rx="11"/><text class="ct c" x="332" y="121">CI (small corpus)</text>
+<rect class="chip" x="404" y="106" width="70" height="22" rx="11"/><text class="ct c" x="439" y="121">staging</text>
+<rect class="chip" x="482" y="106" width="96" height="22" rx="11"/><text class="ct c" x="530" y="121">production</text>
+<rect class="e" x="680" y="56" width="240" height="78" rx="10"/>
+<text class="et c" x="800" y="88">Cloudflare R2</text><text class="es c" x="800" y="110">~$3/month with the PDFs</text>
+<line class="ar" x1="600" y1="95" x2="678" y2="95" marker-end="url(#a4)"/>
+<!-- row 1 -->
+<rect class="s" x="40" y="156" width="560" height="94" rx="10"/>
+<text class="st" x="58" y="182">LLM key pool: one account, one key per consumer</text>
+<text class="ss" x="58" y="202">each key has a spending cap; spend is visible per person, agent and env</text>
+<rect class="chip" x="58" y="214" width="70" height="22" rx="11"/><text class="ct c" x="93" y="229">people</text>
+<rect class="chip" x="136" y="214" width="104" height="22" rx="11"/><text class="ct c" x="188" y="229">cloud agents</text>
+<rect class="chip" x="248" y="214" width="100" height="22" rx="11"/><text class="ct c" x="298" y="229">benchmarks</text>
+<rect class="chip" x="356" y="214" width="70" height="22" rx="11"/><text class="ct c" x="391" y="229">staging</text>
+<rect class="chip" x="434" y="214" width="96" height="22" rx="11"/><text class="ct c" x="482" y="229">production</text>
+<rect class="e" x="680" y="164" width="240" height="78" rx="10"/>
+<text class="et c" x="800" y="196">OpenRouter</text><text class="es c" x="800" y="218">pay per use; $10 of credit now</text>
+<line class="ar" x1="600" y1="203" x2="678" y2="203" marker-end="url(#a4)"/>
+<!-- row 2 -->
+<rect class="s" x="40" y="264" width="560" height="94" rx="10"/>
+<text class="st" x="58" y="290">GPU job queue: one machine, at night</text>
+<text class="ss" x="58" y="310">crawls, OCR, rebuilds, embeddings, paid benchmarks; never on laptops</text>
+<rect class="chip" x="58" y="322" width="112" height="22" rx="11"/><text class="ct c" x="114" y="337">data pipeline</text>
+<rect class="chip" x="178" y="322" width="100" height="22" rx="11"/><text class="ct c" x="228" y="337">benchmarks</text>
+<rect class="chip" x="286" y="322" width="156" height="22" rx="11"/><text class="ct c" x="364" y="337">agents' long jobs</text>
+<rect class="e" x="680" y="272" width="240" height="78" rx="10"/>
+<text class="et c" x="800" y="304">Dev PC, RTX 4060</text><text class="es c" x="800" y="326">own hardware; rent a GPU for peaks</text>
+<line class="ar" x1="600" y1="311" x2="678" y2="311" marker-end="url(#a4)"/>
+<circle class="mb" cx="910" cy="280" r="11"/><text class="mt" x="910" y="285">$</text>
+<!-- row 3 -->
+<rect class="s" x="40" y="372" width="560" height="94" rx="10"/>
+<text class="st" x="58" y="398">Postgres: one Neon project, many branches</text>
+<text class="ss" x="58" y="418">production main, staging, a branch per PR and per worktree</text>
+<rect class="chip" x="58" y="430" width="90" height="22" rx="11"/><text class="ct c" x="103" y="445">worktrees</text>
+<rect class="chip" x="156" y="430" width="104" height="22" rx="11"/><text class="ct c" x="208" y="445">cloud agents</text>
+<rect class="chip" x="268" y="430" width="100" height="22" rx="11"/><text class="ct c" x="318" y="445">CI previews</text>
+<rect class="chip" x="376" y="430" width="70" height="22" rx="11"/><text class="ct c" x="411" y="445">staging</text>
+<rect class="chip" x="454" y="430" width="96" height="22" rx="11"/><text class="ct c" x="502" y="445">production</text>
+<rect class="e" x="680" y="380" width="240" height="78" rx="10"/>
+<text class="et c" x="800" y="412">Neon</text><text class="es c" x="800" y="434">free tier today (0.5 GB)</text>
+<line class="ar" x1="600" y1="419" x2="678" y2="419" marker-end="url(#a4)"/>
+<circle class="mb" cx="910" cy="64" r="11"/><text class="mt" x="910" y="69">$</text>
+<circle class="mb" cx="910" cy="172" r="11"/><text class="mt" x="910" y="177">$</text>
+</svg>
+<figcaption>Figure 4. Four pools serve every consumer; the providers on the right are the only bills.</figcaption>
+</figure>
+<ul>
+<li><b>Corpus snapshots</b> replace "send the data folder": a rebuild costs GPU hours, a download costs minutes. Everyone
+(people, agents, CI, staging, prod) reads the same immutable files, so a bug report names a snapshot.</li>
+<li><b>Capped keys</b>: a runaway agent or benchmark can only spend its own cap (Windows keeps killed Python jobs
+alive: a "stopped" benchmark kept spending once). The product's keys stay separate from people's experiments.</li>
+<li><b>One GPU queue</b>: the 8 GB card holds either the app (6.5 GB) or a batch job, not both. Batch jobs are queued
+for the night, with the app stopped, as the night script already does.</li>
+<li><b>Neon branches</b> are copies on write: a branch per PR or worktree costs almost nothing and isolates schema
+changes and test data.</li>
+</ul>
+
+<h2>5. Databases and data versions</h2>
+<figure>
+<svg viewBox="0 0 960 500" role="img" aria-label="Data stores">
+<defs><marker id="a5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#888780"/></marker></defs>
+<rect class="d" x="20" y="20" width="215" height="170" rx="10"/>
+<text class="dt c" x="127" y="48">App state</text><text class="ds c" x="127" y="68">Neon Postgres</text>
+<text class="id" x="36" y="96">users, chats, traces</text><text class="id" x="36" y="116">mutable, small (73 MB)</text>
+<text class="id" x="36" y="136">written by the backend</text><text class="id" x="36" y="156">copied by Neon branches</text>
+<rect class="d" x="255" y="20" width="215" height="170" rx="10"/>
+<text class="dt c" x="362" y="48">Raw data</text><text class="ds c" x="362" y="68">object storage (R2)</text>
+<text class="id" x="271" y="96">PDFs, pages, OCR text</text><text class="id" x="271" y="116">append-only, 194 GB</text>
+<text class="id" x="271" y="136">written by crawler and OCR</text><text class="id" x="271" y="156">read by pipeline, PDF viewer</text>
+<rect class="d" x="490" y="20" width="215" height="170" rx="10"/>
+<text class="dt c" x="597" y="48">Corpus snapshot</text><text class="ds c" x="597" y="68">files: SQLite + vectors</text>
+<text class="id" x="506" y="96">documents, chunks, plans</text><text class="id" x="506" y="116">immutable, 7.4 GB each</text>
+<text class="id" x="506" y="136">written by the night build</text><text class="id" x="506" y="156">pinned per environment</text>
+<rect class="d" x="725" y="20" width="215" height="170" rx="10"/>
+<text class="dt c" x="832" y="48">Results</text><text class="ds c" x="832" y="68">git (data/agentic, data/eval)</text>
+<text class="id" x="741" y="96">benchmarks, evals, checks</text><text class="id" x="741" y="116">JSON, one file per run</text>
+<text class="id" x="741" y="136">written by bench, eval, check</text><text class="id" x="741" y="156">read by reports and views</text>
+<text class="gl" x="20" y="232" style="font-weight:600">Releasing a corpus snapshot</text>
+<rect class="p" x="20" y="246" width="172" height="60" rx="9"/><text class="pt c" x="106" y="271" style="font-size:13px">Build N+1</text><text class="ps c" x="106" y="290" style="font-size:11px">GPU box, at night</text>
+<rect class="p" x="207" y="246" width="172" height="60" rx="9"/><text class="pt c" x="293" y="271" style="font-size:13px">Checks</text><text class="ps c" x="293" y="290" style="font-size:11px">check, replay, coverage</text>
+<rect class="p" x="394" y="246" width="172" height="60" rx="9"/><text class="pt c" x="480" y="271" style="font-size:13px">Staging on N+1</text><text class="ps c" x="480" y="290" style="font-size:11px">pull from R2, restart</text>
+<rect class="p" x="581" y="246" width="172" height="60" rx="9"/><text class="pt c" x="667" y="271" style="font-size:13px">Benchmarks</text><text class="ps c" x="667" y="290" style="font-size:11px">with an approved budget</text>
+<rect class="p" x="768" y="246" width="172" height="60" rx="9"/><text class="pt c" x="854" y="271" style="font-size:13px">Production on N+1</text><text class="ps c" x="854" y="290" style="font-size:11px">keeps N for rollback</text>
+<line class="ar" x1="192" y1="276" x2="205" y2="276" marker-end="url(#a5)"/><line class="ar" x1="379" y1="276" x2="392" y2="276" marker-end="url(#a5)"/>
+<line class="ar" x1="566" y1="276" x2="579" y2="276" marker-end="url(#a5)"/><line class="ar" x1="753" y1="276" x2="766" y2="276" marker-end="url(#a5)"/>
+<text class="gl" x="20" y="348" style="font-weight:600">App database branches (Neon)</text>
+<rect class="s" x="20" y="362" width="215" height="56" rx="9"/><text class="st c" x="127" y="386" style="font-size:13px">main</text><text class="ss c" x="127" y="405" style="font-size:11px">production</text>
+<rect class="s" x="255" y="362" width="215" height="56" rx="9"/><text class="st c" x="362" y="386" style="font-size:13px">staging</text><text class="ss c" x="362" y="405" style="font-size:11px">child of main, reset per release</text>
+<rect class="s" x="490" y="362" width="215" height="56" rx="9"/><text class="st c" x="597" y="386" style="font-size:13px">pr-&lt;n&gt; / wt-&lt;name&gt;</text><text class="ss c" x="597" y="405" style="font-size:11px">children of staging</text>
+<rect class="s" x="725" y="362" width="215" height="56" rx="9"/><text class="st c" x="832" y="386" style="font-size:13px">deleted</text><text class="ss c" x="832" y="405" style="font-size:11px">at merge, or when the worktree goes</text>
+<line class="ar" x1="235" y1="390" x2="253" y2="390" marker-end="url(#a5)"/><line class="ar" x1="470" y1="390" x2="488" y2="390" marker-end="url(#a5)"/>
+<line class="ar" x1="705" y1="390" x2="723" y2="390" marker-end="url(#a5)"/>
+<text class="small" x="20" y="452">Schema today: create_all plus idempotent ALTERs at startup (main.py). With several branches alive, move to migrations</text>
+<text class="small" x="20" y="470">(e.g. Alembic) applied by CI to each branch. The legacy pgvector chunk tables on Neon only serve RETRIEVAL_BACKEND=pgvector.</text>
+</svg>
+<figcaption>Figure 5. Four stores with one writer each; corpus snapshots and app branches move through the same gates.</figcaption>
+</figure>
+<ul>
+<li><b>Never mix app state and corpus</b>: the corpus is rebuilt from raw data at any time, the app state is not. Keeping
+the corpus out of Neon also keeps Neon in its free tier (1.9M chunks would take ~8–11 GB there).</li>
+<li><b>A snapshot is a folder</b> such as <code>corpus-20261025-arctic-l-v2/</code> holding the store, the plan
+registry, <code>check.json</code> and a manifest of counts; <code>CORPUS_DATA_DIR</code> already selects one, as
+<code>data/small</code> does today.</li>
+<li><b>Raw data is the source of truth</b> for rebuilds: append-only in a bucket, so any snapshot can be rebuilt, and
+the PDF viewer and map tools read from it through a local cache.</li>
+<li><b>Results stay in git</b>: they are small, and the reports are generated from them.</li>
+</ul>
+
+<h2>6. Workflows</h2>
+<h3>6.1 Code, for people and agents alike</h3>
+<figure>
+<svg viewBox="0 0 960 240" role="img" aria-label="Code workflow">
+<defs><marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#888780"/></marker></defs>
+<rect class="p" x="20" y="30" width="104" height="66" rx="9"/><text class="pt c" x="72" y="57" style="font-size:12.5px">Linear issue</text><text class="ps c" x="72" y="77" style="font-size:10.5px">person or agent</text>
+<rect class="p" x="137" y="30" width="104" height="66" rx="9"/><text class="pt c" x="189" y="57" style="font-size:12.5px">Worktree</text><text class="ps c" x="189" y="77" style="font-size:10.5px">branch from issue</text>
+<rect class="p" x="254" y="30" width="104" height="66" rx="9"/><text class="pt c" x="306" y="57" style="font-size:12.5px">Pull request</text><text class="ps c" x="306" y="77" style="font-size:10.5px">linked to issue</text>
+<rect class="s" x="371" y="30" width="104" height="66" rx="9"/><text class="st c" x="423" y="57" style="font-size:12.5px">CI checks</text><text class="ss c" x="423" y="77" style="font-size:10.5px">see below</text>
+<rect class="p" x="488" y="30" width="104" height="66" rx="9"/><text class="pt c" x="540" y="57" style="font-size:12.5px">Review</text><text class="ps c" x="540" y="77" style="font-size:10.5px">always a person</text>
+<rect class="p" x="605" y="30" width="104" height="66" rx="9"/><text class="pt c" x="657" y="57" style="font-size:12.5px">Merge</text><text class="ps c" x="657" y="77" style="font-size:10.5px">issue closes</text>
+<rect class="e" x="722" y="30" width="104" height="66" rx="9"/><text class="et c" x="774" y="57" style="font-size:12.5px">Staging</text><text class="es c" x="774" y="77" style="font-size:10.5px">deployed on merge</text>
+<rect class="e" x="839" y="30" width="104" height="66" rx="9"/><text class="et c" x="891" y="57" style="font-size:12.5px">Production</text><text class="es c" x="891" y="77" style="font-size:10.5px">release tag</text>
+<line class="ar" x1="124" y1="63" x2="135" y2="63" marker-end="url(#a6)"/><line class="ar" x1="241" y1="63" x2="252" y2="63" marker-end="url(#a6)"/>
+<line class="ar" x1="358" y1="63" x2="369" y2="63" marker-end="url(#a6)"/><line class="ar" x1="475" y1="63" x2="486" y2="63" marker-end="url(#a6)"/>
+<line class="ar" x1="592" y1="63" x2="603" y2="63" marker-end="url(#a6)"/><line class="ar" x1="709" y1="63" x2="720" y2="63" marker-end="url(#a6)"/>
+<line class="ar" x1="826" y1="63" x2="837" y2="63" marker-end="url(#a6)"/>
+<line class="ar dash" x1="423" y1="96" x2="423" y2="126"/>
+<rect class="s" x="250" y="126" width="346" height="100" rx="9"/>
+<text class="ss" x="266" y="150">• frontend lint (exists) and typecheck</text>
+<text class="ss" x="266" y="170">• backend pytest on the small corpus or a fixture store</text>
+<text class="ss" x="266" y="190">• a Neon branch for the PR, deleted at merge</text>
+<text class="ss" x="266" y="210">• no paid API calls unless the PR is labelled</text>
+<line class="ar dash" x1="832" y1="96" x2="832" y2="126"/>
+<rect class="e" x="660" y="126" width="282" height="60" rx="9"/>
+<text class="es" x="676" y="150">each environment pins its corpus snapshot</text>
+<text class="es" x="676" y="170">and has its own LLM key and Neon branch</text>
+</svg>
+<figcaption>Figure 6. One path to production. Agents follow it like people; their PRs always get a human review.</figcaption>
+</figure>
+
+<h3>6.2 Data, on the GPU box</h3>
+<ul>
+<li><b>Weekly</b>: <code>corpus.crawl --revisit</code> (new PDF links on known pages, ~35k requests, about an hour); a full
+crawl (~166k requests, several hours) monthly or when the crawl rules change.</li>
+<li><b>Nightly, while the OCR backlog lasts</b>: OCR until a deadline, then the rebuild (extraction → filter → chunks
+→ embeddings → store → plans → checks → replay), as the night script does; then publish snapshot N+1 to R2.</li>
+<li><b>Release</b>: staging switches to N+1; the coverage benchmark and, with a budget, the agent benchmarks run there;
+production switches when they hold. A failed check stops the release, not the night.</li>
+</ul>
+
+<h3>6.3 Evaluation</h3>
+<ul>
+<li>Every paid run has a label and runs on its own capped key; results (JSON) are committed and the reports are
+regenerated from them, so a number in a report always points to a file.</li>
+<li>Free checks run on every snapshot (data checks, tool replay, coverage); paid benchmarks run when the prompts, the
+model or the corpus change in a way the free checks cannot judge.</li>
+</ul>
+
+<h2>7. Worktrees and agents in parallel</h2>
+<figure>
+<svg viewBox="0 0 960 430" role="img" aria-label="Worktrees">
+<defs><marker id="a7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#888780"/></marker></defs>
+<rect class="g" x="20" y="20" width="620" height="390" rx="14"/><text class="gl" x="40" y="46">One machine</text>
+<rect class="p" x="40" y="60" width="270" height="48" rx="9"/><text class="pt c" x="175" y="82" style="font-size:13.5px">pyrmit/ (main checkout)</text><text class="ps c" x="175" y="99" style="font-size:11px">not used for feature work</text>
+<rect class="p" x="40" y="124" width="270" height="76" rx="9"/><text class="pt c" x="175" y="147" style="font-size:13.5px">../pyrmit-feature-a</text><text class="ps c" x="175" y="166" style="font-size:11px">backend :8001, frontend :3001</text><text class="ps c" x="175" y="184" style="font-size:11px">the one GPU backend (full store)</text>
+<rect class="p" x="40" y="214" width="270" height="76" rx="9"/><text class="pt c" x="175" y="237" style="font-size:13.5px">../pyrmit-issue-142 (agent)</text><text class="ps c" x="175" y="256" style="font-size:11px">backend :8002 on the CPU</text><text class="ps c" x="175" y="274" style="font-size:11px">small corpus, own LLM key</text>
+<rect class="p" x="40" y="304" width="270" height="76" rx="9"/><text class="pt c" x="175" y="327" style="font-size:13.5px">../pyrmit-ui-fix</text><text class="ps c" x="175" y="346" style="font-size:11px">frontend :3003 only</text><text class="ps c" x="175" y="364" style="font-size:11px">API_PROXY_TARGET → :8001</text>
+<rect class="d" x="350" y="60" width="270" height="84" rx="9"/><text class="dt c" x="485" y="86" style="font-size:13.5px">Shared data folder (read-only)</text><text class="ds c" x="485" y="106" style="font-size:11px">CORPUS_DATA_DIR = absolute path to</text><text class="ds c" x="485" y="124" style="font-size:11px">corpus-20261025-arctic-l-v2/</text>
+<rect class="s" x="350" y="164" width="270" height="84" rx="9"/><text class="st c" x="485" y="190" style="font-size:13.5px">GPU, 8 GB</text><text class="ss c" x="485" y="210" style="font-size:11px">one backend holds the full store</text><text class="ss c" x="485" y="228" style="font-size:11px">(6.5 GB); the others run on the CPU</text>
+<rect class="d" x="350" y="268" width="270" height="84" rx="9"/><text class="dt c" x="485" y="294" style="font-size:13.5px">Small corpus</text><text class="ds c" x="485" y="314" style="font-size:11px">data/small, 3.6 GB</text><text class="ds c" x="485" y="332" style="font-size:11px">for CPU worktrees and CI</text>
+<line class="ar" x1="310" y1="150" x2="348" y2="110" marker-end="url(#a7)"/>
+<line class="ar" x1="310" y1="170" x2="348" y2="200" marker-end="url(#a7)"/>
+<line class="ar" x1="310" y1="260" x2="348" y2="305" marker-end="url(#a7)"/>
+<path class="ar dash" d="M40,342 H28 V162 H38" marker-end="url(#a7)"/>
+<rect class="g" x="660" y="20" width="280" height="390" rx="14"/><text class="gl" x="680" y="46">Neon (one project)</text>
+<rect class="s" x="680" y="60" width="240" height="48" rx="9"/><text class="st c" x="800" y="82" style="font-size:13.5px">main</text><text class="ss c" x="800" y="99" style="font-size:11px">production</text>
+<rect class="s" x="680" y="124" width="240" height="48" rx="9"/><text class="st c" x="800" y="146" style="font-size:13.5px">staging</text><text class="ss c" x="800" y="163" style="font-size:11px">child of main</text>
+<rect class="s" x="700" y="188" width="220" height="48" rx="9"/><text class="st c" x="810" y="210" style="font-size:13.5px">wt-feature-a</text><text class="ss c" x="810" y="227" style="font-size:11px">used by ../pyrmit-feature-a</text>
+<rect class="s" x="700" y="252" width="220" height="48" rx="9"/><text class="st c" x="810" y="274" style="font-size:13.5px">wt-issue-142</text><text class="ss c" x="810" y="291" style="font-size:11px">used by the agent's worktree</text>
+<rect class="s" x="700" y="316" width="220" height="48" rx="9"/><text class="st c" x="810" y="338" style="font-size:13.5px">pr-151</text><text class="ss c" x="810" y="355" style="font-size:11px">created by CI for a PR</text>
+<path class="ar" d="M690,108 V122" marker-end="url(#a7)"/>
+<path class="ar" d="M690,172 V340 H698" marker-end="url(#a7)"/>
+<path class="ar" d="M690,212 H698" marker-end="url(#a7)"/><path class="ar" d="M690,276 H698" marker-end="url(#a7)"/>
+</svg>
+<figcaption>Figure 7. Three worktrees on one PC: one owns the GPU, one runs on the CPU and the small corpus, one only
+changes the frontend and borrows a backend. Each has its own Neon branch.</figcaption>
+</figure>
+
+<table>
+<tr><th>Setting</th><th>Production</th><th>Staging</th><th>PR preview (CI)</th><th>Worktree</th></tr>
+<tr><td><code>DATABASE_URL</code></td><td>Neon main</td><td>branch <code>staging</code></td><td>branch <code>pr-&lt;n&gt;</code></td><td>branch <code>wt-&lt;name&gt;</code></td></tr>
+<tr><td><code>CORPUS_DATA_DIR</code></td><td>snapshot N</td><td>snapshot N+1</td><td>small corpus or fixture</td><td>shared folder, full or small</td></tr>
+<tr><td>LLM key</td><td>production key</td><td>staging key</td><td>none, or a CI key with a low cap</td><td>the person's or agent's key</td></tr>
+<tr><td>GPU</td><td>optional</td><td>optional</td><td>none</td><td>one backend at a time</td></tr>
+<tr><td>Ports</td><td>–</td><td>–</td><td>–</td><td>8000+n and 3000+n</td></tr>
+</table>
+
+<pre># bash syntax
+git worktree add ../pyrmit-feature-a -b feature-a            # branch named from the Linear issue
+neonctl branches create --name wt-feature-a --parent staging  # or the Neon console / API
+# ../pyrmit-feature-a/backend/.env : DATABASE_URL=&lt;branch URL&gt;, CORPUS_DATA_DIR=&lt;shared snapshot&gt;, own OPENROUTER key
+# CPU backend when another worktree holds the GPU (CUDA_VISIBLE_DEVICES=-1: on Windows an empty value deletes it)
+CUDA_VISIBLE_DEVICES=-1 EMBEDDING_RUNTIME=onnx python -m uvicorn main:app --port 8002
+cd frontend &amp;&amp; API_PROXY_TARGET=http://localhost:8002 bunx next dev -p 3002</pre>
+
+<ul>
+<li><b>One GPU backend per 8 GB card</b>: the store and model take 6.5 GB. Measured with the GPU hidden on Oct 25: a
+search in one kommun takes 0.03–0.14 s on the CPU and in the statutes 0.03 s, but a search over the whole country 13–16
+s (3.9 GB of vectors read per query). CPU worktrees should use the small corpus or questions that name a kommun.</li>
+<li><b>Ports and stale processes</b>: on Windows a stopped shell leaves its Python and Node children running; each
+worktree uses its own ports, and processes are checked and stopped before a restart.</li>
+<li><b>Agents</b>: one issue, one worktree, one branch, one Neon branch, one capped key. Long jobs (OCR, full crawls,
+re-embedding, paid benchmarks) are not run by agents: they are queued on the GPU box.</li>
+<li><b>Shared data is read-only</b>: only the night build writes a new snapshot folder, so worktrees never see a
+half-written store.</li>
+</ul>
+
+<h2>8. Next steps</h2>
+<table>
+<tr><th>#</th><th>Step</th><th>Cost</th><th>Unlocks</th></tr>
+<tr><td>1</td><td>Backend tests and frontend typecheck in CI, on the small corpus or a fixture store</td><td>free</td><td>agent PRs that are safe to review</td></tr>
+<tr><td>2</td><td>Neon: a <code>staging</code> branch, a branch per PR (GitHub Action) and per worktree</td><td>free tier, check limits</td><td>parallel work without shared test data</td></tr>
+<tr><td>3</td><td>OpenRouter: one key per person, agent and environment, each with a cap</td><td>free</td><td>visible, bounded LLM spend</td></tr>
+<tr><td>4</td><td>Corpus snapshots and raw PDFs on R2, with a pull script</td><td>~$3/month</td><td>no more data folders sent by hand</td></tr>
+<tr><td>5</td><td>A staging server pinned to a snapshot; an ANN index (or a GPU) for nationwide searches on the CPU</td><td>server: to price</td><td>a shareable app off the dev PC</td></tr>
+<tr><td>6</td><td>GPU queue: finish the OCR backlog at night (~3–4 nights), rent a GPU for peaks</td><td>own PC, a few $ rented</td><td>every scanned plan searchable</td></tr>
+<tr><td>7</td><td>Pilot the map-application crawl agent on 2–3 map-only kommuner</td><td>to measure</td><td>the plans a third of the kommuner publish only in a map</td></tr>
+<tr><td>8</td><td>Schema migrations once several Neon branches live</td><td>work</td><td>safe schema changes across branches</td></tr>
+</table>
+
+<h2>Caveats and sources</h2>
+<ul>
+<li>Sizes and timings: measured on the development PC (RTX 4060 Laptop 8 GB, 16 GB RAM) on October 25, 2026, and from
+last night's run log (OCR, rebuild).</li>
+<li>Prices: <code>reports/pyrmit_hosting_report.md</code> (October 9, 2026: Cloudflare R2 official; Neon, VPS and other
+prices from third-party trackers, to check before paying). The rented-GPU price is a quote, not tried. LLM costs come
+from the project's benchmark result files (<code>backend/data/agentic/</code>).</li>
+<li>Coverage figures (map-only kommuner, missing plans): benchmark report section 2.11.</li>
+<li>Tool features named here (Linear–GitHub integration, Neon branching and its CLI, OpenRouter per-key limits) should
+be checked against each plan before relying on them.</li>
+</ul>
+
+</body>
+</html>

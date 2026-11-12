@@ -1,0 +1,756 @@
+"""
+Case-study benchmark: classic RAG vs. the tool-calling agent on planning questions with a reference
+(agentic/cases*.jsonl). A case's `task` (default "verdict") says what kind of answer is expected:
+
+  verdict   a defined project: is it feasible? (cases.jsonl, cases_caselaw.jsonl, cases_plans.jsonl)
+  explain   how a rule / procedure / fee works (cases_tasks.jsonl, cases_generated.jsonl)
+  propose   where a project could go: options named in the kommun's plans (`anchors`)
+  develop   complete a project idea: key points prefixed "Obstacle:", "Lever:", "Ask:"
+
+Per case and system:
+  evidence  share of the case's evidence groups (law sections / kommun passages) that the system
+            put in front of the model (retrieved chunks for RAG, every chunk a tool showed for the agent)
+  verdict   did the answer reach one of the acceptable verdicts (LLM judge; cases with `verdicts` only)
+  points    coverage of the expected key points, 0-2 each (LLM judge), reported as 0-1;
+            develop: also per kind (obstacles / levers / asks)
+  anchors   propose: share of the `min_anchors` places of the reference the answer names (string match, no LLM)
+  proposals propose: options the answer gives, and the share the cited sources support (LLM judge)
+  mode      agent: the kind of question it chose in answer_ready, and whether it is the case's task
+  cost, seconds, tool calls
+
+The judge defaults to the systems' model (GPT-6 Luna): cheap but self-preferential, so read its scores as
+relative between systems. --judge-model xiaomi/mimo-v2.6-flash grades with another model family.
+--leakage (no LLM) prints the rank of each case's evidence in a plain search with the question as asked:
+evidence ranked first means the question gives the answer away.
+
+    cd backend
+    LLM_PROVIDER=openrouter python -m agentic.bench --systems rag agent
+    python -m agentic.bench --systems agent --effort medium --cases kumla-200m2 attefall-vallentuna
+    python -m agentic.bench --cases-file cases_tasks.jsonl --store disk --judge-model xiaomi/mimo-v2.6-flash
+    CUDA_VISIBLE_DEVICES= python -m agentic.bench --cases-file cases_tasks.jsonl --store disk --leakage
+"""
+
+import argparse
+import json
+import os
+import random
+import re
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+from pathlib import Path
+
+from agentic.agent import (
+    ANSWER_FORMAT,
+    DEFAULT_MODEL,
+    MODES_GUIDE,
+    ROLE,
+    AgentRun,
+    _add_usage,
+    run_agent,
+)
+from agentic.health import health_lines
+from agentic.run import build_tools
+from agentic.tools import resolve_cited
+from answer_language import LANGUAGE_RULE
+from corpus.common import RESULTS_ROOT, read_jsonl
+from glossary import glossary_prompt
+from llm import get_openai_client, get_response_output_text, resolve_model_name
+from localrag.eval import matches
+from localrag.index import chunk_text
+from localrag.service import SWEDISH_QUERY_SUFFIX, split_rewrite
+from place.context import question_with_place
+
+CASES_PATH = Path(__file__).resolve().parent / "cases.jsonl"
+RESULTS_DIR = RESULTS_ROOT / "agentic"
+
+RAG_INSTRUCTIONS = f"""{ROLE}
+
+Answer only from the numbered sources below (Swedish statutes and municipal documents). Each source starts with its
+chunk id [c:<id>]; cite it like that.
+
+{MODES_GUIDE}
+
+{ANSWER_FORMAT}
+
+{LANGUAGE_RULE}
+
+{glossary_prompt()}"""
+
+JUDGE_INSTRUCTIONS = """You grade answers of a Swedish planning assistant against a reference.
+Return JSON only: {"verdict": "<feasible|conditional|not_feasible|unclear>", "points": [<0|1|2> per key point, in order], "unsupported_claims": <int>, "comment": "<one sentence>"}.
+- verdict: how the answer classifies the project (Feasible -> feasible, Feasible with conditions -> conditional, Not feasible as described -> not_feasible, Unclear -> unclear).
+- points: 2 = the key point is clearly stated, 1 = partially / vaguely, 0 = missing or contradicted.
+- unsupported_claims: number of specific rules/numbers/facts in the answer that are stated neither in the reference nor
+  in the cited sources given below, or that contradict them. A claim the cited sources state is supported even when
+  the reference does not mention it (the reference is not exhaustive)."""
+
+_POINTS = "- points: 2 = the key point is clearly stated, 1 = partially / vaguely, 0 = missing or contradicted."
+_UNSUPPORTED = """- unsupported_claims: number of specific rules/numbers/facts in the answer that are stated neither in the reference nor
+  in the cited sources given below, or that contradict them. A claim the cited sources state is supported even when
+  the reference does not mention it (the reference is not exhaustive)."""
+_VERDICT = ("- verdict: only if the reference lists acceptable verdicts, how the answer classifies the project (Feasible -> "
+            "feasible, Feasible with conditions -> conditional, Not feasible as described -> not_feasible, Unclear -> "
+            "unclear); \"none\" if it gives no classification.")
+
+# Per task: the answer is graded on the reference key points; no verdict unless the case has accepted verdicts
+TASK_JUDGE_INSTRUCTIONS = {
+    "explain": f"""You grade answers of a Swedish planning assistant to a question about rules or procedures, against a reference.
+Return JSON only: {{"verdict": "<...|none>", "points": [<0|1|2> per key point, in order], "unsupported_claims": <int>, "comment": "<one sentence>"}}.
+{_VERDICT}
+{_POINTS}
+{_UNSUPPORTED}""",
+    "develop": f"""You grade answers of a Swedish planning assistant that helps a user develop a project idea, against a reference.
+The reference key points are labelled Obstacle (what could block the project), Lever (a way to make it work) or Ask
+(information the assistant should ask the user for or say it needs).
+Return JSON only: {{"verdict": "<...|none>", "points": [<0|1|2> per key point, in order], "unsupported_claims": <int>, "comment": "<one sentence>"}}.
+{_VERDICT}
+{_POINTS} A Lever counts when the answer proposes it as an option; an Ask counts when the answer asks for or flags
+  that missing information.
+{_UNSUPPORTED}""",
+    "propose": f"""You grade answers of a Swedish planning assistant that proposes where or what a user could build, against a reference.
+Return JSON only: {{"verdict": "<...|none>", "proposals": [{{"place": "<as the answer names it>", "sourced": true|false}}], "points": [<0|1|2> per key point, in order], "unsupported_claims": <int>, "comment": "<one sentence>"}}.
+- proposals: each distinct option (place or kind of project) the answer proposes. sourced = the cited sources given
+  below show that the kommun's plans designate or support this place for this kind of development (not only that the
+  place exists), or the reference does.
+{_VERDICT}
+{_POINTS}
+{_UNSUPPORTED}""",
+}
+
+# Every cited chunk, whole: with 15 x 1500 chars, a quarter of the agent answers had cited facts the judge never saw
+# (counted as unsupported)
+MAX_JUDGE_SOURCES, MAX_SOURCE_CHARS = 40, 3000
+_SOURCES_SEPARATOR = "\n---\n"  # the chat's source list follows the answer after this rule
+_CITED_ID = re.compile(r"c:([0-9a-f]{8,16})(?![0-9a-f])")
+MAP_TOOLS = {"view_map_area", "view_pdf_page"}
+POINT_KINDS = ("Obstacle", "Lever", "Ask")
+
+
+def run_rag(question: str, tools, model: str, effort: str, k: int = 10) -> AgentRun:
+    """The chat's local pipeline: rewrite (EN + SV), dense retrieval on the Swedish query with the kommun filter, answer."""
+    client = get_openai_client()
+    run = AgentRun()
+    started = time.perf_counter()
+    rewrite = client.responses.create(
+        model=model, reasoning={"effort": "low"},
+        input=("Translate the following user message to English (return only the translation, no explanation): "
+               f"{question}\n\n{SWEDISH_QUERY_SUFFIX}"),
+    )
+    _add_usage(run.usage, rewrite.usage)
+    english, swedish = split_rewrite(get_response_output_text(rewrite), question)
+    result = tools.retriever.search(english, query_sv=swedish, k=k, mode="dense", dense_lang="sv")
+    hits = result["law"] + result["local"]
+    run.seen_chunks = [hit.chunk["chunk_id"] for hit in hits]
+    context = "\n\n".join(f"Source {i + 1} [c:{hit.chunk['chunk_id']}]:\n{chunk_text(hit.chunk)}" for i, hit in enumerate(hits))
+    # Streamed as in the chat, so the time to the first answer token compares with the agent's
+    stream = client.responses.create(
+        model=model, reasoning={"effort": effort}, instructions=RAG_INSTRUCTIONS,
+        input=f"Sources:\n\n{context}\n\nQuestion: {question}", stream=True,
+    )
+    parts, final = [], None
+    for event in stream:
+        if event.type == "response.output_text.delta" and event.delta:
+            if not parts:
+                run.first_token_s = round(time.perf_counter() - started, 1)
+            parts.append(event.delta)
+        elif event.type == "response.completed":
+            final = event.response
+    if final is not None:
+        _add_usage(run.usage, final.usage)
+    run.llm_calls = 2
+    run.answer = "".join(parts)
+    run.seconds = round(time.perf_counter() - started, 1)
+    run.steps = [{"tool": "retrieve", "kommuner": result["kommuner"], "chunks": run.seen_chunks}]
+    return run
+
+
+def cited_sources(answer: str, tools, seen=()) -> str:
+    """The text of the chunks the answer cites ([c:<id>]), so the judge can tell sourced facts from invented ones;
+    `seen` (the chunks the system was shown) resolves miscopied ids as in the chat."""
+    ids = list(dict.fromkeys(_CITED_ID.findall(answer)))[:MAX_JUDGE_SOURCES]
+    chunks = [(chunk_id, resolve_cited(tools.get_chunk, chunk_id, seen)) for chunk_id in ids]
+    return "\n\n".join(f"[c:{chunk_id}] {chunk_text(chunk)[:MAX_SOURCE_CHARS]}" for chunk_id, chunk in chunks if chunk)
+
+
+def judge(case: dict, answer: str, model: str, sources: str = "") -> dict:
+    client = get_openai_client()
+    task = case.get("task", "verdict")
+    points = "\n".join(f"{i + 1}. {point}" for i, point in enumerate(case["key_points"]))
+    verdicts = f"Acceptable verdicts: {case['verdicts']}" if case.get("verdicts") else "Acceptable verdicts: none (no verdict expected)"
+    anchors = (f"Places the kommun's plans designate (reference, not exhaustive): "
+               f"{', '.join(anchor['name'] for anchor in case['anchors'])}\n\n" if case.get("anchors") else "")
+    response = client.responses.create(
+        model=model, reasoning={"effort": "medium"}, instructions=TASK_JUDGE_INSTRUCTIONS.get(task, JUDGE_INSTRUCTIONS),
+        input=f"Question: {case['question']}\n\nReference key points:\n{points}\n\n{anchors}"
+              f"{verdicts}\n\nAnswer to grade:\n{answer}\n\n"
+              f"Cited sources (excerpts):\n{sources or '(none)'}",
+    )
+    text = get_response_output_text(response).strip()
+    text = text[text.find("{"):text.rfind("}") + 1]  # some models wrap the JSON in prose or a code fence
+    try:
+        grade = json.loads(text)
+    except json.JSONDecodeError:
+        grade = {"verdict": "unclear", "points": [0] * len(case["key_points"]), "unsupported_claims": 0,
+                 "comment": f"unparseable judge output: {text[:200]}"}
+    grade["judge_cost"] = float(getattr(response.usage, "cost", 0) or 0)
+    return grade
+
+
+def anchor_hits(case: dict, answer: str) -> list[str]:
+    """Reference places (name or alias) the answer names, case-insensitive, whole words."""
+    hits = []
+    for anchor in case.get("anchors") or []:
+        names = [anchor["name"], *anchor.get("aliases", [])]
+        if any(re.search(rf"(?<!\w){re.escape(name)}(?!\w)", answer, re.IGNORECASE) for name in names):
+            hits.append(anchor["name"])
+    return hits
+
+
+# Function words that tell Swedish from English text: domain terms are Swedish in both kinds of answer, so they do not count
+_SWEDISH_WORDS = frozenset(["och", "att", "det", "är", "en", "i", "för", "ett", "på", "som", "med", "av", "till", "du", "jag", "inte", "kan", "har", "om", "den", "de", "eller", "men", "från", "vid", "ska", "måste", "behöver", "enligt", "finns", "vad", "när", "så", "också", "får", "inom", "eftersom", "detta", "denna", "dessa", "sin", "sitt", "sina", "din", "ditt", "dina", "vi", "man", "där", "här", "än", "efter", "under", "hur", "bara", "redan", "alltså"])
+_ENGLISH_WORDS = frozenset(["the", "and", "to", "of", "is", "for", "you", "in", "that", "a", "an", "on", "with", "are", "be", "can", "not", "or", "this", "it", "must", "need", "your", "if", "as", "by", "from", "what", "when", "also", "may", "within", "because", "these", "those", "its", "we", "there", "here", "than", "after", "under", "how", "only", "already", "so", "which", "would", "should", "does", "do"])
+_MIN_QUOTE_WORDS = 3  # shorter quoted text is a term ("byggnadsarea"), not a quote of a source
+# Swedish and English answers measured 30-50% function words, German ones 1-2%: below this share it is another language
+_MIN_FUNCTION_WORD_SHARE = 0.1
+_QUOTED = re.compile(r'["“”]([^"“”\n]+)["“”]')
+_BLOCK_QUOTE = re.compile(r"^\s*>\s?(.*)$", re.MULTILINE)
+_QUOTE_EDGE = re.compile(r'^["“”]|["“”]\s*(\([^)]*\))?\s*$')
+
+
+def _words(text: str) -> list[str]:
+    return re.findall(r"[a-zåäöéüßàâçèêëîïôûñ]+", text.lower())
+
+
+def _word_counts(text: str) -> tuple[int, int]:
+    """(Swedish function words, English function words) in the text."""
+    words = _words(text)
+    return sum(word in _SWEDISH_WORDS for word in words), sum(word in _ENGLISH_WORDS for word in words)
+
+
+def _tokens(text: str) -> list[str]:
+    return re.findall(r"\w+", text.lower())
+
+
+def _quotes(answer: str) -> list[str]:
+    """The quoted passages of an answer: text in quotation marks, and block quote lines without a pair of their own,
+    each without a quotation mark it opens or closes and a reference after it (a quote spanning lines
+    `> "...` / `> ..." (PBL 9 kap. 4 §)`)."""
+    quotes = [match.group(1) for match in _QUOTED.finditer(answer)]
+    for line in _BLOCK_QUOTE.findall(answer):
+        if not _QUOTED.search(line):
+            line = _QUOTE_EDGE.sub("", re.sub(r"^\*\*[^*]+:\*\*\s*", "", line.strip()))
+            quotes.append(line)
+    return quotes
+
+
+def _cited_texts(answer: str, tools, seen=()) -> list[str]:
+    """The full text of every chunk the answer cites ([c:<id>])."""
+    ids = dict.fromkeys(_CITED_ID.findall(answer))
+    chunks = (resolve_cited(tools.get_chunk, chunk_id, seen) for chunk_id in ids)
+    return [chunk_text(chunk) for chunk in chunks if chunk]
+
+
+def answer_language_ok(case: dict, answer: str) -> bool:
+    """The answer is written in the case's language (`lang`, "sv" or "en"; "en" when absent), read from its own words:
+    quoted source text, citation ids and the source list are left out, so an English answer quoting Swedish law is
+    still English. An empty answer, or one in any other language, is never ok. String matching only, no model call."""
+    own_words = _QUOTED.sub(" ", _BLOCK_QUOTE.sub(" ", answer.split(_SOURCES_SEPARATOR)[0]))
+    own_words = re.sub(r"\[c:[^\]]*\]", " ", own_words)
+    swedish, english = _word_counts(own_words)
+    words = len(_words(own_words))
+    if not words or max(swedish, english) < _MIN_FUNCTION_WORD_SHARE * words:
+        return False
+    return ("sv" if swedish > english else "en") == case.get("lang", "en")
+
+
+def quotes_verbatim(answer: str, sources: list[str]) -> bool:
+    """Every Swedish quote in the answer appears word for word in one of the source texts (case, whitespace and
+    punctuation ignored). A quote is text inside quotation marks ("…", “…”, ”…”) or a markdown block quote line without
+    quotation marks of its own; quotes that contain no Swedish word, such as an English translation, are not checked.
+    True when the answer quotes nothing. String matching only, no model call."""
+    haystack = [f" {' '.join(_tokens(source))} " for source in sources]
+    for quote in _quotes(answer):
+        swedish, english = _word_counts(quote)
+        words = _tokens(quote)
+        if len(words) < _MIN_QUOTE_WORDS or swedish <= english:
+            continue  # a quoted term or an English translation: nothing to check against the sources
+        if not any(f" {' '.join(words)} " in source for source in haystack):
+            return False
+    return True
+
+
+def mode_ok(case: dict, mode: str | None) -> bool:
+    """The agent's mode (answer_ready) is one the case accepts: `modes` when a question mixes kinds (e.g. a
+    verdict case asking "how does that work?"), else its task."""
+    return mode in (case.get("modes") or [case.get("task", "verdict")])
+
+
+def grade_answer(case: dict, answer: str, tools, judge_model: str, seen=()) -> dict:
+    """The task-dependent scores of one answer (LLM judge + string matching), as stored in a result row.
+
+    Every row also carries `lang` (the case's language), `language_ok` (answer_language_ok) and `quotes_ok`
+    (quotes_verbatim against the text of the chunks the answer cites)."""
+    grade = judge(case, answer, judge_model, cited_sources(answer, tools, seen))
+    scores = grade.get("points") or []
+    scores = (list(scores) + [0] * len(case["key_points"]))[:len(case["key_points"])]  # judge returned too few / many
+    row = {
+        "task": case.get("task", "verdict"),
+        "lang": case.get("lang", "en"),
+        "language_ok": answer_language_ok(case, answer),
+        "quotes_ok": quotes_verbatim(answer, _cited_texts(answer, tools, seen)),
+        "verdict": grade.get("verdict"),
+        "verdict_ok": grade.get("verdict") in case["verdicts"] if case.get("verdicts") else None,
+        "points": sum(scores) / (2 * len(case["key_points"])),
+        "point_scores": scores,
+        "unsupported": grade.get("unsupported_claims", 0),
+        "comment": grade.get("comment"), "judge_cost": grade.get("judge_cost", 0), "judge_model": judge_model,
+    }
+    if row["task"] == "develop":  # coverage per kind of key point
+        for kind in POINT_KINDS:
+            mine = [s for point, s in zip(case["key_points"], scores) if point.startswith(kind + ":")]
+            row[f"points_{kind.lower()}"] = sum(mine) / (2 * len(mine)) if mine else None
+    if case.get("anchors"):
+        hits = anchor_hits(case, answer)
+        needed = min(case.get("min_anchors") or len(case["anchors"]), len(case["anchors"]))
+        row["anchors_hit"], row["anchors"] = hits, min(len(hits), needed) / needed
+    if row["task"] == "propose":
+        proposals = [p for p in grade.get("proposals") or [] if isinstance(p, dict)]
+        row["proposals"] = len(proposals)
+        row["proposals_sourced"] = sum(bool(p.get("sourced")) for p in proposals) / len(proposals) if proposals else None
+    return row
+
+
+# The missing-info eval (#91): should-ask cases miss a fact only the user knows that changes the answer, should-answer
+# cases are general or complete questions; each half must reach MISSING_INFO_PASS
+MISSING_INFO_PATH = Path(__file__).resolve().parent / "cases_missing_info.jsonl"
+MISSING_INFO_PASS = 0.95
+
+
+ASK_JUDGE_INSTRUCTIONS = """You grade the clarifying questions a Swedish planning assistant asked a user instead of answering.
+Return JSON only: {"covered": [<0|1> per missing fact, in order], "options_ok": true|false, "comment": "<one sentence>"}.
+- covered: 1 if the questions ask for that fact (in any wording, or as one of the options; a button offering to pin the
+  place on the map asks for the place), else 0. Empty list when no missing facts are listed.
+- options_ok: true if every question's options fit it: either 2-4 distinct, complete replies the user could click and
+  the assistant could act on (none of them "other", "something else" or "please specify"), or no options where the
+  answer is open (a size, an address, a description); false if any question has options that are incomplete,
+  overlapping, need more input, or are missing where a few obvious answers exist."""
+
+
+def _card(run: AgentRun) -> list[dict]:
+    return [{"question": asked.question, "options": list(asked.options)} for asked in run.questions]
+
+
+def judge_card(case: dict, run: AgentRun, model: str) -> dict:
+    """The judge's view of a question card: which of the case's missing facts it asks for, and whether its options
+    fit."""
+    missing = case.get("missing") or []
+    card = "\n".join(f"- {asked.question}" + (f" Options: {' | '.join(asked.options)}" if asked.options
+                                                 else " (open question, free text)") for asked in run.questions)
+    if run.offer_pin:
+        card += "\n- (button: pin the place on the map)"
+    facts = "\n".join(f"{i + 1}. {fact}" for i, fact in enumerate(missing)) or "(none listed)"
+    response = get_openai_client().responses.create(
+        model=model, reasoning={"effort": "low"}, instructions=ASK_JUDGE_INSTRUCTIONS,
+        input=f"User's question: {case['question']}\n\nMissing facts:\n{facts}\n\nQuestions asked:\n{card}",
+    )
+    text = get_response_output_text(response).strip()
+    text = text[text.find("{"):text.rfind("}") + 1]
+    try:
+        grade = json.loads(text)
+    except json.JSONDecodeError:
+        grade = {"covered": [0] * len(missing), "options_ok": False, "comment": f"unparseable judge output: {text[:200]}"}
+    grade["judge_cost"] = float(getattr(response.usage, "cost", 0) or 0)
+    return grade
+
+
+def grade_asked(case: dict, run: AgentRun, judge_model: str) -> dict:
+    """How one run of a missing-info case handled the missing facts, as stored in its result row.
+
+    A case has `expect`: "ask" (with `missing`, the facts the question leaves out, and `reply`, the scripted user
+    reply) or "answer". Returns {"expect", "lang", "asked", "ask_ok", "missing_covered", "options_ok", "questions"}:
+    - asked: the run ended in a question card (run.questions) instead of an answer.
+    - missing_covered: for an asked should-ask case, the share of `missing` the card's questions ask for (the
+      judge decides; offering to pin the place asks for the place); None otherwise.
+    - options_ok: for an asked case, the judge's view of whether each question's options fit (complete replies when
+      a few answers are likely, none for an open question); None when it did not ask. Reported, no threshold.
+    - ask_ok: a should-ask case asked and covered every missing fact; a should-answer case did not ask.
+    - questions: the card as [{"question", "options"}], [] when it answered.
+    No judge call when the run did not ask."""
+    expect = case.get("expect", "answer")
+    asked = bool(run.questions)
+    row = {"expect": expect, "lang": case.get("lang", "en"), "asked": asked, "missing_covered": None,
+           "options_ok": None, "questions": _card(run), "ask_comment": None, "ask_judge_cost": 0.0}
+    if asked:
+        grade = judge_card(case, run, judge_model)
+        row["options_ok"] = bool(grade.get("options_ok"))
+        row["ask_comment"], row["ask_judge_cost"] = grade.get("comment"), grade.get("judge_cost", 0.0)
+        missing = case.get("missing") or []
+        if expect == "ask" and missing:
+            covered = list(grade.get("covered") or [])
+            covered = (covered + [0] * len(missing))[:len(missing)]
+            row["missing_covered"] = sum(1 for c in covered if c) / len(missing)
+    row["ask_ok"] = (asked and row["missing_covered"] == 1.0) if expect == "ask" else not asked
+    return row
+
+
+def follow_up(case: dict, asked: AgentRun, tools, model: str, effort: str = "medium",
+              explore_effort: str | None = "low", max_steps: int = 10) -> AgentRun:
+    """The agent's answer once the user has replied to its question card: a new run on the case's scripted `reply`,
+    with the case's question and the card (asked.answer) as the conversation before it, that cannot ask again.
+    Graded like any answer against the case's key points (reported, no threshold)."""
+    history = [*(case.get("history") or []), {"role": "user", "content": missing_info_question(case)},
+               {"role": "assistant", "content": asked.answer}]
+    return run_agent(question_with_place(case["reply"], None, answered=True), tools, history=history, model=model,
+                     effort=effort, explore_effort=explore_effort, max_steps=max_steps, allow_ask=False)
+
+
+def missing_info_question(case: dict) -> str:
+    """A missing-info case's question as the chat sends it with nothing pinned (the no-pin hint before it)."""
+    return question_with_place(case["question"], None)
+
+
+def _rate(rows: list[dict]) -> float | None:
+    return sum(1 for row in rows if row.get("ask_ok")) / len(rows) if rows else None
+
+
+def missing_info_summary(rows: list[dict], baseline_points: float | None = None) -> dict:
+    """The missing-info result of a benchmark run's rows (each carrying grade_asked's keys and `points`).
+
+    Returns {"ask": {"n", "rate"}, "answer": {"n", "rate", "points", "points_ok"}, "by_lang": {lang: {"ask", "answer"}},
+    "passed"}: `rate` is the share of the half's rows with ask_ok, `by_lang` the same rates per question language,
+    `points` the should-answer half's mean key-point score. `points_ok` is whether that score is not below
+    `baseline_points` (today's score on the same cases; None without one). `passed`: both rates reach
+    MISSING_INFO_PASS and points_ok is not False. A half without rows has rate None and fails."""
+    ask = [row for row in rows if row.get("expect") == "ask"]
+    answer = [row for row in rows if row.get("expect") == "answer"]
+    scored = [row["points"] for row in answer if row.get("points") is not None]
+    points = sum(scored) / len(scored) if scored else None
+    # rounded: a mean of identical scores must not fall below the same baseline by float noise
+    points_ok = (None if baseline_points is None or points is None
+                 else round(points, 6) >= round(baseline_points, 6))
+    summary = {
+        "ask": {"n": len(ask), "rate": _rate(ask)},
+        "answer": {"n": len(answer), "rate": _rate(answer), "points": points, "points_ok": points_ok},
+        "by_lang": {lang: {"ask": _rate([r for r in ask if r.get("lang") == lang]),
+                           "answer": _rate([r for r in answer if r.get("lang") == lang])}
+                    for lang in sorted({row.get("lang", "en") for row in ask + answer})},
+    }
+    rates = (summary["ask"]["rate"], summary["answer"]["rate"])
+    summary["passed"] = (all(rate is not None and rate >= MISSING_INFO_PASS for rate in rates)
+                         and points_ok is not False)
+    return summary
+
+
+def evidence_recall(case: dict, seen: list[str], tools) -> float | None:
+    if not case["evidence"]:  # e.g. rulings under the old PBL: no current provision to look for
+        return None
+    seen_chunks = [chunk for chunk in (tools.get_chunk(chunk_id) for chunk_id in seen) if chunk]
+    groups = [any(matches(chunk, matcher) for chunk in seen_chunks) for matcher in case["evidence"]]
+    return sum(groups) / len(groups)
+
+
+def _candidates(tools, matcher: dict):
+    """Chunks a matcher can match: all of them in memory; with the disk store, the rows of its law / kommun."""
+    if not hasattr(tools.retriever, "store"):
+        return tools.corpus.chunks.values()
+    if "any" in matcher:
+        return [chunk for alternative in matcher["any"] for chunk in _candidates(tools, alternative)]
+    store = tools.retriever.store
+    if "law" in matcher:
+        rows = store.query("SELECT * FROM chunks WHERE kind = 'law' AND title LIKE ?", (f"%{matcher['law']}%",))
+    elif "doc_id" in matcher:  # plankarta cases: one document, not a scan of the whole table
+        rows = store.query("SELECT * FROM chunks WHERE doc_id = ?", (matcher["doc_id"],))
+    elif "kommun_code" in matcher:
+        rows = store.query("SELECT * FROM chunks WHERE kommun_code = ?", (matcher["kommun_code"],))
+    else:
+        rows = store.query("SELECT * FROM chunks")
+    return [store._chunk(row) for row in rows]
+
+
+def check_labels(cases: list[dict], tools) -> None:
+    missing = [(case["id"], matcher) for case in cases for matcher in case["evidence"]
+               if not any(matches(chunk, matcher) for chunk in _candidates(tools, matcher))]
+    if missing:
+        raise SystemExit("Evidence labels with no matching chunk:\n" + "\n".join(f"  {m}" for m in missing))
+
+
+def sample_cases(cases: list[dict], n: int, seed: int = 0) -> list[dict]:
+    """n cases stratified by expected outcome (rulings are mostly refusals), labelled cases first in each stratum."""
+    rng = random.Random(seed)
+    strata: dict[str, list[dict]] = {}
+    for case in cases:
+        if not case.get("verdicts"):  # explain / propose / develop: one stratum per task
+            strata.setdefault(case.get("task", "verdict"), []).append(case)
+            continue
+        verdicts = set(case["verdicts"])
+        key = ("negative" if verdicts <= {"not_feasible", "unclear"} and "not_feasible" in verdicts
+               else "open" if verdicts <= {"unclear", "conditional"} else "positive")
+        strata.setdefault(key, []).append(case)
+    for members in strata.values():
+        rng.shuffle(members)
+        members.sort(key=lambda case: not case["evidence"])  # stable: shuffled within labelled / unlabelled
+    picked: list[dict] = []
+    while len(picked) < min(n, len(cases)):
+        for members in strata.values():
+            if members and len(picked) < n:
+                picked.append(members.pop(0))
+    return picked
+
+
+def evidence_ranks(case: dict, tools, k: int = 20) -> list[int | None]:
+    """Per evidence group: the best rank (1-based) of a matching chunk in the agent's search tool run on the question
+    as asked (hybrid, kommun filter from the question), None when not in the top k. Rank 1-3 for most groups means the
+    question gives the answer away: a single search finds it."""
+    result = tools.retriever.search(case["question"], query_sv=case["question"], k=k,
+                                    mode="hybrid" if "stem" in tools.retriever.bm25 else "dense", dense_lang="sv",
+                                    bm25_mode="stem" if "stem" in tools.retriever.bm25 else None, kommuner="auto")
+    ranked = {"law": [hit.chunk for hit in result["law"]], "local": [hit.chunk for hit in result["local"]]}
+    ranks = []
+    for matcher in case["evidence"]:
+        best = None
+        for pool in ranked.values():
+            rank = next((i + 1 for i, chunk in enumerate(pool) if matches(chunk, matcher)), None)
+            if rank is not None and (best is None or rank < best):
+                best = rank
+        ranks.append(best)
+    return ranks
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Agent vs. RAG on planning case studies")
+    parser.add_argument("--systems", nargs="+", default=["rag", "agent"], choices=["rag", "agent"])
+    parser.add_argument("--cases", nargs="*", help="case ids (default: all)")
+    parser.add_argument("--effort", default="medium", help="reasoning effort of the answer (RAG answer / agent final answer)")
+    parser.add_argument("--explore-effort", default="low", help="agent: effort of the tool-calling turns ('same' = --effort)")
+    parser.add_argument("--max-steps", type=int, default=10)
+    parser.add_argument("--model", default=DEFAULT_MODEL)
+    parser.add_argument("--cases-file", default=CASES_PATH.name, help="cases file in agentic/ (e.g. cases_caselaw.jsonl)")
+    parser.add_argument("--store", default="memory", choices=["memory", "disk"],
+                        help="memory: laws + the cases' kommuner in RAM; disk: the full corpus from the disk store")
+    parser.add_argument("--limit", type=int, default=0, help="only the first N cases")
+    parser.add_argument("--sample", type=int, default=0, help="N cases stratified by outcome (fixed seed)")
+    parser.add_argument("--repeats", type=int, default=1, help="runs per case and system (variance)")
+    parser.add_argument("--resume", type=Path, help="results file of an interrupted run: only the missing runs are made")
+    parser.add_argument("--disable-tools", nargs="*", help="agent tools removed for this run (ablation), e.g. view_map_area")
+    parser.add_argument("--workers", type=int, default=1,
+                        help="cases run in parallel (faster; latencies then include some contention)")
+    parser.add_argument("--judge-model", help="grading model (default: --model), e.g. xiaomi/mimo-v2.6-flash")
+    parser.add_argument("--label", help="tag appended to the result file name (-x-<label>) for experiments the name does "
+                                        "not describe (another agent model or prompt), e.g. mimo-flash")
+    parser.add_argument("--baseline", type=Path,
+                        help="missing-info cases: results file of the same cases before the change; the should-answer "
+                             "half must score at least its key points")
+    parser.add_argument("--leakage", action="store_true",
+                        help="no LLM: print the rank of each evidence group in a plain search on the question, then exit")
+    args = parser.parse_args()
+    os.environ.setdefault("LLM_PROVIDER", "openrouter")
+    model = resolve_model_name(args.model)
+    judge_model = resolve_model_name(args.judge_model or args.model)
+
+    cases = list(read_jsonl(CASES_PATH.parent / args.cases_file))
+    if args.cases:
+        cases = [case for case in cases if case["id"] in set(args.cases)]
+    if args.limit:
+        cases = cases[:args.limit]
+    if args.sample:
+        cases = sample_cases(cases, args.sample)
+    if args.store == "disk":
+        from agentic.tools import CorpusTools
+        from localrag.store import DiskRetriever
+
+        tools = CorpusTools(DiskRetriever("st-arctic-l-v2"))
+        tools.warm_up()
+        corpus = "full disk store"
+    else:
+        kommuner = sorted({code for case in cases for code in case["kommun"]})
+        tools = build_tools(kommuner)
+        corpus = f"laws + {kommuner} ({len(tools.corpus.chunks)} chunks)"
+    check_labels(cases, tools)
+    if args.leakage:
+        given_away = 0
+        for case in cases:
+            ranks = evidence_ranks(case, tools)
+            top3 = sum(1 for rank in ranks if rank is not None and rank <= 3)
+            given_away += bool(ranks) and top3 > len(ranks) / 2
+            print(f"  {case['id']:<40} {case.get('task', 'verdict'):<8} evidence ranks {ranks}")
+        print(f"{given_away} of {len(cases)} cases have most evidence in the top 3 of a search on the question")
+        return
+    print(f"{len(cases)} cases, corpus: {corpus}, model {model}, effort {args.effort}, judge {judge_model}")
+
+    explore = None if args.explore_effort == "same" else args.explore_effort
+
+    def run_case(job: tuple[dict, str, int]) -> dict:
+        case, system, repeat = job
+        # Missing-info cases (expect): asked as the chat asks with nothing pinned; a question card is graded on what
+        # it asks, then answered with the scripted reply and the follow-up graded on the key points
+        missing_info = "expect" in case
+        question = missing_info_question(case) if missing_info else case["question"]
+        try:
+            run = (run_rag(case["question"], tools, model, args.effort) if system == "rag"
+                   else run_agent(question, tools, history=case.get("history"), model=model,
+                                  effort=args.effort, max_steps=args.max_steps, explore_effort=explore,
+                                  disabled_tools=set(args.disable_tools or ())))
+        except Exception as exc:  # noqa: BLE001 - keep the benchmark going; the failure is reported
+            run = AgentRun(error=repr(exc))
+        asked_row: dict = {}
+        if missing_info and not run.error:
+            asked_row = grade_asked(case, run, judge_model)
+            if run.questions:  # the graded answer is the one after the user's reply
+                card_cost = run.usage["cost"]
+                try:
+                    answered = follow_up(case, run, tools, model, args.effort, explore, args.max_steps)
+                except Exception as exc:  # noqa: BLE001 - reported like a failed run
+                    answered = AgentRun(error=repr(exc))
+                answered.usage["cost"] += card_cost
+                answered.questions = run.questions
+                run = answered if case["expect"] == "ask" else AgentRun(
+                    questions=run.questions, usage=run.usage, steps=run.steps, seconds=run.seconds)
+        grade = (grade_answer(case, run.answer, tools, judge_model, run.seen_chunks) if run.answer
+                 else {"task": case.get("task", "verdict"), "lang": case.get("lang", "en"), "language_ok": False,
+                       "quotes_ok": None, "verdict": "none",
+                       "verdict_ok": False if case.get("verdicts") else None, "points": 0.0, "unsupported": 0,
+                       "comment": run.error, "judge_cost": 0, "judge_model": judge_model})
+        row = {
+            "case": case["id"], "system": system, "model": model, "hard": bool(case.get("hard")),
+            "repeat": repeat, "effort": args.effort,
+            "explore_effort": args.explore_effort,
+            **{key: value for key, value in grade.items() if key not in ("comment", "judge_cost")},
+            # agent: the kind of question it chose (answer_ready), against the case's task
+            "mode": run.mode, "mode_ok": mode_ok(case, run.mode) if system == "agent" else None,
+            "evidence": evidence_recall(case, run.seen_chunks, tools),
+            "tool_calls": len(run.steps) if system == "agent" else 0, "llm_calls": run.llm_calls,
+            # Map reading (plankarta cases): image views, and whether the case's own plankarta was viewed
+            "map_views": sum(1 for s in run.steps if s["tool"] in MAP_TOOLS),
+            "map_doc_viewed": (any(s["tool"] in MAP_TOOLS and s["arguments"].get("doc_id") == case["map_doc_id"]
+                                   for s in run.steps) if case.get("map_doc_id") else None),
+            "seconds": run.seconds, "first_token_s": run.first_token_s,
+            "cost": round(run.usage["cost"], 5), "judge_cost": grade.get("judge_cost", 0),
+            "tokens_in": run.usage["input_tokens"], "tokens_out": run.usage["output_tokens"],
+            "comment": grade.get("comment"), "answer": run.answer, "steps": run.steps, "error": run.error,
+            **asked_row,
+        }
+        if missing_info:
+            row["judge_cost"] += row.pop("ask_judge_cost", 0.0)
+            if case["expect"] == "answer" and row.get("asked"):  # a card where an answer was due scores nothing
+                row["points"] = 0.0
+        evidence = "-" if row["evidence"] is None else format(row["evidence"], ".2f")
+        verdict = (f"verdict {row['verdict']:<13}{'OK ' if row['verdict_ok'] else 'NO '}" if row["verdict_ok"] is not None
+                   else f"mode {row['mode'] or '-':<8}" + (f" anchors {row['anchors']:.2f}" if "anchors" in row else ""))
+        print(f"  {case['id']:<26} {system:<6} {verdict} "
+              f"points {row['points']:.2f}  evidence {evidence:>4}  tools {row['tool_calls']:>2}  "
+              f"{row['seconds']:>5.0f}s (1st token {row['first_token_s'] or '-'})  ${row['cost']:.4f}", flush=True)
+        return row
+
+    # Results are written after every case (a killed run keeps what it paid for); --resume continues such a file
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    cases_tag = "" if args.cases_file == CASES_PATH.name else f"-{Path(args.cases_file).stem}"
+    if args.disable_tools:
+        cases_tag += "-no-" + "-".join(sorted(args.disable_tools))
+    out = args.resume or RESULTS_DIR / (f"bench-{datetime.now():%Y%m%d-%H%M%S}-{'-'.join(args.systems)}-{args.effort}"  # noqa: DTZ005 - the local time names the run
+                                        f"-explore-{args.explore_effort}{cases_tag}"
+                                        f"{f'-x-{args.label}' if args.label else ''}.json")
+    rows: list[dict] = json.loads(out.read_text(encoding="utf-8")) if args.resume and out.exists() else []
+    rows = [row for row in rows if not row.get("error")]  # resumed: failed runs (e.g. network errors) are redone
+    done = {(row["case"], row["system"], row.get("repeat", 0)) for row in rows}
+    jobs = [(case, system, repeat) for repeat in range(args.repeats) for case in cases for system in args.systems
+            if (case["id"], system, repeat) not in done]
+    if done:
+        print(f"resuming {out.name}: {len(done)} runs done, {len(jobs)} to go")
+    lock = threading.Lock()
+
+    def run_and_save(job: tuple[dict, str, int]) -> None:
+        row = run_case(job)
+        with lock:
+            rows.append(row)
+            out.write_text(json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+        list(pool.map(run_and_save, jobs))
+
+    print("\nsystem   verdict_ok  points  evidence  unsupported  tool_calls  seconds   cost/case")
+    for system in args.systems:
+        mine = [row for row in rows if row["system"] == system]
+        if not mine:
+            continue
+        def mean(key: str, subset: list[dict] | None = None) -> float:
+            values = [row[key] for row in (mine if subset is None else subset) if row.get(key) is not None]  # noqa: B023 - the closure is called within this iteration only
+            return sum(values) / len(values) if values else 0.0
+
+        def shown(key: str, subset: list[dict] | None = None) -> str:  # "-" when no row has the score
+            has = any(row.get(key) is not None for row in (mine if subset is None else subset))  # noqa: B023 - the closure is called within this iteration only
+            return f"{mean(key, subset):.2f}" if has else "-"
+        first = [row["first_token_s"] for row in mine if row["first_token_s"] is not None]
+        print(f"{system:<8} {shown('verdict_ok'):>10}  {mean('points'):>6.2f}  {mean('evidence'):>8.2f}  "
+              f"{mean('unsupported'):>11.2f}  {mean('tool_calls'):>10.1f}  {mean('seconds'):>7.0f}  ${mean('cost'):.4f}"
+              f"  llm_calls {mean('llm_calls'):.1f}  first_token {sum(first) / len(first) if first else 0:.0f}s")
+        tasks = sorted({row.get("task", "verdict") for row in mine})
+        if tasks != ["verdict"]:  # the task-specific scores, per task
+            for task in tasks:
+                rows_task = [row for row in mine if row.get("task", "verdict") == task]
+                extra = {"develop": ("points_obstacle", "points_lever", "points_ask"),
+                         "propose": ("anchors", "proposals", "proposals_sourced")}.get(task, ())
+                print(f"         {task:<8} n {len(rows_task):>3}  points {mean('points', rows_task):.2f}  "
+                      f"evidence {shown('evidence', rows_task)}  mode_ok {shown('mode_ok', rows_task)}  "
+                      + "  ".join(f"{key} {shown(key, rows_task)}" for key in extra))
+        if any(row.get("lang") == "sv" for row in mine):  # bilingual cases: the scores per question language
+            for label, subset in (("sv", [r for r in mine if r.get("lang") == "sv" and not r.get("hard")]),
+                                  ("en", [r for r in mine if r.get("lang", "en") == "en" and not r.get("hard")]),
+                                  ("hard", [r for r in mine if r.get("hard")])):
+                if subset:
+                    print(f"         {label:<8} n {len(subset):>3}  language_ok {shown('language_ok', subset)}  "
+                          f"quotes_ok {shown('quotes_ok', subset)}  verdict_ok {shown('verdict_ok', subset)}  "
+                          f"points {mean('points', subset):.2f}")
+        if args.repeats > 1:  # spread of the per-repeat means: how much of a difference is noise
+            for key in ("verdict_ok", "points", "evidence"):
+                per_repeat = []
+                for repeat in range(args.repeats):
+                    values = [r[key] for r in mine if r["repeat"] == repeat and r.get(key) is not None]
+                    per_repeat.append(sum(values) / len(values) if values else None)
+                if any(v is not None for v in per_repeat):  # e.g. no verdict_ok on explain / propose / develop cases
+                    print(f"         {key:<11} per repeat: "
+                          f"{', '.join('-' if v is None else f'{v:.2f}' for v in per_repeat)}")
+
+    if any("expect" in row for row in rows):
+        print_missing_info(rows, args.baseline)
+
+    if any(row.get("steps") for row in rows):
+        # Failed tool calls do not show in the scores (the agent works around them): flag them here
+        print("\nTool health (calls that returned nothing usable):")
+        print("\n".join("  " + line for line in health_lines(rows)))
+
+    print(f"\nSaved {out}")
+
+
+def print_missing_info(rows: list[dict], baseline: Path | None) -> None:
+    """The missing-info eval's result per system, against MISSING_INFO_PASS (and the baseline's key points)."""
+    for system in sorted({row["system"] for row in rows if "expect" in row}):
+        mine = [row for row in rows if row["system"] == system and "expect" in row]
+        baseline_points = None
+        if baseline:
+            before = [row for row in json.loads(baseline.read_text(encoding="utf-8"))
+                      if row.get("system") == system and row.get("expect") == "answer" and not row.get("error")]
+            baseline_points = sum(row["points"] for row in before) / len(before) if before else None
+        summary = missing_info_summary(mine, baseline_points)
+
+        def pct(value: float | None) -> str:
+            return "-" if value is None else f"{value:.0%}"
+        answer = summary["answer"]
+        print(f"\nMissing-info eval, {system} (pass: {MISSING_INFO_PASS:.0%} on each half):")
+        print(f"  should ask     n {summary['ask']['n']:>3}  asked for every missing fact {pct(summary['ask']['rate'])}")
+        print(f"  should answer  n {answer['n']:>3}  answered without a card {pct(answer['rate'])}  points "
+              + ("-" if answer["points"] is None else f"{answer['points']:.2f}")
+              + ("" if baseline_points is None else f" (baseline {baseline_points:.2f}, "
+                 f"{'OK' if answer['points_ok'] else 'BELOW'})"))
+        for lang, rates in summary["by_lang"].items():
+            print(f"  {lang:<13}  should ask {pct(rates['ask'])}  should answer {pct(rates['answer'])}")
+        cards = [row for row in mine if row.get("options_ok") is not None]
+        follow = [row["points"] for row in mine if row["expect"] == "ask" and row.get("asked")]
+        print(f"  options fit {pct(sum(r['options_ok'] for r in cards) / len(cards) if cards else None)} of {len(cards)} "
+              f"cards; follow-up points {sum(follow) / len(follow) if follow else 0:.2f} over {len(follow)}")
+        print(f"  {'PASSED' if summary['passed'] else 'FAILED'}")
+
+
+if __name__ == "__main__":
+    main()

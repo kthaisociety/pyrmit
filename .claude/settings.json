@@ -1,0 +1,15 @@
+{
+  "extraKnownMarketplaces": {
+    "custom-skills": {
+      "source": {
+        "source": "github",
+        "repo": "Maxastrand04/Custom-skills",
+        "ref": "release"
+      },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "max@custom-skills": true
+  }
+}

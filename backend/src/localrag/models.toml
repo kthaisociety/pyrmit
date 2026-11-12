@@ -1,0 +1,98 @@
+# Local embedding models (sentence-transformers on the GPU), picked from the MTEB
+# multilingual / Scandinavian retrieval results among models under 1B parameters, which fit
+# the 8 GB laptop GPU in float16. Same keys as benchmark/models.toml (EmbeddingConfig).
+#
+# Qwen3-Embedding-4B/8B rank higher on MTEB but need more VRAM than 8 GB in float16; they
+# can be tried through OpenRouter instead (benchmark/models.toml).
+
+[models."st-qwen3-0.6b"]
+provider = "st"
+model = "Qwen/Qwen3-Embedding-0.6B"
+query_prefix = "Instruct: Given a question about Swedish land law, planning or building permits, retrieve the passage that answers it\nQuery: "
+batch_size = 16
+notes = "MTEB multilingual retrieval ~64.7, 1024 dims, 32k context"
+
+[models.st-bge-m3]
+provider = "st"
+model = "BAAI/bge-m3"
+batch_size = 16
+notes = "strong multilingual baseline, 1024 dims, 8k context"
+
+[models.st-me5-large-instruct]
+provider = "st"
+model = "intfloat/multilingual-e5-large-instruct"
+query_prefix = "Instruct: Given a question about Swedish land law, planning or building permits, retrieve the passage that answers it\nQuery: "
+batch_size = 16
+notes = "1024 dims, 512 tokens"
+
+[models.st-arctic-l-v2]
+provider = "st"
+model = "Snowflake/snowflake-arctic-embed-l-v2.0"
+query_prefix = "query: "
+batch_size = 16
+onnx_file = "onnx/model_int8.onnx"  # CPU fallback (EMBEDDING_RUNTIME=auto without a GPU)
+notes = "multilingual, 1024 dims, 8k context"
+
+[models.st-gte-multi-base]
+provider = "st"
+model = "Alibaba-NLP/gte-multilingual-base"
+batch_size = 32
+st_kwargs = { trust_remote_code = true }
+notes = "305M, 768 dims, fast"
+
+[models.st-embeddinggemma]
+provider = "st"
+model = "google/embeddinggemma-300m"
+query_prefix = "task: search result | query: "
+document_prefix = "title: none | text: "
+batch_size = 32
+notes = "300M, 768 dims; gated on Hugging Face (accept the licence + HF_TOKEN)"
+
+[models.st-kblab-swedish]
+provider = "st"
+model = "KBLab/sentence-bert-swedish-cased"
+batch_size = 32
+notes = "Swedish-only sentence-BERT, 768 dims: a monolingual reference"
+
+# --- Through OpenRouter (OPENROUTER_API_KEY or OPENROUTER_KEY): models too big for the
+# laptop GPU, and the same open models without downloading them. Paid per token.
+
+[models.or-qwen3-8b]
+provider = "openrouter"
+model = "qwen/qwen3-embedding-8b"
+query_prefix = "Instruct: Given a question about Swedish land law, planning or building permits, retrieve the passage that answers it\nQuery: "
+batch_size = 64
+notes = "top-ranked open model on MTEB multilingual, 4096 dims"
+
+[models.or-qwen3-4b]
+provider = "openrouter"
+model = "qwen/qwen3-embedding-4b"
+query_prefix = "Instruct: Given a question about Swedish land law, planning or building permits, retrieve the passage that answers it\nQuery: "
+batch_size = 64
+
+[models.or-bge-m3]
+provider = "openrouter"
+model = "baai/bge-m3"
+batch_size = 64
+
+[models.or-me5-large]
+provider = "openrouter"
+model = "intfloat/multilingual-e5-large"
+query_prefix = "query: "
+document_prefix = "passage: "
+batch_size = 64
+
+[models.or-gemini-001]
+provider = "openrouter"
+model = "google/gemini-embedding-001"
+batch_size = 64
+
+[models.or-voyage-4]
+provider = "openrouter"
+model = "voyageai/voyage-4"
+batch_size = 64
+
+[models.te3-large]
+provider = "openai"
+model = "text-embedding-3-large"
+notes = "current production model (OPENAI_API_KEY)"

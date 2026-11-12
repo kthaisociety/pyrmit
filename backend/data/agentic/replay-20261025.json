@@ -1,0 +1,93 @@
+{
+ "calls": {
+  "find_kommun": 233,
+  "law_section": 574,
+  "read": 7270,
+  "grep": 2901,
+  "list_documents": 974,
+  "plans": 236,
+  "plan_rules": 209,
+  "search": 200
+ },
+ "errors": {
+  "law_section": {
+   "not_found": 35
+  },
+  "read": {
+   "unknown_id": 479,
+   "bad_args": 10
+  },
+  "plan_rules": {
+   "no_data": 34,
+   "unknown_id": 95
+  },
+  "grep": {
+   "not_found": 29,
+   "bad_args": 21
+  },
+  "plans": {
+   "no_data": 2
+  },
+  "list_documents": {
+   "bad_args": 1
+  },
+  "find_kommun": {},
+  "search": {}
+ },
+ "violations": {
+  "read": 1,
+  "grep": 0,
+  "list_documents": 0,
+  "law_section": 0,
+  "plans": 0,
+  "find_kommun": 0,
+  "plan_rules": 0,
+  "search": 0
+ },
+ "stale": {
+  "read": 488
+ },
+ "sample": null,
+ "latency": {
+  "find_kommun": {
+   "p50": 0.03,
+   "p95": 0.188,
+   "max": 0.935
+  },
+  "law_section": {
+   "p50": 0.01,
+   "p95": 0.011,
+   "max": 0.018
+  },
+  "read": {
+   "p50": 0.001,
+   "p95": 0.227,
+   "max": 0.504
+  },
+  "grep": {
+   "p50": 0.245,
+   "p95": 1.15,
+   "max": 4.616
+  },
+  "list_documents": {
+   "p50": 0.016,
+   "p95": 0.05,
+   "max": 0.234
+  },
+  "plans": {
+   "p50": 0.004,
+   "p95": 0.006,
+   "max": 0.739
+  },
+  "plan_rules": {
+   "p50": 0.004,
+   "p95": 0.006,
+   "max": 0.006
+  },
+  "search": {
+   "p50": 0.124,
+   "p95": 0.222,
+   "max": 1.284
+  }
+ }
+}
