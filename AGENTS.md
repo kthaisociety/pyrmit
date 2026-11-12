@@ -689,6 +689,12 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
 
 ## Agentic RAG (`CHAT_MODE=agent`)
 
+**Off-topic answers (#102).** A question outside Swedish planning, building and land law (small talk, adjacent topics
+the corpus lacks, unrelated questions) gets the fifth mode, `off_topic` (`agent.OFF_TOPIC`): `answer_ready` first, no
+tools, a short answer without headings or citations, never a question card (`OFF_TOPIC_GUIDE`). A rule question the
+corpus does not cover gets no answer in substance, only who can answer it; a mixed question stays a planning answer.
+The chat skips the claim check for an `off_topic` run, as for a question card.
+
 **Question card (#91, narrowed in #99).** The agent answers whenever it can, laying out the routes where an unknown
 fact decides (a size, height, use or number); it asks only when no useful answer is possible without the user: the
 place of their own case when the answer turns wholly on it, what is to be built, or which kommun a place name means.
