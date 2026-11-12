@@ -6,10 +6,11 @@ from collections.abc import Callable
 
 from place.sources import PILOTS
 
-NO_PIN_HINT = ("(No place is pinned on the map. A question about one specific place needs a pin: ask with ask_user and "
-               "offer_pin before any search, unless the conversation already names the kommun and the area: then use "
-               "that place and do not ask the user to confirm it. Answer a general question with the search tools and "
-               "offer to pin a place for an exact answer.)")
+NO_PIN_HINT = ("(No place is pinned on the map. A question whose answer turns wholly on one specific place needs a pin: "
+               "ask with ask_user and offer_pin before any search, unless the conversation already names the kommun and "
+               "the area: then use that place and do not ask the user to confirm it. When a general rule already "
+               "answers a specific question, answer with it and offer to pin the place for an exact answer, as for a "
+               "general question: answer it with the search tools and offer to pin a place.)")
 
 OPENING = ("[Place pinned by the user on the map. This is the place the question is about: do not ask where it is, "
            "and do not call find_kommun: the kommun and its code are given below. "
