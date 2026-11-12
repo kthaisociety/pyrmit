@@ -12,6 +12,10 @@ export interface ChunkCardProps {
   rank?: number;
   defaultOpen?: boolean;
   actions?: ReactNode; // shown under the header, open or not (e.g. links to the original document)
+  // Sentences of `content` to underline in the open card (<u title="Supports a claim in the answer">), issue #84.
+  // Matched regardless of whitespace (runs of spaces and line breaks compare equal); a sentence not found in
+  // `content` is skipped without an error. The collapsed preview is never underlined.
+  underline?: string[];
 }
 
 // Cosine distance: 0 = identical, 1 = unrelated. Colour bands are a rough visual aid only,
@@ -31,6 +35,7 @@ export default function ChunkCard({
   rank,
   defaultOpen = false,
   actions,
+  underline = [], // stub, issue #84
 }: ChunkCardProps) {
   const [open, setOpen] = useState(defaultOpen);
   const preview = content.replace(/\s+/g, ' ').slice(0, 220);

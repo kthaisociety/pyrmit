@@ -59,11 +59,14 @@ export async function openPageAtChunk(chunkId: string): Promise<void> {
 
 // Side panel: the cited chunks, and the original document opened where the chunk is
 // (PDF at its page with the chunk highlighted, or the web page / statute scrolled to it by Chrome).
-// n = 0: not a citation (Database view); autoOpen: open the first chunk's document right away
-export default function SourceViewer({ citation, onClose, autoOpen = false }: {
+// n = 0: not a citation (Database view); autoOpen: open the first chunk's document right away.
+// supporting: chunk_id -> the sentences of that chunk that back a claim of the answer (claim check, issue #84),
+// underlined in that chunk's card only; a chunk missing from it, or no `supporting` at all, shows no underline
+export default function SourceViewer({ citation, onClose, autoOpen = false, supporting = {} }: {
   citation: Citation;
   onClose: () => void;
   autoOpen?: boolean;
+  supporting?: Record<string, string[]>;
 }) {
   const [pdf, setPdf] = useState<{ blobUrl: string; url: string; page: number; note: string } | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
