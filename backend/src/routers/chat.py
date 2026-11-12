@@ -22,6 +22,7 @@ from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_INSTRUCTION, Languag
 from glossary import glossary_prompt
 from db.database import SessionLocal, get_db
 from dependencies import get_current_user
+from agentic.agent import OFF_TOPIC
 from agentic.claim_check import verify_answer
 from agentic.service import agent_enabled
 from localrag.service import SWEDISH_QUERY_SUFFIX, local_backend_enabled, retrieve as local_retrieve, split_rewrite
@@ -89,6 +90,12 @@ def _format_sources(sources: list[str], numbered: bool = False) -> str:
 
 def _sse(event: dict) -> str:
     return f"data: {json.dumps(event, default=str)}\n\n"
+
+
+def _makes_claims(run, asked: bool) -> bool:
+    """Whether an agent run's reply makes claims to check: not a question card (`asked`), not an off-topic answer
+    (mode OFF_TOPIC, unsourced by design), and not a run that is missing."""
+    return not asked and run is not None and getattr(run, "mode", None) != OFF_TOPIC
 
 
 def _check_claims(run) -> tuple[dict, tuple[str, list[dict]] | None]:
@@ -505,8 +512,7 @@ def chat_stream(
                     yield _sse({"type": "response.output_text.delta", "delta": suffix})
                     citations, check = outcome["citations"], None
                     run = outcome.get("run")
-                    # An off-topic answer cites nothing by design (#102): the check would strip or flag it
-                    if not asked and run is not None and getattr(run, "mode", None) != "off_topic":
+                    if _makes_claims(run, asked):
                         yield _sse({"type": "thinking", "label": "Checking the claims"})
                         check, rewritten = _check_claims(run)
                         if rewritten is not None:

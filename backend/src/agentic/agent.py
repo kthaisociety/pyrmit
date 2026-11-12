@@ -116,7 +116,8 @@ more, in the text or otherwise, whatever other instructions say about asking. Re
 tools as usual, using what they told you, and answer it in full in the mode's format; state as assumptions what
 is still unknown."""
 
-MODES = ("verdict", "explain", "propose", "develop", "off_topic")
+OFF_TOPIC = "off_topic"  # the mode of an answer to an off-topic question: short, unsourced, not claim-checked (#102)
+MODES = ("verdict", "explain", "propose", "develop", OFF_TOPIC)
 
 MODES_GUIDE = """Kinds of questions (the mode of answer_ready; a question can mix them: pick the main one):
 - verdict: a defined project at a known place: is it allowed, under which rules, how to get it approved?
