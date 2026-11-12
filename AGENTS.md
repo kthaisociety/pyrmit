@@ -689,10 +689,19 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
 
 ## Agentic RAG (`CHAT_MODE=agent`)
 
-**Question card (#91).** When the conclusion turns on facts only the user can give (place, use, a size or height
-against a threshold, what is to be built, which of two places), the agent asks instead of guessing: `ask_user` takes
+**Off-topic answers (#102).** A question outside Swedish planning, building and land law (small talk, adjacent topics
+the corpus lacks, unrelated questions) gets the fifth mode, `off_topic` (`agent.OFF_TOPIC`): `answer_ready` first, no
+tools, no headings or citations, never a question card (`OFF_TOPIC_GUIDE`). Small talk and adjacent questions get a
+short answer; an unrelated question gets a polite decline ("Det ligger utanför vad jag hjälper till med ..."). A rule question the
+corpus does not cover gets no answer in substance, only who can answer it; a mixed question stays a planning answer.
+The chat skips the claim check for an `off_topic` run, as for a question card.
+
+**Question card (#91, narrowed in #99).** The agent answers whenever it can, laying out the routes where an unknown
+fact decides (a size, height, use or number); it asks only when no useful answer is possible without the user: the
+place of their own case when the answer turns wholly on it, what is to be built, or which kommun a place name means.
+A specific question a general rule answers (windows, a pond) gets that rule, the detaljplan caveat and a pin offer. `ask_user` takes
 1-3 `questions` (each `question` + 0-4 `options`, none for an open question) and `offer_pin`, and ends the run with
-`AgentRun.questions`. The rule is the "Asking instead of guessing" part of `MODES_GUIDE`; `ASK_LANGUAGE_REMINDER` follows
+`AgentRun.questions`. The rule is `ASK_GUIDE` ("Answer first, ask only when you cannot answer"), appended to `MODES_GUIDE`; `ASK_LANGUAGE_REMINDER` follows
 each turn's tool results so the card stays in the user's language. The chat saves the card as the `choices` pipeline
 event `{questions, offer_pin}` (an open question too) and skips the claim check; `frontend/components/QuestionCard.tsx`
 shows it with an "Other" field per question, one reply message for the whole card, locked once answered (old saved

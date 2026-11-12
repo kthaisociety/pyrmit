@@ -221,6 +221,12 @@ def test_the_no_pin_hint_asks_for_a_pin_on_a_specific_question(words):
     assert words in NO_PIN_HINT
 
 
+def test_the_no_pin_hint_asks_only_when_the_answer_turns_wholly_on_the_place():
+    """A specific question a general rule answers is answered, with an offer to pin (#99)."""
+    assert "turns wholly on one specific place" in NO_PIN_HINT
+    assert "When a general rule already answers a specific question, answer with it" in NO_PIN_HINT
+
+
 def test_a_pinned_general_question_is_told_to_stay_general(tmp_path):
     """The pinned block leaves room for a general question."""
     assert "general question" in statement(amended_snapshot(tmp_path)).lower()

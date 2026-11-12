@@ -702,3 +702,20 @@ def test_the_answer_turn_repeats_the_language_rule(rag):
     """The answer's last turn says to answer in the user's language whatever the sources' language."""
     post_swedish(rag)
     assert "whatever the language of the sources" in answer_call(rag)["input"][-1]["content"]
+
+
+# --- an off-topic answer (#102) ---------------------------------------------------------------------------------------
+
+def test_an_off_topic_answer_is_not_claim_checked(harness, monkeypatch):
+    """A short answer to an off-topic question cites nothing by design: the claim check would strip or flag it."""
+    checked = []
+
+    def fake_stream_agent(question, history, record, sse, flush=list, allow_ask=True):
+        yield sse({"type": "response.output_text.delta", "delta": "Hej! Vad kan jag hjälpa dig med?"})
+        return {"answer": "Hej! Vad kan jag hjälpa dig med?", "law_rows": [], "local_rows": [], "sources": [],
+                "citations": [], "questions": [], "offer_pin": False, "run": AgentRun(mode="off_topic")}
+
+    monkeypatch.setattr(agentic.service, "stream_agent", fake_stream_agent)
+    monkeypatch.setattr(chat, "_check_claims", lambda run: checked.append(run) or ({"status": "checked"}, None))
+    ask(harness, PINNED)
+    assert checked == [] and saved_answer(harness).content.startswith("Hej!")

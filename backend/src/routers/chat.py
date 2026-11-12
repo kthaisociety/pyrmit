@@ -22,6 +22,7 @@ from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_INSTRUCTION, Languag
 from glossary import glossary_prompt
 from db.database import SessionLocal, get_db
 from dependencies import get_current_user
+from agentic.agent import OFF_TOPIC
 from agentic.claim_check import check_claims
 from agentic.service import agent_enabled
 from localrag.service import SWEDISH_QUERY_SUFFIX, local_backend_enabled, retrieve as local_retrieve, split_rewrite
@@ -89,6 +90,12 @@ def _format_sources(sources: list[str], numbered: bool = False) -> str:
 
 def _sse(event: dict) -> str:
     return f"data: {json.dumps(event, default=str)}\n\n"
+
+
+def _makes_claims(run, asked: bool) -> bool:
+    """Whether an agent run's reply makes claims to check: not a question card (`asked`), not an off-topic answer
+    (mode OFF_TOPIC, unsourced by design), and not a run that is missing."""
+    return not asked and run is not None and getattr(run, "mode", None) != OFF_TOPIC
 
 
 def _check_claims(run) -> dict:
@@ -393,8 +400,8 @@ def chat_stream(
     Claim check (issue #82): once the agent's answer has streamed, the stream says {"type": "thinking", "label":
     "Checking the claims"} and the decision model judges its claims (agentic.claim_check.check_claims, about a second);
     the message stays "streaming" until the check is done. The answer is never rewritten. The verdicts are saved as
-    the "claim_check" pipeline event, ClaimCheck.as_event(). A
-    question back to the user (the agent's question card) is not checked and has no "claim_check" event."""
+    the "claim_check" pipeline event, ClaimCheck.as_event(). A question back to the user (the agent's question card) and
+    an off-topic answer (mode "off_topic", #102) are not checked and have no "claim_check" event."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
@@ -497,7 +504,7 @@ def chat_stream(
                     yield _sse({"type": "response.output_text.delta", "delta": suffix})
                     check = None
                     run = outcome.get("run")
-                    if not asked and run is not None:
+                    if _makes_claims(run, asked):
                         yield _sse({"type": "thinking", "label": "Checking the claims"})
                         check = _check_claims(run)
                     yield emit("citations", items=outcome["citations"])
