@@ -518,22 +518,98 @@ describe('the source panel of a checked answer', () => {
   });
 });
 
+// A stream whose deltas the test sends one at a time; `null` ends it
+function liveStream() {
+  let push: (event: object | null) => void = () => {};
+  server.use(http.post('*/api/chat/stream', () => {
+    const body = new ReadableStream({
+      start(controller) {
+        push = (event) => (event === null ? controller.close()
+          : controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`)));
+      },
+    });
+    return new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } });
+  }));
+  return (event: object | null) => push(event);
+}
+
+describe('typing while an answer is on its way', () => {
+  const INPUT = 'Ask about building permits...';
+
+  async function streaming() {
+    const push = liveStream();
+    const view = chat();
+    await ask();
+    push({ type: 'session_id', session_id: 's9' });
+    push({ type: 'response.output_text.delta', delta: 'The first part.' });
+    await screen.findByText(/The first part/);
+    return Object.assign(push, { view });
+  }
+
+  it('takes the next question while the answer streams', async () => {
+    /** The input stays open while an answer streams, so the next question can be written. */
+    await streaming();
+
+    await userEvent.type(screen.getByPlaceholderText(INPUT), 'And in Uppsala?');
+
+    expect(screen.getByPlaceholderText(INPUT)).toHaveValue('And in Uppsala?');
+  });
+
+  it('does not send the next question before the answer is done', async () => {
+    /** Send stays off and Enter does nothing until the answer is finished; the typed question is kept. */
+    let posts = 0;
+    await streaming();
+    server.use(http.post('*/api/chat/stream', () => {
+      posts += 1;
+      return sse({ type: 'done', session_id: 's9' });
+    }));
+
+    await userEvent.type(screen.getByPlaceholderText(INPUT), 'And in Uppsala?{Enter}');
+
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    expect(posts).toBe(0);
+    expect(screen.getByPlaceholderText(INPUT)).toHaveValue('And in Uppsala?');
+  });
+
+  it('sends the typed question once the answer is done, in the same new chat', async () => {
+    /** The question written meanwhile goes out as it stands, in the session the first answer created, with it. */
+    server.use(http.get('*/api/sessions/s9', () => HttpResponse.json([])));
+    const push = await streaming();
+    await userEvent.type(screen.getByPlaceholderText(INPUT), 'And in Uppsala?');
+    push({ type: 'response.completed' });
+    push({ type: 'done', session_id: 's9' });
+    push(null);
+    // The page passes the new session back, as onSessionCreated makes it do
+    push.view.rerender(createElement(Chat, { sessionId: 's9', onSessionCreated: () => undefined, user: { name: 'anna' } }));
+    const sent: { session_id?: string; messages?: { role: string; content: string }[] }[] = [];
+    server.use(http.post('*/api/chat/stream', async ({ request }) => {
+      sent.push(await request.json() as (typeof sent)[number]);
+      return sse({ type: 'done', session_id: 's9' });
+    }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0].session_id).toBe('s9');
+    expect(sent[0].messages?.at(-1)).toEqual({ role: 'user', content: 'And in Uppsala?' });
+    expect(sent[0].messages?.some((m) => m.content.includes('The first part.'))).toBe(true);
+  });
+
+  it('does not send while a reopened answer is still being checked', async () => {
+    /** An answer left to finish in the background (saved as streaming) keeps Send off until it is done. */
+    history(answer(2, [CITATIONS], { status: 'streaming' }));
+    chat('s1');
+    await screen.findByText('Checking claims…');
+
+    await userEvent.type(screen.getByPlaceholderText(INPUT), 'And in Uppsala?');
+
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+  });
+});
+
 describe('scrolling while an answer streams', () => {
   const scrolled = vi.mocked(Element.prototype.scrollIntoView);
-
-  // A stream whose deltas the test sends one at a time
-  function liveStream() {
-    let push: (event: object) => void = () => {};
-    server.use(http.post('*/api/chat/stream', () => {
-      const body = new ReadableStream({
-        start(controller) {
-          push = (event) => controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`));
-        },
-      });
-      return new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } });
-    }));
-    return (event: object) => push(event);
-  }
 
   // The reader's place in the conversation: `fromBottom` px above its end (jsdom has no layout)
   function scrollTo(fromBottom: number) {
@@ -605,7 +681,7 @@ describe('scrolling while an answer streams', () => {
     );
     chat();
     await ask();
-    await waitFor(() => expect(screen.getByPlaceholderText('Ask about building permits...')).toBeEnabled());
+    await waitFor(() => expect(screen.getByPlaceholderText('Ask about building permits...').closest('form')).toHaveAttribute('aria-busy', 'false'));
     scrollTo(1500);
     liveStream();
     scrolled.mockClear();
