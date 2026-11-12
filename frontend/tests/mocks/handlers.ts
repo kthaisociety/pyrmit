@@ -10,6 +10,10 @@ export const handlers = [
     return HttpResponse.json(lat > 59.87 ? kaboOutside : kungsangen);
   }),
   http.get('*/api/place/search', () => HttpResponse.json([])),
+  // The shared glossary of Swedish domain terms (backend/src/glossary.py), two of its entries
+  http.get('*/api/glossary', () =>
+    HttpResponse.json({ bygglov: 'building permit', detaljplan: 'detailed development plan' }),
+  ),
   http.get('*/api/place/coverage', () =>
     HttpResponse.json([{ code: '0380', name: 'Uppsala', bbox: [17.5, 59.7, 17.9, 60.0], fetched: '2026-10-25' }]),
   ),

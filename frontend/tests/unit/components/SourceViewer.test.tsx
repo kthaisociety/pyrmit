@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SourceViewer, { Citation } from '@/components/SourceViewer';
+import { LanguageProvider } from '@/lib/i18n';
 
 import { server } from '../../mocks/server';
 
@@ -14,6 +15,11 @@ const citation: Citation = {
   chunks: [{ chunk_id: 'c1', source: 'Detaljplan Kårsta', chunk_index: 3, content: 'Nockhöjd 8 m', doc_id: 'pdf:0115:aa' }],
 };
 const located = { type: 'pdf', page: 3, found: true, highlighted: true, pdf_url: '/api/docs/pdf/c1', view: null };
+// The chunk's wording is on no page of the PDF
+const notFound = { ...located, page: 1, found: false, highlighted: false };
+const NOT_FOUND = 'The cited passage was not found in this PDF.';
+const OPEN_FROM_PAGE_1 = /Open the PDF from page 1/;
+const OPENED = 'Page 3, cited passage highlighted.';
 
 beforeEach(() => {
   vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: () => 'blob:pdf', revokeObjectURL: () => {} }));
@@ -22,74 +28,161 @@ beforeEach(() => {
     new HttpResponse('%PDF-1.7', { status: 200, headers: { 'Content-Type': 'application/pdf' } })));
 });
 
+const openThePassage = async (shown: Citation = citation) => {
+  render(<SourceViewer citation={shown} onClose={vi.fn()} />, { wrapper: LanguageProvider });
+  await userEvent.click(screen.getAllByRole('button', { name: /Open the PDF at this passage/ })[0]);
+};
+
+// Corpus on Neon: the first opening fetches the PDF from the kommun's website, which takes seconds.
+// Returns what lets the download finish.
+const downloadFirst = (): (() => void) => {
+  let finishDownload: () => void = () => {};
+  const downloaded = new Promise<void>((resolve) => { finishDownload = resolve; });
+  server.use(
+    http.get('*/api/docs/locate', async ({ request }) => {
+      if (new URL(request.url).searchParams.get('download') === 'false') {
+        return HttpResponse.json({ type: 'pdf', needs_download: true, source_host: 'www.vallentuna.se' });
+      }
+      await downloaded;
+      return HttpResponse.json(located);
+    }),
+  );
+  return finishDownload;
+};
+
+const legacy: Citation = {
+  n: 2,
+  label: 'Vallentuna – Översiktsplan 2040',
+  chunks: [
+    { chunk_id: 'l1', source: 'Översiktsplan 2040', chunk_index: 0, content: 'Vision', doc_id: 'legacy:2040vision', url: null },
+    { chunk_id: 's1', source: 'PBL', chunk_index: 1, content: '4 §', doc_id: 'law:pbl', url: 'https://data.riksdagen.se/a' },
+  ],
+};
+
 describe('SourceViewer', () => {
-  it('says the PDF is being downloaded from the kommun site when this install does not have it', async () => {
-    /** Corpus on Neon: the first opening fetches the PDF from the kommun's website, which takes seconds. */
-    let finishDownload: () => void = () => {};
-    const downloaded = new Promise<void>((resolve) => { finishDownload = resolve; });
-    server.use(
-      http.get('*/api/docs/locate', async ({ request }) => {
-        if (new URL(request.url).searchParams.get('download') === 'false') {
-          return HttpResponse.json({ type: 'pdf', needs_download: true, source_host: 'www.vallentuna.se' });
-        }
-        await downloaded;
-        return HttpResponse.json(located);
-      }),
-    );
-    render(<SourceViewer citation={citation} onClose={vi.fn()} />);
+  describe('a PDF this install must first download', () => {
+    it('says it is being downloaded from the kommun site', async () => {
+      downloadFirst();
+      await openThePassage();
 
-    await userEvent.click(screen.getByRole('button', { name: /Open the PDF at this passage/ }));
+      expect(await screen.findByRole('status')).toHaveTextContent('Downloading the PDF from www.vallentuna.se');
+    });
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Downloading the PDF from www.vallentuna.se');
-    finishDownload();
-    expect(await screen.findByText('Page 3, cited passage highlighted.')).toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    it('opens at the passage once downloaded', async () => {
+      const finishDownload = downloadFirst();
+      await openThePassage();
+      await screen.findByRole('status');
+      finishDownload();
+
+      expect(await screen.findByText(OPENED)).toBeInTheDocument();
+    });
+
+    it('drops the download message once open', async () => {
+      const finishDownload = downloadFirst();
+      await openThePassage();
+      await screen.findByRole('status');
+      finishDownload();
+      await screen.findByText(OPENED);
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
   });
 
-  it('offers no open button for a document kept without its original', async () => {
+  describe('a document kept without its original', () => {
     /** The early prototype's "legacy:" documents have no file or URL: a button would only end in an error. */
-    const legacy: Citation = {
-      n: 2,
-      label: 'Vallentuna – Översiktsplan 2040',
-      chunks: [
-        { chunk_id: 'l1', source: 'Översiktsplan 2040', chunk_index: 0, content: 'Vision', doc_id: 'legacy:2040vision', url: null },
-        { chunk_id: 's1', source: 'PBL', chunk_index: 1, content: '4 §', doc_id: 'law:pbl', url: 'https://data.riksdagen.se/a' },
-      ],
-    };
-    render(<SourceViewer citation={legacy} onClose={vi.fn()} />);
+    it('offers no open button', () => {
+      render(<SourceViewer citation={legacy} onClose={vi.fn()} />, { wrapper: LanguageProvider });
 
-    expect(screen.getByText(/No original kept/)).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /Open the/ })).toHaveLength(1); // the statute only
+      expect(screen.getAllByRole('button', { name: /Open the/ })).toHaveLength(1); // the statute only
+    });
+
+    it('says no original was kept', () => {
+      render(<SourceViewer citation={legacy} onClose={vi.fn()} />, { wrapper: LanguageProvider });
+
+      expect(screen.getByText(/No original kept/)).toBeInTheDocument();
+    });
   });
 
-  it('keeps the other buttons usable while one document opens', async () => {
-    server.use(http.get('*/api/docs/locate', () => new Promise(() => {}))); // never answers
+  describe('while one document opens', () => {
     const two: Citation = { ...citation, chunks: [citation.chunks[0], { ...citation.chunks[0], chunk_id: 'c2' }] };
-    render(<SourceViewer citation={two} onClose={vi.fn()} />);
 
-    const [first, second] = screen.getAllByRole('button', { name: /Open the PDF at this passage/ });
-    await userEvent.click(first);
+    beforeEach(() => {
+      server.use(http.get('*/api/docs/locate', () => new Promise(() => {}))); // never answers
+    });
 
-    expect(first).toBeDisabled();
-    expect(second).toBeEnabled();
+    it('makes its button wait', async () => {
+      await openThePassage(two);
+
+      expect(screen.getAllByRole('button', { name: /Open the PDF at this passage/ })[0]).toBeDisabled();
+    });
+
+    it('keeps the other buttons usable', async () => {
+      await openThePassage(two);
+
+      expect(screen.getAllByRole('button', { name: /Open the PDF at this passage/ })[1]).toBeEnabled();
+    });
   });
 
-  it('opens a PDF already on this machine without a download message', async () => {
+  describe('a PDF already on this machine', () => {
     /** The crawl folder or the cache has it: one locate call, straight to the page. */
-    const asked: string[] = [];
-    server.use(
-      http.get('*/api/docs/locate', ({ request }) => {
-        asked.push(new URL(request.url).search);
-        return HttpResponse.json(located);
-      }),
-    );
-    render(<SourceViewer citation={citation} onClose={vi.fn()} />);
+    let asked: string[];
 
-    await userEvent.click(screen.getByRole('button', { name: /Open the PDF at this passage/ }));
+    beforeEach(() => {
+      asked = [];
+      server.use(
+        http.get('*/api/docs/locate', ({ request }) => {
+          asked.push(new URL(request.url).search);
+          return HttpResponse.json(located);
+        }),
+      );
+    });
 
-    expect(await screen.findByText('Page 3, cited passage highlighted.')).toBeInTheDocument();
-    expect(screen.queryByText(/Downloading/)).not.toBeInTheDocument();
-    expect(asked).toEqual(['?chunk_id=c1&download=false']);
+    it('opens at the passage', async () => {
+      await openThePassage();
+
+      expect(await screen.findByText(OPENED)).toBeInTheDocument();
+    });
+
+    it('opens without a download message', async () => {
+      await openThePassage();
+      await screen.findByText(OPENED);
+
+      expect(screen.queryByText(/Downloading/)).not.toBeInTheDocument();
+    });
+
+    it('is located with one call that downloads nothing', async () => {
+      await openThePassage();
+      await screen.findByText(OPENED);
+
+      expect(asked).toEqual(['?chunk_id=c1&download=false']);
+    });
+  });
+
+  describe('a passage not found in its PDF', () => {
+    beforeEach(() => {
+      server.use(http.get('*/api/docs/locate', () => HttpResponse.json(notFound)));
+    });
+
+    it('is reported as not found', async () => {
+      await openThePassage();
+
+      expect(await screen.findByText(NOT_FOUND)).toBeInTheDocument();
+    });
+
+    it('does not open the PDF on its own', async () => {
+      /** Page 1 holds nothing the citation points at: no PDF is shown until the user asks for it. */
+      await openThePassage();
+      await screen.findByRole('button', { name: OPEN_FROM_PAGE_1 });
+
+      expect(screen.queryByTitle(citation.label)).not.toBeInTheDocument();
+    });
+
+    it('opens the PDF from page 1 when asked', async () => {
+      await openThePassage();
+      await userEvent.click(await screen.findByRole('button', { name: OPEN_FROM_PAGE_1 }));
+
+      expect((await screen.findByTitle(citation.label)).getAttribute('src')).toContain('#page=1');
+    });
   });
 });
 
@@ -110,7 +203,8 @@ describe('SourceViewer with supporting sentences', () => {
 
   it('underlines a sentence whose line breaks differ from the chunk text', () => {
     /** Whitespace in the supporting sentence need not match the chunk's line breaks. */
-    render(<SourceViewer citation={twoChunks} onClose={vi.fn()} supporting={{ c1: ['Nockhöjden får vara högst 8 m.'] }} />);
+    render(<SourceViewer citation={twoChunks} onClose={vi.fn()} supporting={{ c1: ['Nockhöjden får vara högst 8 m.'] }} />,
+      { wrapper: LanguageProvider });
 
     expect(underlined().map((text) => text?.replace(/\s+/g, ' '))).toEqual(['Nockhöjden får vara högst 8 m.']);
   });
@@ -118,14 +212,15 @@ describe('SourceViewer with supporting sentences', () => {
   it('skips a supporting sentence that is not in the chunk', () => {
     /** A sentence the chunk does not hold is left out without an error; the ones it holds are underlined. */
     render(<SourceViewer citation={twoChunks} onClose={vi.fn()}
-      supporting={{ c1: ['Byggrätten är 200 kvm.', 'Taket ska vara rött.'] }} />);
+      supporting={{ c1: ['Byggrätten är 200 kvm.', 'Taket ska vara rött.'] }} />, { wrapper: LanguageProvider });
 
     expect(underlined()).toEqual(['Taket ska vara rött.']);
   });
 
   it('underlines a sentence only in the chunk it supports', () => {
     /** Two chunks hold the same sentence; only the chunk the claim cites underlines it. */
-    render(<SourceViewer citation={twoChunks} onClose={vi.fn()} supporting={{ c2: ['Taket ska vara rött.'] }} />);
+    render(<SourceViewer citation={twoChunks} onClose={vi.fn()} supporting={{ c2: ['Taket ska vara rött.'] }} />,
+      { wrapper: LanguageProvider });
 
     expect(underlined()).toEqual(['Taket ska vara rött.']);
   });

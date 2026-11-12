@@ -4,9 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
+import LanguageSwitch from '@/components/LanguageSwitch';
 import { authFetch, storeAccessToken } from '@/lib/auth';
+import { useLanguage } from '@/lib/i18n';
 
 export default function AuthPage() {
+  const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,7 +31,7 @@ export default function AuthPage() {
 
     if (!response.ok) {
       const data = await response.json().catch(() => null);
-      throw new Error(data?.detail || 'Authentication failed');
+      throw new Error(data?.detail || t('auth.failed'));
     }
 
     const token = await response.json();
@@ -52,7 +55,7 @@ export default function AuthPage() {
 
         if (!signupResponse.ok) {
           const data = await signupResponse.json().catch(() => null);
-          throw new Error(data?.detail || 'Authentication failed');
+          throw new Error(data?.detail || t('auth.failed'));
         }
 
         const token = await signupResponse.json();
@@ -71,6 +74,9 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-900 p-4">
       <div className="w-full max-w-md bg-white dark:bg-zinc-800 rounded-2xl shadow-xl p-8">
+        <div className="flex justify-end">
+          <LanguageSwitch />
+        </div>
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 relative rounded-full overflow-hidden mb-4 shadow-sm">
             <Image
@@ -81,17 +87,17 @@ export default function AuthPage() {
             />
           </div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
+            {isLogin ? t('auth.welcomeBack') : t('auth.createAccount')}
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400 text-sm mt-2">
-            {isLogin ? 'Sign in to continue to Pyrmit' : 'Get started with your building permit assistant'}
+            {isLogin ? t('auth.signInLead') : t('auth.signUpLead')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Name</label>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('auth.name')}</label>
               <input
                 type="text"
                 value={name}
@@ -103,7 +109,7 @@ export default function AuthPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Email</label>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('auth.email')}</label>
             <input
               type="email"
               value={email}
@@ -114,7 +120,7 @@ export default function AuthPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Password</label>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">{t('auth.password')}</label>
             <input
               type="password"
               value={password}
@@ -136,7 +142,7 @@ export default function AuthPage() {
             disabled={loading}
             className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}
+            {loading ? t('auth.processing') : (isLogin ? t('auth.signIn') : t('auth.signUp'))}
           </button>
         </form>
 
@@ -145,7 +151,7 @@ export default function AuthPage() {
             onClick={() => setIsLogin(!isLogin)}
             className="text-sm text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
-            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+            {isLogin ? t('auth.toSignUp') : t('auth.toSignIn')}
           </button>
         </div>
       </div>

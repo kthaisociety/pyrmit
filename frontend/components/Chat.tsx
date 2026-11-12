@@ -24,6 +24,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
+import { fill, type LanguageState, useLanguage } from '@/lib/i18n';
 import ChunkCard from '@/components/ChunkCard';
 import PipelineTrace, { type PipelineEvent, type RetrievedChunk } from '@/components/PipelineTrace';
 import SourceViewer, { type Citation } from '@/components/SourceViewer';
@@ -80,12 +81,14 @@ interface ChatProps {
   user: { name: string } | null;
 }
 
+type Translate = LanguageState['t'];
+
 const EXAMPLE_PROMPTS = [
-  "Can I build 20 apartments in Södermalm?",
-  "What does PBL say about building height restrictions?",
-  "Explain detaljplan requirements for commercial buildings",
-  "What are the setback rules for residential construction?",
-];
+  'chat.example.apartments',
+  'chat.example.height',
+  'chat.example.detaljplan',
+  'chat.example.setback',
+] as const;
 
 function extractSseEvents(rawBuffer: string): { events: StreamEvent[]; remainder: string } {
   const normalized = rawBuffer.replace(/\r\n/g, '\n');
@@ -152,9 +155,10 @@ function Choices({ options, offerPin, onChoose, onPin, awaitingPin }: {
   onPin?: () => void;
   awaitingPin?: boolean; // the user clicked "Pin it on the map": the next pin answers the question
 }) {
+  const { t } = useLanguage();
   return (
     <div className="mt-3 space-y-2">
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Answer options">
+    <div className="flex flex-wrap gap-2" role="group" aria-label={t('chat.answerOptions')}>
       {offerPin && onPin && (
         <button
           type="button"
@@ -162,7 +166,7 @@ function Choices({ options, offerPin, onChoose, onPin, awaitingPin }: {
           className="inline-flex items-center gap-1.5 rounded-full bg-zinc-900 px-3.5 py-1.5 text-sm font-medium text-white transition hover:bg-zinc-700 active:scale-[0.97] dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
           <MapPin size={14} aria-hidden />
-          Pin it on the map
+          {t('chat.pinOnMap')}
         </button>
       )}
       {options.map((option) => (
@@ -177,7 +181,7 @@ function Choices({ options, offerPin, onChoose, onPin, awaitingPin }: {
       ))}
     </div>
     <p className="text-xs text-zinc-500 dark:text-zinc-400">
-      {awaitingPin ? 'Click the map to pin the place: it is sent as your answer.' : 'Or type your own answer below.'}
+      {awaitingPin ? t('chat.pinHint') : t('chat.typeOwnAnswer')}
     </p>
     </div>
   );
@@ -281,34 +285,36 @@ function getProcessItems(steps: Step[]): ProcessItem[] {
   return items;
 }
 
-const TOOL_INFO: Record<string, { label: string; icon: typeof Search }> = {
-  find_kommun: { label: 'Kommun', icon: MapPin },
-  search: { label: 'Search', icon: Search },
-  grep: { label: 'Grep', icon: Regex },
-  list_documents: { label: 'Documents', icon: List },
-  read: { label: 'Read', icon: BookOpen },
-  law_section: { label: 'Law', icon: Scale },
-  plans: { label: 'Plans', icon: Layers },
-  plan_rules: { label: 'Plan rules', icon: FileText },
-  view_map_area: { label: 'Map', icon: MapIcon },
-  view_pdf_page: { label: 'PDF page', icon: ImageIcon },
-  embed_query: { label: 'Embed', icon: Sparkles },
-  retrieve_local_corpus: { label: 'Retrieve', icon: Search },
-  retrieve_law_chunks: { label: 'Laws', icon: Scale },
-  retrieve_document_chunks: { label: 'Documents', icon: FileText },
-  law_agent: { label: 'Law agent', icon: Scale },
-  document_agent: { label: 'Document agent', icon: FileText },
+const TOOL_INFO: Record<string, { label: Parameters<Translate>[0]; icon: typeof Search }> = {
+  find_kommun: { label: 'chat.tool.kommun', icon: MapPin },
+  search: { label: 'chat.tool.search', icon: Search },
+  grep: { label: 'chat.tool.grep', icon: Regex },
+  list_documents: { label: 'chat.tool.documents', icon: List },
+  read: { label: 'chat.tool.read', icon: BookOpen },
+  law_section: { label: 'chat.tool.law', icon: Scale },
+  plans: { label: 'chat.tool.plans', icon: Layers },
+  plan_rules: { label: 'chat.tool.planRules', icon: FileText },
+  view_map_area: { label: 'chat.tool.map', icon: MapIcon },
+  view_pdf_page: { label: 'chat.tool.pdfPage', icon: ImageIcon },
+  embed_query: { label: 'chat.tool.embed', icon: Sparkles },
+  retrieve_local_corpus: { label: 'chat.tool.retrieve', icon: Search },
+  retrieve_law_chunks: { label: 'chat.tool.laws', icon: Scale },
+  retrieve_document_chunks: { label: 'chat.tool.documents', icon: FileText },
+  law_agent: { label: 'chat.tool.lawAgent', icon: Scale },
+  document_agent: { label: 'chat.tool.documentAgent', icon: FileText },
 };
 
-function toolInfo(name: string) {
-  return TOOL_INFO[name] ?? {
+function toolInfo(name: string, t: Translate) {
+  const info = TOOL_INFO[name];
+  if (info) return { label: t(info.label), icon: info.icon };
+  return {
     label: name.replace(/_/g, ' ').replace(/^\w/, (char) => char.toUpperCase()),
     icon: Wrench,
   };
 }
 
 // What the call asked for, in one line: the agent sends its arguments as JSON, the RAG pipeline as plain text
-function describeToolCall(name: string, input?: string): { text: string; tags: string[] } {
+function describeToolCall(name: string, t: Translate, input?: string): { text: string; tags: string[] } {
   let args: Record<string, unknown> | null = null;
   try {
     const parsed = JSON.parse(input ?? '');
@@ -338,7 +344,7 @@ function describeToolCall(name: string, input?: string): { text: string; tags: s
     case 'read':
       return {
         text: arg('chunk_id') || arg('doc_id'),
-        tags: tags(!arg('chunk_id') && Number(arg('start')) > 0 ? `from #${arg('start')}` : ''),
+        tags: tags(!arg('chunk_id') && Number(arg('start')) > 0 ? fill(t('chat.call.from'), { start: arg('start') }) : ''),
       };
     case 'law_section':
       return { text: `${arg('law')} ${arg('section')}`, tags: [] };
@@ -347,9 +353,12 @@ function describeToolCall(name: string, input?: string): { text: string; tags: s
     case 'plan_rules':
       return { text: arg('plan_id'), tags: tags(arg('topic')) };
     case 'view_map_area':
-      return { text: `around ${quoted('around')}`, tags: tags(arg('doc_id'), arg('page') && `p. ${arg('page')}`) };
+      return {
+        text: fill(t('chat.call.around'), { place: quoted('around') }),
+        tags: tags(arg('doc_id'), arg('page') && fill(t('chat.call.page'), { page: arg('page') })),
+      };
     case 'view_pdf_page':
-      return { text: arg('doc_id'), tags: tags(`p. ${arg('page') || '1'}`) };
+      return { text: arg('doc_id'), tags: tags(fill(t('chat.call.page'), { page: arg('page') || '1' })) };
     default:
       return { text: Object.values(values).map(String).join(' · '), tags: [] };
   }
@@ -368,12 +377,13 @@ function formatDuration(ms: number): string {
 
 const TOOL_ERROR =/^(Unknown|No kommun|No section|No plan registry|Invalid regex|Bad arguments|Only crawled|PDF file missing)|is not printed as text/;
 
-function plural(count: number, word: string, many = `${word}s`): string {
-  return `${count} ${count === 1 ? word : many}`;
+// "{count} …" in the current language: `one` for exactly 1, `other` for any other count
+function plural(t: Translate, count: number, one: Parameters<Translate>[0], other: Parameters<Translate>[0]): string {
+  return fill(t(count === 1 ? one : other), { count: String(count) });
 }
 
 // What the call returned, in a few words (the agent's result text is cut at 300 characters)
-function summarizeToolCall(item: ProcessItem): { text: string; error: boolean } {
+function summarizeToolCall(item: ProcessItem, t: Translate): { text: string; error: boolean } {
   const result = item.result ?? '';
   const first = result.split('\n')[0].trim();
   if (TOOL_ERROR.test(first)) {
@@ -393,30 +403,30 @@ function summarizeToolCall(item: ProcessItem): { text: string; error: boolean } 
     }
     case 'grep':
       n = count(/^(\d+) matching chunks/);
-      if (n !== null) return { text: plural(n, 'match', 'matches'), error: n === 0 };
+      if (n !== null) return { text: plural(t, n, 'chat.result.matches.one', 'chat.result.matches.other'), error: n === 0 };
       break;
     case 'list_documents':
       n = count(/^(\d+) documents/);
-      if (n !== null) return { text: plural(n, 'document'), error: n === 0 };
+      if (n !== null) return { text: plural(t, n, 'chat.result.documents.one', 'chat.result.documents.other'), error: n === 0 };
       break;
     case 'plans':
       n = count(/^(\d+) of \d+ plans/);
-      if (n !== null) return { text: plural(n, 'plan'), error: n === 0 };
+      if (n !== null) return { text: plural(t, n, 'chat.result.plans.one', 'chat.result.plans.other'), error: n === 0 };
       break;
     case 'plan_rules':
       n = count(/(\d+) provisions:/);
-      if (n !== null) return { text: plural(n, 'rule'), error: false };
-      if (result.includes('No provisions extracted')) return { text: 'no rules extracted', error: true };
+      if (n !== null) return { text: plural(t, n, 'chat.result.rules.one', 'chat.result.rules.other'), error: false };
+      if (result.includes('No provisions extracted')) return { text: t('chat.result.noRules'), error: true };
       break;
     case 'view_map_area':
     case 'view_pdf_page':
-      return { text: 'image', error: false };
+      return { text: t('chat.result.image'), error: false };
   }
 
   if (item.chunks !== undefined) {
     return item.chunks === 0
-      ? { text: 'no results', error: true }
-      : { text: plural(item.chunks, 'passage'), error: false };
+      ? { text: t('chat.result.noResults'), error: true }
+      : { text: plural(t, item.chunks, 'chat.result.passages.one', 'chat.result.passages.other'), error: false };
   }
   return { text: first.length > 40 ? `${first.slice(0, 40)}…` : first, error: false };
 }
@@ -469,9 +479,9 @@ function CollapsibleMetaSection({
   );
 }
 
-const TABLE_LABELS: Record<string, string> = {
-  law: 'Law',
-  document: 'Planning document',
+const TABLE_LABELS: Record<string, Parameters<Translate>[0]> = {
+  law: 'chat.table.law',
+  document: 'chat.table.document',
 };
 
 interface SourceChunk extends RetrievedChunk {
@@ -500,6 +510,7 @@ function getRetrievedChunksBySource(pipeline: PipelineEvent[]): Map<string, Sour
 }
 
 function SourceList({ sources, pipeline }: { sources: string[]; pipeline: PipelineEvent[] }) {
+  const { t } = useLanguage();
   const [selected, setSelected] = useState<string | null>(null);
   const chunksBySource = getRetrievedChunksBySource(pipeline);
   const selectedChunks = selected ? chunksBySource.get(selected) ?? [] : [];
@@ -537,14 +548,14 @@ function SourceList({ sources, pipeline }: { sources: string[]; pipeline: Pipeli
                 chunkIndex={chunk.chunk_index}
                 distance={chunk.distance}
                 content={chunk.content}
-                meta={[TABLE_LABELS[chunk.agent] ?? chunk.agent]}
+                meta={[TABLE_LABELS[chunk.agent] ? t(TABLE_LABELS[chunk.agent]) : chunk.agent]}
                 defaultOpen={selectedChunks.length === 1}
               />
             ))}
           </div>
         ) : (
           <p className="text-xs italic text-zinc-500">
-            No chunk details were recorded for this answer (it was generated before pipeline tracing was added).
+            {t('chat.noChunkDetails')}
           </p>
         )
       )}
@@ -554,6 +565,7 @@ function SourceList({ sources, pipeline }: { sources: string[]; pipeline: Pipeli
 
 // Numbered sources of an agent answer: the same numbers as the [n] in the text, each opens the source panel
 function CitationList({ citations, onOpen }: { citations: Citation[]; onOpen: (citation: Citation) => void }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-1.5 pt-1">
       {citations.map((citation) => (
@@ -566,7 +578,9 @@ function CitationList({ citations, onOpen }: { citations: Citation[]; onOpen: (c
             {citation.n}
           </span>
           <span className="min-w-0 flex-1">{citation.label}</span>
-          <span className="text-zinc-400">{citation.chunks.length} passage{citation.chunks.length > 1 ? 's' : ''}</span>
+          <span className="text-zinc-400">
+            {fill(t(citation.chunks.length > 1 ? 'chat.passages.other' : 'chat.passages.one'), { count: String(citation.chunks.length) })}
+          </span>
         </button>
       ))}
     </div>
@@ -580,6 +594,7 @@ function AnswerDetails({ sources, pipeline, citations, onOpenCitation }: {
   citations: Citation[];
   onOpenCitation: (citation: Citation) => void;
 }) {
+  const { t } = useLanguage();
   const chunkCount = pipeline
     .filter((event) => event.stage === 'retrieval')
     .reduce((total, event) => total + ((event.data.matches as unknown[] | undefined)?.length ?? 0), 0);
@@ -592,23 +607,23 @@ function AnswerDetails({ sources, pipeline, citations, onOpenCitation }: {
     <div className="mt-4 space-y-3">
       {pipeline.length > 0 && (
         <CollapsibleMetaSection
-          badge={`${chunkCount} chunks`}
+          badge={fill(t('chat.chunkCount'), { count: String(chunkCount) })}
           icon={<Microscope size={14} />}
-          title="Inspect pipeline"
+          title={t('chat.inspectPipeline')}
         >
           <PipelineTrace events={pipeline} />
         </CollapsibleMetaSection>
       )}
 
       {citations.length > 0 ? (
-        <CollapsibleMetaSection badge={`${citations.length}`} icon={<FileSearch size={14} />} title="Sources">
+        <CollapsibleMetaSection badge={`${citations.length}`} icon={<FileSearch size={14} />} title={t('chat.sources')}>
           <CitationList citations={citations} onOpen={onOpenCitation} />
         </CollapsibleMetaSection>
       ) : sources.length > 0 && (
         <CollapsibleMetaSection
           badge={`${sources.length}`}
           icon={<FileSearch size={14} />}
-          title="Sources"
+          title={t('chat.sources')}
         >
           <SourceList sources={sources} pipeline={pipeline} />
         </CollapsibleMetaSection>
@@ -621,6 +636,7 @@ function AnswerDetails({ sources, pipeline, citations, onOpenCitation }: {
 const VISIBLE_STEPS = 3;
 
 function ProcessRow({ item, done }: { item: ProcessItem; done: boolean }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
 
   if (item.kind === 'thinking') {
@@ -632,10 +648,10 @@ function ProcessRow({ item, done }: { item: ProcessItem; done: boolean }) {
     );
   }
 
-  const { label, icon: Icon } = toolInfo(item.name);
-  const call = describeToolCall(item.name, item.input);
+  const { label, icon: Icon } = toolInfo(item.name, t);
+  const call = describeToolCall(item.name, t, item.input);
   const title = resultTitle(item);
-  const summary = item.done && item.result !== undefined ? summarizeToolCall(item) : null;
+  const summary = item.done && item.result !== undefined ? summarizeToolCall(item, t) : null;
 
   return (
     <li>
@@ -676,6 +692,7 @@ function ProcessRow({ item, done }: { item: ProcessItem; done: boolean }) {
 // What happens before the answer arrives: the last VISIBLE_STEPS steps, all of them on demand
 // (the finished answer has "Inspect pipeline" instead)
 function LiveProgress({ steps }: { steps: Step[] }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const items = getProcessItems(steps);
   const toolCount = items.filter((item) => item.kind === 'tool').length;
@@ -691,10 +708,10 @@ function LiveProgress({ steps }: { steps: Step[] }) {
     <section className="mb-4 w-[40rem] max-w-full rounded-xl border border-zinc-200 bg-zinc-50/70 dark:border-zinc-700 dark:bg-zinc-900/40">
       <div className="flex items-center gap-2 px-3 py-1.5">
         <Loader2 size={12} className="animate-spin text-zinc-400" />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Process</span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">{t('chat.process')}</span>
         {toolCount > 0 && (
           <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
-            {plural(toolCount, 'tool call')}
+            {plural(t, toolCount, 'chat.toolCalls.one', 'chat.toolCalls.other')}
           </span>
         )}
         {items.length > VISIBLE_STEPS && (
@@ -702,7 +719,7 @@ function LiveProgress({ steps }: { steps: Step[] }) {
             onClick={() => setExpanded((e) => !e)}
             className="ml-auto flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
           >
-            {expanded ? 'Show less' : `Show all ${items.length}`}
+            {expanded ? t('chat.showLess') : fill(t('chat.showAll'), { count: String(items.length) })}
             {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </button>
         )}
@@ -714,7 +731,7 @@ function LiveProgress({ steps }: { steps: Step[] }) {
               onClick={() => setExpanded(true)}
               className="w-full px-1.5 py-0.5 text-left text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
             >
-              + {hidden} earlier step{hidden > 1 ? 's' : ''}
+              {fill(t(hidden > 1 ? 'chat.earlierSteps.other' : 'chat.earlierSteps.one'), { count: String(hidden) })}
             </button>
           </li>
         )}
@@ -746,6 +763,7 @@ function AssistantBubble({
   onPin?: () => void;
   awaitingPin?: boolean;
 }) {
+  const { t } = useLanguage();
   const { body, sources } = parseAssistantContent(message.content);
   const hasBody = Boolean(body.trim());
   const citations = getCitations(message.pipeline ?? []);
@@ -767,7 +785,7 @@ function AssistantBubble({
           <button
             onClick={onCopy}
             className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
-            title="Copy to clipboard"
+            title={t('chat.copy')}
           >
             {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
           </button>
@@ -783,7 +801,7 @@ function AssistantBubble({
       ) : inBackground && hasBody && (
         <div className="mb-2 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
           <Loader2 size={12} className="animate-spin" />
-          Still generating, this updates automatically
+          {t('chat.stillGenerating')}
         </div>
       )}
 
@@ -802,7 +820,7 @@ function AssistantBubble({
         // Before the first step arrives (the progress panel shows the rest)
         <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
           <Loader2 size={14} className="animate-spin" />
-          {inBackground ? 'Still generating, this updates automatically' : 'Starting'}
+          {inBackground ? t('chat.stillGenerating') : t('chat.starting')}
         </div>
       )}
 
@@ -827,6 +845,7 @@ function AssistantBubble({
 }
 
 export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
+  const { t } = useLanguage();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -938,7 +957,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     const from = awaitingPin.from;
     if (from && from.lat === pin.lat && from.lon === pin.lon) return;
     setAwaitingPin(null);
-    void send(`I pinned the place on the map: ${pinLabel}. Assess that place.`, true);
+    void send(fill(t('chat.pinnedMessage'), { place: pinLabel }), true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [awaitingPin, pin, pinLabel]);
 
@@ -1098,7 +1117,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
             console.error('Stream error:', event.message);
             updateLast((msg) => ({
               ...msg,
-              content: msg.content || `Error: ${event.message}`,
+              content: msg.content || fill(t('chat.streamError'), { message: String(event.message) }),
             }));
             break;
         }
@@ -1165,19 +1184,19 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
             <div className="flex flex-col items-center justify-center text-center p-8 mt-20">
               <div className="opacity-50 flex flex-col items-center mb-6">
                 <div className="w-24 h-24 relative rounded-full overflow-hidden mb-4 shadow-sm">
-                  <Image src="/pyrmit_middle.jpg" alt="Pyrmit Logo" fill sizes="96px" className="object-cover" />
+                  <Image src="/pyrmit_middle.jpg" alt={t('chat.logoAlt')} fill sizes="96px" className="object-cover" />
                 </div>
                 <h2 className="text-2xl font-bold mb-2">Pyrmit Agent</h2>
-                <p className="max-w-md">I can help you navigate building permits, zoning laws, and construction regulations.</p>
+                <p className="max-w-md">{t('chat.intro')}</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
                 {EXAMPLE_PROMPTS.map((prompt, i) => (
                   <button
                     key={i}
-                    onClick={() => setInput(prompt)}
+                    onClick={() => setInput(t(prompt))}
                     className="text-left px-4 py-3 text-sm rounded-xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                   >
-                    {prompt}
+                    {t(prompt)}
                   </button>
                 ))}
               </div>
@@ -1236,7 +1255,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
             <button
               type="button"
               onClick={() => setMapOpen((open) => !open)}
-              aria-label={mapOpen ? 'Hide map' : 'Open map'}
+              aria-label={mapOpen ? t('chat.hideMap') : t('chat.openMap')}
               aria-pressed={mapOpen}
               className={`absolute left-2 top-2 bottom-2 px-2.5 rounded-lg transition-transform duration-100 active:scale-95 flex items-center justify-center ${mapOpen ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}
             >
@@ -1246,7 +1265,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about building permits..."
+              placeholder={t('chat.placeholder')}
               className="w-full p-4 pl-14 pr-24 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               disabled={loading || streaming}
             />
@@ -1256,11 +1275,11 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
               className="absolute right-2 top-2 bottom-2 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {(loading || streaming) && <Loader2 size={14} className="animate-spin" />}
-              Send
+              {t('chat.send')}
             </button>
           </form>
           <p className="text-center text-xs text-zinc-400 dark:text-zinc-500 mt-3">
-            Pyrmit can make mistakes. Verify important information.
+            {t('chat.disclaimer')}
           </p>
         </div>
       </div>

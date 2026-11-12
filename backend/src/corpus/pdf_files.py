@@ -15,6 +15,7 @@ with the crawled bytes, 0.2-1.1 s median, 14 s for the largest. Links will die a
 caller then gets None (the agent still has the chunk text).
 """
 
+import json
 import logging
 import os
 import re
@@ -70,6 +71,22 @@ def ocr_path(doc_id: str | None) -> Path | None:
     part.write_bytes(data)
     part.replace(cached)
     return cached
+
+
+def ocr_words(doc_id: str | None, page_index: int) -> list[tuple] | None:
+    """Words corpus.ocr read on page `page_index` (0-based) of a scanned PDF, in reading order, as (pymupdf.Rect,
+    text) in unrotated PDF points like PyMuPDF's get_text("words"). None when the PDF has no OCR output, or one
+    without word boxes (EasyOCR, before 2026-10-23)."""
+    import pymupdf
+
+    path = ocr_path(doc_id)
+    try:
+        words = json.loads(path.read_text(encoding="utf-8")).get("words") if path else None
+    except (OSError, ValueError):
+        return None
+    if not words:
+        return None
+    return [(pymupdf.Rect(x0, y0, x1, y1), text) for number, x0, y0, x1, y1, text, *_ in words if number == page_index]
 
 
 def needs_download(doc_id: str | None, url: str | None) -> bool:

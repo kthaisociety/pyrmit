@@ -1,15 +1,16 @@
 // Unit tests for components/place/PlaceCard.tsx.
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 
 import PlaceCard from '@/components/place/PlaceCard';
 import type { PlaceFeature, PlaceProfile } from '@/lib/place';
+import { LanguageProvider } from '@/lib/i18n';
 
 import { kaboOutside, kungsangen, nothingAround, notCovered, propertyUnavailable, street } from '../../../mocks/place';
 
 function card(profile = kungsangen) {
-  render(createElement(PlaceCard, { profile }));
+  render(createElement(PlaceCard, { profile }), { wrapper: LanguageProvider });
 }
 
 describe('place card', () => {
@@ -82,13 +83,21 @@ describe('place card', () => {
   it('says the property is inside a detaljplan', () => {
     /** A property under a plan in force is marked inside a detaljplan. */
     card();
-    expect(screen.getByText(/inside a detaljplan/i)).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && /^inside a detaljplan$/i.test(element.textContent ?? ''))).toBeInTheDocument();
+  });
+
+  it('in English explains detaljplan on its pill as tooltip', async () => {
+    /** The detaljplan pill keeps "detaljplan" in Swedish, titled with its glossary explanation. */
+    card();
+    const pill = screen.getByText((_, element) => element?.tagName === 'P' && element.textContent === 'Inside a detaljplan');
+
+    await waitFor(() => expect(within(pill).getByText('detaljplan')).toHaveAttribute('title', 'detailed development plan'));
   });
 
   it('says the property is outside a detaljplan', () => {
     /** A property with no plan, in a complete plan source, is marked outside a detaljplan. */
     card(kaboOutside);
-    expect(screen.getByText(/outside a detaljplan/i)).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.tagName === 'P' && /^outside a detaljplan$/i.test(element.textContent ?? ''))).toBeInTheDocument();
   });
 
   it('asks to move the pin when there is no property', () => {
@@ -265,7 +274,7 @@ function withPlans(...changes: Partial<PlaceFeature>[]): PlaceProfile {
 }
 
 function planRows(profile: PlaceProfile) {
-  render(createElement(PlaceCard, { profile }));
+  render(createElement(PlaceCard, { profile }), { wrapper: LanguageProvider });
   return within(screen.getByRole('list', { name: 'Detaljplaner' })).getAllByRole('listitem');
 }
 

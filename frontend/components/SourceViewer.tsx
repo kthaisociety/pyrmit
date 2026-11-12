@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ExternalLink, FileText, Loader2, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
+import { fill, useLanguage } from '@/lib/i18n';
+import Term from '@/components/Term';
 import ChunkCard from '@/components/ChunkCard';
 
 // One numbered source of an agent answer: what "[n]" stands for (pipeline event "citations")
@@ -57,6 +59,12 @@ export async function openPageAtChunk(chunkId: string): Promise<void> {
   else throw new Error('No original page is available for this source.');
 }
 
+// A text with "{kommun}" in it: the word shown as a glossary Term (the English texts keep the Swedish word)
+function WithKommun({ text }: { text: string }) {
+  const [before, after] = text.split('{kommun}');
+  return after === undefined ? <>{text}</> : <>{before}<Term term="kommun" />{after}</>;
+}
+
 // Side panel: the cited chunks, and the original document opened where the chunk is
 // (PDF at its page with the chunk highlighted, or the web page / statute scrolled to it by Chrome).
 // n = 0: not a citation (Database view); autoOpen: open the first chunk's document right away.
@@ -68,10 +76,13 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
   autoOpen?: boolean;
   supporting?: Record<string, string[]>;
 }) {
+  const { t } = useLanguage();
   const [pdf, setPdf] = useState<{ blobUrl: string; url: string; page: number; note: string } | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null); // what the open click is waiting for
   const [error, setError] = useState<string | null>(null);
+  // locate found the chunk's wording on no page of its PDF: the notice, and the PDF to open from page 1 on request
+  const [notFound, setNotFound] = useState<{ chunkId: string; pdfUrl: string } | null>(null);
 
   // The latest click: a slower earlier request (or one for the previous citation) must not replace its result
   const request = useRef(0);
@@ -81,6 +92,7 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
     request.current += 1;
     setPdf(null);
     setError(null);
+    setNotFound(null);
     setLoading(null);
   }, [citation]);
   useEffect(() => () => { if (pdf) URL.revokeObjectURL(pdf.blobUrl); }, [pdf]);
@@ -91,46 +103,28 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const open = async (chunk: CitedChunk) => {
+  // Fetched with the auth header, shown from a blob URL: the browser's PDF viewer opens it at #page
+  const showPdf = async (pdfUrl: string, page: number, view: Location['view'], note: string, mine: number) => {
+    setStatus(t('source.openingPdf'));
+    const file = await authFetch(pdfUrl);
+    if (!file.ok) throw new Error(`PDF failed (${file.status})`);
+    const blob = await file.blob();
+    if (mine !== request.current) return;
+    const blobUrl = URL.createObjectURL(blob);
+    const zoom = view ? `&zoom=${view.zoom},${view.left},${view.top}` : '';
+    // no thumbnail pane: more room for the page
+    setPdf({ blobUrl, url: `${blobUrl}#page=${page}${zoom}&navpanes=0`, page, note });
+  };
+
+  // Runs one open request: the latest click wins, the button of `chunkId` waits meanwhile
+  const run = async (chunkId: string, work: (mine: number) => Promise<void>) => {
     const mine = ++request.current;
-    setLoading(chunk.chunk_id);
+    setLoading(chunkId);
     setStatus(null);
     setError(null);
+    setNotFound(null);
     try {
-      // First ask without downloading: an install without the crawled PDFs (corpus on Neon) fetches the PDF from
-      // the kommun's site, which can take seconds, so the viewer says so before the download starts
-      let location = await locateChunk(chunk.chunk_id, false);
-      if (mine !== request.current) return;
-      if (location.needs_download) {
-        setStatus(`Downloading the PDF from ${location.source_host ?? "the kommun's website"} (first time only, then kept)…`);
-        location = await locateChunk(chunk.chunk_id);
-        if (mine !== request.current) return;
-      }
-      if (location.type === 'pdf' && location.pdf_url) {
-        setStatus('Opening the PDF…');
-        // Fetched with the auth header, shown from a blob URL: the browser's PDF viewer opens it at #page
-        const file = await authFetch(location.pdf_url);
-        if (!file.ok) throw new Error(`PDF failed (${file.status})`);
-        const blob = await file.blob();
-        if (mine !== request.current) return;
-        const blobUrl = URL.createObjectURL(blob);
-        const page = location.page ?? 1;
-        const zoom = location.view ? `&zoom=${location.view.zoom},${location.view.left},${location.view.top}` : '';
-        setPdf({
-          blobUrl,
-          url: `${blobUrl}#page=${page}${zoom}&navpanes=0`, // no thumbnail pane: more room for the page
-          page,
-          note: !location.found
-            ? 'Passage not located in the PDF: opened at the first page.'
-            : location.highlighted
-              ? `Page ${page}, cited passage highlighted.`
-              : `Page ${page} (scanned document: no highlight).`,
-        });
-      } else if (location.type === 'url' && location.url) {
-        window.open(location.url, '_blank', 'noopener,noreferrer');
-      } else {
-        setError('No original document is available for this source.');
-      }
+      await work(mine);
     } catch (exc) {
       if (mine === request.current) setError(exc instanceof Error ? exc.message : String(exc));
     } finally {
@@ -140,6 +134,33 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
       }
     }
   };
+
+  const openFromStart = (chunkId: string, pdfUrl: string) => run(chunkId, (mine) =>
+    showPdf(pdfUrl, 1, null, t('source.openedFromStart'), mine));
+
+  const open = (chunk: CitedChunk) => run(chunk.chunk_id, async (mine) => {
+    // First ask without downloading: an install without the crawled PDFs (corpus on Neon) fetches the PDF from
+    // the kommun's site, which can take seconds, so the viewer says so before the download starts
+    let location = await locateChunk(chunk.chunk_id, false);
+    if (mine !== request.current) return;
+    if (location.needs_download) {
+      setStatus(fill(t('source.downloading'), { host: location.source_host ?? t('source.kommunWebsite') }));
+      location = await locateChunk(chunk.chunk_id);
+      if (mine !== request.current) return;
+    }
+    if (location.type === 'pdf' && location.pdf_url && location.found === false) {
+      // Page 1 holds nothing the citation points at: say so, and open the PDF only when asked
+      setNotFound({ chunkId: chunk.chunk_id, pdfUrl: location.pdf_url });
+    } else if (location.type === 'pdf' && location.pdf_url) {
+      const page = location.page ?? 1;
+      await showPdf(location.pdf_url, page, location.view ?? null,
+        fill(t(location.highlighted ? 'source.pageHighlighted' : 'source.pageNoHighlight'), { page: String(page) }), mine);
+    } else if (location.type === 'url' && location.url) {
+      window.open(location.url, '_blank', 'noopener,noreferrer');
+    } else {
+      setError(t('source.noOriginalDocument'));
+    }
+  });
 
   useEffect(() => {
     if (autoOpen && citation.chunks.length > 0) open(citation.chunks[0]);
@@ -158,7 +179,7 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
             </span>
           )}
           <h2 className="min-w-0 flex-1 text-sm font-semibold text-zinc-800 dark:text-zinc-100">{citation.label}</h2>
-          <button onClick={onClose} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800" title="Close">
+          <button onClick={onClose} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800" title={t('source.close')}>
             <X size={16} />
           </button>
         </header>
@@ -178,11 +199,11 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
                   >
                     {loading === chunk.chunk_id ? <Loader2 size={12} className="animate-spin" /> :
                       chunk.doc_id?.startsWith('pdf:') ? <FileText size={12} /> : <ExternalLink size={12} />}
-                    {chunk.doc_id?.startsWith('pdf:') ? 'Open the PDF at this passage' : 'Open the original at this passage'}
+                    {chunk.doc_id?.startsWith('pdf:') ? t('source.openPdf') : t('source.openOriginal')}
                   </button>
                 ) : (
                   <p className="text-xs italic text-zinc-500 dark:text-zinc-400">
-                    No original kept: this document was added by hand before the crawl, without its file or web address.
+                    {t('source.noOriginalKept')}
                   </p>
                 )}
                 {chunk.url && chunk.doc_id?.startsWith('pdf:') && (
@@ -193,8 +214,19 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
                     title={chunk.url}
                     className="ml-1.5 inline-flex items-center gap-1 text-xs text-blue-600 hover:underline dark:text-blue-400"
                   >
-                    <ExternalLink size={12} /> On the kommun&apos;s website
+                    <ExternalLink size={12} /> <WithKommun text={t('source.onKommunWebsite')} />
                   </a>
+                )}
+                {notFound?.chunkId === chunk.chunk_id && (
+                  <div role="alert" className="space-y-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+                    <p>{t('source.passageNotFound')}</p>
+                    <button
+                      onClick={() => openFromStart(notFound.chunkId, notFound.pdfUrl)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 px-2.5 py-1 hover:border-amber-500 dark:border-amber-700"
+                    >
+                      <FileText size={12} /> {t('source.openFromPage1')}
+                    </button>
+                  </div>
                 )}
                 {loading === chunk.chunk_id && status && (
                   <p role="status" className="text-xs text-zinc-500 dark:text-zinc-400">{status}</p>

@@ -15,6 +15,8 @@ from shapely.errors import GEOSException
 from shapely.geometry import Point, mapping, shape
 from shapely.validation import make_valid
 
+from answer_language import Language
+from glossary import explained
 from place import live, plan_layers
 from place.permits import likely_permits
 from place.plan_links import polygon_key
@@ -38,16 +40,53 @@ logger = logging.getLogger(__name__)
 CORPUS_LOOKUP_SECONDS = 8
 _corpus_worker = ThreadPoolExecutor(max_workers=1, thread_name_prefix="corpus-documents")
 ROLE_ORDER = {"plankarta": 0, "planbeskrivning": 1}
-DOCUMENTS_UNAVAILABLE = "The plan documents could not be read from the corpus right now: the plans are listed without them."
-NOT_A_DECISION = ("Registry data, not a decision: the adopted plan documents and the authorities' decisions are "
-                  "binding.")
-STRANDSKYDD = {
-    "status": "not_checked",
-    "reason": "Not checked: the länsstyrelser's strandskydd services could not be reached, and the general 100 m "
-              "strandskydd is not published as data.",
-    "note": "A strandskyddsdispens (MB 7 kap. 18 b §) may be needed within 100 m of a shoreline, unless the "
-            "detaljplan lifts the strandskydd.",
+# The profile's user-facing texts per page language; English ones get their glossary explanations in _texts
+_TEXTS: dict[Language, dict[str, str]] = {
+    "en": {
+        "not_a_decision": "Registry data, not a decision: the adopted plan documents and the authorities' decisions "
+                          "are binding.",
+        "documents_unavailable": "The plan documents could not be read from the corpus right now: the plans are "
+                                 "listed without them.",
+        "plan_layer_only": "Only {name} kommun's plan layer is checked here: no property, land-use zones or plans in "
+                           "progress.",
+        "no_plan_in_layer": "No plan was found in {name} kommun's plan layer at this point. The layer is not known to "
+                            "hold every plan in force, so an older plan may still apply.",
+        "strandskydd_reason": "Not checked: the länsstyrelser's strandskydd services could not be reached, and the "
+                              "general 100 m strandskydd is not published as data.",
+        "strandskydd_note": "A strandskyddsdispens (MB 7 kap. 18 b §) may be needed within 100 m of a shoreline, "
+                            "unless the detaljplan lifts the strandskydd.",
+        "not_covered": "This place is not covered yet.",
+    },
+    "sv": {
+        "not_a_decision": "Registeruppgifter, inget beslut: det är de antagna plandokumenten och myndigheternas "
+                          "beslut som gäller.",
+        "documents_unavailable": "Plandokumenten kunde inte läsas från korpusen just nu: planerna listas utan dem.",
+        "plan_layer_only": "Här kontrolleras bara {name} kommuns planlager: ingen fastighet, inga "
+                           "markanvändningszoner och inga pågående planer.",
+        "no_plan_in_layer": "Ingen plan hittades i {name} kommuns planlager på den här platsen. Lagret är inte känt "
+                            "för att innehålla alla gällande planer, så en äldre plan kan fortfarande gälla.",
+        "strandskydd_reason": "Inte kontrollerat: länsstyrelsernas tjänster för strandskydd gick inte att nå, och det "
+                              "generella strandskyddet på 100 m publiceras inte som data.",
+        "strandskydd_note": "Strandskyddsdispens (MB 7 kap. 18 b §) kan behövas inom 100 m från strandlinjen, om "
+                            "inte detaljplanen upphäver strandskyddet.",
+        "not_covered": "Den här platsen täcks inte ännu.",
+    },
 }
+NOT_A_DECISION = _TEXTS["en"]["not_a_decision"]
+
+
+def _texts(language: Language) -> dict[str, str]:
+    """The profile's texts in `language`, English ones with their glossary explanations (unformatted placeholders
+    such as {name} are left as they are)."""
+    texts = _TEXTS[language]
+    return {key: explained(text) for key, text in texts.items()} if language == "en" else texts
+
+
+def _strandskydd(language: Language, **override: str) -> dict:
+    texts = _texts(language)
+    return {"status": "not_checked", "reason": texts["strandskydd_reason"], "note": texts["strandskydd_note"]} | override
+
+
 SECTIONS = (*SECTION_KINDS, "ancient_remains")
 
 ANCIENT_REMAINS_RADIUS_M = 30         # without a property: remains this close to the pin
@@ -122,12 +161,14 @@ def _section_status(status_of: dict[str, str]) -> dict[str, str]:
             else "unavailable" for section, kind in SECTION_KINDS.items()}
 
 
-def _not_covered(lat: float, lon: float) -> dict:
+def _not_covered(lat: float, lon: float, language: Language) -> dict:
+    texts = _texts(language)
     return {"point": {"lat": lat, "lon": lon}, "kommun": None, "covered": False, "property": None,
             "property_status": "not_covered", "detaljplan": "unknown", "plans": [], "zones": [],
             "pending_plans": [], **{section: [] for section in SECTIONS},
-            "strandskydd": STRANDSKYDD | {"reason": "This place is not covered yet."}, "permits": [],
-            "section_status": dict.fromkeys(SECTIONS, "not_covered"), "layers": [], "notes": [NOT_A_DECISION]}
+            "strandskydd": _strandskydd(language, reason=texts["not_covered"]), "permits": [],
+            "section_status": dict.fromkeys(SECTIONS, "not_covered"), "layers": [],
+            "notes": [texts["not_a_decision"]]}
 
 
 def _around_pin(point, lat: float):
@@ -225,7 +266,8 @@ def _documents_of(matched: list[dict], found: dict[str, dict]) -> list[dict]:
 
 
 def _with_documents(rows: list[dict], links: dict[str, list[dict]],
-                    corpus_documents: Callable[[list[str]], dict[str, dict]]) -> tuple[list[dict], list[str]]:
+                    corpus_documents: Callable[[list[str]], dict[str, dict]],
+                    language: Language) -> tuple[list[dict], list[str]]:
     """The plan rows with their documents (place.plan_links) as the corpus holds them, and the notes that go with them:
     one when the corpus could not be reached, which leaves the rows without documents."""
     matched_of = [links.get(polygon_key(row) or "", []) for row in rows]
@@ -247,11 +289,11 @@ def _with_documents(rows: list[dict], links: dict[str, list[dict]],
                           "corpus_documents": documents, "text_status": status,
                           "read_with": [{"ref": ref, "corpus_documents": _documents_of(links.get(ref, []), found)}
                                         for ref in read_with]})
-    return out, [DOCUMENTS_UNAVAILABLE] if unavailable else []
+    return out, [_texts(language)["documents_unavailable"]] if unavailable else []
 
 
 def _plan_layer_profile(lat: float, lon: float, code: str, store: PlaceStore,
-                        corpus_documents: Callable[[list[str]], dict[str, dict]]) -> dict:
+                        corpus_documents: Callable[[list[str]], dict[str, dict]], language: Language) -> dict:
     """The profile of a point in a kommun whose plan layer place.plan_layers snapshotted: the plans at the point
     from that layer, nothing else looked up."""
     name = next(kommun["name"] for kommun in store.kommuner() if kommun["code"] == code)
@@ -262,22 +304,21 @@ def _plan_layer_profile(lat: float, lon: float, code: str, store: PlaceStore,
                                       "licence": meta.get("licence"), "geometry": mapping(geometry),
                                       "corpus_plan_id": None, "provisions_indexed": False}
         for props, geometry in store.features(code, plan_layers.LAYER_ID, point)]), store.plan_links(code),
-        corpus_documents)
-    notes = [NOT_A_DECISION, (f"Only {name} kommun's plan layer is checked here: no property, land-use zones or plans "
-                              "in progress."), *document_notes]
+        corpus_documents, language)
+    texts = _texts(language)
+    notes = [texts["not_a_decision"], texts["plan_layer_only"].format(name=name), *document_notes]
     if not plans:
-        notes.append(f"No plan was found in {name} kommun's plan layer at this point. The layer is not known to hold "
-                     "every plan in force, so an older plan may still apply.")
+        notes.append(texts["no_plan_in_layer"].format(name=name))
     profile = {"point": {"lat": lat, "lon": lon}, "kommun": {"code": code, "name": name}, "covered": True,
                "property": None, "property_status": "not_covered",
                "detaljplan": "inside" if plans else "unknown", "plans": plans, "zones": [], "pending_plans": [],
-               **{section: [] for section in SECTIONS}, "strandskydd": dict(STRANDSKYDD),
+               **{section: [] for section in SECTIONS}, "strandskydd": _strandskydd(language),
                "section_status": dict.fromkeys(SECTIONS, "not_covered"),
                "layers": [{"id": plan_layers.LAYER_ID, "title": meta.get("title"), "provider": meta.get("provider"),
                            "licence": meta.get("licence"), "fetched": meta.get("fetched"),
                            "status": meta.get("status", "unavailable")}],
                "notes": notes}
-    return profile | {"permits": likely_permits(profile)}
+    return profile | {"permits": likely_permits(profile, language)}
 
 
 def _layer_rows(store: PlaceStore, code: str, layer: Layer, meta: dict, point, area) -> list[dict]:
@@ -295,7 +336,8 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
                   corpus_documents: Callable[[list[str]], dict[str, dict]] | None = None,
                   property_at: Callable[[str, float, float], dict | None] | None = None,
                   plan_registry: Callable[[str], list[dict]] | None = None,
-                  ancient_remains_at: Callable[[dict], list[dict]] | None = None) -> dict:
+                  ancient_remains_at: Callable[[dict], list[dict]] | None = None,
+                  language: Language = "en") -> dict:
     """Place profile of a point in WGS84. `store`, `property_at` (code, lon, lat), `plan_registry` (kommun code
     -> plan records of data/corpus/plans.jsonl) and `ancient_remains_at` (GeoJSON geometry -> register features,
     see place.live) default to the snapshots, the live property service, the corpus registry and Riksantikvarieämbetet.
@@ -335,6 +377,12 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
     - "layers": [{"id", "title", "provider", "licence", "fetched", "status"}] for every layer consulted
     - "notes": user-facing caveats, the first one NOT_A_DECISION
 
+    `language` ("sv" or "en", the page language the user chose) is the language of the user-facing texts: every note,
+    the strandskydd reason and note, and each permit's title and reason (likely_permits). Registry values (names,
+    designations, refs, codes, dates, laws, authorities) and every key stay the same in both. In English a Swedish
+    domain term in those texts stays in Swedish and is followed by its English explanation from glossary.GLOSSARY in
+    parentheses on its first use in each text; in Swedish no explanation is added.
+
     Every row of plans, zones, pending_plans, protected_areas, natura2000, national_interests and ancient_remains
     is a feature of `place.sources.feature` (`place.plan_layers.feature` in a plan-layer kommun) plus "source"
     (provider), "fetched" (snapshot date) and "geometry" (GeoJSON). Plans also carry "page" (the plan's page link,
@@ -362,9 +410,9 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
     store = store or default_store()
     code = store.kommun_at(lon, lat)
     if code is None:
-        return _not_covered(lat, lon)
+        return _not_covered(lat, lon, language)
     if code not in PILOTS:
-        return _plan_layer_profile(lat, lon, code, store, corpus_documents or hosted_documents)
+        return _plan_layer_profile(lat, lon, code, store, corpus_documents or hosted_documents, language)
 
     kommun = PILOTS[code]["name"]
     found, property_status = _property(code, lon, lat, property_at or live.property_at)
@@ -392,7 +440,7 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
         _without_share(row) | {"page": row["url"], "documents": [], "licence": meta.get(row["layer"], {}).get("licence")}
         | _corpus_match(_plan_key(row["name"], kommun), plans_by_key, pages.get(row["ref"]), plans_by_page)
         for kind in PLAN_KINDS for row in rows.get(kind, [])]), store.plan_links(code),
-        corpus_documents or hosted_documents)
+        corpus_documents or hosted_documents, language)
 
     remains, remains_entry = _ancient_remains(ancient_remains_at or live.ancient_remains_at,
                                               area if found else _around_pin(point, lat))
@@ -406,6 +454,7 @@ def build_profile(lat: float, lon: float, *, store: PlaceStore | None = None,
                "zones": sorted(rows.get("zone", []), key=lambda row: row["share"], reverse=True),
                "pending_plans": [_without_share(row) for row in rows.get("plan_pending", [])
                                  if (row["status"] or "").lower() not in FINISHED_STAGES],
-               **sections, "ancient_remains": remains, "strandskydd": dict(STRANDSKYDD),
-               "section_status": section_status, "layers": consulted, "notes": [NOT_A_DECISION, *document_notes]}
-    return profile | {"permits": likely_permits(profile)}
+               **sections, "ancient_remains": remains, "strandskydd": _strandskydd(language),
+               "section_status": section_status, "layers": consulted,
+               "notes": [_texts(language)["not_a_decision"], *document_notes]}
+    return profile | {"permits": likely_permits(profile, language)}

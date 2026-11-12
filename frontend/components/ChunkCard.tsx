@@ -2,6 +2,7 @@
 
 import { ReactNode, useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { fill, useLanguage } from '@/lib/i18n';
 
 export interface ChunkCardProps {
   source: string;
@@ -25,8 +26,6 @@ function distanceTone(distance: number): string {
   if (distance < 0.65) return 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300';
   return 'bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300';
 }
-
-const UNDERLINE_TITLE = 'Supports a claim in the answer';
 
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -52,13 +51,14 @@ function mergeOverlapping(ranges: [number, number][]): [number, number][] {
 
 // `content` with each of the sentences it holds underlined
 function Underlined({ content, sentences }: { content: string; sentences: string[] }) {
+  const { t } = useLanguage();
   const found = sentences.map((sentence) => findSentence(content, sentence)).filter((range) => range !== null);
   const parts: ReactNode[] = [];
   let pos = 0;
   for (const [start, end] of mergeOverlapping(found)) {
     parts.push(content.slice(pos, start));
     parts.push(
-      <u key={start} title={UNDERLINE_TITLE} className="decoration-emerald-500 decoration-2 underline-offset-2">
+      <u key={start} title={t('source.supportsClaim')} className="decoration-emerald-500 decoration-2 underline-offset-2">
         {content.slice(start, end)}
       </u>,
     );
@@ -79,6 +79,7 @@ export default function ChunkCard({
   actions,
   underline = [],
 }: ChunkCardProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(defaultOpen);
   const preview = content.replace(/\s+/g, ' ').slice(0, 220);
 
@@ -99,7 +100,7 @@ export default function ChunkCard({
             <span className="truncate font-medium text-zinc-800 dark:text-zinc-100">{source}</span>
             {chunkIndex !== undefined && chunkIndex !== null && (
               <span className="rounded-full bg-zinc-100 px-1.5 py-0.5 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-                chunk {chunkIndex}
+                {fill(t('source.chunk'), { index: String(chunkIndex) })}
               </span>
             )}
             {meta.map((item) => (
@@ -111,7 +112,7 @@ export default function ChunkCard({
               </span>
             ))}
             {distance !== undefined && distance !== null && (
-              <span className={`rounded-full px-1.5 py-0.5 font-mono ${distanceTone(distance)}`} title="Cosine distance (lower = closer)">
+              <span className={`rounded-full px-1.5 py-0.5 font-mono ${distanceTone(distance)}`} title={t('source.distance')}>
                 d={distance.toFixed(3)}
               </span>
             )}
