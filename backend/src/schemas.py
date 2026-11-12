@@ -186,6 +186,7 @@ class AnalyzeRequest(BaseModel):
     location: str | None = None
     project_type: str | None = None
     units: int | None = None
+    language: Literal["sv", "en"] = "en"  # the analysis' text fields; no question text decides it here
 
 
 class AnalyzeResponse(BaseModel):
