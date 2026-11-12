@@ -1,6 +1,8 @@
 import logging
 import os
 import threading
+from contextlib import asynccontextmanager
+
 from dotenv import load_dotenv
 
 # Must run before any module that reads env vars at import time
@@ -23,15 +25,16 @@ from logging_config import setup_logging
 setup_logging()
 logger = logging.getLogger(__name__)
 
-# Create tables
-Base.metadata.create_all(bind=engine)
 
-# create_all never alters existing tables: add columns introduced after a table was created
-_message_columns = {column["name"] for column in inspect(engine).get_columns("chat_messages")}
-for _column, _type in (("trace", "JSONB"), ("status", "VARCHAR")):
-    if _column not in _message_columns:
-        with engine.begin() as connection:
-            connection.execute(text(f"ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS {_column} {_type}"))
+def _create_tables() -> None:
+    Base.metadata.create_all(bind=engine)
+
+    # create_all never alters existing tables: add columns introduced after a table was created
+    message_columns = {column["name"] for column in inspect(engine).get_columns("chat_messages")}
+    for column, column_type in (("trace", "JSONB"), ("status", "VARCHAR")):
+        if column not in message_columns:
+            with engine.begin() as connection:
+                connection.execute(text(f"ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS {column} {column_type}"))
 
 
 def _check_embedding_config() -> None:
@@ -52,10 +55,6 @@ def _check_embedding_config() -> None:
             if comment and comment != config.label:
                 logger.error("%s was embedded with %s but the app uses %s", table, comment, config.label)
 
-
-_check_embedding_config()
-
-app = FastAPI()
 
 
 def _preload_local_corpus() -> None:
@@ -84,8 +83,17 @@ def _open_corpus_database() -> None:
             logger.exception("Opening the corpus database failed")
 
 
-_open_corpus_database()
-threading.Thread(target=_preload_local_corpus, name="preload-local-corpus", daemon=True).start()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Database work runs at startup, not on import, so `import main` works without a database (the CI image check)."""
+    _create_tables()
+    _check_embedding_config()
+    _open_corpus_database()
+    threading.Thread(target=_preload_local_corpus, name="preload-local-corpus", daemon=True).start()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.middleware("http")

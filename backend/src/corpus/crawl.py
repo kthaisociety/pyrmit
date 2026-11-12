@@ -34,12 +34,12 @@ from urllib.parse import unquote, urldefrag, urljoin, urlparse
 from urllib.robotparser import RobotFileParser, RuleLine
 
 import httpx
-import trafilatura
 import truststore
-from lxml import etree
-from lxml import html as lxml_html
 
 from corpus.common import MUNICIPALITIES_PATH, USER_AGENT, WEB_DIR, stable_id
+
+# lxml and trafilatura are in the corpus extra, which the server image does not install. The server imports this
+# module (routers.pipeline -> corpus.ocr -> corpus.extract), so they are imported in the functions that use them.
 
 # Keyword weights, matched on ASCII-folded, lowercased URL path + link text + title
 _KEYWORDS = {
@@ -163,6 +163,8 @@ def robots_parser(text: str) -> RobotFileParser:
 
 def parse_sitemap(content: bytes):
     """Sitemap XML, gzipped or not; a stray non-UTF-8 byte made lxml drop all of Luleå's sitemap."""
+    from lxml import etree  # the corpus extra, see the top of the module
+
     if content[:2] == b"\x1f\x8b":
         content = gzip.decompress(content)
     content = re.sub(rb"^\s*<\?xml[^>]*\?>", b"", content).decode("utf-8", "replace").encode("utf-8")
@@ -408,6 +410,10 @@ class KommunCrawler:
         self.push(url, "pdf", max(score, 1) + page_score // 2, anchor, source, depth)
 
     async def process_page(self, task: Task) -> None:
+        import trafilatura  # the corpus extra, see the top of the module
+        from lxml import etree
+        from lxml import html as lxml_html
+
         response = await self.get(task.url)
         if response is None or response.status_code != 200:
             return
@@ -620,6 +626,9 @@ class KommunCrawler:
 
     async def pdf_links_of(self, url: str) -> None:
         """The PDF links of one page, judged as in process_page (the page itself is not stored again)."""
+        from lxml import etree  # the corpus extra, see the top of the module
+        from lxml import html as lxml_html
+
         response = await self.get(url)
         if response is None or response.status_code != 200 or "html" not in response.headers.get("content-type", ""):
             return
