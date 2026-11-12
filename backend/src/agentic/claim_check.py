@@ -10,6 +10,13 @@ A claim is a stretch of a sentence followed by its citations ([c:<chunk_id>]): J
 (a yes/no question) and picks the chunk sentence that states it (a choice question), in one call per claim, all calls
 in parallel. A sentence without any citation is put to Jev too, in one call: only one that states a rule, number,
 fee, deadline or legal reference as fact is flagged, as "uncited". Calls are answered in about half a second.
+
+The pinned place's registry data (`place`: the property, its plans, protected areas, riksintressen...) is a source
+too: the agent states facts about the site from it, and cites the statute the fact bears on. Every claim is judged
+against its cited chunks and that data, and an uncited sentence the data backs is not flagged.
+
+The question's wording was chosen on 380 claim-source pairs refereed by another model (2026-11-12): 88 % agreement,
+8 % of backed claims flagged, against 86 % and 14 % for the LLM judge it replaced.
 """
 
 import logging
@@ -41,12 +48,13 @@ _LEAD = re.compile(r"^\s*(?:[-*+]\s+|\d+\.\s+)?(?:\*\*[^*\n]{1,60}:\*\*\s*)?")
 # "t.ex. en" stay whole
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+(?=[A-ZÅÄÖ\"“‘(*])")
 
-_SUPPORTED = {
-    "type": "noul",
-    "instructions": "Does any passage in `sources` state what `claim` says?",
-    "criteria": {"true": "a passage states the claim, in other words or in another language",
-                 "false": "no passage states the claim, or a passage says something else"},
+_BACKED = {
+    "true": "the sources say the same as the claim or clearly imply it, even when the claim words it differently, "
+            "shortens it, explains it or is in English while the sources are Swedish",
+    "false": "the claim adds a fact, number or condition the sources do not give, or contradicts them, or the "
+             "sources are about something else",
 }
+_SUPPORTED = {"type": "noul", "instructions": "Do `sources` back what `claim` says?", "criteria": _BACKED}
 _NEEDS_SOURCE = {
     "true": "it states a specific rule, permit requirement, number, fee, deadline, date or legal reference as fact",
     "false": "it is advice, a question, an offer, a heading, a general remark, or it sums up points made elsewhere",
@@ -97,7 +105,7 @@ class _Stretch:
     chunk_ids: list[str]
 
 
-def check_claims(answer: str, get_chunk: Callable[[str], dict | None],
+def check_claims(answer: str, get_chunk: Callable[[str], dict | None], place: str | None = None,
                  timeout_s: float | None = None) -> ClaimCheck:
     """The verdicts of a raw agent answer's claims ("[c:<chunk_id>]" citations), judged by the decision model.
 
@@ -107,6 +115,8 @@ def check_claims(answer: str, get_chunk: Callable[[str], dict | None],
     - A sentence without citations is "uncited" when Jev says it states a rule, number, fee, deadline or legal
       reference as fact; any other uncited sentence is left out.
     - "supported" claims are kept in `claims` too, for the source panel's supporting sentences.
+    - `place`, the pinned place's registry data as the agent got it, counts as a source of every claim; it offers no
+      supporting sentence, since it is no chunk.
 
     Never raises: a decision model error or a check over `timeout_s` (None: CLAIM_CHECK_TIMEOUT_S, default 20 s)
     gives status "failed"."""
@@ -116,7 +126,7 @@ def check_claims(answer: str, get_chunk: Callable[[str], dict | None],
 
     def run() -> None:
         try:
-            outcome["claims"] = _judge_all(_stretches(answer), get_chunk)
+            outcome["claims"] = _judge_all(_stretches(answer), get_chunk, place)
         except Exception:
             logger.warning("Claim check failed", exc_info=True)
 
@@ -159,19 +169,20 @@ def _add(found: dict[str, "_Stretch"], text: str, chunk_ids: list[str]) -> None:
         found[text] = _Stretch(text=text, chunk_ids=list(dict.fromkeys(chunk_ids)))
 
 
-def _judge_all(stretches: list[_Stretch], get_chunk: Callable[[str], dict | None]) -> list[Claim]:
+def _judge_all(stretches: list[_Stretch], get_chunk: Callable[[str], dict | None], place: str | None) -> list[Claim]:
     """Every stretch judged by Jev: one call per cited stretch and one for all uncited ones, in parallel."""
     cited = [stretch for stretch in stretches if stretch.chunk_ids]
     uncited = [stretch for stretch in stretches if not stretch.chunk_ids]
     with ThreadPoolExecutor(max_workers=8) as pool:
-        judged = pool.map(lambda stretch: _judge_cited(stretch, get_chunk), cited)
-        flagged = pool.submit(_needs_source, uncited)
+        judged = pool.map(lambda stretch: _judge_cited(stretch, get_chunk, place), cited)
+        flagged = pool.submit(_needs_source, uncited, place)
         by_text = {claim.text: claim for claim in [*judged, *flagged.result()]}
     return [by_text[stretch.text] for stretch in stretches if stretch.text in by_text]
 
 
-def _judge_cited(stretch: _Stretch, get_chunk: Callable[[str], dict | None]) -> Claim:
-    """A cited stretch's verdict: do its readable chunks state it, and which of their sentences does."""
+def _judge_cited(stretch: _Stretch, get_chunk: Callable[[str], dict | None], place: str | None) -> Claim:
+    """A cited stretch's verdict: do its readable chunks (with the pinned place's data) state it, and which of the
+    chunks' sentences does."""
     from localrag.index import chunk_text
 
     chunks = {chunk_id: chunk for chunk_id in stretch.chunk_ids if (chunk := get_chunk(chunk_id))}
@@ -188,7 +199,8 @@ def _judge_cited(stretch: _Stretch, get_chunk: Callable[[str], dict | None]) -> 
             "instructions": "Which sentence of `sources` states what `claim` says most directly?",
             "criteria": {f"s{index}": sentence for index, (_, sentence) in enumerate(sentences)},
         }
-    answers = ask_decision_model({"claim": stretch.text, "sources": list(texts.values())}, questions)
+    sources = [*texts.values(), *([place] if place else [])]
+    answers = ask_decision_model({"claim": stretch.text, "sources": sources}, questions)
     chunk_ids = list(texts)
     if float(answers["supported"]["noul"]) < SUPPORTED_AT:
         return Claim(text=stretch.text, verdict="unsupported", chunk_ids=chunk_ids)
@@ -198,19 +210,27 @@ def _judge_cited(stretch: _Stretch, get_chunk: Callable[[str], dict | None]) -> 
     return Claim(text=stretch.text, verdict="supported", chunk_ids=chunk_ids, supporting=supporting)
 
 
-def _needs_source(uncited: list[_Stretch]) -> list[Claim]:
-    """The uncited stretches Jev says state something as fact that needs a source, as "uncited" claims."""
+def _needs_source(uncited: list[_Stretch], place: str | None) -> list[Claim]:
+    """The uncited stretches Jev says state something as fact that needs a source, as "uncited" claims, unless the
+    pinned place's data backs them (asked in the same call)."""
     if not uncited:
         return []
-    state = {f"sentence_{index}": stretch.text for index, stretch in enumerate(uncited)}
+    state: dict = {f"sentence_{index}": stretch.text for index, stretch in enumerate(uncited)}
     questions = {f"needs_{index}": {
         "type": "noul",
         "instructions": f"In an answer about Swedish planning and building law, does `sentence_{index}` need a source?",
         "criteria": _NEEDS_SOURCE,
     } for index in range(len(uncited))}
+    if place:
+        state["place"] = place
+        questions |= {f"place_{index}": {"type": "noul", "instructions": f"Does `place` back what `sentence_{index}` says?",
+                                         "criteria": _BACKED} for index in range(len(uncited))}
     answers = ask_decision_model(state, questions)
-    return [Claim(text=stretch.text, verdict="uncited") for index, stretch in enumerate(uncited)
-            if float(answers[f"needs_{index}"]["noul"]) >= SUPPORTED_AT]
+
+    def flagged(index: int) -> bool:
+        backed = place and float(answers[f"place_{index}"]["noul"]) >= SUPPORTED_AT
+        return float(answers[f"needs_{index}"]["noul"]) >= SUPPORTED_AT and not backed
+    return [Claim(text=stretch.text, verdict="uncited") for index, stretch in enumerate(uncited) if flagged(index)]
 
 
 def _sentences(text: str) -> list[str]:

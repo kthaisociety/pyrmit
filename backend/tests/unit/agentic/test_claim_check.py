@@ -142,6 +142,37 @@ def test_an_answer_without_claims_has_none(jev):
     assert (check("Ja.").claims, fake.calls) == ([], [])
 
 
+# --- the pinned place's data as a source ------------------------------------------------------------------------
+
+PLACE = "Property: Uppsala Kvarngärdet 27:2. Protected areas: Vattenskyddsområde Uppsala- och Vattholmaåsarna."
+SITE_FACT = "The property lies in the water protection area of Uppsala- och Vattholmaåsarna"
+
+
+def test_a_claim_is_judged_against_its_chunks_and_the_place_data(jev):
+    """The agent states site facts from the pinned place's data and cites the statute: both are the claim's sources."""
+    fake = jev(supported={HOUSE: 0.9})
+    check(f"{HOUSE} [c:{A}].", place=PLACE)
+    [state] = [state for state, _ in fake.calls if state.get("claim") == HOUSE]
+    assert state["sources"] == [chunk_text(CHUNKS[A]), PLACE]
+
+
+def test_an_uncited_site_fact_the_place_data_backs_is_not_flagged(jev):
+    jev(needs_source={SITE_FACT: 0.9}, place_backs={SITE_FACT: 0.9})
+    assert check(f"{SITE_FACT}.", place=PLACE).claims == []
+
+
+def test_an_uncited_site_fact_the_place_data_does_not_back_is_flagged(jev):
+    jev(needs_source={SITE_FACT: 0.9}, place_backs={SITE_FACT: 0.1})
+    assert [claim.verdict for claim in check(f"{SITE_FACT}.", place=PLACE).claims] == ["uncited"]
+
+
+def test_without_a_pin_the_place_is_not_asked_about(jev):
+    fake = jev(needs_source={SITE_FACT: 0.9})
+    check(f"{SITE_FACT}.")
+    [(_, questions)] = fake.calls
+    assert not any(name.startswith("place_") for name in questions)
+
+
 # --- speed and failure ----------------------------------------------------------------------------------------
 
 def test_the_answer_is_not_rewritten(jev):

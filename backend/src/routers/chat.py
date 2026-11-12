@@ -40,7 +40,7 @@ from observability import (
     start_observation,
 )
 from pipeline_trace import CallRecorder, recorded_chat_completion, response_usage
-from place.context import compact_profile, question_with_place
+from place.context import compact_profile, place_context, question_with_place
 import schemas
 
 logger = logging.getLogger(__name__)
@@ -98,9 +98,10 @@ def _makes_claims(run, asked: bool) -> bool:
     return not asked and run is not None and getattr(run, "mode", None) != OFF_TOPIC
 
 
-def _check_claims(run) -> dict:
+def _check_claims(run, place: str | None = None) -> dict:
     """The claim check of an agent run's answer (agentic.claim_check.check_claims, issue #82): the data of its
-    "claim_check" pipeline event. A cited id the agent shortened is resolved against the chunks it read."""
+    "claim_check" pipeline event. A cited id the agent shortened is resolved against the chunks it read; `place`, the
+    pinned place's registry data the agent was given, counts as a source of the answer's facts about the site."""
     from agentic.service import get_tools
     from agentic.tools import resolve_cited
 
@@ -109,7 +110,7 @@ def _check_claims(run) -> dict:
     def get_chunk(chunk_id: str) -> dict | None:
         return resolve_cited(tools.get_chunk, chunk_id, run.seen_chunks)
 
-    return check_claims(run.answer, get_chunk).as_event()
+    return check_claims(run.answer, get_chunk, place).as_event()
 
 
 def _agent_output_for_trace(output: dict) -> dict:
@@ -481,11 +482,13 @@ def chat_stream(
 
                     answered = request.answer_to_question
                     question = question_with_place(original_content, None, answered=answered)
+                    place = None
                     if pinned:
                         yield _sse({"type": "thinking", "label": "Looking up the pinned place"})
                         profile = place_profile(pinned.lat, pinned.lon)
                         yield emit("place", pin=pinned.model_dump(), profile=compact_profile(profile))
                         question = question_with_place(original_content, profile, law_text, answered=answered)
+                        place = place_context(profile)
 
                     outcome = yield from stream_agent(question, history, record, _sse,
                                                       flush=lambda: list(emit_calls()), allow_ask=not answered)
@@ -507,7 +510,7 @@ def chat_stream(
                     run = outcome.get("run")
                     if _makes_claims(run, asked):
                         yield _sse({"type": "thinking", "label": "Checking the claims"})
-                        yield emit("claim_check", **_check_claims(run))
+                        yield emit("claim_check", **_check_claims(run, place))
                     yield _sse({"type": "response.completed"})
                     yield _sse({"type": "done", "session_id": session_id})
                     return

@@ -37,6 +37,7 @@ def _jsonb_as_json(element, compiler, **kw):
 import agentic.service
 import models
 from agentic.agent import AgentRun
+from agentic.claim_check import ClaimCheck
 from agents.base import BaseRAGAgent
 from answer_language import LANGUAGE_RULE, REWRITE_LANGUAGE_INSTRUCTION
 from db.database import get_db
@@ -556,6 +557,16 @@ def test_the_check_sends_only_its_verdicts(checked_chat, jev):
     sent = [event.get("stage", event["type"]) for event in stream_events(checked_chat)
             if event["type"] == "answer_replaced" or event.get("stage") == "claim_check"]
     assert sent == ["claim_check"]
+
+
+def test_the_check_gets_the_pinned_place_data(monkeypatch):
+    """The place data the agent was given is passed to the claim check as a source."""
+    given = {}
+    monkeypatch.setattr(agentic.service, "get_tools", lambda: types.SimpleNamespace(get_chunk=get_chunk))
+    monkeypatch.setattr(chat, "check_claims", lambda answer, get, place=None: given.update(place=place)
+                        or ClaimCheck(status="checked"))
+    chat._check_claims(types.SimpleNamespace(answer=RAW, seen_chunks=[A]), "Property: Uppsala Kvarngärdet 27:2.")
+    assert given["place"] == "Property: Uppsala Kvarngärdet 27:2."
 
 
 def test_a_question_back_to_the_user_is_not_checked(checked_chat, jev):

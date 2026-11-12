@@ -35,12 +35,15 @@ def get_chunk(chunk_id: str) -> dict | None:
 class FakeJev:
     """The decision model, scripted: `supported` maps a claim's text to the probability that its sources state it
     (0 when absent), `needs_source` an uncited sentence's text to the probability that it needs a source (0 when
-    absent). The sentence choice picks the first sentence. `error` is raised on every call; `delay` (s) stalls each.
+    absent), `place_backs` an uncited sentence's text to the probability that the pinned place's data backs it. The
+    sentence choice picks the first sentence. `error` is raised on every call; `delay` (s) stalls each.
     `calls` holds every (state, questions) sent."""
 
-    def __init__(self, supported=None, needs_source=None, error: BaseException | None = None, delay: float = 0.0):
+    def __init__(self, supported=None, needs_source=None, place_backs=None, error: BaseException | None = None,
+                 delay: float = 0.0):
         self.supported = supported or {}
         self.needs_source = needs_source or {}
+        self.place_backs = place_backs or {}
         self.error, self.delay = error, delay
         self.calls: list[tuple] = []
         self._lock = threading.Lock()
@@ -57,8 +60,10 @@ class FakeJev:
             if "sentence" in questions:
                 answers["sentence"] = {"type": "choice", "choice": next(iter(questions["sentence"]["criteria"]))}
             return answers
-        return {name: {"type": "noul", "noul": self.needs_source.get(state[f"sentence_{name.split('_')[1]}"], 0.0)}
-                for name in questions}
+        def noul(name: str) -> float:
+            text = state[f"sentence_{name.split('_')[1]}"]
+            return (self.place_backs if name.startswith("place_") else self.needs_source).get(text, 0.0)
+        return {name: {"type": "noul", "noul": noul(name)} for name in questions}
 
     def claims_asked(self) -> list[str]:
         """The cited claims put to the model, in no particular order."""
