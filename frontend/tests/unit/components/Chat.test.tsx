@@ -502,12 +502,12 @@ describe('typing while an answer is on its way', () => {
 
   async function streaming() {
     const push = liveStream();
-    chat();
+    const view = chat();
     await ask();
     push({ type: 'session_id', session_id: 's9' });
     push({ type: 'response.output_text.delta', delta: 'The first part.' });
     await screen.findByText(/The first part/);
-    return push;
+    return Object.assign(push, { view });
   }
 
   it('takes the next question while the answer streams', async () => {
@@ -521,26 +521,54 @@ describe('typing while an answer is on its way', () => {
 
   it('does not send the next question before the answer is done', async () => {
     /** Send stays off and Enter does nothing until the answer is finished; the typed question is kept. */
+    let posts = 0;
     await streaming();
+    server.use(http.post('*/api/chat/stream', () => {
+      posts += 1;
+      return sse({ type: 'done', session_id: 's9' });
+    }));
 
     await userEvent.type(screen.getByPlaceholderText(INPUT), 'And in Uppsala?{Enter}');
 
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
-    expect(screen.queryByText('And in Uppsala?', { selector: 'p, div' })).not.toBeInTheDocument();
+    expect(posts).toBe(0);
     expect(screen.getByPlaceholderText(INPUT)).toHaveValue('And in Uppsala?');
   });
 
-  it('sends the typed question once the answer is done', async () => {
-    /** When the answer finishes, the question written meanwhile can be sent as it stands. */
+  it('sends the typed question once the answer is done, in the same new chat', async () => {
+    /** The question written meanwhile goes out as it stands, in the session the first answer created, with it. */
     server.use(http.get('*/api/sessions/s9', () => HttpResponse.json([])));
     const push = await streaming();
     await userEvent.type(screen.getByPlaceholderText(INPUT), 'And in Uppsala?');
-
     push({ type: 'response.completed' });
     push({ type: 'done', session_id: 's9' });
     push(null);
+    // The page passes the new session back, as onSessionCreated makes it do
+    push.view.rerender(createElement(Chat, { sessionId: 's9', onSessionCreated: () => undefined, user: { name: 'anna' } }));
+    const sent: { session_id?: string; messages?: { role: string; content: string }[] }[] = [];
+    server.use(http.post('*/api/chat/stream', async ({ request }) => {
+      sent.push(await request.json() as (typeof sent)[number]);
+      return sse({ type: 'done', session_id: 's9' });
+    }));
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0].session_id).toBe('s9');
+    expect(sent[0].messages?.at(-1)).toEqual({ role: 'user', content: 'And in Uppsala?' });
+    expect(sent[0].messages?.some((m) => m.content.includes('The first part.'))).toBe(true);
+  });
+
+  it('does not send while a reopened answer is still being checked', async () => {
+    /** An answer left to finish in the background (saved as streaming) keeps Send off until it is done. */
+    history(answer(2, [CITATIONS], { status: 'streaming' }));
+    chat('s1');
+    await screen.findByText('Checking claims…');
+
+    await userEvent.type(screen.getByPlaceholderText(INPUT), 'And in Uppsala?');
+
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
   });
 });
 
