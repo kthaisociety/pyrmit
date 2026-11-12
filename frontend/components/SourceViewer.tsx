@@ -128,27 +128,27 @@ export default function SourceViewer({ citation, onClose, autoOpen = false }: {
 
   const open = (chunk: CitedChunk) => run(chunk.chunk_id, async (mine) => {
     // First ask without downloading: an install without the crawled PDFs (corpus on Neon) fetches the PDF from
-      // the kommun's site, which can take seconds, so the viewer says so before the download starts
-      let location = await locateChunk(chunk.chunk_id, false);
+    // the kommun's site, which can take seconds, so the viewer says so before the download starts
+    let location = await locateChunk(chunk.chunk_id, false);
+    if (mine !== request.current) return;
+    if (location.needs_download) {
+      setStatus(`Downloading the PDF from ${location.source_host ?? "the kommun's website"} (first time only, then kept)…`);
+      location = await locateChunk(chunk.chunk_id);
       if (mine !== request.current) return;
-      if (location.needs_download) {
-        setStatus(`Downloading the PDF from ${location.source_host ?? "the kommun's website"} (first time only, then kept)…`);
-        location = await locateChunk(chunk.chunk_id);
-        if (mine !== request.current) return;
-      }
-      if (location.type === 'pdf' && location.pdf_url && location.found === false) {
-        // Page 1 holds nothing the citation points at: say so, and open the PDF only when asked
-        setNotFound({ chunkId: chunk.chunk_id, pdfUrl: location.pdf_url });
-      } else if (location.type === 'pdf' && location.pdf_url) {
-        const page = location.page ?? 1;
-        await showPdf(location.pdf_url, page, location.view ?? null, location.highlighted
-          ? `Page ${page}, cited passage highlighted.`
-          : `Page ${page} (no highlight: the passage's position on the page is unknown).`, mine);
-      } else if (location.type === 'url' && location.url) {
-        window.open(location.url, '_blank', 'noopener,noreferrer');
-      } else {
-        setError('No original document is available for this source.');
-      }
+    }
+    if (location.type === 'pdf' && location.pdf_url && location.found === false) {
+      // Page 1 holds nothing the citation points at: say so, and open the PDF only when asked
+      setNotFound({ chunkId: chunk.chunk_id, pdfUrl: location.pdf_url });
+    } else if (location.type === 'pdf' && location.pdf_url) {
+      const page = location.page ?? 1;
+      await showPdf(location.pdf_url, page, location.view ?? null, location.highlighted
+        ? `Page ${page}, cited passage highlighted.`
+        : `Page ${page} (no highlight: the passage's position on the page is unknown).`, mine);
+    } else if (location.type === 'url' && location.url) {
+      window.open(location.url, '_blank', 'noopener,noreferrer');
+    } else {
+      setError('No original document is available for this source.');
+    }
   });
 
   useEffect(() => {
