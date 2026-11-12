@@ -878,9 +878,14 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     followRef.current = scrollHeight - scrollTop - clientHeight <= FOLLOW_THRESHOLD_PX;
   };
 
-  // At once, not smoothly: a smooth scroll still under way would read as the reader having scrolled up
+  // The conversation at its latest message, at once (ADR-0016)
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+  };
+
+  // From now on new content scrolls the conversation down, whatever the reader had scrolled to
+  const followLatest = () => {
+    followRef.current = true;
   };
 
   useEffect(() => {
@@ -918,7 +923,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   };
 
   useEffect(() => {
-    followRef.current = true; // another chat opens at its latest message
+    followLatest();
     if (abortRef.current && sessionId !== streamSessionRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
@@ -977,7 +982,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     const trimmedInput = text.trim();
     if (!trimmedInput || loading) return;
 
-    followRef.current = true; // the reader sees the question they sent and its answer
+    followLatest();
     const userMsg: Message = { role: 'user', content: trimmedInput };
     const newHistory = [...messages, userMsg];
     const placeholder: Message = { role: 'assistant', content: '', steps: [] };
