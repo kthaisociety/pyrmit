@@ -20,6 +20,7 @@ from agents.orchestrator import Orchestrator
 from agents.parsers import format_response, parse_query
 from db.database import SessionLocal, get_db
 from dependencies import get_current_user
+from agentic.claim_check import verify_answer
 from agentic.service import agent_enabled
 from localrag.service import SWEDISH_QUERY_SUFFIX, local_backend_enabled, retrieve as local_retrieve, split_rewrite
 from llm import (
@@ -346,7 +347,14 @@ def chat_stream(
     """The chat's streamed answer (SSE). In the agent mode a pinned place (request.place) is the place the question
     is about: its place profile goes before the question (place.context.question_with_place) and is saved as the "place"
     pipeline event of the answer's trace, {"pin": {"lat", "lon", "label"}, "profile": compact_profile}, which is how
-    the chat session keeps its place (ADR-0004). Without a pin the question gets place.context.NO_PIN_HINT."""
+    the chat session keeps its place (ADR-0004). Without a pin the question gets place.context.NO_PIN_HINT.
+
+    Claim check (issue #82): once the agent's answer has streamed, the stream says {"type": "thinking", "label":
+    "Checking the claims"} and the answer goes through agentic.claim_check.verify_answer; the message stays "streaming"
+    until the check is done. A rewritten answer is sent as {"type": "answer_replaced", "content": <the numbered answer
+    with its source list>} (only when the text changed) and saved as the message's content; the "citations" event
+    numbers the final answer. The verdicts are saved as the "claim_check" pipeline event, ClaimCheck.as_event(). A
+    question back to the user (the agent's choices or offer_pin) is not checked and has no "claim_check" event."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 

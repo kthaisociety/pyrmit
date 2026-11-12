@@ -35,12 +35,22 @@ export function linkCitations(body: string): string {
   return grouped.replace(MARKS, (_: string, n: string) => CHIP(n));
 }
 
+// A claim of the answer that its sources do not back after the claim check (issue #82). `text` is an exact
+// substring of the answer without citation markers.
+export interface ClaimFlag {
+  text: string;
+  verdict: 'unsupported' | 'uncited';
+}
+
 // Markdown answer whose [n] citations are chips opening the cited source (onOpen); used by the chat and the
-// benchmark view
+// benchmark view. Each flag's text is marked in the answer (<mark>, titled "Not supported by the cited sources" or
+// "No source cited" by its verdict); a flag whose text is not in the answer is listed below it instead, as
+// "Unchecked claim: <text>" with the same title.
 export default function CitedMarkdown({ body, citations, onOpen }: {
   body: string;
   citations: Citation[];
   onOpen: (citation: Citation) => void;
+  flags?: ClaimFlag[];
 }) {
   return (
     <ReactMarkdown
