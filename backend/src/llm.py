@@ -1,11 +1,18 @@
 import os
 from typing import Any, Iterable
 
+import httpx
 from openai import OpenAI
 
 VERCEL_AI_GATEWAY_BASE_URL = "https://ai-gateway.vercel.sh/v1"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 _CHAT_PROVIDERS = {"openai", "gateway", "openrouter"}
+# The decision model (TypeSafe Jev): answers fixed questions with probabilities instead of writing text, through
+# OpenRouter's System One endpoint with the OpenRouter key. DECISION_MODEL overrides the model id.
+SYSTEM_ONE_URL = f"{OPENROUTER_BASE_URL}/systemone"
+DEFAULT_DECISION_MODEL = "typesafe/jev-1.14"
+DECISION_TIMEOUT_S = 10.0  # one decision model call; Jev answers in about half a second
+_DECISION_RETRY_STATUS = {429, 500, 502, 503, 504, 529}  # answered once more: rate limit or an overloaded server
 
 
 def _get_ai_gateway_key() -> str:
@@ -90,3 +97,26 @@ def get_openai_client() -> OpenAI:
     # The SDK default (600 s per read, 2 retries) let a stalled OpenRouter stream block a benchmark worker for
     # 30 min; LLM_TIMEOUT_S bounds the wait for each response / stream chunk, not the whole answer
     return OpenAI(api_key=api_key, base_url=base_url, timeout=float(os.getenv("LLM_TIMEOUT_S", "180")), max_retries=1)
+
+
+def decision_model() -> str:
+    """The decision model's id: DECISION_MODEL, else DEFAULT_DECISION_MODEL."""
+    return os.getenv("DECISION_MODEL", "").strip() or DEFAULT_DECISION_MODEL
+
+
+def ask_decision_model(state: Any, questions: dict[str, dict],
+                       timeout_s: float = DECISION_TIMEOUT_S) -> dict[str, dict]:
+    """Ask the decision model `questions` about `state` (System One format: a question's `instructions` name state
+    fields in backticks; types "noul" (yes/no), "choice" and "score") and return its answers by question name, e.g.
+    {"supported": {"type": "noul", "noul": 0.87}}. A rate limit or server error (429, 5xx) is asked once more.
+    Raises RuntimeError without an OpenRouter key and httpx.HTTPError when the call fails or takes longer than
+    `timeout_s`."""
+    key = (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_KEY") or "").strip()
+    if not key:
+        raise RuntimeError("OPENROUTER_API_KEY is required for the decision model")
+    body = {"model": decision_model(), "state": state, "questions": questions}
+    response = httpx.post(SYSTEM_ONE_URL, json=body, headers={"Authorization": f"Bearer {key}"}, timeout=timeout_s)
+    if response.status_code in _DECISION_RETRY_STATUS:
+        response = httpx.post(SYSTEM_ONE_URL, json=body, headers={"Authorization": f"Bearer {key}"}, timeout=timeout_s)
+    response.raise_for_status()
+    return response.json()["answers"]

@@ -4,6 +4,8 @@
 import json
 from types import SimpleNamespace
 
+import pytest
+
 from agentic import agent
 from agentic.agent import AgentRun, AskedQuestion
 from tests.unit.agentic.test_agent_images import FakeCall
@@ -150,3 +152,53 @@ def test_a_run_that_can_ask_keeps_the_asking_rule(monkeypatch):
     monkeypatch.setattr(agent, "get_openai_client", lambda: Client())
     agent.run_agent("Can I build a shed?", tools=None, model="test/model")
     assert agent.ASK_GUIDE in given[0]
+
+
+# --- answer first, ask only when it cannot answer (#99) ----------------------------------------------------------------
+
+def flat(text: str) -> str:
+    """`text` with its line breaks and runs of spaces as single spaces: the rule's wording, not its wrapping."""
+    return " ".join(text.split())
+
+
+ASK = flat(agent.ASK_GUIDE)
+
+def test_the_rule_says_to_answer_whenever_a_useful_answer_is_possible():
+    """Asking is the exception: the agent answers whenever it can."""
+    assert "If you can give the user a useful answer" in ASK and "answer: do not ask" in ASK
+
+
+def test_the_rule_lays_out_routes_instead_of_asking_for_a_measure():
+    """A size, height, use or number is answered with the routes, not asked for."""
+    assert "lay out the few routes" in ASK and "for a size, height, distance, use or number: give the routes instead" in ASK
+
+
+def test_the_rule_asks_only_for_the_place_what_to_build_or_an_ambiguous_name():
+    """Three facts may still bring a question card, and the list holds no others."""
+    asked_for = ASK.split("only for these facts:")[1].split("Do not ask:")[0]
+    facts = [item.split(":")[0].split(",")[0].strip() for item in asked_for.split(" - ")[1:]]
+    assert facts == ["the place", "what is to be built or done", "which kommun a place name means"]
+
+
+@pytest.mark.parametrize("question", ["Behöver jag bygglov för en altan?", "Vi vill bygga några hus på gården i Knivsta",
+                                      "Får jag byta fönster på mitt hus?"])
+def test_the_rule_answers_the_examples_of_the_ticket(question):
+    """The ticket's examples that used to get a card are named as ones to answer."""
+    answered = ASK.split("Ask with ask_user")[0]
+    assert question in answered
+
+
+@pytest.mark.parametrize("question", ["Kan jag bygga ett hus här?", "Kan jag bygga det?"])
+def test_the_rule_still_asks_on_the_examples_of_the_ticket(question):
+    """Without a place or without a project the agent still asks."""
+    assert question in ASK.split("only for these facts:")[1]
+
+
+def test_the_tool_is_described_as_a_last_resort():
+    """The model reads the tool's own description too: it says to answer unless no answer is possible."""
+    assert "only when no useful answer is possible" in agent.ASK_USER_TOOL["description"]
+
+
+def test_a_specific_question_a_general_rule_answers_gets_the_rule_and_a_pin_offer():
+    """Without a pin, a question the general rule answers is answered, with the detaljplan caveat and a pin offer."""
+    assert "answer with that rule" in agent.PIN_GUIDE and "detaljplan may change it" in agent.PIN_GUIDE

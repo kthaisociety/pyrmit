@@ -232,7 +232,7 @@ Backend (`backend/.env`), names as read by the code:
 - `RETRIEVAL_BACKEND` (pgvector | local) + `LOCAL_RAG_MODEL` / `LOCAL_RAG_MODE` / `LOCAL_RAG_DENSE_QUERY` / `LOCAL_RAG_RERANKER` -- the chat's retrieval (`localrag/service.py`)
 - `LOCAL_RAG_STORE` (disk | neon | memory, PCR-0005), `CORPUS_DATABASE_URL` (the hosted corpus, Neon branch `demo`), `CORPUS_DATA_DIR` (corpus folder relative to `backend/`, default `data`)
 - `CHAT_MODE` (rag | agent) + `AGENT_MODEL`, `AGENT_EFFORT` (final answer, medium), `AGENT_EXPLORE_EFFORT` (tool turns, medium), `AGENT_MAX_STEPS` (10)
-- `CLAIM_CHECK_MODEL` (default `AGENT_MODEL`), `CLAIM_CHECK_EFFORT` (low), `CLAIM_CHECK_TIMEOUT_S` (60) -- the live claim check of agent answers (`agentic/claim_check.py`)
+- `DECISION_MODEL` (default `typesafe/jev-1.14`, through OpenRouter's System One endpoint with `OPENROUTER_API_KEY` / `OPENROUTER_KEY`), `CLAIM_CHECK_TIMEOUT_S` (20) -- the live claim check of agent answers (`agentic/claim_check.py`)
 - `PDF_CACHE_DIR` (default `data/cache/pdf`) -- crawled PDFs downloaded from their URL when the crawl folder lacks them
 - `HF_HUB_DISABLE_XET=1` -- Hugging Face downloads can hang on Windows without it
 - `MISTRAL_API_KEY` -- PDF OCR
@@ -285,7 +285,7 @@ Frontend (`frontend/.env`):
 - `reports/` -- the benchmark, technical, hosting and place-evaluation reports (generated into `../pyrmit_doc/` by `agentic.report`, `agentic.report_technical`, `place.report`: copy them here after regenerating) and the hand-written architecture report and status deck (HTML, printed to PDF with headless Chrome)
 - `backend/src/place/` -- `sources.py` (layers, attribute mapping, pilot kommuner), `fetch.py` (snapshot CLI), `registry.py` (`plan_sources.json`, built from the survey in `docs/research/`), `plan_layers.py`, `plan_links.py`, `review.py` (review mode, ADR-0008), `store.py` (`PlaceStore`, STRtree per layer), `live.py`, `profile.py` (`build_profile`), `permits.py`, `context.py` (the place as text for the agent), `geocode.py`, `check_sources.py` / `check_search.py` / `bench_answers.py` / `bench.py` / `report.py` (the evaluation, see Place Lookup)
 - `backend/src/localrag/` -- `analyzer.py` (Swedish BM25 tokens), `gazetteer.py`, `index.py` (VectorStore), `store.py` (disk store), `retriever.py` (`LocalRetriever`), `service.py` (chat integration), `eval.py` + `questions.jsonl`, `rewrite_queries.py`, `models.toml`, `pg_store.py` (the hosted corpus: loader + `PgStore` / `PgRetriever`). Never `pip install` a package that depends on torch without the CUDA index
-- `backend/src/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat integration, `CitationNumberer`), `claim_check.py` (live claim check of a chat answer: `verify_answer`), `run.py` (CLI), `bench.py` + `cases*.jsonl`, `cases_from_caselaw.py`, `cases_from_corpus.py`, `cases_from_plans.py`, `rejudge.py`, `grounding.py`, `health.py`, `replay.py`, `coverage.py`, `report.py` / `report_technical.py` (PDF reports)
+- `backend/src/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat integration, `CitationNumberer`), `claim_check.py` (live claim check of a chat answer by the decision model Jev: `check_claims`), `run.py` (CLI), `bench.py` + `cases*.jsonl`, `cases_from_caselaw.py`, `cases_from_corpus.py`, `cases_from_plans.py`, `rejudge.py`, `grounding.py`, `health.py`, `replay.py`, `coverage.py`, `report.py` / `report_technical.py` (PDF reports)
 - `backend/src/corpus/` -- the offline corpus steps (see Offline Corpus): `common.py` (paths: `BACKEND_DIR` = `backend/`, `DATA_ROOT` from `CORPUS_DATA_DIR`), `municipalities.py`, `laws.py`, `crawl.py`, `ocr.py` + `ocr_engines.py` (run in `backend/.venv-ocr`), `extract.py`, `pdf_filter.py`, `chunk.py`, `plans.py`, `check.py`, `snapshot.py`, `caselaw.py` (MÖD rulings for the case benchmark, not searchable), `pdf_files.py` (where the serving code reads crawled PDFs and OCR outputs: crawl folder, else a cache filled from the PDF's URL)
 - `backend/src/db/database.py` -- SQLAlchemy engine + `get_db` session factory
 - `backend/src/db/push_db.py` -- `PushDB` class: psycopg2 inserts into chunk tables
@@ -421,7 +421,7 @@ The frontend uses `POST /api/chat/stream` (SSE); `POST /api/chat` runs the same 
 3. A model call rewrites the latest message as a standalone English query (location, units and project type from the last 5 messages) and decides the answer language on a first `LANG: sv|en` line (`answer_language.split_language`, ADR-0011).
 4. `parse_query` extracts location, units and project type by regex.
 5. Location or units missing: general RAG, the query embedded once, the top `RAG_TOP_K` law and document chunks, an answer in markdown in the question's language, given the question as the user wrote it, quoting Swedish verbatim (PCR-0006), and a Sources list. Both present: `Orchestrator.analyze` runs LawAgent and DocumentAgent in parallel and applies fixed rules for the verdict; its texts and `format_response` follow the decided language.
-6. SSE events: `session_id`, `thinking`, `tool_call` / `tool_result`, `pipeline`, `response.output_text.delta`, `answer_replaced` (agent mode: the answer rewritten by the claim check, whole), `response.completed`, `done` (or `error`). `relay()` sends a `: keep-alive` comment after 10 s idle (`SSE_HEARTBEAT_S`), since the Next.js dev proxy drops a stream idle for 30 s; the frontend aborts after 45 s without bytes (`STREAM_STALL_MS`) and reloads the session.
+6. SSE events: `session_id`, `thinking`, `tool_call` / `tool_result`, `pipeline`, `response.output_text.delta`, `response.completed`, `done` (or `error`). `relay()` sends a `: keep-alive` comment after 10 s idle (`SSE_HEARTBEAT_S`), since the Next.js dev proxy drops a stream idle for 30 s; the frontend aborts after 45 s without bytes (`STREAM_STALL_MS`) and reloads the session.
 7. The worker updates the assistant message from the events: partial content every 2 s, then the final content, its `trace` (every pipeline event) and status `done` (or `error`).
 
 `pipeline` events (`{type: "pipeline", stage, data}`) feed the inspector: `translation`, `intent`, `retrieval` (matched chunks with source, distance, content), `agent_output`, `verdict`, and `call` (one per model, embedding or search call: model, prompts, output, token usage incl. reasoning tokens and the OpenRouter cost, duration), captured by a `CallRecorder` passed to the agents. They are saved in `chat_messages.trace` (~20-60 KB per answer), so a reopened conversation keeps its inspector and sources.
@@ -689,10 +689,19 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
 
 ## Agentic RAG (`CHAT_MODE=agent`)
 
-**Question card (#91).** When the conclusion turns on facts only the user can give (place, use, a size or height
-against a threshold, what is to be built, which of two places), the agent asks instead of guessing: `ask_user` takes
+**Off-topic answers (#102).** A question outside Swedish planning, building and land law (small talk, adjacent topics
+the corpus lacks, unrelated questions) gets the fifth mode, `off_topic` (`agent.OFF_TOPIC`): `answer_ready` first, no
+tools, no headings or citations, never a question card (`OFF_TOPIC_GUIDE`). Small talk and adjacent questions get a
+short answer; an unrelated question gets a polite decline ("Det ligger utanför vad jag hjälper till med ..."). A rule question the
+corpus does not cover gets no answer in substance, only who can answer it; a mixed question stays a planning answer.
+The chat skips the claim check for an `off_topic` run, as for a question card.
+
+**Question card (#91, narrowed in #99).** The agent answers whenever it can, laying out the routes where an unknown
+fact decides (a size, height, use or number); it asks only when no useful answer is possible without the user: the
+place of their own case when the answer turns wholly on it, what is to be built, or which kommun a place name means.
+A specific question a general rule answers (windows, a pond) gets that rule, the detaljplan caveat and a pin offer. `ask_user` takes
 1-3 `questions` (each `question` + 0-4 `options`, none for an open question) and `offer_pin`, and ends the run with
-`AgentRun.questions`. The rule is the "Asking instead of guessing" part of `MODES_GUIDE`; `ASK_LANGUAGE_REMINDER` follows
+`AgentRun.questions`. The rule is `ASK_GUIDE` ("Answer first, ask only when you cannot answer"), appended to `MODES_GUIDE`; `ASK_LANGUAGE_REMINDER` follows
 each turn's tool results so the card stays in the user's language. The chat saves the card as the `choices` pipeline
 event `{questions, offer_pin}` (an open question too) and skips the claim check; `frontend/components/QuestionCard.tsx`
 shows it with an "Other" field per question, one reply message for the whole card, locked once answered (old saved
@@ -727,14 +736,23 @@ each model turn and tool call is recorded for the inspector ("Explore (agent)" s
 `response.output_text.delta` with citations numbered on the fly (`CitationNumberer`: one number per source label,
 partial `c:` ids and open `[...]` groups held back until complete, repeats merged); the numbered source list
 ("- [n] label") is appended at the end and a `citations` pipeline event maps each n to its label and cited chunks.
-Then the claim check (`agentic/claim_check.py`, `verify_answer`, issue #82) runs, except on a question back to the user:
-a judge lists the answer's factual claims and judges each against the full text of its cited chunks (supported /
-unsupported / uncited, with the supporting sentences); unsupported and uncited claims go back once to a rewrite that
-may re-cite any chunk the agent read or remove the claim, and the rewritten answer is judged again. The stream says
-"Checking the claims" meanwhile (the message stays `streaming`), sends a rewritten answer as `answer_replaced`, and
-saves the verdicts as the `claim_check` pipeline event (`{status: checked | failed, claims}`, ADR-0004). The chat marks
-the claims still not supported, and says "The claims in this answer could not be checked." when the check failed
-(model error, `CLAIM_CHECK_TIMEOUT_S`, a cited chunk that cannot be read). Answers saved before the check show neither.
+Then the claim check (`agentic/claim_check.py`, `check_claims`, issue #82) runs, except on a question back to the user
+or an off-topic answer. It uses the decision model Jev (`llm.ask_decision_model`, about half a second per call, one
+retry on 429/5xx), not a chat model. A claim runs from a line's start (or the previous claim) to the end of the sentence
+holding a citation group, so a citation after the full stop or mid-sentence backs the whole sentence. Each claim goes
+to Jev with the full text of its cited chunks and the pinned place's registry data (the property, plans, protected
+areas, riksintressen: the agent states site facts from it and cites the statute), as a yes/no question ("do sources
+back what claim says?", backed from 0.5) plus a choice of the chunk sentence that states it (the supporting sentence).
+The sentences without a citation go in one call, and only those Jev says state a rule, number, fee, deadline or legal
+reference as fact, and the place data does not back, are flagged "uncited". All calls run on one shared pool of 16; a
+call that fails or misses `CLAIM_CHECK_TIMEOUT_S` costs only its own claims. A cited id that cannot be read makes the
+claim "uncited". Headings, table rows and text holding brackets are not judged. The answer is never rewritten. The
+stream sends the `citations` event first (the chips work during the check), then "Checking the claims" (the message
+stays `streaming`), then the verdicts as the `claim_check` pipeline event (`{status: checked | failed, claims}`,
+ADR-0004). The chat marks each flagged claim with a dotted underline and a ⚠ that shows its reason, with one line under
+the answer explaining the marking. It says "The claims in this answer could not be checked." when no call succeeded.
+Answers saved before the check show neither. Jev's wording was chosen on 380 claim-source pairs refereed by another
+model (2026-11-12): 88 % agreement, against 86 % for the LLM judge it replaced.
 The source panel a citation chip opens underlines, in each cited chunk, the supporting sentences of every claim that
 cites it (`SourceViewer`'s `supporting` prop, ADR-0015, issue #84); an answer without a check result shows no underline.
 The answer format asks for the law reference in the sentence and `[c:id]` right after the claim, never nested.

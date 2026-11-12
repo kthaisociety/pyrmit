@@ -71,7 +71,6 @@ interface StreamEvent {
   message?: string;
   stage?: string;
   data?: Record<string, unknown>;
-  content?: string; // answer_replaced: the rewritten answer, whole
 }
 
 const STREAM_STALL_MS = 45_000; // no bytes for this long (keep-alives every 10 s) = dead connection
@@ -776,7 +775,7 @@ function AssistantBubble({
           </div>
           {claimCheck?.status === 'failed' && (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
-              The claims in this answer could not be checked.
+              {t('chat.claimsNotChecked')}
             </p>
           )}
         </div>
@@ -903,6 +902,9 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
 
   // An answer generated in the background (the user left during streaming): refresh until it is finished
   const hasBackgroundAnswer = messages.some((msg) => msg.status === 'streaming');
+  // One answer at a time: the next question can be typed, but not sent, while an answer streams or is checked, here
+  // or in the background (an answer the user left and came back to)
+  const busy = loading || streaming || hasBackgroundAnswer;
   useEffect(() => {
     if (streaming || !sessionId || !hasBackgroundAnswer) return;
     const timer = setTimeout(() => loadHistory(sessionId, false), 2000);
@@ -929,18 +931,19 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
 
   // The pin set after "Pin it on the map" goes back to the agent as the answer, with the place (once it is named)
   useEffect(() => {
-    if (!awaitingPin || !pin || !pinLabel) return;
+    // A pin set while an answer is on its way waits for it: dropping it would lose the answer silently
+    if (!awaitingPin || !pin || !pinLabel || busy) return;
     const from = awaitingPin.from;
     if (from && from.lat === pin.lat && from.lon === pin.lon) return;
     setAwaitingPin(null);
     void send(fill(t('chat.pinnedMessage'), { place: pinLabel }), true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [awaitingPin, pin, pinLabel]);
+  }, [awaitingPin, pin, pinLabel, busy]);
 
   // `answer`: the message answers the agent's question card (from the card, the chat input, or a pin from its button)
   const send = async (text: string, answer = false) => {
     const trimmedInput = text.trim();
-    if (!trimmedInput || loading) return;
+    if (!trimmedInput || busy) return;
 
     followLatest();
     const userMsg: Message = { role: 'user', content: trimmedInput };
@@ -1053,12 +1056,6 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
                 steps: (msg.steps ?? []).map((s) => ({ ...s, done: true })),
                 content: msg.content + event.delta,
               }));
-            }
-            break;
-
-          case 'answer_replaced':
-            if (event.content !== undefined) {
-              updateLast((msg) => ({ ...msg, content: event.content ?? msg.content }));
             }
             break;
 
@@ -1229,7 +1226,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
                          onClear={clearPin} />
             </div>
           )}
-          <form onSubmit={sendMessage} className="relative shadow-lg rounded-xl">
+          <form onSubmit={sendMessage} aria-busy={busy} className="relative shadow-lg rounded-xl">
             <button
               type="button"
               onClick={() => setMapOpen((open) => !open)}
@@ -1245,14 +1242,13 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
               onChange={(e) => setInput(e.target.value)}
               placeholder={t('chat.placeholder')}
               className="w-full p-4 pl-14 pr-24 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              disabled={loading || streaming}
             />
             <button
               type="submit"
-              disabled={loading || streaming || !input.trim()}
+              disabled={busy || !input.trim()}
               className="absolute right-2 top-2 bottom-2 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
-              {(loading || streaming) && <Loader2 size={14} className="animate-spin" />}
+              {busy && <Loader2 size={14} className="animate-spin" />}
               {t('chat.send')}
             </button>
           </form>

@@ -98,17 +98,14 @@ def profile_of(tmp_path):
 
 
 @pytest.fixture
-def model(monkeypatch):
-    """Script the claim check's model: model(reply, ...) -> the fake client (tests.unit.agentic.claims.FakeClient),
-    whichever llm accessor the check reaches it through."""
-    import llm
-    import observability
+def jev(monkeypatch):
+    """Script the claim check's decision model: jev(supported={claim: p}, needs_source={sentence: p}, error=...,
+    delay=...) -> the fake (tests.unit.agentic.claims.FakeJev)."""
     from agentic import claim_check
-    from tests.unit.agentic.claims import FakeClient
+    from tests.unit.agentic.claims import FakeJev
 
-    def script(*replies) -> FakeClient:
-        client = FakeClient(list(replies))
-        for module in (llm, observability, claim_check):
-            monkeypatch.setattr(module, "get_openai_client", lambda: client, raising=False)
-        return client
+    def script(**kwargs) -> FakeJev:
+        fake = FakeJev(**kwargs)
+        monkeypatch.setattr(claim_check, "ask_decision_model", fake)
+        return fake
     return script
