@@ -162,7 +162,7 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
     `allow_ask=False` keeps the agent from asking the user again (the message answers its question).
     `flush` returns the pipeline events of the calls recorded so far: streamed (and so saved with the
     message) as the agent goes, so someone reopening the chat mid-run sees its progress."""
-    from agentic.agent import run_agent
+    from agentic.agent import OFF_TOPIC, run_agent
     from agentic.tools import resolve_cited
 
     tools = get_tools()
@@ -221,8 +221,10 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
         yield from delta(numberer.close())
     else:  # answered in an exploration turn (not streamed): send it whole
         yield from delta(numberer.feed(run.answer) + numberer.close())
-    # Sources = cited chunks (falling back to everything the agent looked at), shown like the RAG retrieval
-    chunks = numberer.chunks or [c for c in (tools.get_chunk(i) for i in run.seen_chunks) if c]
+    # Sources = cited chunks (falling back to everything the agent looked at), shown like the RAG retrieval; an
+    # off-topic reply has none, also when the agent searched before declining
+    chunks = numberer.chunks or ([] if run.mode == OFF_TOPIC else
+                                 [c for c in (tools.get_chunk(i) for i in run.seen_chunks) if c])
     law_rows = [chunk_row(c) for c in chunks if c["kind"] == "law"]
     local_rows = [chunk_row(c) for c in chunks if c["kind"] != "law"]
     return {"answer": answer, "law_rows": law_rows, "local_rows": local_rows, "sources": numberer.labels,

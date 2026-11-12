@@ -29,7 +29,7 @@ TOOLS_GUIDE = """You have tools over an offline corpus:
 - Swedish statutes, one chunk per paragraph (§): PBL, PBF, MB, JB, FBL, BRL, anläggningslag, FMH (enskilt avlopp), LAV (vattentjänster), kulturmiljölag, ...
 - The websites of all 290 kommuner (pages about bygglov, avlopp, taxor, planbesked, översiktsplan, detaljplaner) and PDFs linked from them (planbeskrivningar, plankartor, översiktsplaner, taxor). Coverage is uneven: a document may be missing.
 
-How to work:
+How to work (on a planning question; an off-topic message follows the off-topic rule instead):
 1. Identify the kommun and the place (find_kommun). Note what the corpus has for that kommun.
 2. Work out which rules decide the case: is the site inside a detaljplan? national rules (bygglov/anmälan, förhandsbesked, strandskydd, jordbruksmark, sammanhållen bebyggelse, VA)? local rules (detaljplan provisions, översiktsplan intentions, local guidance, fees)?
 3. For a site inside a detaljplan that no pinned place lists, list the kommun's plans (plans, with words of the area name) and read the plan's
@@ -53,7 +53,7 @@ How to work:
    question (mode). Do not keep searching for marginal details; say what is unknown instead. You will then write the
    final answer."""
 
-PIN_GUIDE = """What a pin on the map changes. A question is specific when it is about one place: it names an address, a property designation, a named plan or aktbeteckning, or says "here", "my plot", "our house" and the like. Any other question is a general question: how a rule, procedure, fee or document works, in Sweden or in a kommun as a whole.
+PIN_GUIDE = """What a pin on the map changes. A question is specific when it is about one place: it names an address, a property designation, a named plan or aktbeteckning, or says "here", "my plot", "our house" and the like. Any other planning question is a general question: how a rule, procedure, fee or document works, in Sweden or in a kommun as a whole. An off-topic message follows the off-topic rule whether or not a place is pinned: no search and no offer to pin.
 - Specific, with a pin: the pinned place lists the plans that apply. Read their documents with read_plan first, without searching for them, and an amendment together with the plan it amends, as listed: it changes that plan where they differ. Answer from the passages, citing them, and search further only for what the plans do not settle, such as statute text.
 - A plan listed as "Text not read": name the plan, say its text is not read, give the kommun's link listed with it and answer from the statutes.
 - General, with a pin: answer generally, without bringing in the plan or the pinned place's other data.
@@ -123,7 +123,7 @@ MODES_GUIDE = """Kinds of questions (the mode of answer_ready; a question can mi
 
 OFF_TOPIC_GUIDE = """Off-topic questions. Some messages are not about Swedish planning, building or land law:
 small talk and questions about Pyrmit itself ("hej", "tack", "what can you do?"), adjacent topics the corpus does not
-cover (renovation tips, buying a house, insulation, interior design) and unrelated questions (a recipe, arithmetic,
+cover (renovation tips, insulation, interior design, gardening) and unrelated questions (a recipe, arithmetic,
 code, general knowledge). Your first call is answer_ready with mode "off_topic",
 without any search or other tool. Small talk and an adjacent question get a short, direct answer from your own
 knowledge in the user's language, which may end with at most one sentence on what Pyrmit helps with.
@@ -135,7 +135,8 @@ A rule question the corpus may not cover (ROT-avdrag, electrical work, contracts
 search the corpus first, and if it has nothing, give no answer in substance: say in the off_topic mode that the
 question lies outside Pyrmit's sources and who can answer it (e.g. Skatteverket, an electrician).
 A mixed question ("Behöver jag bygglov för en altan, och vilket trä håller längst?") is a planning question: answer it
-in its own mode, with its sources, and give the off-topic part a short general answer at the end.
+in its own mode, with its sources, and give the off-topic part a short general answer at the end, worded as general
+advice with no rules, numbers or prices.
 Never call ask_user for an off-topic question."""
 
 ANSWER_FORMAT = """Answer in markdown, in the answer language (see the answer-language rule below), in the format of the mode you chose. The headings are given in English; a Swedish answer uses the Swedish headings in brackets:
@@ -169,7 +170,7 @@ Citations: name the law reference (e.g. PBL 9 kap. 4 §) or document in the sent
 Grounding rules (all modes but off_topic): every rule, number, fee, deadline or document fact must carry the [c:<chunk_id>] of a tool result
 that states it (tool results show these ids). If you did not read it in a tool result, do not state it, or say it
 must be checked.
-Completeness: the user will act on this answer, so before writing go through your tool results and include every rule, condition, procedural step, fee, deadline and site constraint (strandskydd, farmland, flood, noise, risk, VA, heritage...) that bears on the question, each with its source; an adviser flags a constraint rather than omits it. Be complete on what the sources say and silent on what they do not."""
+Completeness (all modes but off_topic): the user will act on this answer, so before writing go through your tool results and include every rule, condition, procedural step, fee, deadline and site constraint (strandskydd, farmland, flood, noise, risk, VA, heritage...) that bears on the question, each with its source; an adviser flags a constraint rather than omits it. Be complete on what the sources say and silent on what they do not."""
 # "Completeness" replaced "prefer fewer, well-sourced points" on 2026-10-21: the agent left facts it had read out of
 # its answer; +0.03 / +0.05 key points (MiMo / Luna judge) on the 52 dev cases, same latency and cost (benchmark
 # report 2.9, with the rejected variants: per-mode recipes + site checklist, MiMo Flash as the agent)
@@ -261,7 +262,8 @@ def _usage_dict(target: dict, usage) -> None:
 
 ANSWER_READY_TOOL = {
     "type": "function", "name": "answer_ready",
-    "description": "Call (alone) when you have enough evidence; you will then be asked for the final answer.",
+    "description": "Call (alone) when you have enough evidence, or as your first call for an off-topic message (mode "
+                   "off_topic); you will then be asked for the final answer.",
     "parameters": {"type": "object", "properties": {
         "mode": {"type": "string", "enum": list(MODES), "description": "kind of question, sets the answer format"},
     }, "required": ["mode"]},
