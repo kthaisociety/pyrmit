@@ -38,6 +38,7 @@ import numpy as np
 
 from corpus.common import DATA_DIR, DOCUMENTS_PATH, WEB_DIR, read_jsonl, write_jsonl
 from corpus.crawl import fold
+from corpus.plans import add_plan_labels
 
 FILTER_DIR = DATA_DIR / "pdf_filter"
 FEATURES_PATH = FILTER_DIR / "features.jsonl"
@@ -373,6 +374,8 @@ def apply() -> None:
                 kept += 1
     temporary.replace(DOCUMENTS_PATH)
     print(f"{removed} dropped PDFs removed, {kept} documents left")
+    if removed:  # a plan's generated ID hashes its document IDs: regroup without the removed ones
+        add_plan_labels(DOCUMENTS_PATH)
 
 
 def eval_sample(limit: int) -> None:

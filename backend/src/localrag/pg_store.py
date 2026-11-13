@@ -3,7 +3,8 @@ The corpus in Postgres (Neon + pgvector): the app queries it instead of local fi
 tester needs no corpus download. Built from a disk store (localrag.store, usually of a corpus.snapshot of a few
 kommuner).
 
-    corpus_chunks   one row per chunk: the disk store's columns, `stems` (tsvector of the Swedish stems
+    corpus_chunks   one row per chunk: the disk store's columns (with the docs/source-chunk-schema.md labels; a row
+                    missing source, place or fetch date is not loaded), `stems` (tsvector of the Swedish stems
                     localrag.analyzer gives, what FTS5 indexes locally) and `embedding` (halfvec, L2-normalised)
     corpus_places   proper nouns per kommun (kommun detection from place names)
     corpus_terms    chunks per stem (document frequency): the IDF of the BM25-like ranking
@@ -39,7 +40,13 @@ from pathlib import Path
 import numpy as np
 
 from corpus import pdf_files
-from corpus.common import BACKEND_DIR, DATA_DIR, DATA_ROOT, MUNICIPALITIES_PATH
+from corpus.common import (
+    BACKEND_DIR,
+    DATA_DIR,
+    DATA_ROOT,
+    MUNICIPALITIES_PATH,
+    REQUIRED_LABELS,
+)
 from corpus.plans import PLANS_PATH
 from embeddings import Embedder
 from localrag.analyzer import SWEDISH_STOPWORDS, analyze
@@ -119,8 +126,10 @@ DROP TABLE IF EXISTS corpus_chunks, corpus_places CASCADE;
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE corpus_chunks (
     rowid integer PRIMARY KEY, chunk_id text NOT NULL, doc_id text NOT NULL, chunk_index integer, kind text NOT NULL,
-    doc_type text, kommun_code text, kommun text, title text, url text, section text, chapter text, paragraph text,
-    heading text, header text, text text, stems tsvector, embedding halfvec({dim}) NOT NULL);
+    doc_type text, kommun_code text, kommun text, title text, url text NOT NULL, section text, chapter text,
+    paragraph text, heading text, header text, text text, place text NOT NULL, fetched_at text NOT NULL,
+    fetched_at_source text, plan_id text, plan_stage text, content_sha1 text, stems tsvector,
+    embedding halfvec({dim}) NOT NULL);
 CREATE TABLE corpus_places (word text NOT NULL, kommun_code text NOT NULL, count integer NOT NULL);
 """
 EXTRAS_SCHEMA = """
@@ -140,6 +149,7 @@ CREATE INDEX IF NOT EXISTS corpus_chunks_doc ON corpus_chunks (doc_id, chunk_ind
 CREATE INDEX IF NOT EXISTS corpus_chunks_id ON corpus_chunks (chunk_id);
 CREATE INDEX IF NOT EXISTS corpus_chunks_law ON corpus_chunks (title, section) WHERE kind = 'law';
 CREATE INDEX IF NOT EXISTS corpus_chunks_stems ON corpus_chunks USING gin (stems);
+CREATE INDEX IF NOT EXISTS corpus_chunks_plan ON corpus_chunks (plan_id) WHERE plan_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS corpus_places_word ON corpus_places (word);
 CREATE OR REPLACE VIEW chunks AS SELECT rowid, {", ".join(COLUMNS)} FROM corpus_chunks;
 CREATE OR REPLACE VIEW places AS SELECT word, kommun_code, count FROM corpus_places;
@@ -160,23 +170,40 @@ def _copy(cursor, table: str, columns: str, rows: list[list]) -> None:
     cursor.copy_expert(f"COPY {table} ({columns}) FROM STDIN WITH (FORMAT csv)", buffer)
 
 
+# A disk-store row that may be loaded: every required label (docs/source-chunk-schema.md) present
+LABELLED = " AND ".join(f"COALESCE({label}, '') != ''" for label in REQUIRED_LABELS)
+
+
+def labelled_chunks(lite: sqlite3.Connection) -> tuple[int, int]:
+    """(rows carrying every required label, rows missing one) of a disk store. A store built before the labels has
+    none of their columns: refused, so it is never loaded without them."""
+    columns = {row[1] for row in lite.execute("PRAGMA table_info(chunks)")}
+    if not set(REQUIRED_LABELS) <= columns:
+        raise SystemExit(f"The disk store has no {', '.join(sorted(set(REQUIRED_LABELS) - columns))} column: it was "
+                         "built before the schema labels. Re-run corpus.extract, corpus.chunk and localrag.store")
+    labelled = lite.execute(f"SELECT COUNT(*) FROM chunks WHERE {LABELLED}").fetchone()[0]
+    return labelled, lite.execute("SELECT COUNT(*) FROM chunks").fetchone()[0] - labelled
+
+
 def _load_chunks(cursor, lite: sqlite3.Connection, vectors: np.ndarray, total: int, started: float) -> None:
+    """Loads the `total` rows of the disk store that carry every required label (labelled_chunks)."""
     cursor.execute(CHUNKS_SCHEMA.format(dim=vectors.shape[1]))
     # Staging table with the stems as text: to_tsvector keeps their positions (term frequencies for ranking).
     # Emptied after every batch: the vectors as text would take ~1.2 GB of the compute's temp space
     cursor.execute(f"CREATE TEMP TABLE staging (rowid integer, {', '.join(f'{c} text' for c in COLUMNS)}, "
                    "stems text, embedding text)")
+    selected = ", ".join("chunk_index::integer" if c == "chunk_index" else c for c in COLUMNS)
     rows, done = [], 0
-    for row in lite.execute("SELECT * FROM chunks ORDER BY rowid"):
+    for row in lite.execute(f"SELECT * FROM chunks WHERE {LABELLED} ORDER BY rowid"):
         chunk = {key: _clean(value) for key, value in dict(row).items()}
         vector = "[" + ",".join(map(str, vectors[chunk["rowid"]].tolist())) + "]"  # float16 values, exact
         rows.append([chunk["rowid"], *[chunk[c] for c in COLUMNS], " ".join(analyze(chunk_text(chunk), "stem")),
                      vector])
         if len(rows) >= BATCH or done + len(rows) == total:
             _copy(cursor, "staging", f"rowid, {', '.join(COLUMNS)}, stems, embedding", rows)
-            cursor.execute("""INSERT INTO corpus_chunks SELECT rowid, chunk_id, doc_id, chunk_index::integer, kind,
-                              doc_type, kommun_code, kommun, title, url, section, chapter, paragraph, heading, header,
-                              text, to_tsvector('simple', stems), embedding::halfvec FROM staging""")
+            cursor.execute(f"""INSERT INTO corpus_chunks (rowid, {', '.join(COLUMNS)}, stems, embedding)
+                               SELECT rowid, {selected}, to_tsvector('simple', stems), embedding::halfvec
+                               FROM staging""")
             cursor.execute("TRUNCATE staging")
             done, rows = done + len(rows), []
             print(f"  {done}/{total} chunks ({time.perf_counter() - started:.0f}s)", flush=True)
@@ -204,7 +231,12 @@ def load(model: str, url: str, skip_chunks: bool = False) -> dict:
     connection.autocommit = True
     cursor = connection.cursor()
     started = time.perf_counter()
-    total = lite.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+    total, rejected = labelled_chunks(lite)
+    if rejected:
+        print(f"  {rejected} chunks of the disk store rejected for a missing label {REQUIRED_LABELS}: not loaded",
+              flush=True)
+    if not total:
+        raise SystemExit("No chunk of the disk store carries the required labels: nothing to load")
     if skip_chunks:
         cursor.execute("SELECT COUNT(*) FROM corpus_chunks")
         if cursor.fetchone()[0] != total:

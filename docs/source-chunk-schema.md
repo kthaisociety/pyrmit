@@ -47,20 +47,22 @@ Decisions that are not part of the schema itself:
 - All plans are stored whatever their stage.
 - If plan grouping needs the finished search store, plan ID and plan stage are copied onto chunks in a step afterwards.
 
-How things are today (2026-11-12), from `corpus/extract.py`, `chunk.py`, `crawl.py`, `plans.py`, `laws.py` and `localrag/store.py`.
+How things are today (2026-11-13, #106), from `corpus/extract.py`, `chunk.py`, `crawl.py`, `plans.py`, `laws.py`, `localrag/store.py` and `localrag/pg_store.py`.
 
 | Label | Lives today | Missing |
 | --- | --- | --- |
 | Source | `url` on the document and the chunk | |
-| Place | `kommun` and `kommun_code` on the document and the chunk; null for laws | `national` for laws |
-| Fetch date | Web pages: `fetched_at` in the crawler's page file, not copied to the document. PDFs and laws: not recorded | The label on documents and chunks; any date for PDFs and laws |
+| Place | `place` on the document and the chunk: `national` for laws, otherwise the municipality name. `kommun` and `kommun_code` stay beside it, null for laws, for the kommun filters | |
+| Fetch date | `fetched_at` (ISO 8601, UTC) on the document and the chunk, with `fetched_at_source`: `recorded` when the crawler (page files, PDF manifest lines) or `corpus.laws` (`index.json`) wrote it at download, `file_mtime` for files downloaded before they did (the raw file's modification time, written once at download) | The legacy Vallentuna documents (no date and no address: their chunks are rejected) |
 | Date in force | Plans: `laga_kraft` in the registry, as found in the text | Laws (the "t.o.m. SFS" header is not stored) |
-| Plan ID | `plan_id` in the registry, generated from municipality code, name and document IDs; `plan_number` (read from the text) beside it | Official number as the ID, the alias, the copy on documents and chunks |
-| Plan stage | `status` in the registry: `in_force`, `adopted`, `review`, `consultation`, `in_progress`, `repealed`, `unknown` | The copy on documents and chunks |
+| Plan ID | `plan_id` in the registry, generated from municipality code, name and document IDs; `plan_number` (read from the text) beside it. Copied onto plan documents by `corpus.extract` (the registry's grouping, which needs no store) and onto their chunks | Official number as the ID, the alias |
+| Plan stage | `status` in the registry: `in_force`, `adopted`, `review`, `consultation`, `in_progress`, `repealed`, `unknown`. Copied as `plan_stage` with the plan ID | |
 | Law chapter and section | On law chunks: `chapter`, `paragraph` (section), and `section` as the combined label (`4 kap. 5 §`). On other chunks `section` holds the heading | |
 | Plan code | `provisions` in the registry, each tied to a `chunk_id` | |
-| Content fingerprint | Text hash inside the chunk ID; `localrag.index` keeps a digest of header plus text. The crawler hashes PDFs and pages without recording it | A stored field |
+| Content fingerprint | `content_sha1`: on the document the SHA-1 of its whitespace-normalised text, on the chunk the same of its lowercased text (the hash inside the chunk ID). `localrag.index` keeps a digest of header plus text | |
 
 Also set today and copied from document to chunk: document link (`doc_id`).
+
+The labels are metadata only: what gets embedded (header plus text) and the chunk ID do not depend on them, so adding them re-embeds nothing. `corpus.chunk` writes a chunk missing source, place or fetch date to `rejected_chunks.jsonl` instead of `chunks.jsonl`; `localrag.store` and `localrag.pg_store` refuse such a row too.
 
 Not covered here: the older `document_chunks` and `law_chunks` tables (current corpus only), a law-version label (possible later addition) and a job that refreshes stale laws.

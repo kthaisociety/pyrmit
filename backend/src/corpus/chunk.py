@@ -12,20 +12,28 @@ Other documents: packed into ~`--max-chars` chunks along paragraph boundaries, w
 one-paragraph overlap and the closest heading kept as `section`.
 
 Every chunk carries a `header` (law/kommun, document title, section) prepended to the
-text for embedding and BM25, so a chunk stays interpretable on its own.
+text for embedding and BM25, so a chunk stays interpretable on its own, and copies of its
+document's labels (docs/source-chunk-schema.md). A chunk missing source, place or fetch
+date goes to data/corpus/rejected_chunks.jsonl instead of chunks.jsonl.
 
     cd backend && python -m corpus.chunk
 """
 
 import argparse
-import hashlib
+import json
 import re
+from collections import Counter
+from collections.abc import Iterable, Iterator
+from typing import TextIO
 
 from corpus.common import (
     CHUNKS_PATH,
     DOCUMENTS_PATH,
+    REJECTED_CHUNKS_PATH,
+    missing_labels,
     read_jsonl,
     stable_id,
+    text_sha1,
     write_jsonl,
 )
 
@@ -238,47 +246,79 @@ def document_chunks(document: dict, max_chars: int) -> list[dict]:
     return chunks
 
 
+# The document's labels each chunk carries a copy of (docs/source-chunk-schema.md). They are metadata only: what gets
+# embedded (localrag.index.chunk_text: header + text) and the chunk id do not depend on them, so adding them re-embeds
+# nothing (tests/unit/corpus/test_chunk.py pins both)
+CHUNK_LABELS = ("place", "fetched_at", "fetched_at_source", "plan_id", "plan_stage")
+
+
+def chunk_rows(documents: Iterable[dict], max_chars: int, counts: Counter) -> Iterator[dict]:
+    """The chunks of the documents, duplicates dropped (counts["duplicates"]). Chunks missing a required label are
+    yielded too, for keep_labelled to reject after the duplicate check: a rejected chunk still hides its later
+    copies, so the chunks kept are a subset of the ones before the labels and no new chunk id needs embedding."""
+    seen_hashes: set[str] = set()
+    for document in documents:
+        if not document.get("text"):
+            continue
+        splitter = law_chunks if document["kind"] == "law" else document_chunks
+        for index, chunk in enumerate(splitter(document, max_chars)):
+            # The same PDF is often linked from several pages or kommuner: keep one copy
+            digest = text_sha1(chunk["text"], lower=True)
+            # A statute section is never a duplicate of another one: the same wording in two places (JB 9 and
+            # 10 kap. 3 a §, "Har upphävts" sections) left the second unreachable by law_section until 2026-10-22.
+            # The id keeps the text hash only, so existing ids do not change
+            key = f"{document['doc_id']}|{chunk['section']}|{digest}" if document["kind"] == "law" else digest
+            if key in seen_hashes:
+                counts["duplicates"] += 1
+                continue
+            seen_hashes.add(key)
+            yield {
+                "chunk_id": stable_id(document["doc_id"], str(index), digest),
+                "doc_id": document["doc_id"],
+                "chunk_index": index,
+                "kind": document["kind"],
+                "doc_type": document["doc_type"],
+                "kommun_code": document.get("kommun_code"),
+                "kommun": document.get("kommun"),
+                "title": document["title"],
+                "url": document.get("url"),
+                **{label: document.get(label) for label in CHUNK_LABELS},
+                "content_sha1": digest,
+                **chunk,
+            }
+
+
+def keep_labelled(rows: Iterable[dict], counts: Counter, rejected: TextIO) -> Iterator[dict]:
+    """The rows carrying every required label; the others are written to `rejected` with what they lack and counted
+    ("rejected", "missing <label>"), never passed on."""
+    for row in rows:
+        missing = missing_labels(row)
+        if missing:
+            counts["rejected"] += 1
+            counts.update(f"missing {label}" for label in missing)
+            rejected.write(json.dumps({"chunk_id": row["chunk_id"], "doc_id": row["doc_id"], "missing": missing},
+                                      ensure_ascii=False) + "\n")
+            continue
+        counts["law"] += row["kind"] == "law"
+        yield row
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Chunk documents.jsonl into chunks.jsonl")
     parser.add_argument("--max-chars", type=int, default=1500)
     args = parser.parse_args()
 
-    seen_hashes: set[str] = set()
-    duplicates = laws = 0
-
-    def rows():  # written as they come: the 2026-10-23 corpus (~2M chunks) did not fit in RAM as a list
-        nonlocal duplicates, laws
-        for document in read_jsonl(DOCUMENTS_PATH):
-            if not document.get("text"):
-                continue
-            splitter = law_chunks if document["kind"] == "law" else document_chunks
-            for index, chunk in enumerate(splitter(document, args.max_chars)):
-                # The same PDF is often linked from several pages or kommuner: keep one copy
-                digest = hashlib.sha1(" ".join(chunk["text"].split()).lower().encode()).hexdigest()
-                # A statute section is never a duplicate of another one: the same wording in two places (JB 9 and
-                # 10 kap. 3 a §, "Har upphävts" sections) left the second unreachable by law_section until 2026-10-22.
-                # The id keeps the text hash only, so existing ids do not change
-                key = f"{document['doc_id']}|{chunk['section']}|{digest}" if document["kind"] == "law" else digest
-                if key in seen_hashes:
-                    duplicates += 1
-                    continue
-                seen_hashes.add(key)
-                laws += document["kind"] == "law"
-                yield {
-                    "chunk_id": stable_id(document["doc_id"], str(index), digest),
-                    "doc_id": document["doc_id"],
-                    "chunk_index": index,
-                    "kind": document["kind"],
-                    "doc_type": document["doc_type"],
-                    "kommun_code": document.get("kommun_code"),
-                    "kommun": document.get("kommun"),
-                    "title": document["title"],
-                    "url": document.get("url"),
-                    **chunk,
-                }
-
-    count = write_jsonl(CHUNKS_PATH, rows())
-    print(f"{count} chunks ({laws} law, {count - laws} other), {duplicates} duplicates dropped -> {CHUNKS_PATH}")
+    counts: Counter = Counter()
+    REJECTED_CHUNKS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    # Written as they come: the 2026-10-23 corpus (~2M chunks) did not fit in RAM as a list
+    with REJECTED_CHUNKS_PATH.open("w", encoding="utf-8") as rejected:
+        rows = chunk_rows(read_jsonl(DOCUMENTS_PATH), args.max_chars, counts)
+        count = write_jsonl(CHUNKS_PATH, keep_labelled(rows, counts, rejected))
+    print(f"{count} chunks ({counts['law']} law, {count - counts['law']} other), {counts['duplicates']} duplicates "
+          f"dropped -> {CHUNKS_PATH}")
+    if counts["rejected"]:
+        missing = {key: value for key, value in counts.items() if key.startswith("missing ")}
+        print(f"  {counts['rejected']} chunks rejected for a missing label {missing} -> {REJECTED_CHUNKS_PATH}")
 
 
 if __name__ == "__main__":

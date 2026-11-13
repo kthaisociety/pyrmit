@@ -11,7 +11,7 @@ whose manifest is complete is skipped on the next run.
 Output per kommun in data/corpus/raw/web/<code>/:
     pages/<id>.json   {url, title, text, score, fetched_at}
     pdf/<id>.pdf      raw PDFs
-    manifest.jsonl    one line per stored item, plus a final {"done": true, ...} line
+    manifest.jsonl    one line per stored item (a PDF's with its fetched_at), plus a final {"done": true, ...} line
 
     cd backend
     python -m corpus.crawl --codes 0115 0188          # pilot on Vallentuna + Norrtälje
@@ -36,7 +36,13 @@ from urllib.robotparser import RobotFileParser, RuleLine
 import httpx
 import truststore
 
-from corpus.common import MUNICIPALITIES_PATH, USER_AGENT, WEB_DIR, stable_id
+from corpus.common import (
+    MUNICIPALITIES_PATH,
+    USER_AGENT,
+    WEB_DIR,
+    fetch_date,
+    stable_id,
+)
 
 # lxml and trafilatura are in the corpus extra, which the server image does not install. The server imports this
 # module (routers.pipeline -> corpus.ocr -> corpus.extract), so they are imported in the functions that use them.
@@ -487,14 +493,16 @@ class KommunCrawler:
             return
         pdf_id = stable_id(task.url)
         path = self.out / "pdf" / f"{pdf_id}.pdf"
-        if path.exists():  # downloaded by an earlier pass
+        if path.exists():  # downloaded by an earlier pass, which wrote the file then
             content = path.read_bytes()
+            fetched_at = fetch_date(None, path)[0]
         else:
             if response is None or response.content is None:
                 response = await self.get(task.url, stream_limit=self.args.max_pdf_mb * 1024 * 1024)
             if response is None or response.status_code != 200 or not response.content.startswith(b"%PDF"):
                 return
             content = response.content
+            fetched_at = datetime.now(UTC).isoformat()
         # The same file under another URL (a /download/<id>/<timestamp>/ link per page, a copy of a national guide)
         digest = hashlib.sha1(content).hexdigest()
         if digest in self.pdf_hashes:
@@ -506,7 +514,7 @@ class KommunCrawler:
             path.write_bytes(content)
         size = len(content)
         self.record({"type": "pdf", "id": pdf_id, "url": task.url, "anchor": task.anchor,
-                     "source": task.source, "bytes": size, "score": -task.priority})
+                     "source": task.source, "bytes": size, "score": -task.priority, "fetched_at": fetched_at})
         self.pdfs += 1
         self.pdf_bytes += size
 

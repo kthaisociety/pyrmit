@@ -21,7 +21,7 @@ from pathlib import Path
 
 import numpy as np
 
-from corpus.common import CHUNKS_PATH, read_jsonl
+from corpus.common import CHUNKS_PATH, REQUIRED_LABELS, missing_labels, read_jsonl
 from embeddings import Embedder
 from localrag.analyzer import SWEDISH_STOPWORDS, analyze
 from localrag.gazetteer import detect_kommuner
@@ -30,7 +30,9 @@ from localrag.retriever import RRF_K, Hit
 
 STORE_DIR = INDEX_DIR / "store"
 COLUMNS = ("chunk_id", "doc_id", "chunk_index", "kind", "doc_type", "kommun_code", "kommun", "title", "url",
-           "section", "chapter", "paragraph", "heading", "header", "text")
+           "section", "chapter", "paragraph", "heading", "header", "text",
+           # docs/source-chunk-schema.md labels (corpus.chunk), last so the columns before keep their positions
+           "place", "fetched_at", "fetched_at_source", "plan_id", "plan_stage", "content_sha1")
 _PROPER_NOUN = re.compile(r"(?<![\w])[A-ZÅÄÖ][a-zåäöé]{3,}")
 _WORD = re.compile(r"[a-zåäöé]{4,}")
 
@@ -55,9 +57,15 @@ def build(model: str) -> None:
     started = time.perf_counter()
     rows, kept = [], []
     places: dict[str, Counter] = defaultdict(Counter)
+    rejected: Counter = Counter()
     for chunk in read_jsonl(CHUNKS_PATH):
         if chunk["chunk_id"] not in vectors.position:
             continue  # not embedded: not served
+        missing = missing_labels(chunk)
+        if missing:  # corpus.chunk rejects these; a chunks.jsonl from before the labels is refused here too
+            rejected.update(missing)
+            rejected["chunks"] += 1
+            continue
         rowid = len(kept)
         kept.append(vectors.position[chunk["chunk_id"]])
         rows.append((rowid, *[None if chunk.get(c) is None else str(chunk.get(c)) for c in COLUMNS]))
@@ -75,6 +83,13 @@ def build(model: str) -> None:
             print(f"  {len(kept)} chunks ({time.perf_counter() - started:.0f}s)", flush=True)
     if rows:
         connection.executemany(f"INSERT INTO chunks VALUES ({', '.join('?' * (len(COLUMNS) + 1))})", rows)
+    if rejected:
+        by_label = {label: rejected[label] for label in REQUIRED_LABELS if rejected[label]}
+        print(f"  {rejected['chunks']} chunks rejected for a missing label {by_label}: not in the store", flush=True)
+        if not kept:
+            connection.close()
+            raise SystemExit(f"No chunk of {CHUNKS_PATH} carries the required labels {REQUIRED_LABELS}: re-run "
+                             "corpus.extract and corpus.chunk")
     connection.executemany("INSERT INTO places VALUES (?, ?, ?)",
                            [(word, code, count) for word, counts in places.items() for code, count in counts.items()])
     connection.executescript("""
@@ -82,6 +97,7 @@ def build(model: str) -> None:
         CREATE INDEX chunks_doc ON chunks(doc_id, chunk_index);
         CREATE INDEX chunks_id ON chunks(chunk_id);
         CREATE INDEX chunks_law ON chunks(title, section);
+        CREATE INDEX chunks_plan ON chunks(plan_id);
         CREATE INDEX places_word ON places(word);
     """)
     connection.commit()

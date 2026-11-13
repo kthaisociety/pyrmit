@@ -472,6 +472,14 @@ python -m corpus.plans            # detaljplan registry + planbestämmelser -> d
 python -m corpus.check            # data checks after a rebuild (exit 1 on an error); then agentic.replay, agentic.coverage score
 ```
 
+- Schema labels (`docs/source-chunk-schema.md`, #106): `corpus.extract` sets `place` (`national` for laws, `kommun`
+  stays null), `fetched_at` + `fetched_at_source` (`recorded` by the crawler / `corpus.laws`, else `file_mtime` of the
+  raw file), `content_sha1`, and `plan_id` / `plan_stage` from `corpus.plans.plan_groups` (no store needed; redone by
+  `pdf_filter apply`). `corpus.chunk` copies them and writes chunks missing `url`, `place` or `fetched_at` to
+  `rejected_chunks.jsonl` (after the duplicate check, so no new chunk id appears); `localrag.store` / `pg_store` refuse
+  them too. Metadata only: `chunk_text` and the chunk id are unchanged (pinned in `tests/unit/corpus/test_chunk.py`),
+  so adding labels to an embedded corpus = re-run extract, chunk, store and pg_store, never `localrag.index` (plan
+  IDs come out the same on the same documents, so plans.jsonl stays valid).
 - `corpus.plans` (rule-based, ~30 s): a plan = the detaljplan PDFs of a kommun whose file names reduce to the same
   key (role words, dates, versions, agenda numbering removed), named by the plan page that links only them, else by
   "Detaljplan för ..." on the first page; plan pages without PDFs are plans too (listing pages excluded). Status from
