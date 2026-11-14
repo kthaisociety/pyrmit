@@ -5,6 +5,7 @@ import { ArrowLeft, CheckCircle2, ChevronDown, ChevronRight, Loader2, Play, Sear
 import { authFetch } from '@/lib/auth';
 import CitedMarkdown from '@/components/CitedMarkdown';
 import SourceViewer, { type Citation } from '@/components/SourceViewer';
+import BenchmarkOverview from '@/components/BenchmarkOverview';
 
 // Benchmark view: browse the case sets used to evaluate the agent (backend/routers/benchmark.py), see how past
 // benchmark runs answered each case, and run the agent on a case now (graded by the same LLM judge).
@@ -199,7 +200,10 @@ function RunPanel({ set, caseId }: { set: string; caseId: string }) {
   );
 }
 
-export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
+// canRun: owners and developers (issue #112); the backend refuses a run from anyone else anyway
+export default function BenchmarkBrowser({ onBack, canRun = true }: { onBack: () => void; canRun?: boolean }) {
+  // The tab opens on the approaches tested and their success rates (issue #116); the cases are one click away
+  const [mode, setMode] = useState<'approaches' | 'cases'>('approaches');
   const [sets, setSets] = useState<CaseSet[]>([]);
   const [current, setCurrent] = useState<string>('cases');
   const [query, setQuery] = useState('');
@@ -248,7 +252,20 @@ export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
           <ArrowLeft size={18} />
         </button>
         <h1 className="text-lg font-semibold">Benchmark</h1>
-        <div className="ml-4 flex gap-1">
+        <div className="ml-2 flex rounded-lg border border-zinc-200 p-0.5 text-sm dark:border-zinc-700" role="tablist">
+          {(['approaches', 'cases'] as const).map((key) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={mode === key}
+              onClick={() => setMode(key)}
+              className={`rounded-md px-3 py-1 ${mode === key ? 'bg-blue-600 font-medium text-white' : 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'}`}
+            >
+              {key === 'approaches' ? 'Approaches tested' : 'Case by case'}
+            </button>
+          ))}
+        </div>
+        {mode === 'cases' && <div className="ml-4 flex flex-wrap gap-1">
           {sets.map((s) => (
             <button
               key={s.set}
@@ -258,8 +275,13 @@ export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
               {s.title} <span className="opacity-60">({s.cases})</span>
             </button>
           ))}
-        </div>
+        </div>}
       </header>
+      {mode === 'approaches' ? (
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          <BenchmarkOverview onShowCases={() => setMode('cases')} />
+        </div>
+      ) : (<>
       {currentSet && <p className="px-6 pt-3 text-xs text-zinc-500">{currentSet.description}</p>}
       <div className="flex min-h-0 flex-1 gap-4 px-6 py-3">
         <div className="flex w-96 shrink-0 flex-col">
@@ -326,10 +348,12 @@ export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
                 )}
                 {detail.case.label_explanation && <p className="text-xs italic text-zinc-500">Reference reading of the map: {detail.case.label_explanation}</p>}
               </section>
-              <section className="space-y-2">
-                <h2 className="text-sm font-semibold">Test it now</h2>
-                <RunPanel key={`${current}:${detail.case.id}`} set={current} caseId={detail.case.id} />
-              </section>
+              {canRun && (
+                <section className="space-y-2">
+                  <h2 className="text-sm font-semibold">Test it now</h2>
+                  <RunPanel key={`${current}:${detail.case.id}`} set={current} caseId={detail.case.id} />
+                </section>
+              )}
               <section className="space-y-2">
                 <h2 className="text-sm font-semibold">Past benchmark results ({detail.results.length})</h2>
                 <PastResults results={detail.results} />
@@ -338,6 +362,7 @@ export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
           )}
         </div>
       </div>
+      </>)}
     </div>
   );
 }

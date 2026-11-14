@@ -113,12 +113,14 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | POST   | `/api/auth/signin`                 | Sign in, returns JWT                      |
 | POST   | `/api/auth/token`                  | OAuth2 password form login, returns JWT   |
 | POST   | `/api/auth/signout`                | Revoke the current login session          |
-| GET    | `/api/auth/me`                     | Current user                              |
+| GET    | `/api/auth/me`                     | Current user, with its `role` (owner / developer / user, #112) |
 | PATCH  | `/api/auth/me`                     | Update the profile name                   |
 | PATCH  | `/api/auth/password`               | Change the password                       |
 | GET    | `/api/auth/api-key`                | The user's own OpenRouter key: `enabled` (API_KEY_ENCRYPTION_KEY set), `has_key`, `last4`; never the key (#108) |
 | PUT    | `/api/auth/api-key`                | Set or replace it (`{api_key}`); 400 not an OpenRouter key, 503 feature off |
 | DELETE | `/api/auth/api-key`                | Remove it: the shared key pays again      |
+| GET    | `/api/users`                       | Owners: every user with `role` and `from_owner_emails` (#112) |
+| PATCH  | `/api/users/{user_id}/role`        | Owners: `{role}`; 409 for the last owner or an `OWNER_EMAILS` owner |
 | GET    | `/api/sessions`                    | List chat sessions                        |
 | GET    | `/api/sessions/{session_id}`       | Messages in a chat session                |
 | DELETE | `/api/sessions`                    | Delete all chat sessions                  |
@@ -138,6 +140,7 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | GET    | `/api/docs/locate`                 | Where to open a cited chunk: PDF page + zoom on the passage, or the original URL with `#:~:text=`; `download=false` answers at once with `needs_download` + `source_host` |
 | GET    | `/api/docs/pdf/{chunk_id}`         | The chunk's crawled PDF with the passage highlighted |
 | GET    | `/api/docs/tool-image`             | The image an agent tool call looked at (`view_map_area` / `view_pdf_page`), re-rendered for the inspector |
+| GET    | `/api/benchmark/summary`           | The approaches tested and their success rate per set: four studies (RAG vs agent and its efforts, beyond the verdict, the optimisation round, missing information), best configuration per set and per study, from the versioned result files, cached until one changes (#116, `agentic/bench_summary.py`) |
 | GET    | `/api/benchmark/sets`, `/cases`, `/case`, `/image/{id}` | Benchmark case sets, cases, one case + its past results (`data/agentic/bench-*.json`), plankarta crop |
 | POST   | `/api/benchmark/run`               | Run the agent on a case now (chat settings) and grade it; background job (spends credits) |
 | GET    | `/api/benchmark/run/{job_id}`      | Progress and result of that job (polled) |
@@ -155,7 +158,7 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 
 | Table              | Key Columns                                                              |
 | ------------------ | ------------------------------------------------------------------------ |
-| `users`            | id, name, email, email_verified, image                                   |
+| `users`            | id, name, email, email_verified, image, role (owner / developer / user, default user, #112) |
 | `accounts`         | id, user_id (FK), provider_id, password (hash)                           |
 | `sessions`         | id (= JWT `sid`), user_id (FK), expires_at; token unused (ADR-0001)      |
 | `user_api_keys`    | user_id (FK) + provider (`openrouter`), encrypted_key (Fernet, API_KEY_ENCRYPTION_KEY), last4 (#108) |
@@ -164,7 +167,7 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | `document_chunks`  | id, document_id, document_name, chunk_index, content, embedding (3072)  |
 | `law_chunks`       | id, law_name, source_file, chapter, section, chunk_index, content, embedding (3072) |
 
-Tables are created at startup by `Base.metadata.create_all` in `backend/src/main.py`, which never alters an existing table: columns added later (`chat_messages.trace`, `status`) are added there with an idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. Migrations/init: `backend/src/db/init.sql`. Match functions (pgvector): `backend/src/db/match_functions.sql`.
+Tables are created at startup by `Base.metadata.create_all` in `backend/src/main.py`, which never alters an existing table: columns added later (`chat_messages.trace`, `status`, `users.role`) are added there with an idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. Migrations/init: `backend/src/db/init.sql`. Match functions (pgvector): `backend/src/db/match_functions.sql`.
 
 ---
 
@@ -244,6 +247,7 @@ Backend (`backend/.env`), names as read by the code:
 - `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` -- optional, turn on Langfuse tracing of model calls
 - `OPENAI_BASE_URL` -- optional override of the OpenAI endpoint
 - `JWT_SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`
+- `OWNER_EMAILS` -- comma-separated, case-insensitive: these accounts become owners at startup and at each sign-in / sign-up (`backend/src/roles.py`, #112). Never demotes; an owner listed here can't be demoted from the app. The first owner must sign up before anyone else can with that email (no email verification; the access gate is the only fence)
 - `ACCESS_GATE_PASSWORD`, `ACCESS_GATE_COOKIE_DOMAIN`, `ACCESS_GATE_COOKIE_SAMESITE`, `ACCESS_GATE_COOKIE_SECURE`
 - `DEV_ACCESS_PASSWORD`, `APP_ENV`, `CORS_ALLOWED_ORIGINS`, `COOKIE_SAMESITE`, `COOKIE_SECURE`
 
@@ -270,7 +274,9 @@ Frontend (`frontend/.env`):
 - `backend/src/schemas.py` -- Pydantic request/response schemas
 - `backend/src/security.py` -- JWT creation/decoding, password hashing
 - `backend/src/user_keys.py` -- users' own OpenRouter keys (#108): Fernet-encrypted in `user_api_keys`, `key_for` gives the router the decrypted key or None. The chat runs its model calls inside `llm.openrouter_key(key)`, a ContextVar read by `chat_client_settings` (provider openrouter) and `ask_decision_model`; the agent's worker thread and the claim check's pool run in `contextvars.copy_context()`. Embeddings stay on the shared key. `llm.public_error` keeps keys out of the error texts sent and saved
-- `backend/src/dependencies.py` -- `get_current_session` checks the bearer JWT and its login session row, `get_current_user` returns its user
+- `backend/src/dependencies.py` -- `get_current_session` checks the bearer JWT and its login session row, `get_current_user` returns its user, `require_role(*roles)` the user if their role is listed, else 403 (#112)
+- `backend/src/roles.py` -- roles owner / developer / user (`STAFF` = owner + developer: ingestion, benchmark runs, and every route of the Benchmark, Pipeline and Database views, which the sidebar hides from users), `OWNER_EMAILS` promotion at startup and sign-in, `set_role` (never the last owner, never an `OWNER_EMAILS` owner)
+- `backend/src/routers/users.py` -- owners list users and change roles
 - `backend/src/routers/access_gate.py` -- Access gate unlock
 - `backend/src/routers/auth.py` -- Signup, signin, token, signout, /me, profile, password
 - `backend/src/routers/chat.py` -- Chat and streaming chat endpoints, chat session CRUD; the streamed answer is generated in a background thread and saved as it goes (see Chat Request)
@@ -291,7 +297,7 @@ Frontend (`frontend/.env`):
 - `reports/` -- the benchmark, technical, hosting and place-evaluation reports (generated into `../pyrmit_doc/` by `agentic.report`, `agentic.report_technical`, `place.report`: copy them here after regenerating) and the hand-written architecture report and status deck (HTML, printed to PDF with headless Chrome)
 - `backend/src/place/` -- `sources.py` (layers, attribute mapping, pilot kommuner), `fetch.py` (snapshot CLI), `registry.py` (`plan_sources.json`, built from the survey in `docs/research/`), `plan_layers.py`, `plan_links.py`, `review.py` (review mode, ADR-0008), `store.py` (`PlaceStore`, STRtree per layer), `live.py`, `profile.py` (`build_profile`), `permits.py`, `context.py` (the place as text for the agent), `geocode.py`, `check_sources.py` / `check_search.py` / `bench_answers.py` / `bench.py` / `report.py` (the evaluation, see Place Lookup)
 - `backend/src/localrag/` -- `analyzer.py` (Swedish BM25 tokens), `gazetteer.py`, `index.py` (VectorStore), `store.py` (disk store), `retriever.py` (`LocalRetriever`), `service.py` (chat integration), `eval.py` + `questions.jsonl`, `rewrite_queries.py`, `models.toml`, `pg_store.py` (the hosted corpus: loader + `PgStore` / `PgRetriever`). Never `pip install` a package that depends on torch without the CUDA index
-- `backend/src/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat integration, `CitationNumberer`), `claim_check.py` (live claim check of a chat answer by the decision model Jev: `check_claims`), `run.py` (CLI), `bench.py` + `cases*.jsonl`, `cases_from_caselaw.py`, `cases_from_corpus.py`, `cases_from_plans.py`, `rejudge.py`, `grounding.py`, `health.py`, `replay.py`, `coverage.py`, `report.py` / `report_technical.py` (PDF reports)
+- `backend/src/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat integration, `CitationNumberer`), `claim_check.py` (live claim check of a chat answer by the decision model Jev: `check_claims`), `run.py` (CLI), `bench.py` + `cases*.jsonl`, `cases_from_caselaw.py`, `cases_from_corpus.py`, `cases_from_plans.py`, `rejudge.py`, `grounding.py`, `health.py`, `replay.py`, `coverage.py`, `report.py` / `report_technical.py` (PDF reports), `bench_summary.py` (the Benchmark tab's studies from the result files, #116)
 - `backend/src/corpus/` -- the offline corpus steps (see Offline Corpus): `common.py` (paths: `BACKEND_DIR` = `backend/`, `DATA_ROOT` from `CORPUS_DATA_DIR`), `municipalities.py`, `laws.py`, `crawl.py`, `ocr.py` + `ocr_engines.py` (run in `backend/.venv-ocr`), `extract.py`, `pdf_filter.py`, `chunk.py`, `plans.py`, `check.py`, `snapshot.py`, `caselaw.py` (MÖD rulings for the case benchmark, not searchable), `pdf_files.py` (where the serving code reads crawled PDFs and OCR outputs: crawl folder, else a cache filled from the PDF's URL)
 - `backend/src/db/database.py` -- SQLAlchemy engine + `get_db` session factory
 - `backend/src/db/push_db.py` -- `PushDB` class: psycopg2 inserts into chunk tables
@@ -345,13 +351,16 @@ Frontend (`frontend/.env`):
   (floating search, Enter only; a match becomes a grey proposed pin with "Pin here"), `PlaceChip` (the chat's pinned
   place above the input), `glass.ts` (the shared glass style); `frontend/lib/place.ts` -- types
   and `fetchPlaceProfile` / `fetchPlaceCoverage`
-- `frontend/components/BenchmarkBrowser.tsx` -- Benchmark view (sidebar, above Database): browse the case sets, a case's
+- `frontend/components/BenchmarkOverview.tsx` -- the Benchmark tab's first view, "Approaches tested" (#116): one table per study, solutions by benchmark set with the success rate, cost and time per answer, the best result per set in green (ties too), the study's best configuration and the one in use badged, a solution's full measures and source files on click
+- `frontend/components/BenchmarkBrowser.tsx` -- Benchmark view (sidebar, above Database), opening on "Approaches tested" with "Case by case" beside it: browse the case sets, a case's
   reference (verdicts, key points, evidence, source, map crop) and past results, and "Test with the agent" (run + judge)
 - `frontend/components/PipelineBrowser.tsx` -- Pipeline view (sidebar, below Benchmark), progressive: an introduction,
   a strip of the six steps (key number + status, click to open), one card per step (status, tiles; opened: what it does,
   how it is measured, collapsible detail sections), a glossary
 - `frontend/components/Sidebar.tsx` -- Session list, new chat, Benchmark / Pipeline / Database / Settings buttons, user info
 - `frontend/components/Settings.tsx` -- Profile / password settings
+- `frontend/components/UserRoleSettings.tsx` -- Settings section for owners: every user with a role select; the last owner and `OWNER_EMAILS` owners are locked, a 409's message is shown (#112)
+- `frontend/lib/roles.ts` -- `Role`, `CurrentUser`, `isOwner` / `isStaff`, for showing or hiding admin features only (the backend checks)
 - `frontend/components/ApiKeySettings.tsx` -- Settings section for the user's own OpenRouter key: paste, replace, remove; shows "Key set (…abcd)", "Using the shared key" or that the feature is off (#108)
 - `frontend/tests/` -- Vitest suite copied from dev: `unit/` mirrors `components/` and `lib/` (reference tests
   `lib/auth.test.ts`, `components/Sidebar.test.tsx`, the rest `it.todo`), `mocks/handlers.ts` is the shared MSW fake
