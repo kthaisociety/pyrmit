@@ -238,3 +238,39 @@ def test_sync_refreshes_its_snapshots_after_a_new_load(geo):
     assert pg_store.sync_files(db) == ["geo/0188/plans.geojson"]
     assert (geo / "0188" / "plans.geojson").read_bytes() == b"second"
 
+
+
+class _CopyCursor:
+    """Records the rows each COPY sends (the chunk load's only contact with Postgres besides plain statements)."""
+
+    def __init__(self):
+        self.copied, self.statements = [], []
+
+    def execute(self, sql, params=()):
+        self.statements.append(sql)
+
+    def copy_expert(self, sql, buffer):
+        self.copied.extend(line.split(",")[0] for line in buffer.getvalue().splitlines())
+
+
+def _chunk_store(n: int) -> sqlite3.Connection:
+    lite = sqlite3.connect(":memory:")
+    lite.row_factory = sqlite3.Row
+    lite.execute(f"CREATE TABLE chunks (rowid INTEGER PRIMARY KEY, {', '.join(COLUMNS)})")
+    lite.executemany(f"INSERT INTO chunks VALUES ({', '.join('?' * (len(COLUMNS) + 1))})",
+                     [(i, f"c{i}", "pdf:0180:x", i, "pdf", "detaljplan", "0180", "Stockholm", "Plan", "u", None, None,
+                       None, None, "Stockholm - Plan", f"Byggnadshöjd {i} meter") for i in range(n)])
+    return lite
+
+
+def test_chunk_ranges_split_the_store_without_gap_or_overlap(monkeypatch):
+    """The parallel load's workers each copy one rowid range: together, every chunk exactly once."""
+    import numpy as np
+
+    monkeypatch.setattr(pg_store, "BATCH", 3)
+    lite, vectors = _chunk_store(10), np.zeros((10, 4), dtype=np.float16)
+    cursor, reports = _CopyCursor(), []
+    counts = [pg_store._copy_range(cursor, lite, vectors, low, high, reports.append) for low, high in [(0, 4), (4, 10)]]
+    assert counts == [4, 6]
+    assert sorted(map(int, cursor.copied)) == list(range(10))
+    assert reports == [3, 4, 3, 6]  # after every batch of each range, the last one partial

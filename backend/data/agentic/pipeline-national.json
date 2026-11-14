@@ -2577,7 +2577,7 @@
     },
     {
      "title": "Automatic checks",
-     "summary": "1 error(s), 4 warning(s), 5 passed (corpus.check, 2026-10-26 10:22)",
+     "summary": "1 error(s), 4 warning(s), 5 passed (corpus.check, 2026-11-14 15:03)",
      "text": "Each line states what should hold; the icon says whether it does (error, warning, information, passed). Click a line to see the cases behind it.",
      "checks": [
       {
@@ -2628,30 +2628,30 @@
       {
        "section": "Crawl (raw/web/*/manifest.jsonl)",
        "level": "WARN",
-       "message": "every PDF on disk is in a manifest (373 are not, 1.3 GB)",
+       "message": "every PDF on disk is in a manifest (981 are not, 2.8 GB)",
        "examples": [
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\01495cf8e49991dc.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\070c1528a193886d.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\074a2e15e12d8c21.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\0a1fab3859fd1849.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\0e1b9b6295c146a0.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\1720dbdecb946629.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\1889a9148c9feecc.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\18f5b3e35c80f09c.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\20db089c1008fdee.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\21fc8d085672665d.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\24a1cbe226548337.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\24d148f5ecd7ebec.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\2a00e32c8413cb46.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\2a7e4e415ad46644.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\2acdb6159fc2f0e6.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\2e5636e6f168e7c0.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\344967d66d233575.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\3a6547f14212ff55.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\3dd8f62f0a431a81.pdf",
-        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0181\\pdf\\3e73f9702a87ad50.pdf"
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\0c44d487036c0431.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\0f1d0f881f718c41.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\13c74b618eec6307.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\144f49508328b43c.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\187843683240d6e9.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\1abc2b084ca595cf.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\1e373747dfa0ded4.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\1f8ba4ab8405c202.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\289fb41b1c60242a.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\31f4f7e33325a752.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\320327aa4bebb748.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\38ef23c7f34d02a9.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\3b2be1ffc86465fb.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\3dd444e5c3fc9b1f.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\431316dd5e33ef5f.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\4981e02f0788c178.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\498b6e2350bea341.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\4bb59e9176c87166.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\4f9492b51385fd00.pdf",
+        "D:\\AISociety\\pyrmit\\backend\\data\\corpus\\raw\\web\\0115\\pdf\\537099e223c46649.pdf"
        ],
-       "count": 373
+       "count": 981
       },
       {
        "section": "Crawl (raw/web/*/manifest.jsonl)",
@@ -2857,26 +2857,26 @@
    "status": {
     "level": "info",
     "label": "In progress",
-    "note": "11,448 of 15,013 scanned PDFs read; then the corpus is rebuilt"
+    "note": "12,932 of 14,914 scanned PDFs read; then the corpus is rebuilt"
    },
    "flow": {
-    "value": 3543,
-    "caption": "3,543 scanned PDFs waiting for OCR"
+    "value": 3066,
+    "caption": "3,066 scanned PDFs waiting for OCR"
    },
    "tiles": [
     {
      "label": "Scanned PDFs (no text yet)",
-     "value": 3543,
+     "value": 3066,
      "hint": "invisible to search until OCR"
     },
     {
      "label": "Of which detaljplaner",
-     "value": 99
+     "value": 0
     },
     {
      "label": "Read by the OCR so far",
-     "value": 11448,
-     "hint": "of 15,013 queued"
+     "value": 12932,
+     "hint": "of 14,914 queued"
     },
     {
      "label": "Words read on real scanned maps",
@@ -2887,51 +2887,21 @@
    "sections": [
     {
      "title": "Progress",
-     "summary": "11,448 of 15,013 scanned PDFs",
+     "summary": "12,932 of 14,914 scanned PDFs",
      "meter": {
-      "value": 11448,
-      "total": 15013,
+      "value": 12932,
+      "total": 14914,
       "label": "scanned PDFs read"
      }
     },
     {
      "title": "Scanned PDFs by document type",
-     "summary": "3,543 in total",
+     "summary": "3,066 in total",
      "bars": [
       {
        "label": "Other",
-       "value": 3074,
+       "value": 3066,
        "hint": "Other: decisions, investigations, guidance kept by the filter"
-      },
-      {
-       "label": "Översiktsplan",
-       "value": 186,
-       "hint": "Översiktsplan: comprehensive plan of the whole kommun"
-      },
-      {
-       "label": "Detaljplan",
-       "value": 99,
-       "hint": "Detaljplan: detailed development plan (plan map, description, consultation documents, studies)"
-      },
-      {
-       "label": "Avlopp",
-       "value": 81,
-       "hint": "Avlopp: water and sewage (private sewage permits)"
-      },
-      {
-       "label": "Bygglov",
-       "value": 55,
-       "hint": "Bygglov: building permits (how to apply, rules, forms)"
-      },
-      {
-       "label": "Taxa",
-       "value": 32,
-       "hint": "Taxa: fee schedules"
-      },
-      {
-       "label": "Strandskydd",
-       "value": 16,
-       "hint": "Strandskydd: shore protection (building near water)"
       }
      ]
     },
@@ -2988,26 +2958,26 @@
    "status": {
     "level": "good",
     "label": "Checks pass",
-    "note": "0 error(s), 4 warning(s), 11 passed (corpus.check, 2026-10-26 10:22)"
+    "note": "0 error(s), 4 warning(s), 11 passed (corpus.check, 2026-11-14 15:03)"
    },
    "flow": {
-    "value": 2390696,
-    "caption": "113,031 documents, 2,390,696 passages"
+    "value": 2395686,
+    "caption": "113,008 documents, 2,395,686 passages"
    },
    "tiles": [
     {
      "label": "Documents",
-     "value": 113031,
-     "hint": "77,631 PDFs, 35,385 web pages, 15 laws"
+     "value": 113008,
+     "hint": "77,608 PDFs, 35,385 web pages, 15 laws"
     },
     {
      "label": "Passages (chunks)",
-     "value": 2390696
+     "value": 2395686
     },
     {
      "label": "Documents per kommun",
      "value": "228",
-     "hint": "median, scanned PDFs included; the largest: Uppsala 6,848, Västerås 3,364, Huddinge 3,283"
+     "hint": "median, scanned PDFs included; the largest: Uppsala 6,848, Västerås 3,363, Huddinge 3,283"
     },
     {
      "label": "Law sections",
@@ -3023,38 +2993,38 @@
      "bars": [
       {
        "label": "Detaljplan",
-       "value": 55202,
-       "hint": "Detaljplan: detailed development plan (plan map, description, consultation documents, studies) - 45,764 PDFs, 9,438 web pages"
+       "value": 55212,
+       "hint": "Detaljplan: detailed development plan (plan map, description, consultation documents, studies) - 45,774 PDFs, 9,438 web pages"
       },
       {
        "label": "Översiktsplan",
-       "value": 9862,
-       "hint": "Översiktsplan: comprehensive plan of the whole kommun - 5,083 PDFs, 4,779 web pages"
+       "value": 9844,
+       "hint": "Översiktsplan: comprehensive plan of the whole kommun - 5,065 PDFs, 4,779 web pages"
       },
       {
        "label": "Bygglov",
-       "value": 9947,
-       "hint": "Bygglov: building permits (how to apply, rules, forms) - 3,030 PDFs, 6,917 web pages"
+       "value": 9934,
+       "hint": "Bygglov: building permits (how to apply, rules, forms) - 3,017 PDFs, 6,917 web pages"
       },
       {
        "label": "Strandskydd",
-       "value": 655,
-       "hint": "Strandskydd: shore protection (building near water) - 211 PDFs, 444 web pages"
+       "value": 650,
+       "hint": "Strandskydd: shore protection (building near water) - 206 PDFs, 444 web pages"
       },
       {
        "label": "Avlopp",
-       "value": 9775,
-       "hint": "Avlopp: water and sewage (private sewage permits) - 3,753 PDFs, 6,022 web pages"
+       "value": 9764,
+       "hint": "Avlopp: water and sewage (private sewage permits) - 3,742 PDFs, 6,022 web pages"
       },
       {
        "label": "Taxa",
-       "value": 3303,
-       "hint": "Taxa: fee schedules - 2,425 PDFs, 878 web pages"
+       "value": 3306,
+       "hint": "Taxa: fee schedules - 2,428 PDFs, 878 web pages"
       },
       {
        "label": "Other",
-       "value": 24272,
-       "hint": "Other: decisions, investigations, guidance kept by the filter - 17,365 PDFs, 6,907 web pages"
+       "value": 24283,
+       "hint": "Other: decisions, investigations, guidance kept by the filter - 17,376 PDFs, 6,907 web pages"
       }
      ]
     },
@@ -3073,7 +3043,7 @@
        ],
        [
         "Västerås",
-        3364
+        3363
        ],
        [
         "Huddinge",
@@ -3089,11 +3059,11 @@
        ],
        [
         "Kalmar",
-        1736
+        1732
        ],
        [
         "Danderyd",
-        1720
+        1721
        ],
        [
         "Kiruna",
@@ -3185,7 +3155,7 @@
        ],
        [
         "Vaxholm",
-        874
+        873
        ],
        [
         "Malung-Sälen",
@@ -3201,7 +3171,7 @@
        ],
        [
         "Vallentuna",
-        785
+        775
        ],
        [
         "Sundbyberg",
@@ -3216,12 +3186,12 @@
         723
        ],
        [
-        "Ronneby",
-        714
-       ],
-       [
         "Kungälv",
         712
+       ],
+       [
+        "Ronneby",
+        705
        ],
        [
         "Borlänge",
@@ -3249,7 +3219,7 @@
        ],
        [
         "Kristinehamn",
-        626
+        627
        ],
        [
         "Täby",
@@ -3293,19 +3263,19 @@
        ],
        [
         "Falkenberg",
-        533
+        532
        ],
        [
         "Håbo",
         504
        ],
        [
-        "Söderköping",
+        "Kungsbacka",
         501
        ],
        [
-        "Kungsbacka",
-        501
+        "Söderköping",
+        500
        ],
        [
         "Nykvarn",
@@ -3337,7 +3307,7 @@
        ],
        [
         "Hässleholm",
-        441
+        442
        ],
        [
         "Strängnäs",
@@ -3345,7 +3315,7 @@
        ],
        [
         "Gagnef",
-        420
+        419
        ],
        [
         "Partille",
@@ -3365,7 +3335,7 @@
        ],
        [
         "Mörbylånga",
-        400
+        401
        ],
        [
         "Kinda",
@@ -3389,7 +3359,7 @@
        ],
        [
         "Härnösand",
-        383
+        384
        ],
        [
         "Gislaved",
@@ -3473,7 +3443,7 @@
        ],
        [
         "Mora",
-        300
+        301
        ],
        [
         "Sotenäs",
@@ -3504,16 +3474,16 @@
         286
        ],
        [
-        "Haninge",
-        285
-       ],
-       [
         "Oskarshamn",
         285
        ],
        [
         "Vellinge",
         285
+       ],
+       [
+        "Haninge",
+        284
        ],
        [
         "Nybro",
@@ -3556,11 +3526,11 @@
         272
        ],
        [
-        "Piteå",
-        268
+        "Östra Göinge",
+        265
        ],
        [
-        "Östra Göinge",
+        "Piteå",
         265
        ],
        [
@@ -3776,12 +3746,12 @@
         182
        ],
        [
-        "Avesta",
-        179
+        "Falköping",
+        180
        ],
        [
-        "Falköping",
-        178
+        "Avesta",
+        179
        ],
        [
         "Vännäs",
@@ -3789,7 +3759,7 @@
        ],
        [
         "Essunga",
-        174
+        173
        ],
        [
         "Hammarö",
@@ -3905,7 +3875,7 @@
        ],
        [
         "Leksand",
-        142
+        141
        ],
        [
         "Älmhult",
@@ -3940,11 +3910,11 @@
         126
        ],
        [
-        "Uppvidinge",
-        124
+        "Mellerud",
+        125
        ],
        [
-        "Mellerud",
+        "Uppvidinge",
         124
        ],
        [
@@ -4189,7 +4159,7 @@
        ],
        [
         "Överkalix",
-        35
+        36
        ],
        [
         "Köping",
@@ -4209,7 +4179,7 @@
        ],
        [
         "Jönköping",
-        13
+        14
        ],
        [
         "Norberg",
@@ -4230,13 +4200,13 @@
     },
     {
      "title": "Automatic checks",
-     "summary": "0 error(s), 4 warning(s), 11 passed (corpus.check, 2026-10-26 10:22)",
+     "summary": "0 error(s), 4 warning(s), 11 passed (corpus.check, 2026-11-14 15:03)",
      "text": "Each line states what should hold; the icon says whether it does (error, warning, information, passed). Click a line to see the cases behind it.",
      "checks": [
       {
        "section": "Documents (documents.jsonl)",
        "level": "WARN",
-       "message": "documents naming only other municipalities than their site's (shared administrations, neighbours' plans; filed under the site's): 756",
+       "message": "documents naming only other municipalities than their site's (shared administrations, neighbours' plans; filed under the site's): 765",
        "examples": [
         "Askersund -> Laxå: 101",
         "Askersund -> Lekeberg: 45",
@@ -4249,8 +4219,8 @@
         "Järfälla -> Stockholm: 11",
         "Ovanåker -> Bollnäs: 11",
         "Töreboda -> Mariestad: 10",
+        "Avesta -> Norberg: 9",
         "Valdemarsvik -> Söderköping: 9",
-        "Avesta -> Norberg: 8",
         "Täby -> Danderyd: 8",
         "Lindesberg -> Ljusnarsberg: 8",
         "Sandviken -> Hofor: 8",
@@ -4259,7 +4229,7 @@
         "Grästorp -> Lidköping: 7",
         "Solna -> Stockholm: 5"
        ],
-       "count": 312
+       "count": 316
       },
       {
        "section": "Documents (documents.jsonl)",
@@ -4292,7 +4262,7 @@
       {
        "section": "Documents (documents.jsonl)",
        "level": "WARN",
-       "message": "every PDF judged by corpus.pdf_filter (features, classify, llm, classify, apply): 2035 are not",
+       "message": "every PDF judged by corpus.pdf_filter (features, classify, llm, classify, apply): 2038 are not",
        "examples": [
         "pdf:0114:a369f76829006f28: 21_1_Optimus_Kompletterande konsekvensanalys BHF_20240701.pdf Pdf, 846",
         "pdf:0114:0f46ae26125fd45a: Platsanalys Älvsunda 7.8 m fl..pdf Pdf, 4 MB.",
@@ -4315,7 +4285,7 @@
         "pdf:0117:11f1cd9551ba5535: Länk till filtypen pdf Strategi för de gröna frågorna i Österåker 3.4 ",
         "pdf:0120:5276756ba9b8bd8f: Ishallsprojektet"
        ],
-       "count": 2035
+       "count": 2038
       },
       {
        "section": "Documents (documents.jsonl)",
@@ -4333,14 +4303,14 @@
       {
        "section": "Documents (documents.jsonl)",
        "level": "INFO",
-       "message": "3543 scanned PDFs waiting for OCR (no text, invisible to search): {'other': 3074, 'detaljplan': 99, 'avlopp': 81, 'oversiktsplan': 186, 'taxa': 32, 'bygglov': 55, 'strandskydd': 16}",
+       "message": "3066 scanned PDFs waiting for OCR (no text, invisible to search): {'other': 3066}",
        "examples": [],
        "count": 0
       },
       {
-       "section": "Index and store (st-arctic-l-v2)",
+       "section": "Index and store (st-bge-m3)",
        "level": "INFO",
-       "message": "87580 vectors of chunks no longer in the corpus (dropped by localrag.store)",
+       "message": "9215 vectors of chunks no longer in the corpus (dropped by localrag.store)",
        "examples": [],
        "count": 0
       },
@@ -4387,37 +4357,37 @@
        "count": 0
       },
       {
-       "section": "Index and store (st-arctic-l-v2)",
+       "section": "Index and store (st-bge-m3)",
        "level": "OK",
-       "message": "2390696 chunks, unique ids (0 duplicates)",
+       "message": "2395686 chunks, unique ids (0 duplicates)",
        "examples": [],
        "count": 0
       },
       {
-       "section": "Index and store (st-arctic-l-v2)",
+       "section": "Index and store (st-bge-m3)",
        "level": "OK",
        "message": "every chunk has a context header (0 without)",
        "examples": [],
        "count": 0
       },
       {
-       "section": "Index and store (st-arctic-l-v2)",
+       "section": "Index and store (st-bge-m3)",
        "level": "OK",
        "message": "every chunk's document is in documents.jsonl (0 not)",
        "examples": [],
        "count": 0
       },
       {
-       "section": "Index and store (st-arctic-l-v2)",
+       "section": "Index and store (st-bge-m3)",
        "level": "OK",
        "message": "every chunk has a vector (0 missing: run localrag.index)",
        "examples": [],
        "count": 0
       },
       {
-       "section": "Index and store (st-arctic-l-v2)",
+       "section": "Index and store (st-bge-m3)",
        "level": "OK",
-       "message": "the store has the chunks of chunks.jsonl (2390696 vs 2390696: rebuild with localrag.store, then restart the backend)",
+       "message": "the store has the chunks of chunks.jsonl (2395686 vs 2395686: rebuild with localrag.store, then restart the backend)",
        "examples": [],
        "count": 0
       }
@@ -4437,37 +4407,37 @@
     "note": "rules extracted for 29 % of the plans"
    },
    "flow": {
-    "value": 38664,
-    "caption": "38,664 plans"
+    "value": 38678,
+    "caption": "38,678 plans"
    },
    "tiles": [
     {
      "label": "Plans",
-     "value": 38664
+     "value": 38678
     },
     {
      "label": "In force",
-     "value": 22252
+     "value": 22268
     },
     {
      "label": "With rules extracted",
-     "value": 11200,
-     "hint": "97,496 rules in total"
+     "value": 11202,
+     "hint": "97,516 rules in total"
     },
     {
      "label": "Known only from a web page",
-     "value": 4310,
+     "value": 4309,
      "hint": "no document of the plan in the corpus"
     }
    ],
    "sections": [
     {
      "title": "Plan status",
-     "summary": "22,252 in force",
+     "summary": "22,268 in force",
      "bars": [
       {
        "label": "In force (laga kraft)",
-       "value": 22252
+       "value": 22268
       },
       {
        "label": "Status not found",
@@ -4475,15 +4445,15 @@
       },
       {
        "label": "Being drawn up",
-       "value": 5129
+       "value": 5125
       },
       {
        "label": "In consultation (samråd)",
-       "value": 1515
+       "value": 1516
       },
       {
        "label": "In review (granskning)",
-       "value": 1135
+       "value": 1136
       },
       {
        "label": "Adopted, not yet in force",
@@ -4497,19 +4467,19 @@
      "bars": [
       {
        "label": "0 documents",
-       "value": 4310
+       "value": 4309
       },
       {
        "label": "1 document",
-       "value": 27656
+       "value": 27676
       },
       {
        "label": "2 documents",
-       "value": 4998
+       "value": 4994
       },
       {
        "label": "3 documents",
-       "value": 857
+       "value": 856
       },
       {
        "label": "4 documents",
@@ -4523,20 +4493,20 @@
     },
     {
      "title": "Automatic checks",
-     "summary": "0 error(s), 0 warning(s), 2 passed (corpus.check, 2026-10-26 10:22)",
+     "summary": "0 error(s), 0 warning(s), 2 passed (corpus.check, 2026-11-14 15:03)",
      "text": "Each line states what should hold; the icon says whether it does (error, warning, information, passed). Click a line to see the cases behind it.",
      "checks": [
       {
        "section": "Plan registry (plans.jsonl)",
        "level": "INFO",
-       "message": "11200 plans with extracted provisions (29%)",
+       "message": "11202 plans with extracted provisions (29%)",
        "examples": [],
        "count": 0
       },
       {
        "section": "Plan registry (plans.jsonl)",
        "level": "OK",
-       "message": "38664 plans, 4310 (11%) without any document in the corpus",
+       "message": "38678 plans, 4309 (11%) without any document in the corpus",
        "examples": [],
        "count": 0
       },
@@ -4799,10 +4769,285 @@
      }
     }
    ]
+  },
+  {
+   "id": "costs",
+   "step": 7,
+   "title": "Rebuild: time and cost",
+   "what": "What it takes to build the corpus again from the kommun sites: each step's time on the laptop that built it, then the other ways to run it (a rented GPU, paid APIs, a CPU only) and what an update costs. OCR is almost all of the time; embeddings are cheap through an API.",
+   "measure": "Timings from the logs of the bge-m3 rebuild of 13-14 November 2026. Laptop: Intel i7-12700H (14 cores), 16 GB RAM, RTX 4060 with 8 GB. Rented GPU speeds are estimated from the cards' compute, not measured; prices are list prices, sources below.",
+   "status": {
+    "level": "info",
+    "label": "Measured 2026-11-14",
+    "note": "OCR 55 h + embeddings 9 h 23 + CPU steps 1 h 20, crawl apart"
+   },
+   "flow": {
+    "value": "≈ 66 h",
+    "caption": "full rebuild on the laptop, $0"
+   },
+   "tiles": [
+    {
+     "label": "Full rebuild on the laptop",
+     "value": "≈ 66 h",
+     "hint": "about 3 days of GPU, $0 (≈ €2 of electricity)"
+    },
+    {
+     "label": "OCR of the scans",
+     "value": "≈ 55 h",
+     "hint": "74,742 pages at 22.6 pages a minute"
+    },
+    {
+     "label": "Embeddings (bge-m3)",
+     "value": "9 h 23",
+     "hint": "2,380,160 passages at 71 a second"
+    },
+    {
+     "label": "Same embeddings through the API",
+     "value": "≈ $6",
+     "hint": "≈ 609M tokens at $0.01 per million (OpenRouter)"
+    }
+   ],
+   "sections": [
+    {
+     "title": "Each step on the laptop",
+     "summary": "Laptop: Intel i7-12700H (14 cores), 16 GB RAM, RTX 4060 with 8 GB",
+     "table": {
+      "columns": [
+       "Step",
+       "Size",
+       "Time",
+       "How it was measured"
+      ],
+      "rows": [
+       [
+        "Crawl the kommun sites",
+        "212,517 requests, 84,631 PDFs (229 GB)",
+        "≈ 8-10 h",
+        "12 kommuner in parallel, 1 request a second per site: the sites set the pace, not the machine"
+       ],
+       [
+        "OCR of the scanned PDFs",
+        "14,914 PDFs, 74,742 pages",
+        "≈ 55 h",
+        "22.6 pages a minute over 10,043 PDFs (32,818 pages in 24.2 h), PP-OCRv6 on the GPU, 1 worker"
+       ],
+       [
+        "Extract the text",
+        "113,008 documents",
+        "37-41 min",
+        "CPU"
+       ],
+       [
+        "Cut into passages",
+        "2.40M passages",
+        "7-8 min",
+        "CPU"
+       ],
+       [
+        "Embeddings (bge-m3)",
+        "2,380,160 passages, ≈ 609M tokens",
+        "9 h 23",
+        "71 passages a second, GPU, fp16"
+       ],
+       [
+        "Search store (SQLite + vectors)",
+        "2.39M passages",
+        "20 min",
+        "CPU"
+       ],
+       [
+        "Plan registry and checks",
+        "38,668 plans",
+        "≈ 15 min",
+        "CPU"
+       ],
+       [
+        "PDF filter (LLM second opinion)",
+        "≈ 13,000 uncertain PDFs",
+        "already done",
+        "Decisions are reused: a rebuild makes no API call. ≈ $1-2 in total"
+       ],
+       [
+        "Load into Postgres (pgvector)",
+        "2.40M passages",
+        "≈ 32 min + indexes",
+        "8 processes in parallel (one: ≈ 2.5 h)"
+       ]
+      ]
+     }
+    },
+    {
+     "title": "Full rebuild: the options",
+     "summary": "laptop, rented GPU, APIs, CPU",
+     "table": {
+      "columns": [
+       "Full rebuild",
+       "Time",
+       "Cost",
+       "Note"
+      ],
+      "rows": [
+       [
+        "Everything on the laptop (today)",
+        "≈ 66 h",
+        "$0",
+        "The laptop is busy for about 3 days"
+       ],
+       [
+        "OCR on the laptop, embeddings through the API",
+        "≈ 57 h",
+        "≈ $6",
+        "Saves 9 h for $6"
+       ],
+       [
+        "OCR on a rented GPU, embeddings through the API",
+        "≈ 20-31 h",
+        "≈ $12-25",
+        "35 GB of scans to upload"
+       ],
+       [
+        "Everything on a rented RTX 4090",
+        "≈ 22-33 h",
+        "≈ $8-23",
+        "$0.34-0.69 an hour; speeds estimated, not measured"
+       ],
+       [
+        "Everything through APIs (Mistral OCR + OpenRouter)",
+        "a few hours to a day",
+        "≈ $155-305",
+        "Mistral OCR returns no word positions: no highlighting on scanned plan maps"
+       ],
+       [
+        "Everything on a CPU",
+        "≈ 1-2 months",
+        "$0",
+        "Not for a full rebuild; enough for updates"
+       ]
+      ],
+      "highlight": 0
+     }
+    },
+    {
+     "title": "Running it locally",
+     "summary": "the credible setups and what each is good for",
+     "table": {
+      "columns": [
+       "Run it locally",
+       "OCR (74,742 pages)",
+       "Embeddings (2.4M passages)",
+       "Good for"
+      ],
+      "rows": [
+       [
+        "Laptop GPU, RTX 4060 (today)",
+        "≈ 55 h",
+        "9 h 23",
+        "Full rebuilds, $0. Measured"
+       ],
+       [
+        "Laptop GPU for OCR, API for embeddings",
+        "≈ 55 h",
+        "≈ 1-3 h, ≈ $6",
+        "Frees the GPU 9 h earlier; vectors are the same model"
+       ],
+       [
+        "A desktop GPU with 24 GB (RTX 3090 / 4090)",
+        "≈ 18-28 h",
+        "≈ 2.5-3 h",
+        "Full rebuilds in about a day; room for 2-3 OCR workers. Estimated"
+       ],
+       [
+        "CPU only, PyTorch",
+        "≈ 14 days",
+        "≈ 45 days",
+        "Small updates only. Embeddings measured at 0.61 passages a second"
+       ],
+       [
+        "CPU only, embeddings in ONNX int8",
+        "≈ 14 days",
+        "≈ 15 days",
+        "Updates: ≈ 50 min for 5,000 new passages. 1.8 passages a second (9 Oct measurement)"
+       ],
+       [
+        "A CPU server at night (e.g. the IT's), API for embeddings",
+        "≈ 1 day per 4,000 pages",
+        "a few minutes, < $0.02",
+        "Regular updates without a GPU"
+       ]
+      ]
+     }
+    },
+    {
+     "title": "Updates",
+     "summary": "only new or changed passages are embedded again",
+     "table": {
+      "columns": [
+       "An update like today's",
+       "OCR (≈ 4,000 pages)",
+       "Embeddings (5,212 passages)",
+       "Total"
+      ],
+      "rows": [
+       [
+        "Laptop",
+        "≈ 3 h",
+        "≈ 2 min",
+        "≈ 4.5 h with the CPU steps, $0"
+       ],
+       [
+        "CPU only",
+        "≈ 18 h",
+        "≈ 1-2.5 h",
+        "about a day, $0"
+       ],
+       [
+        "CPU for OCR, API for embeddings",
+        "≈ 18 h",
+        "minutes, < $0.02",
+        "about a day, almost $0"
+       ],
+       [
+        "APIs",
+        "≈ $8-16 (Mistral)",
+        "< $0.02",
+        "≈ $8-16"
+       ]
+      ]
+     }
+    },
+    {
+     "title": "Price sources",
+     "summary": "4 pages",
+     "table": {
+      "columns": [
+       "Price",
+       "Source"
+      ],
+      "rows": [
+       [
+        "OpenRouter embedding prices (baai/bge-m3 $0.01 per million tokens)",
+        "https://openrouter.ai/api/v1/embeddings/models"
+       ],
+       [
+        "Mistral API prices (OCR 4.1 $4, OCR 3 $2 per 1,000 pages)",
+        "https://docs.mistral.ai/inference/pricing"
+       ],
+       [
+        "Mistral OCR batch price (≈ $2 per 1,000 pages, third party)",
+        "https://www.activepieces.com/blog/mistral-ocr-pricing-2026-cost-per-1000-pages"
+       ],
+       [
+        "RunPod GPU prices (RTX 4090 $0.34-0.74 an hour)",
+        "https://www.runpod.io/pricing"
+       ]
+      ]
+     }
+    }
+   ]
   }
  ],
  "snapshot": {
-  "built": "2026-11-01",
+  "built": "2026-11-14",
   "corpus": "data"
  }
 }

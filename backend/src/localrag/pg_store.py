@@ -160,27 +160,82 @@ def _copy(cursor, table: str, columns: str, rows: list[list]) -> None:
     cursor.copy_expert(f"COPY {table} ({columns}) FROM STDIN WITH (FORMAT csv)", buffer)
 
 
-def _load_chunks(cursor, lite: sqlite3.Connection, vectors: np.ndarray, total: int, started: float) -> None:
-    cursor.execute(CHUNKS_SCHEMA.format(dim=vectors.shape[1]))
+def _copy_range(cursor, lite: sqlite3.Connection, vectors: np.ndarray, low: int, high: int, report) -> int:
+    """Copy the chunks with low <= rowid < high; report(done) after every batch. Returns the chunks copied."""
     # Staging table with the stems as text: to_tsvector keeps their positions (term frequencies for ranking).
     # Emptied after every batch: the vectors as text would take ~1.2 GB of the compute's temp space
     cursor.execute(f"CREATE TEMP TABLE staging (rowid integer, {', '.join(f'{c} text' for c in COLUMNS)}, "
                    "stems text, embedding text)")
     rows, done = [], 0
-    for row in lite.execute("SELECT * FROM chunks ORDER BY rowid"):
+
+    def flush() -> None:
+        _copy(cursor, "staging", f"rowid, {', '.join(COLUMNS)}, stems, embedding", rows)
+        cursor.execute("""INSERT INTO corpus_chunks SELECT rowid, chunk_id, doc_id, chunk_index::integer, kind,
+                          doc_type, kommun_code, kommun, title, url, section, chapter, paragraph, heading, header,
+                          text, to_tsvector('simple', stems), embedding::halfvec FROM staging""")
+        cursor.execute("TRUNCATE staging")
+
+    for row in lite.execute("SELECT * FROM chunks WHERE rowid >= ? AND rowid < ? ORDER BY rowid", (low, high)):
         chunk = {key: _clean(value) for key, value in dict(row).items()}
         vector = "[" + ",".join(map(str, vectors[chunk["rowid"]].tolist())) + "]"  # float16 values, exact
         rows.append([chunk["rowid"], *[chunk[c] for c in COLUMNS], " ".join(analyze(chunk_text(chunk), "stem")),
                      vector])
-        if len(rows) >= BATCH or done + len(rows) == total:
-            _copy(cursor, "staging", f"rowid, {', '.join(COLUMNS)}, stems, embedding", rows)
-            cursor.execute("""INSERT INTO corpus_chunks SELECT rowid, chunk_id, doc_id, chunk_index::integer, kind,
-                              doc_type, kommun_code, kommun, title, url, section, chapter, paragraph, heading, header,
-                              text, to_tsvector('simple', stems), embedding::halfvec FROM staging""")
-            cursor.execute("TRUNCATE staging")
+        if len(rows) >= BATCH:
+            flush()
             done, rows = done + len(rows), []
-            print(f"  {done}/{total} chunks ({time.perf_counter() - started:.0f}s)", flush=True)
+            report(done)
+    if rows:
+        flush()
+        done += len(rows)
+        report(done)
     cursor.execute("DROP TABLE staging")
+    return done
+
+
+def _load_range(job: tuple) -> int:
+    """One worker of a parallel load (multiprocessing): its own SQLite reader and Postgres connection."""
+    import psycopg2
+
+    model, url, low, high, worker = job
+    directory = store_dir(model)
+    lite = sqlite3.connect(f"file:{directory / 'corpus.sqlite'}?mode=ro", uri=True)
+    lite.row_factory = sqlite3.Row
+    vectors = np.load(directory / "vectors.npy", mmap_mode="r")
+    connection = psycopg2.connect(url)
+    connection.autocommit = True
+    started = time.perf_counter()
+
+    def report(done: int) -> None:
+        if done % 50_000 < BATCH:
+            print(f"  worker {worker}: {done} chunks ({time.perf_counter() - started:.0f}s)", flush=True)
+
+    try:
+        return _copy_range(connection.cursor(), lite, vectors, low, high, report)
+    finally:
+        connection.close()
+
+
+def _load_chunks(cursor, lite: sqlite3.Connection, vectors: np.ndarray, total: int, started: float,
+                 model: str = "", url: str = "", workers: int = 1) -> None:
+    """workers > 1: that many processes copy one rowid range each (the time goes into the Python side, the Swedish
+    stems and the vectors as text: 8 workers ~5x faster, 2.4M chunks in ~32 min instead of ~2.5 h)."""
+    cursor.execute(CHUNKS_SCHEMA.format(dim=vectors.shape[1]))
+    low, high = lite.execute("SELECT MIN(rowid), MAX(rowid) FROM chunks").fetchone()
+    if low is None:
+        done = 0
+    elif workers <= 1:
+        done = _copy_range(cursor, lite, vectors, low, high + 1, lambda n: print(
+            f"  {n}/{total} chunks ({time.perf_counter() - started:.0f}s)", flush=True))
+    else:
+        import multiprocessing
+
+        step = -(-(high + 1 - low) // workers)
+        jobs = [(model, url, low + k * step, min(low + (k + 1) * step, high + 1), k) for k in range(workers)]
+        with multiprocessing.Pool(workers) as pool:
+            done = sum(pool.map(_load_range, jobs))
+        print(f"  {done}/{total} chunks with {workers} workers ({time.perf_counter() - started:.0f}s)", flush=True)
+    if done != total:
+        raise SystemExit(f"copied {done} of the store's {total} chunks")
     _copy(cursor, "corpus_places", "word, kommun_code, count",
           [list(r) for r in lite.execute("SELECT word, kommun_code, count FROM places")])
 
@@ -191,9 +246,9 @@ def _small_files(kommuner: list[str]) -> dict[str, Path]:
     return {"corpus/municipalities.json": MUNICIPALITIES_PATH, "corpus/plans.jsonl": PLANS_PATH, **snapshot_files(kommuner)}
 
 
-def load(model: str, url: str, skip_chunks: bool = False) -> dict:
+def load(model: str, url: str, skip_chunks: bool = False, workers: int = 1) -> dict:
     """skip_chunks: keep the chunks and places a previous run loaded (~17 min for 115k chunks from home), redo the
-    rest."""
+    rest. workers: processes copying the chunks (_load_chunks)."""
     import psycopg2
 
     directory = store_dir(model)
@@ -210,7 +265,7 @@ def load(model: str, url: str, skip_chunks: bool = False) -> dict:
         if cursor.fetchone()[0] != total:
             raise SystemExit("corpus_chunks does not hold this store's chunks: run without --skip-chunks")
     else:
-        _load_chunks(cursor, lite, vectors, total, started)
+        _load_chunks(cursor, lite, vectors, total, started, model, url, workers)
 
     cursor.execute(EXTRAS_SCHEMA)  # corpus_terms: ts_stat over every chunk, ~30 s
     kommuner = sorted(r[0] for r in lite.execute("SELECT DISTINCT kommun_code FROM chunks WHERE kommun_code IS NOT NULL"))
@@ -463,6 +518,8 @@ def main() -> None:
                                                  "with --files, the kommuner's place snapshots alone")
     parser.add_argument("--model", help="disk store to copy (localrag.store), e.g. st-bge-m3")
     parser.add_argument("--skip-chunks", action="store_true", help="keep the chunks already loaded, redo the rest")
+    parser.add_argument("--workers", type=int, default=1,
+                        help="processes copying the chunks (8: the national corpus in ~32 min instead of ~2.5 h)")
     parser.add_argument("--files", action="store_true", help="add or replace the place snapshots (data/geo), nothing else")
     parser.add_argument("--kommun", action="append", help="with --files: these kommun codes only (default: every snapshot)")
     parser.add_argument("--limit-mb", type=float, default=STORAGE_LIMIT_MB, help="with --files: the database's storage limit")
@@ -478,7 +535,7 @@ def main() -> None:
         print(f"Loaded {result['files']} files of {len(result['kommuner'])} kommuner ({result['mb']} MB gzip): "
               f"database {result['database_mb']} MB")
     elif args.model:
-        load(args.model, url, args.skip_chunks)
+        load(args.model, url, args.skip_chunks, args.workers)
     else:
         parser.error("give --model (the whole corpus) or --files (the place snapshots)")
 
