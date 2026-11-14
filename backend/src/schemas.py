@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, SecretStr
 
 
 class UserTable(BaseModel):
@@ -87,6 +87,19 @@ class SignInRequest(BaseModel):
 
 class UpdateProfileRequest(BaseModel):
     name: str = Field(min_length=2, max_length=100)
+
+
+class ApiKeyStatus(BaseModel):
+    """The user's own OpenRouter key (issue #108), as the browser sees it: never the key, only its last 4 characters."""
+    enabled: bool  # API_KEY_ENCRYPTION_KEY is set: users can store a key
+    has_key: bool  # False: the shared key pays
+    last4: str | None = None
+
+
+class SetApiKeyRequest(BaseModel):
+    # SecretStr keeps the key out of reprs and logs; no length or pattern constraint here, since a 422 echoes the
+    # input back: user_keys.normalise checks it and its error never contains the text
+    api_key: SecretStr
 
 
 class ChangePasswordRequest(BaseModel):

@@ -16,13 +16,16 @@ from tests.unit.place.snapshot import (
 )
 
 # In-memory SQLite stands in for Postgres (PCR-0011). Only tables without pgvector columns work here.
-AUTH_TABLES = (models.User, models.Account, models.Session, models.ChatSession, models.ChatMessage)
+AUTH_TABLES = (models.User, models.Account, models.Session, models.ChatSession, models.ChatMessage,
+               models.UserApiKey)
 
 
 @pytest.fixture(autouse=True)
 def jwt_env(monkeypatch):
     monkeypatch.setenv("JWT_SECRET_KEY", "test-only-signing-key-at-least-32-bytes")
     monkeypatch.setenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
+    # Users' own API keys are off unless a test turns them on (user_keys.py), whatever the developer's .env says
+    monkeypatch.delenv("API_KEY_ENCRYPTION_KEY", raising=False)
 
 
 @pytest.fixture

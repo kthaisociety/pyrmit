@@ -738,3 +738,67 @@ def test_an_off_topic_answer_is_not_claim_checked(harness, monkeypatch):
     monkeypatch.setattr(chat, "_check_claims", lambda run: checked.append(run) or ({"status": "checked"}, None))
     ask(harness, PINNED)
     assert checked == [] and saved_answer(harness).content.startswith("Hej!")
+
+
+# --- the user's own OpenRouter key (issue #108) -------------------------------------------------------------------
+
+USER_KEY = "sk-or-v1-" + "ab12" * 16
+
+
+@pytest.fixture
+def user_key(harness, monkeypatch):
+    """User u1 stored USER_KEY; the shared key is sk-or-shared."""
+    from cryptography.fernet import Fernet
+
+    import user_keys
+
+    monkeypatch.setenv("API_KEY_ENCRYPTION_KEY", Fernet.generate_key().decode())
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-shared")
+    models.UserApiKey.__table__.create(harness.Session.kw["bind"])
+    with harness.Session() as db:
+        user_keys.save(db, "u1", USER_KEY)
+
+
+def agent_recording_keys(monkeypatch, error: Exception | None = None) -> list[str]:
+    """Replace the agent with one that records the OpenRouter key it would use (and raises `error`, if given)."""
+    import llm
+
+    keys = []
+
+    def fake_stream_agent(question, history, record, sse, flush=list, allow_ask=True):
+        keys.append(llm.openrouter_api_key())
+        if error:
+            raise error
+        yield sse({"type": "response.output_text.delta", "delta": "An answer."})
+        return {"answer": "An answer.", "law_rows": [], "local_rows": [], "sources": [], "citations": [],
+                "questions": [], "run": None}
+
+    monkeypatch.setattr(agentic.service, "stream_agent", fake_stream_agent)
+    return keys
+
+
+def test_the_answer_is_generated_on_the_users_own_key(harness, user_key, monkeypatch):
+    keys = agent_recording_keys(monkeypatch)
+    ask(harness)
+    saved_answer(harness)
+    assert keys == [USER_KEY]
+
+
+def test_without_an_own_key_the_answer_is_generated_on_the_shared_key(harness, monkeypatch):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-shared")
+    keys = agent_recording_keys(monkeypatch)
+    ask(harness)
+    saved_answer(harness)
+    assert keys == ["sk-or-shared"]
+
+
+def test_a_refused_own_key_tells_the_user_what_to_do_without_showing_it(harness, user_key, monkeypatch):
+    class Refused(Exception):
+        status_code = 401
+
+    agent_recording_keys(monkeypatch, error=Refused(f"Error code: 401, key {USER_KEY}"))
+    response = ask(harness)
+    message = saved_answer(harness)
+    assert message.status == "error"
+    assert "Settings" in message.content
+    assert USER_KEY not in message.content and USER_KEY not in response.text
