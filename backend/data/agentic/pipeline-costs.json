@@ -1,0 +1,64 @@
+{
+ "measured": "2026-11-14",
+ "run": "bge-m3 rebuild of 13-14 November 2026",
+ "hardware": "Laptop: Intel i7-12700H (14 cores), 16 GB RAM, RTX 4060 with 8 GB",
+ "full_rebuild": {"hours": 66, "cost": "$0", "note": "OCR 55 h + embeddings 9 h 23 + CPU steps 1 h 20, crawl apart"},
+ "tiles": [
+  {"label": "Full rebuild on the laptop", "value": "≈ 66 h", "hint": "about 3 days of GPU, $0 (≈ €2 of electricity)"},
+  {"label": "OCR of the scans", "value": "≈ 55 h", "hint": "74,742 pages at 22.6 pages a minute"},
+  {"label": "Embeddings (bge-m3)", "value": "9 h 23", "hint": "2,380,160 passages at 71 a second"},
+  {"label": "Same embeddings through the API", "value": "≈ $6", "hint": "≈ 609M tokens at $0.01 per million (OpenRouter)"}
+ ],
+ "steps": {
+  "columns": ["Step", "Size", "Time", "How it was measured"],
+  "rows": [
+   ["Crawl the kommun sites", "212,517 requests, 84,631 PDFs (229 GB)", "≈ 8-10 h", "12 kommuner in parallel, 1 request a second per site: the sites set the pace, not the machine"],
+   ["OCR of the scanned PDFs", "14,914 PDFs, 74,742 pages", "≈ 55 h", "22.6 pages a minute over 10,043 PDFs (32,818 pages in 24.2 h), PP-OCRv6 on the GPU, 1 worker"],
+   ["Extract the text", "113,008 documents", "37-41 min", "CPU"],
+   ["Cut into passages", "2.40M passages", "7-8 min", "CPU"],
+   ["Embeddings (bge-m3)", "2,380,160 passages, ≈ 609M tokens", "9 h 23", "71 passages a second, GPU, fp16"],
+   ["Search store (SQLite + vectors)", "2.39M passages", "20 min", "CPU"],
+   ["Plan registry and checks", "38,668 plans", "≈ 15 min", "CPU"],
+   ["PDF filter (LLM second opinion)", "≈ 13,000 uncertain PDFs", "already done", "Decisions are reused: a rebuild makes no API call. ≈ $1-2 in total"],
+   ["Load into Postgres (pgvector)", "2.40M passages", "≈ 32 min + indexes", "8 processes in parallel (one: ≈ 2.5 h)"]
+  ]
+ },
+ "scenarios": {
+  "columns": ["Full rebuild", "Time", "Cost", "Note"],
+  "rows": [
+   ["Everything on the laptop (today)", "≈ 66 h", "$0", "The laptop is busy for about 3 days"],
+   ["OCR on the laptop, embeddings through the API", "≈ 57 h", "≈ $6", "Saves 9 h for $6"],
+   ["OCR on a rented GPU, embeddings through the API", "≈ 20-31 h", "≈ $12-25", "35 GB of scans to upload"],
+   ["Everything on a rented RTX 4090", "≈ 22-33 h", "≈ $8-23", "$0.34-0.69 an hour; speeds estimated, not measured"],
+   ["Everything through APIs (Mistral OCR + OpenRouter)", "a few hours to a day", "≈ $155-305", "Mistral OCR returns no word positions: no highlighting on scanned plan maps"],
+   ["Everything on a CPU", "≈ 1-2 months", "$0", "Not for a full rebuild; enough for updates"]
+  ],
+  "highlight": 0
+ },
+ "local": {
+  "columns": ["Run it locally", "OCR (74,742 pages)", "Embeddings (2.4M passages)", "Good for"],
+  "rows": [
+   ["Laptop GPU, RTX 4060 (today)", "≈ 55 h", "9 h 23", "Full rebuilds, $0. Measured"],
+   ["Laptop GPU for OCR, API for embeddings", "≈ 55 h", "≈ 1-3 h, ≈ $6", "Frees the GPU 9 h earlier; vectors are the same model"],
+   ["A desktop GPU with 24 GB (RTX 3090 / 4090)", "≈ 18-28 h", "≈ 2.5-3 h", "Full rebuilds in about a day; room for 2-3 OCR workers. Estimated"],
+   ["CPU only, PyTorch", "≈ 14 days", "≈ 45 days", "Small updates only. Embeddings measured at 0.61 passages a second"],
+   ["CPU only, embeddings in ONNX int8", "≈ 14 days", "≈ 15 days", "Updates: ≈ 50 min for 5,000 new passages. 1.8 passages a second (9 Oct measurement)"],
+   ["A CPU server at night (e.g. the IT's), API for embeddings", "≈ 1 day per 4,000 pages", "a few minutes, < $0.02", "Regular updates without a GPU"]
+  ]
+ },
+ "updates": {
+  "columns": ["An update like today's", "OCR (≈ 4,000 pages)", "Embeddings (5,212 passages)", "Total"],
+  "rows": [
+   ["Laptop", "≈ 3 h", "≈ 2 min", "≈ 4.5 h with the CPU steps, $0"],
+   ["CPU only", "≈ 18 h", "≈ 1-2.5 h", "about a day, $0"],
+   ["CPU for OCR, API for embeddings", "≈ 18 h", "minutes, < $0.02", "about a day, almost $0"],
+   ["APIs", "≈ $8-16 (Mistral)", "< $0.02", "≈ $8-16"]
+  ]
+ },
+ "sources": [
+  ["OpenRouter embedding prices (baai/bge-m3 $0.01 per million tokens)", "https://openrouter.ai/api/v1/embeddings/models"],
+  ["Mistral API prices (OCR 4.1 $4, OCR 3 $2 per 1,000 pages)", "https://docs.mistral.ai/inference/pricing"],
+  ["Mistral OCR batch price (≈ $2 per 1,000 pages, third party)", "https://www.activepieces.com/blog/mistral-ocr-pricing-2026-cost-per-1000-pages"],
+  ["RunPod GPU prices (RTX 4090 $0.34-0.74 an hour)", "https://www.runpod.io/pricing"]
+ ]
+}

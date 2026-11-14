@@ -10,7 +10,8 @@ Only reads the files the steps write. Separate from the Benchmark view, which gr
 Sources: data/corpus/check.json (corpus.check), raw/web/*/manifest.jsonl done lines (corpus.crawl),
 data/agentic/coverage-*.json (agentic.coverage), data/corpus/pdf_filter/ + corpus/pdf_filter_eval.jsonl
 (corpus.pdf_filter), data/eval/ocr-*.json (corpus.ocr_bench), raw/web/*/ocr/ + ocr_jobs.jsonl (corpus.ocr),
-data/eval/<date>.json (localrag.eval), data/agentic/replay-*.json (agentic.replay), plans.jsonl via check.json.
+data/eval/<date>.json (localrag.eval), data/agentic/replay-*.json (agentic.replay), plans.jsonl via check.json,
+data/agentic/pipeline-costs.json (timings and prices of a rebuild, written by hand after one).
 """
 
 import json
@@ -519,6 +520,41 @@ def tools_step() -> dict:
     }
 
 
+# Time and cost of a rebuild, measured on the machine that built the national corpus (the step logs have no common
+# format to read them from): edit it after a rebuild that changes the timings, and when prices change
+COSTS_PATH = AGENTIC_DIR / "pipeline-costs.json"
+
+
+def costs_step() -> dict | None:
+    costs = _load(COSTS_PATH)
+    if not costs:
+        return None
+    rebuild = costs["full_rebuild"]
+
+    def table(part: str) -> dict:
+        return {key: costs[part][key] for key in ("columns", "rows", "highlight") if key in costs[part]}
+
+    return {
+        "id": "costs", "step": 7, "title": "Rebuild: time and cost",
+        "what": "What it takes to build the corpus again from the kommun sites: each step's time on the laptop that "
+                "built it, then the other ways to run it (a rented GPU, paid APIs, a CPU only) and what an update "
+                "costs. OCR is almost all of the time; embeddings are cheap through an API.",
+        "measure": f"Timings from the logs of the {costs['run']}. {costs['hardware']}. Rented GPU speeds are "
+                   "estimated from the cards' compute, not measured; prices are list prices, sources below.",
+        "status": {"level": "info", "label": f"Measured {costs['measured']}", "note": rebuild["note"]},
+        "flow": {"value": f"≈ {rebuild['hours']} h", "caption": f"full rebuild on the laptop, {rebuild['cost']}"},
+        "tiles": costs["tiles"],
+        "sections": [
+            _section("Each step on the laptop", costs["hardware"], table=table("steps")),
+            _section("Full rebuild: the options", "laptop, rented GPU, APIs, CPU", table=table("scenarios")),
+            _section("Running it locally", "the credible setups and what each is good for", table=table("local")),
+            _section("Updates", "only new or changed passages are embedded again", table=table("updates")),
+            _section("Price sources", f"{len(costs['sources'])} pages",
+                     table={"columns": ["Price", "Source"], "rows": costs["sources"]}),
+        ],
+    }
+
+
 _cache: dict = {}
 
 
@@ -527,7 +563,7 @@ def _signature() -> tuple:
     new results (reading the filter's 70k rows takes seconds)."""
     from corpus.pdf_filter import DECISIONS_PATH, EVAL_PATH
 
-    paths = [DATA_DIR / "check.json", DECISIONS_PATH, EVAL_PATH, DATA_DIR / "ocr_jobs.jsonl",
+    paths = [DATA_DIR / "check.json", DECISIONS_PATH, EVAL_PATH, DATA_DIR / "ocr_jobs.jsonl", COSTS_PATH,
              *AGENTIC_DIR.glob("coverage-*.json"), *AGENTIC_DIR.glob("replay-*.json"), *EVAL_DIR.glob("*.json")]
     ocr_outputs = sum(1 for _ in WEB_DIR.glob("*/ocr/*.json"))
     return tuple(sorted((str(p), p.stat().st_mtime) for p in paths if p.exists())) + (ocr_outputs,)
@@ -541,9 +577,9 @@ SNAPSHOT_PATH = AGENTIC_DIR / "pipeline-national.json"
 
 def build() -> dict:
     check = _load(DATA_DIR / "check.json") or {}
-    return {"corpus": DATA_DIR.parent.name, "steps": [
-        crawl_step(check), filter_step(), ocr_step(check), documents_step(check), plans_step(check), tools_step(),
-    ]}
+    steps = [crawl_step(check), filter_step(), ocr_step(check), documents_step(check), plans_step(check), tools_step(),
+             costs_step()]
+    return {"corpus": DATA_DIR.parent.name, "steps": [step for step in steps if step]}
 
 
 @router.get("/pipeline")
