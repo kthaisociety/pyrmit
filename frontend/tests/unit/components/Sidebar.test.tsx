@@ -15,7 +15,7 @@ function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> = {}) {
     onSelectSession: vi.fn(),
     onNewChat: vi.fn(),
     refreshTrigger: 0,
-    user: { id: 'u1', name: 'anna', email: 'anna@example.com' },
+    user: { id: 'u1', name: 'anna', email: 'anna@example.com', role: 'developer' as const },
     onOpenSettings: vi.fn(),
     onOpenDatabase: vi.fn(),
     onOpenBenchmark: vi.fn(),
@@ -102,6 +102,24 @@ describe('Sidebar', () => {
 
     expect(props.onOpenBenchmark).toHaveBeenCalled();
     await screen.findByText('Bygglov Storgatan 3');
+  });
+
+  it.each(['owner', 'developer'] as const)('shows the work views to a %s', (role) => {
+    renderSidebar({ user: { id: 'u1', name: 'anna', email: 'anna@example.com', role } });
+
+    for (const name of [/Benchmark/, /Pipeline/, /Database/]) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    }
+  });
+
+  it('hides Benchmark, Pipeline and Database from a plain user', () => {
+    /** Issue #112: users chat; the backend refuses them those routes too. */
+    renderSidebar({ user: { id: 'u1', name: 'anna', email: 'anna@example.com', role: 'user' } });
+
+    for (const name of [/Benchmark/, /Pipeline/, /Database/]) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', { name: /Settings/ })).toBeInTheDocument();
   });
 
   it('carries the language switch', () => {

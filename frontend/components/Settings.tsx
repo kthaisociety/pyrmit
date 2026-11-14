@@ -5,12 +5,10 @@ import { ArrowLeft, LogOut, Trash2, Check, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
 import { useLanguage } from '@/lib/i18n';
 import ApiKeySettings from '@/components/ApiKeySettings';
+import UserRoleSettings, { ROLE_LABEL } from '@/components/UserRoleSettings';
+import { isOwner, type CurrentUser } from '@/lib/roles';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+type User = CurrentUser;
 
 interface SettingsProps {
   user: User;
@@ -138,6 +136,9 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
               <div>
                 <p className="font-medium">{user.name}</p>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400">{user.email}</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  {t('settings.role')}: {t(ROLE_LABEL[user.role ?? 'user'])}
+                </p>
               </div>
             </div>
           </section>
@@ -216,6 +217,9 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
 
           {/* Own OpenRouter key (issue #108) */}
           <ApiKeySettings />
+
+          {/* Users and roles, owners only (issue #112); the backend checks the role too */}
+          {isOwner(user) && <UserRoleSettings currentUserId={user.id} />}
 
           {/* Danger Zone */}
           <section>

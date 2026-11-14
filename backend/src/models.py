@@ -17,6 +17,8 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     email_verified = Column(Boolean, default=False)
     image = Column(String, nullable=True)
+    # owner | developer | user (roles.py, issue #112); added to existing tables by main._create_tables
+    role = Column(String, nullable=False, default="user", server_default="user")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

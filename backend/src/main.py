@@ -19,7 +19,8 @@ from dev_access import (
     request_has_dev_access,
 )
 from embeddings import EmbeddingConfig
-from routers import access_gate, chat, auth, chunks, agents, db_browser, docs, benchmark, pipeline, place, glossary
+from routers import (access_gate, chat, auth, chunks, agents, db_browser, docs, benchmark, pipeline, place, glossary,
+                     users)
 from logging_config import setup_logging
 
 setup_logging()
@@ -35,6 +36,21 @@ def _create_tables() -> None:
         if column not in message_columns:
             with engine.begin() as connection:
                 connection.execute(text(f"ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS {column} {column_type}"))
+
+    user_columns = {column["name"] for column in inspect(engine).get_columns("users")}
+    if "role" not in user_columns:  # issue #112: existing accounts start as plain users
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR NOT NULL DEFAULT 'user'"))
+
+
+def _apply_owner_emails() -> None:
+    """The accounts named in OWNER_EMAILS become owners (roles.py); sign-in does the same for later accounts."""
+    from sqlalchemy.orm import Session
+
+    import roles
+
+    with Session(engine) as db:
+        roles.apply_owner_emails(db)
 
 
 def _check_embedding_config() -> None:
@@ -87,6 +103,7 @@ def _open_corpus_database() -> None:
 async def lifespan(app: FastAPI):
     """Database work runs at startup, not on import, so `import main` works without a database (the CI image check)."""
     _create_tables()
+    _apply_owner_emails()
     _check_embedding_config()
     _open_corpus_database()
     threading.Thread(target=_preload_local_corpus, name="preload-local-corpus", daemon=True).start()
@@ -128,6 +145,7 @@ app.add_middleware(
 
 app.include_router(access_gate.router, prefix="/api/access-gate", tags=["access-gate"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(users.router, prefix="/api", tags=["users"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(chunks.router, prefix="/api", tags=["chunks"])
 app.include_router(agents.router, prefix="/api", tags=["agents"])
