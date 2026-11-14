@@ -1,6 +1,8 @@
 """Shared fixtures for backend unit tests."""
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Session
 
 import models
@@ -14,6 +16,13 @@ from tests.unit.place.snapshot import (
     write_national_snapshot,
     write_snapshot,
 )
+
+
+@compiles(JSONB, "sqlite")
+def _jsonb_as_json(element, compiler, **kw):
+    """chat_messages.trace is JSONB: SQLite stores it as JSON, so every test file can create the auth tables alone."""
+    return "JSON"
+
 
 # In-memory SQLite stands in for Postgres (PCR-0011). Only tables without pgvector columns work here.
 AUTH_TABLES = (models.User, models.Account, models.Session, models.ChatSession, models.ChatMessage,

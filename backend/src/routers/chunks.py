@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 
 from chunking.ingest_pipeline import ensure_markdown_source, ingest_folder, ingest_markdown_document
-from dependencies import get_current_user
+from dependencies import require_staff
 from db.push_db import PushDB
 import models
 import schemas
@@ -35,7 +35,7 @@ def _resolve_workspace_path(path_value: str) -> Path:
 @router.post("/chunks/ingest-detaljplan", response_model=schemas.ChunkIngestResponse)
 def ingest_detaljplan_chunks(
     request: schemas.ChunkIngestRequest,
-    _user: models.User = Depends(get_current_user),
+    _user: models.User = Depends(require_staff),  # writes the shared database, OCR spends credits
 ):
     input_path = _resolve_workspace_path(request.input_path)
     if not input_path.exists():
@@ -79,7 +79,7 @@ def ingest_detaljplan_chunks(
 @router.post("/chunks/ingest-data-folder", response_model=schemas.FolderIngestResponse)
 def ingest_data_folder_route(
     request: schemas.FolderIngestRequest,
-    _user: models.User = Depends(get_current_user),
+    _user: models.User = Depends(require_staff),  # writes the shared database, OCR spends credits
 ):
     data_dir = _resolve_workspace_path(request.data_dir)
     if not data_dir.exists() or not data_dir.is_dir():

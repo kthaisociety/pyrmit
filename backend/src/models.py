@@ -17,6 +17,8 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     email_verified = Column(Boolean, default=False)
     image = Column(String, nullable=True)
+    # owner | developer | user (roles.py, issue #112); added to existing tables by main._create_tables
+    role = Column(String, nullable=False, default="user", server_default="user")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -124,6 +126,28 @@ class ChatMessage(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("ChatSession", back_populates="messages")
+
+
+class CorpusVersion(Base):
+    """History of the corpus (issue #114, corpus_admin.py): every replace, roll back and download, who did it and how it
+    went. A replace row is also its background job: status running -> done / failed, `progress` polled by the panel.
+    In public, beside the users: it outlives the corpus schemas it describes."""
+    __tablename__ = "corpus_versions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    action = Column(String, nullable=False)  # replace | rollback | download
+    status = Column(String, nullable=False)  # running | done | failed
+    user_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    user_email = Column(String, nullable=True)  # kept when the account goes
+    file_name = Column(String, nullable=True)
+    model = Column(String, nullable=True)
+    chunks = Column(Integer, nullable=True)
+    kommuner = Column(Integer, nullable=True)
+    built = Column(String, nullable=True)
+    progress = Column(JSONB, nullable=True)  # {"phase", "percent", "message"}
+    detail = Column(Text, nullable=True)  # the result, or the error
+    started_at = Column(DateTime(timezone=True), server_default=func.now())
+    finished_at = Column(DateTime(timezone=True), nullable=True)
 
 if __name__ == "__main__":
     load_dotenv()

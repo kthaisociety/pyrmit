@@ -113,12 +113,14 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | POST   | `/api/auth/signin`                 | Sign in, returns JWT                      |
 | POST   | `/api/auth/token`                  | OAuth2 password form login, returns JWT   |
 | POST   | `/api/auth/signout`                | Revoke the current login session          |
-| GET    | `/api/auth/me`                     | Current user                              |
+| GET    | `/api/auth/me`                     | Current user, with its `role` (owner / developer / user, #112) |
 | PATCH  | `/api/auth/me`                     | Update the profile name                   |
 | PATCH  | `/api/auth/password`               | Change the password                       |
 | GET    | `/api/auth/api-key`                | The user's own OpenRouter key: `enabled` (API_KEY_ENCRYPTION_KEY set), `has_key`, `last4`; never the key (#108) |
 | PUT    | `/api/auth/api-key`                | Set or replace it (`{api_key}`); 400 not an OpenRouter key, 503 feature off |
 | DELETE | `/api/auth/api-key`                | Remove it: the shared key pays again      |
+| GET    | `/api/users`                       | Owners: every user with `role` and `from_owner_emails` (#112) |
+| PATCH  | `/api/users/{user_id}/role`        | Owners: `{role}`; 409 for the last owner or an `OWNER_EMAILS` owner |
 | GET    | `/api/sessions`                    | List chat sessions                        |
 | GET    | `/api/sessions/{session_id}`       | Messages in a chat session                |
 | DELETE | `/api/sessions`                    | Delete all chat sessions                  |
@@ -130,7 +132,14 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | POST   | `/api/chunks/ingest-detaljplan`    | Ingest one detaljplan PDF or Markdown     |
 | POST   | `/api/chunks/ingest-data-folder`   | Ingest every file in a data folder        |
 | POST   | `/api/analyze`                     | Multi-agent feasibility analysis          |
-| GET    | `/api/db/sources`                  | What each store of the Database view reads: `neon` = the pgvector tables of `DATABASE_URL`, `local` = the agent's corpus (disk store folder, or corpus database endpoint + chunks + kommuner + models); never a password |
+| GET    | `/api/db/sources`                  | What each store reads: `local` = the agent's corpus ("Agent corpus · Postgres" with host/database + chunks + kommuner + models, or the disk store folder), the one the Database tab shows; `neon` = the legacy pgvector tables of `DATABASE_URL`, no longer shown (#114); never a password |
+| GET    | `/api/corpus`                      | Owners and developers: active and previous corpus version, the replace job (progress), unfinished uploads, history, disk use (#114, `corpus_admin.py`) |
+| POST   | `/api/corpus/uploads`              | Owners: start or resume an upload (`{file_name, size, manifest}`); 400 bad manifest, 507 no room |
+| GET / PUT / DELETE | `/api/corpus/uploads/{id}` | Owners: its state / one part at `?offset=` (raw bytes, at most `CORPUS_UPLOAD_PART_MB`, 409 for a gap) / discard |
+| POST   | `/api/corpus/uploads/{id}/restore` | Owners: start the replace job of a complete upload (one at a time) |
+| POST   | `/api/corpus/rollback`             | Owners: the previous version goes live again (instant) |
+| GET    | `/api/corpus/manifest`             | Owners: the active corpus's manifest (schema `corpus`) |
+| POST   | `/api/corpus/download-link`        | Owners: a link valid 5 minutes (signed, never a sign-in) for `GET /api/corpus/download?token=`, which streams `pg_dump -Fc --compress=zstd:3 -n corpus` |
 | GET    | `/api/db/overview`                 | Chunk counts per table and per source (`store`=neon/local) |
 | GET    | `/api/db/chunks`                   | Paginated chunks (`table`=law/document, `source` (local: kommun code), `doc_type`, `doc_id`, `q`, `store`); local without a kommun: store order, `total` null with a text filter |
 | GET    | `/api/db/documents`                | Local store: a kommun's documents (`source`, `doc_type`, `q` title filter, `scanned`) by type then title, with chunk counts and a `scanned` flag |
@@ -155,16 +164,17 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 
 | Table              | Key Columns                                                              |
 | ------------------ | ------------------------------------------------------------------------ |
-| `users`            | id, name, email, email_verified, image                                   |
+| `users`            | id, name, email, email_verified, image, role (owner / developer / user, default user, #112) |
 | `accounts`         | id, user_id (FK), provider_id, password (hash)                           |
 | `sessions`         | id (= JWT `sid`), user_id (FK), expires_at; token unused (ADR-0001)      |
 | `user_api_keys`    | user_id (FK) + provider (`openrouter`), encrypted_key (Fernet, API_KEY_ENCRYPTION_KEY), last4 (#108) |
 | `chat_sessions`    | id, user_id (FK), title, updated_at                                      |
+| `corpus_versions`  | action (replace / rollback / download), status (running / done / failed), user_id, user_email, file_name, model, chunks, kommuner, built, progress (JSONB), detail, started_at, finished_at: the corpus history, and a replace's job state (#114) |
 | `chat_messages`    | id, session_id (FK), role, content, trace (JSONB, pipeline events), status (streaming / done / error, assistant only), created_at |
 | `document_chunks`  | id, document_id, document_name, chunk_index, content, embedding (3072)  |
 | `law_chunks`       | id, law_name, source_file, chapter, section, chunk_index, content, embedding (3072) |
 
-Tables are created at startup by `Base.metadata.create_all` in `backend/src/main.py`, which never alters an existing table: columns added later (`chat_messages.trace`, `status`) are added there with an idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. Migrations/init: `backend/src/db/init.sql`. Match functions (pgvector): `backend/src/db/match_functions.sql`.
+Tables are created at startup by `Base.metadata.create_all` in `backend/src/main.py`, which never alters an existing table: columns added later (`chat_messages.trace`, `status`, `users.role`) are added there with an idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. Migrations/init: `backend/src/db/init.sql`. Match functions (pgvector): `backend/src/db/match_functions.sql`.
 
 ---
 
@@ -236,6 +246,7 @@ Backend (`backend/.env`), names as read by the code:
 - `RAG_TOP_K` (default 10) -- chunks per pool (laws / documents) given to the answer model
 - `RETRIEVAL_BACKEND` (pgvector | local) + `LOCAL_RAG_MODEL` / `LOCAL_RAG_MODE` / `LOCAL_RAG_DENSE_QUERY` / `LOCAL_RAG_RERANKER` -- the chat's retrieval (`localrag/service.py`)
 - `LOCAL_RAG_STORE` (disk | neon | memory, PCR-0005), `CORPUS_DATABASE_URL` (the hosted corpus, Neon branch `demo`), `CORPUS_DATA_DIR` (corpus folder relative to `backend/`, default `data`)
+- `CORPUS_UPLOAD_DIR` (the uploads volume of the Corpus panel, default `data/uploads/corpus`), `CORPUS_UPLOAD_PART_MB` (default 50), `CORPUS_DB_DISK_GB` (the corpus database's disk, default 40: a restore checks its free space against it, Postgres can't tell) -- `corpus_admin.py`, #114
 - `CHAT_MODE` (rag | agent) + `AGENT_MODEL`, `AGENT_EFFORT` (final answer, medium), `AGENT_EXPLORE_EFFORT` (tool turns, medium), `AGENT_MAX_STEPS` (10)
 - `DECISION_MODEL` (default `typesafe/jev-1.14`, through OpenRouter's System One endpoint with `OPENROUTER_API_KEY` / `OPENROUTER_KEY`), `CLAIM_CHECK_TIMEOUT_S` (20) -- the live claim check of agent answers (`agentic/claim_check.py`)
 - `PDF_CACHE_DIR` (default `data/cache/pdf`) -- crawled PDFs downloaded from their URL when the crawl folder lacks them
@@ -244,6 +255,7 @@ Backend (`backend/.env`), names as read by the code:
 - `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` -- optional, turn on Langfuse tracing of model calls
 - `OPENAI_BASE_URL` -- optional override of the OpenAI endpoint
 - `JWT_SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`
+- `OWNER_EMAILS` -- comma-separated, case-insensitive: these accounts become owners at startup and at each sign-in / sign-up (`backend/src/roles.py`, #112). Never demotes; an owner listed here can't be demoted from the app. The first owner must sign up before anyone else can with that email (no email verification; the access gate is the only fence)
 - `ACCESS_GATE_PASSWORD`, `ACCESS_GATE_COOKIE_DOMAIN`, `ACCESS_GATE_COOKIE_SAMESITE`, `ACCESS_GATE_COOKIE_SECURE`
 - `DEV_ACCESS_PASSWORD`, `APP_ENV`, `CORS_ALLOWED_ORIGINS`, `COOKIE_SAMESITE`, `COOKIE_SECURE`
 
@@ -270,7 +282,9 @@ Frontend (`frontend/.env`):
 - `backend/src/schemas.py` -- Pydantic request/response schemas
 - `backend/src/security.py` -- JWT creation/decoding, password hashing
 - `backend/src/user_keys.py` -- users' own OpenRouter keys (#108): Fernet-encrypted in `user_api_keys`, `key_for` gives the router the decrypted key or None. The chat runs its model calls inside `llm.openrouter_key(key)`, a ContextVar read by `chat_client_settings` (provider openrouter) and `ask_decision_model`; the agent's worker thread and the claim check's pool run in `contextvars.copy_context()`. Embeddings stay on the shared key. `llm.public_error` keeps keys out of the error texts sent and saved
-- `backend/src/dependencies.py` -- `get_current_session` checks the bearer JWT and its login session row, `get_current_user` returns its user
+- `backend/src/dependencies.py` -- `get_current_session` checks the bearer JWT and its login session row, `get_current_user` returns its user, `require_role(*roles)` the user if their role is listed, else 403 (#112)
+- `backend/src/roles.py` -- roles owner / developer / user (`STAFF` = owner + developer: ingestion, benchmark runs, and every route of the Benchmark, Pipeline and Database views, which the sidebar hides from users), `OWNER_EMAILS` promotion at startup and sign-in, `set_role` (never the last owner, never an `OWNER_EMAILS` owner)
+- `backend/src/routers/users.py` -- owners list users and change roles
 - `backend/src/routers/access_gate.py` -- Access gate unlock
 - `backend/src/routers/auth.py` -- Signup, signin, token, signout, /me, profile, password
 - `backend/src/routers/chat.py` -- Chat and streaming chat endpoints, chat session CRUD; the streamed answer is generated in a background thread and saved as it goes (see Chat Request)
@@ -283,6 +297,8 @@ Frontend (`frontend/.env`):
 - `backend/src/chunking/reembed.py` -- re-embeds the stored chunks with the configured model (alters the vector dimension, stores the model label as the column comment). Needs `--yes`; meant for a dedicated Neon branch
 - `backend/src/ocr/` -- Mistral OCR, PDF to Markdown
 - `backend/src/routers/db_browser.py` -- read-only chunk browser + search over both stores (never user tables or embeddings); local kommun and type counts from `localrag.store.summary`; `/api/db/sources` names the real source of each store
+- `backend/src/corpus_admin.py` + `backend/src/routers/corpus.py` -- the Corpus panel (#114): resumable uploads under `CORPUS_UPLOAD_DIR`, the replace job (Postgres advisory lock; sha256, dump contents, free space, `pg_restore -j 4` into schema `corpus_next`, validation, swap in one transaction, cache refresh), roll back, download link. Database work through `PgOps` (tests use a fake)
+- `backend/src/localrag/corpus_dump.py` -- the dump's manifest, its table-of-contents check (only schema `corpus_next`), the validation rules, the swap / roll back SQL; `backend/src/localrag/export.py` -- `python -m localrag.export` on the developer PC: disk store -> local Postgres schema `corpus_next` -> `pg_dump` + manifest
 - `backend/src/routers/docs.py` -- opens a cited chunk in its original document (PDF page + highlight, or URL text fragment; the PDF comes from `corpus.pdf_files`); chunks come from the agent's corpus tools
 - `backend/src/routers/benchmark.py` -- Benchmark view API: case sets, past results parsed from the result file names, in-memory run jobs (lost on restart)
 - `backend/src/routers/place.py` -- `/api/place/*`
@@ -290,7 +306,7 @@ Frontend (`frontend/.env`):
 - `backend/src/benchmark/` -- the early retrieval-only embedding benchmark on the pgvector tables: `export_corpus.py`, `models.toml`, `questions.jsonl`, `generate_questions.py`, `run.py` (hit@k / recall@5 / MRR; vectors cached in `src/benchmark/cache/`, results in `src/benchmark/results/`). Its frozen corpus `src/benchmark/data/corpus.jsonl` (gitignored) also holds the 7 `legacy:` documents `corpus.extract` keeps
 - `reports/` -- the benchmark, technical, hosting and place-evaluation reports (generated into `../pyrmit_doc/` by `agentic.report`, `agentic.report_technical`, `place.report`: copy them here after regenerating) and the hand-written architecture report and status deck (HTML, printed to PDF with headless Chrome)
 - `backend/src/place/` -- `sources.py` (layers, attribute mapping, pilot kommuner), `fetch.py` (snapshot CLI), `registry.py` (`plan_sources.json`, built from the survey in `docs/research/`), `plan_layers.py`, `plan_links.py`, `review.py` (review mode, ADR-0008), `store.py` (`PlaceStore`, STRtree per layer), `live.py`, `profile.py` (`build_profile`), `permits.py`, `context.py` (the place as text for the agent), `geocode.py`, `check_sources.py` / `check_search.py` / `bench_answers.py` / `bench.py` / `report.py` (the evaluation, see Place Lookup)
-- `backend/src/localrag/` -- `analyzer.py` (Swedish BM25 tokens), `gazetteer.py`, `index.py` (VectorStore), `store.py` (disk store), `retriever.py` (`LocalRetriever`), `service.py` (chat integration), `eval.py` + `questions.jsonl`, `rewrite_queries.py`, `models.toml`, `pg_store.py` (the hosted corpus: loader + `PgStore` / `PgRetriever`). Never `pip install` a package that depends on torch without the CUDA index
+- `backend/src/localrag/` -- `analyzer.py` (Swedish BM25 tokens), `gazetteer.py`, `index.py` (VectorStore), `store.py` (disk store), `retriever.py` (`LocalRetriever`), `service.py` (chat integration), `eval.py` + `questions.jsonl`, `rewrite_queries.py`, `models.toml`, `pg_store.py` (the hosted corpus: loader + `PgStore` / `PgRetriever`, in Postgres schema `corpus`, #114). Never `pip install` a package that depends on torch without the CUDA index
 - `backend/src/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat integration, `CitationNumberer`), `claim_check.py` (live claim check of a chat answer by the decision model Jev: `check_claims`), `run.py` (CLI), `bench.py` + `cases*.jsonl`, `cases_from_caselaw.py`, `cases_from_corpus.py`, `cases_from_plans.py`, `rejudge.py`, `grounding.py`, `health.py`, `replay.py`, `coverage.py`, `report.py` / `report_technical.py` (PDF reports)
 - `backend/src/corpus/` -- the offline corpus steps (see Offline Corpus): `common.py` (paths: `BACKEND_DIR` = `backend/`, `DATA_ROOT` from `CORPUS_DATA_DIR`), `municipalities.py`, `laws.py`, `crawl.py`, `ocr.py` + `ocr_engines.py` (run in `backend/.venv-ocr`), `extract.py`, `pdf_filter.py`, `chunk.py`, `plans.py`, `check.py`, `snapshot.py`, `caselaw.py` (MÖD rulings for the case benchmark, not searchable), `pdf_files.py` (where the serving code reads crawled PDFs and OCR outputs: crawl folder, else a cache filled from the PDF's URL)
 - `backend/src/db/database.py` -- SQLAlchemy engine + `get_db` session factory
@@ -318,10 +334,10 @@ Frontend (`frontend/.env`):
   per step / tool call (tool, its query or arguments, result summary, duration), the last 3 ("Show all" expands), shown
   only until the answer text starts (rebuilt from the saved trace for an answer still generating, `stepsFromTrace`); once finished, "Inspect pipeline" and a clickable "Sources" list (retrieved chunks per source, from `pipeline` events) below the answer
 - `frontend/components/PipelineTrace.tsx` -- "Inspect pipeline" panel rendering `pipeline` events (live or from saved `trace`): a totals line (time, tokens, cost) then one collapsible step per stage (Understand, Retrieve, Agents, Verdict, Answer) with a one-line summary, and the stage's API calls nested inside (assigned by call kind/name in `stepOf`). An expanded `view_map_area` / `view_pdf_page` tool call shows the image the agent looked at: traces store no images (tool records carry `tool` + `image`), `ToolImage` re-renders them from the call's arguments via `/api/docs/tool-image` (older traces: tool taken from the call name)
-- `frontend/components/DatabaseBrowser.tsx` -- Database view with a store toggle, the buttons named by `/api/db/sources`
-  ("pgvector tables" = law_chunks / document_chunks of DATABASE_URL; "Agent corpus · disk / · Neon / · memory" = what
-  the agent searches; the source detail in the header and as tooltip, generic labels when the route fails): stats,
-  chunk browsing, search playground (store keys `neon` / `local` in the API). Local kommun documents: kommun select (documents and scanned PDFs per kommun), document-type chips,
+- `frontend/components/DatabaseBrowser.tsx` -- Database view of the agent's corpus only (store `local` in the API;
+  the "pgvector tables" toggle and every Neon mention went in #114, the legacy routes stay): its name and detail from
+  `/api/db/sources` ("Agent corpus · Postgres / · disk / · memory", generic label when the route fails), the Corpus
+  panel for owners and developers, stats, chunk browsing, search playground. Local kommun documents: kommun select (documents and scanned PDFs per kommun), document-type chips,
   "Only scanned PDFs" (OCR) checkbox, then the kommun's documents by type (`DocumentList`, click one for its chunks;
   scans carry an OCR badge); without a kommun, chunks in store order. Every local
   chunk (browse and search) links to its original (`SourceLinks`): crawled PDF opened at the passage in the
@@ -329,6 +345,7 @@ Frontend (`frontend/.env`):
   statute in a new tab at the passage (`openPageAtChunk`); a document's "Open the PDF" lists its chunks beside it.
   `/api/db/chunks` rows carry `url`, local `/api/db/search` matches `chunk_id` / `doc_id` / `kind` / `url`
   (`localrag.service._row`). The 7 "legacy:" PoC documents have no original
+- `frontend/components/CorpusPanel.tsx` -- the Database tab's Corpus panel (#114): active and previous version (built, model, chunks, kommuner, uploaded by / when), the replace job's progress (polled every 3 s), history; owners also get Replace (dump + manifest, uploaded in parts by `sendParts`, resumable by picking the same file), Roll back (confirmed), Download (a signed link the browser follows: no 10 GB in memory) and Manifest
 - `frontend/lib/corpus.ts` -- document type names / hints and number formatting shared by the Database and Pipeline views
 - `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)
 - `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage.
@@ -352,6 +369,8 @@ Frontend (`frontend/.env`):
   how it is measured, collapsible detail sections), a glossary
 - `frontend/components/Sidebar.tsx` -- Session list, new chat, Benchmark / Pipeline / Database / Settings buttons, user info
 - `frontend/components/Settings.tsx` -- Profile / password settings
+- `frontend/components/UserRoleSettings.tsx` -- Settings section for owners: every user with a role select; the last owner and `OWNER_EMAILS` owners are locked, a 409's message is shown (#112)
+- `frontend/lib/roles.ts` -- `Role`, `CurrentUser`, `isOwner` / `isStaff`, for showing or hiding admin features only (the backend checks)
 - `frontend/components/ApiKeySettings.tsx` -- Settings section for the user's own OpenRouter key: paste, replace, remove; shows "Key set (…abcd)", "Using the shared key" or that the feature is off (#108)
 - `frontend/tests/` -- Vitest suite copied from dev: `unit/` mirrors `components/` and `lib/` (reference tests
   `lib/auth.test.ts`, `components/Sidebar.test.tsx`, the rest `it.todo`), `mocks/handlers.ts` is the shared MSW fake
@@ -620,6 +639,21 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
 ---
 
 ## Local Retrieval and the Hosted Corpus
+
+- Managing the corpus from the app (#114): the corpus tables live in Postgres schema `corpus` (`PgStore` connects with
+  `search_path=corpus,public`; `pg_store.load(..., schema=)` writes a given schema; at startup with
+  `LOCAL_RAG_STORE=neon`, an older install's `public.corpus_*` tables and views move there, `move_public_corpus`).
+  On the PC, `python -m localrag.export --model st-bge-m3 --url <local Postgres 17>` loads the disk store into schema
+  `corpus_next` and writes `pyrmit-corpus-<built>.dump` (`pg_dump -Fc --compress=zstd:3 -n corpus_next`) and its
+  `.manifest.json` (model, dim, chunks, kommuner, label schema version, database MB, sha256); `--pg-dump "docker exec -i
+  <container> pg_dump"` when pg_dump 17 is not installed. An owner uploads both in the Database tab; the server
+  restores beside the live corpus, validates (model and dim against `LOCAL_RAG_MODEL`, chunk count against the
+  manifest, the columns `localrag.store.COLUMNS`, a chunk found by its own vector), then renames `corpus` ->
+  `corpus_prev`, `corpus_next` -> `corpus` in one transaction (the old `corpus_prev` dropped). Any failure drops
+  `corpus_next` and leaves the live corpus. Exactly one previous version; roll back = three renames. A download is a
+  dump of schema `corpus`: restore it locally, `python -m localrag.export --from-schema corpus` to upload it again.
+  Space: active + previous ~14 GB each for the national corpus, a third copy only during a restore (if it doesn't fit
+  `CORPUS_DB_DISK_GB`, the previous version is dropped first and the history says so).
 
 - Hosted demo for outside testers (2026-10-31, README "Try it without the data"): `LOCAL_RAG_STORE=neon` serves the
   corpus from Postgres (`localrag.pg_store.PgRetriever` / `PgStore`), no local data. Built from `data/demo`

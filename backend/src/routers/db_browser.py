@@ -1,8 +1,8 @@
 """
-Read-only browser over the RAG chunks: the pgvector tables (law_chunks, document_chunks) or,
-with store=local, the agent's corpus used by RETRIEVAL_BACKEND=local (loaded by localrag.service): the disk store,
-or the corpus database with LOCAL_RAG_STORE=neon. /api/db/sources says which. User/auth tables are intentionally not
-exposed.
+Read-only browser over the RAG chunks: with store=local, the agent's corpus used by RETRIEVAL_BACKEND=local (loaded by
+localrag.service): the corpus in Postgres with LOCAL_RAG_STORE=neon (schema corpus, localrag.pg_store), or the disk
+store. /api/db/sources says which. The Database tab shows only that one (issue #114); store=neon (the classic RAG's
+law_chunks / document_chunks) is still served for the legacy path. User/auth tables are intentionally not exposed.
 """
 
 import os
@@ -18,7 +18,7 @@ import schemas
 from agents.document_agent import DocumentAgent
 from agents.law_agent import LawAgent
 from db.database import get_db
-from dependencies import get_current_user
+from dependencies import require_staff
 from observability import get_openai_client
 
 router = APIRouter()
@@ -46,7 +46,7 @@ def _table_overview(db: Session, model, source_col) -> schemas.ChunkTableOvervie
 
 
 def database_label(url: str | None) -> str:
-    """The Neon endpoint and database of a connection URL ("ep-quiet-lake-123456/neondb"), never its password."""
+    """The host and database of a connection URL ("db-host/pyrmit"), never its password."""
     if not url:
         return "not set"
     parsed = urlparse(url)
@@ -67,7 +67,7 @@ def local_source() -> schemas.DbSource:
         meta = store.meta
         kommuner = ", ".join(kommun_label(code) for code in meta.get("kommuner", []))
         return schemas.DbSource(
-            name="Agent corpus · Neon",
+            name="Agent corpus · Postgres",
             detail=f"corpus database {database_label(store.url)}: {meta['chunks']:,} chunks of {kommuner} and the "
                    f"statutes, {meta['model']} vectors, queries embedded with {retriever.model}")
     if store is not None:  # localrag.store.DiskStore
@@ -275,7 +275,7 @@ def _store_page(store, table: str, source: str | None, doc_type: str | None, q: 
 
 
 @router.get("/db/sources", response_model=schemas.DbSources)
-def sources(_user: models.User = Depends(get_current_user)):
+def sources(_user: models.User = Depends(require_staff)):
     """What each store of the Database view reads, for its buttons."""
     return schemas.DbSources(
         neon=schemas.DbSource(name="pgvector tables",
@@ -289,7 +289,7 @@ def sources(_user: models.User = Depends(get_current_user)):
 def overview(
     store: schemas.ChunkStore = "neon",
     db: Session = Depends(get_db),
-    _user: models.User = Depends(get_current_user),
+    _user: models.User = Depends(require_staff),
 ):
     if store == "local":
         return _local_overview()
@@ -310,7 +310,7 @@ def list_chunks(
     limit: int = Query(default=25, ge=1, le=100),
     store: schemas.ChunkStore = "neon",
     db: Session = Depends(get_db),
-    _user: models.User = Depends(get_current_user),
+    _user: models.User = Depends(require_staff),
 ):
     if store == "local":
         return _local_page(table, source, doc_type, q, offset, limit, doc_id)
@@ -361,7 +361,7 @@ def list_documents(
     scanned: bool = False,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
-    _user: models.User = Depends(get_current_user),
+    _user: models.User = Depends(require_staff),
 ):
     """Local disk store only: a kommun's documents by type, then title (q filters the title, scanned keeps the
     scanned PDFs read by the OCR)."""
@@ -375,7 +375,7 @@ def list_documents(
 def semantic_search(
     request: schemas.ChunkSearchRequest,
     db: Session = Depends(get_db),
-    _user: models.User = Depends(get_current_user),
+    _user: models.User = Depends(require_staff),
 ):
     """Run the same retrieval the chat uses, without calling the LLM."""
     if request.store == "local":
