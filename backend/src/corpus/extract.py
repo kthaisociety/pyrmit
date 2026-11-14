@@ -13,7 +13,6 @@ Turn every raw source into one text document in data/corpus/documents.jsonl.
 """
 
 import argparse
-import hashlib
 import json
 import re
 from collections.abc import Iterator
@@ -26,14 +25,18 @@ from corpus.common import (
     DOCUMENTS_PATH,
     LAWS_DIR,
     MUNICIPALITIES_PATH,
+    NATIONAL,
     WEB_DIR,
     clean_text,
+    fetch_date,
     read_jsonl,
     repair_mojibake,
+    text_sha1,
     write_jsonl,
 )
 from corpus.crawl import KEEP_SCORE, content_relevance, fold
 from corpus.pdf_filter import dropped_ids
+from corpus.plans import add_plan_labels
 
 LEGACY_CORPUS = Path(__file__).resolve().parent.parent / "benchmark" / "data" / "corpus.jsonl"
 LEGACY_TITLES = {
@@ -71,21 +74,31 @@ def doc_type(*texts: str) -> str:
     return "other"
 
 
+def labels(place: str | None, fetched: tuple[str | None, str | None], text: str) -> dict:
+    """The schema labels a document carries besides doc_id, url and kommun (docs/source-chunk-schema.md). Plan ID and
+    plan stage are added by add_plan_labels once every document is extracted."""
+    return {"place": place, "fetched_at": fetched[0], "fetched_at_source": fetched[1], "content_sha1": text_sha1(text)}
+
+
 def law_documents() -> list[dict]:
     index = json.loads((LAWS_DIR / "index.json").read_text(encoding="utf-8"))
-    return [
-        {
+    documents = []
+    for law in index:
+        path = LAWS_DIR / f"{law['slug']}.txt"
+        text = path.read_text(encoding="utf-8")
+        documents.append({
             "doc_id": f"law:{law['slug']}",
             "kind": "law",
             "doc_type": "lag",
+            # kommun stays null: the kommun filters and the law pool test it; `place` carries "national"
             "kommun_code": None,
             "kommun": None,
             "title": law["title"],
             "url": law["url"],
-            "text": (LAWS_DIR / f"{law['slug']}.txt").read_text(encoding="utf-8"),
-        }
-        for law in index
-    ]
+            **labels(NATIONAL, fetch_date(law.get("fetched_at"), path), text),
+            "text": text,
+        })
+    return documents
 
 
 def page_documents(names: dict[str, str]) -> list[dict]:
@@ -98,11 +111,13 @@ def page_documents(names: dict[str, str]) -> list[dict]:
         if content_relevance(page["url"].split("/", 3)[-1], page["title"]) < KEEP_SCORE:
             continue  # kept by an older, looser crawl filter
         # The same page under view-only URL variants ("?open.12_...=true", ".printable"): 6.5k copies before 2026-10-22
-        key = (code, hashlib.sha1(" ".join(page["text"].split()).encode()).hexdigest())
+        key = (code, text_sha1(page["text"]))
         if key in seen:
             duplicates += 1
             continue
         seen.add(key)
+        # Sitevision prints "org.mozilla.javascript.Undefined@0" for empty script fields (87 pages)
+        text = clean_text(re.sub(r"(?m)^org\.mozilla\.javascript\.\S*$", "", page["text"]))
         documents.append({
             "doc_id": f"page:{code}:{path.stem}",
             "kind": "page",
@@ -111,8 +126,8 @@ def page_documents(names: dict[str, str]) -> list[dict]:
             "kommun": names.get(code),
             "title": page["title"],
             "url": page["url"],
-            # Sitevision prints "org.mozilla.javascript.Undefined@0" for empty script fields (87 pages)
-            "text": clean_text(re.sub(r"(?m)^org\.mozilla\.javascript\.\S*$", "", page["text"])),
+            **labels(names.get(code), fetch_date(page.get("fetched_at"), path), text),
+            "text": text,
         })
     print(f"  pages: {duplicates} duplicates skipped")
     return documents
@@ -172,6 +187,7 @@ def _pdf_document(args: tuple[str, str, dict, str | None]) -> dict:
     if ocr:  # written by corpus.ocr
         text = clean_text("\n\n".join(json.loads(ocr_path.read_text(encoding="utf-8"))["pages"]))
         needs_ocr = False
+    text = "" if needs_ocr else text
     return {
         "doc_id": f"pdf:{code}:{entry['id']}",
         "kind": "pdf",
@@ -180,11 +196,12 @@ def _pdf_document(args: tuple[str, str, dict, str | None]) -> dict:
         "kommun": kommun,
         "title": " ".join(title.replace("\xad", "").split())[:200],
         "url": entry["url"],
+        **labels(kommun, fetch_date(entry.get("fetched_at"), Path(path)), text),
         "source_page": entry.get("source"),
         "pages": len(pages),
         "needs_ocr": needs_ocr,
         "ocr": ocr,
-        "text": "" if needs_ocr else text,
+        "text": text,
     }
 
 
@@ -220,7 +237,7 @@ def pdf_documents(names: dict[str, str], workers: int, allow_missing: bool = Fal
                 skipped[document["skip"]] += 1
                 continue
             # The same text under another URL of the same kommun (crawls before 2026-10-22 keyed PDFs by exact URL)
-            key = (document["kommun_code"], hashlib.sha1(" ".join(document["text"].split()).encode()).hexdigest())
+            key = (document["kommun_code"], document["content_sha1"])
             if document["text"] and key in seen:
                 skipped["duplicate"] += 1
                 continue
@@ -248,6 +265,7 @@ def legacy_documents() -> list[dict]:
                 last_section = section
             if body.strip():
                 parts.append(body.strip())
+        text = clean_text("\n\n".join(parts))
         documents.append({
             "doc_id": f"legacy:{source}",
             "kind": "pdf",
@@ -255,8 +273,10 @@ def legacy_documents() -> list[dict]:
             "kommun_code": "0115",
             "kommun": "Vallentuna",
             "title": LEGACY_TITLES.get(source, source),
+            # No address and no download date were kept for these: corpus.chunk rejects their chunks and reports them
             "url": None,
-            "text": clean_text("\n\n".join(parts)),
+            **labels("Vallentuna", (None, None), text),
+            "text": text,
         })
     return documents
 
@@ -282,6 +302,8 @@ def main() -> None:
                       pdf_documents(names, args.workers, args.allow_missing_pdfs))
     count = write_jsonl(DOCUMENTS_PATH, counted(documents))
     print(f"{count} documents {by_kind}, {ocr} scanned PDFs need OCR -> {DOCUMENTS_PATH}")
+    stages = add_plan_labels(DOCUMENTS_PATH)
+    print(f"  plan labels on {sum(stages.values())} documents, by stage {stages}")
 
 
 if __name__ == "__main__":
