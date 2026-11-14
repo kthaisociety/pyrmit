@@ -26,4 +26,6 @@ export const handlers = [
     ]),
   ),
   http.delete('*/api/sessions/:sessionId', () => new HttpResponse(null, { status: 204 })),
+  // The user's own OpenRouter key (issue #108): none set, the feature on
+  http.get('*/api/auth/api-key', () => HttpResponse.json({ enabled: true, has_key: false, last4: null })),
 ];

@@ -116,6 +116,9 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | GET    | `/api/auth/me`                     | Current user                              |
 | PATCH  | `/api/auth/me`                     | Update the profile name                   |
 | PATCH  | `/api/auth/password`               | Change the password                       |
+| GET    | `/api/auth/api-key`                | The user's own OpenRouter key: `enabled` (API_KEY_ENCRYPTION_KEY set), `has_key`, `last4`; never the key (#108) |
+| PUT    | `/api/auth/api-key`                | Set or replace it (`{api_key}`); 400 not an OpenRouter key, 503 feature off |
+| DELETE | `/api/auth/api-key`                | Remove it: the shared key pays again      |
 | GET    | `/api/sessions`                    | List chat sessions                        |
 | GET    | `/api/sessions/{session_id}`       | Messages in a chat session                |
 | DELETE | `/api/sessions`                    | Delete all chat sessions                  |
@@ -155,6 +158,7 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | `users`            | id, name, email, email_verified, image                                   |
 | `accounts`         | id, user_id (FK), provider_id, password (hash)                           |
 | `sessions`         | id (= JWT `sid`), user_id (FK), expires_at; token unused (ADR-0001)      |
+| `user_api_keys`    | user_id (FK) + provider (`openrouter`), encrypted_key (Fernet, API_KEY_ENCRYPTION_KEY), last4 (#108) |
 | `chat_sessions`    | id, user_id (FK), title, updated_at                                      |
 | `chat_messages`    | id, session_id (FK), role, content, trace (JSONB, pipeline events), status (streaming / done / error, assistant only), created_at |
 | `document_chunks`  | id, document_id, document_name, chunk_index, content, embedding (3072)  |
@@ -225,6 +229,7 @@ Backend (`backend/.env`), names as read by the code:
 - `DATABASE_URL`
 - `AI_GATEWAY_API_KEY` (if set, model calls go through the Vercel AI Gateway) or `OPENAI_API_KEY`
 - `LLM_PROVIDER` (openai | gateway | openrouter, with `OPENROUTER_API_KEY` or `OPENROUTER_KEY`), `LLM_MODEL` -- optional chat override (`backend/src/llm.py`)
+- `API_KEY_ENCRYPTION_KEY` -- Fernet key (`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`) that encrypts users' own OpenRouter keys (`backend/src/user_keys.py`, #108). Unset: users can't store a key and the shared `OPENROUTER_API_KEY` pays for everything. Comma-separated to rotate (the first encrypts, all decrypt); losing it makes stored keys unreadable (they count as no key)
 - `LLM_TIMEOUT_S` (default 180) -- max wait per API response or stream chunk, one retry
 - `LLM_REASONING_EFFORT` (answers), `LLM_REWRITE_REASONING_EFFORT` (query rewrite, default low)
 - `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `EMBEDDING_QUERY_PREFIX`, `EMBEDDING_DOCUMENT_PREFIX` -- embedding model of the pgvector tables (`backend/src/embeddings.py`; default openai text-embedding-3-large at 3072, PCR-0004); `EMBEDDING_RUNTIME` (auto | torch | onnx) for local models
@@ -264,6 +269,7 @@ Frontend (`frontend/.env`):
 - `backend/src/models.py` -- SQLAlchemy ORM models
 - `backend/src/schemas.py` -- Pydantic request/response schemas
 - `backend/src/security.py` -- JWT creation/decoding, password hashing
+- `backend/src/user_keys.py` -- users' own OpenRouter keys (#108): Fernet-encrypted in `user_api_keys`, `key_for` gives the router the decrypted key or None. The chat runs its model calls inside `llm.openrouter_key(key)`, a ContextVar read by `chat_client_settings` (provider openrouter) and `ask_decision_model`; the agent's worker thread and the claim check's pool run in `contextvars.copy_context()`. Embeddings stay on the shared key. `llm.public_error` keeps keys out of the error texts sent and saved
 - `backend/src/dependencies.py` -- `get_current_session` checks the bearer JWT and its login session row, `get_current_user` returns its user
 - `backend/src/routers/access_gate.py` -- Access gate unlock
 - `backend/src/routers/auth.py` -- Signup, signin, token, signout, /me, profile, password
@@ -346,6 +352,7 @@ Frontend (`frontend/.env`):
   how it is measured, collapsible detail sections), a glossary
 - `frontend/components/Sidebar.tsx` -- Session list, new chat, Benchmark / Pipeline / Database / Settings buttons, user info
 - `frontend/components/Settings.tsx` -- Profile / password settings
+- `frontend/components/ApiKeySettings.tsx` -- Settings section for the user's own OpenRouter key: paste, replace, remove; shows "Key set (…abcd)", "Using the shared key" or that the feature is off (#108)
 - `frontend/tests/` -- Vitest suite copied from dev: `unit/` mirrors `components/` and `lib/` (reference tests
   `lib/auth.test.ts`, `components/Sidebar.test.tsx`, the rest `it.todo`), `mocks/handlers.ts` is the shared MSW fake
   backend (override with `server.use(...)`), and `setup.ts` fails any test whose request has no handler.

@@ -29,6 +29,8 @@ from localrag.service import SWEDISH_QUERY_SUFFIX, local_backend_enabled, retrie
 from llm import (
     build_responses_input,
     get_response_output_text,
+    openrouter_key,
+    public_error,
     resolve_model_name,
 )
 import models
@@ -42,6 +44,7 @@ from observability import (
 from pipeline_trace import CallRecorder, recorded_chat_completion, response_usage
 from place.context import compact_profile, place_context, question_with_place
 import schemas
+import user_keys
 
 logger = logging.getLogger(__name__)
 
@@ -209,6 +212,12 @@ def update_session(session_id: str, request: schemas.UpdateSessionRequest, db: S
 
 @router.post("/chat", response_model=schemas.MessageResponse)
 def chat(request: schemas.ChatRequest, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    """The answer in one response. Model calls run on the user's own OpenRouter key when they set one (#108)."""
+    with openrouter_key(user_keys.key_for(db, user.id)):
+        return _chat(request, db, user)
+
+
+def _chat(request: schemas.ChatRequest, db: Session, user: models.User):
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
@@ -357,7 +366,7 @@ Latest User Message: {original_content}"""
                     ai_response_content = _clarifying_prompt(language)
             except Exception as e:
                 logger.error("General RAG failed", exc_info=True)
-                raise HTTPException(status_code=500, detail=str(e))
+                raise HTTPException(status_code=500, detail=public_error(e))
         else:
             logger.info("Running multi-agent analysis: location=%s units=%s type=%s", location, units, project_type)
             # Run full multi-agent feasibility analysis
@@ -369,7 +378,7 @@ Latest User Message: {original_content}"""
                 ai_response_content = format_response(result, language) + _format_sources(result.get("sources", []))
             except Exception as e:
                 logger.error("Multi-agent analysis failed", exc_info=True)
-                raise HTTPException(status_code=500, detail=str(e))
+                raise HTTPException(status_code=500, detail=public_error(e))
 
         # Save AI response
         ai_message = models.ChatMessage(
@@ -403,12 +412,17 @@ def chat_stream(
     the message stays "streaming" until the check is done. The "citations" event comes before the check, so the
     citation chips open their sources while it runs. The answer is never rewritten. The verdicts are saved as
     the "claim_check" pipeline event, ClaimCheck.as_event(). A question back to the user (the agent's question card) and
-    an off-topic answer (mode "off_topic", #102) are not checked and have no "claim_check" event."""
+    an off-topic answer (mode "off_topic", #102) are not checked and have no "claim_check" event.
+
+    The model calls (the chat model with LLM_PROVIDER=openrouter, the claim check) run on the user's own OpenRouter key
+    when they set one, else on the shared key (#108, llm.openrouter_key); question embeddings stay on the shared key."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 
     # All setup done eagerly so HTTPException can still be raised before streaming
-    client = get_openai_client()
+    user_key = user_keys.key_for(db, user.id)
+    with openrouter_key(user_key):
+        client = get_openai_client()
 
     session_id = request.session_id
     is_new_session = not session_id
@@ -776,7 +790,7 @@ def chat_stream(
 
             except Exception as e:
                 logger.error("Stream generation failed", exc_info=True)
-                yield _sse({"type": "error", "message": str(e)})
+                yield _sse({"type": "error", "message": public_error(e)})
                 return
 
             # The background worker below persists the message from the streamed events
@@ -789,6 +803,10 @@ def chat_stream(
     def run_in_background() -> None:
         """Generate the answer whatever happens to the HTTP connection (tab closed, other chat opened), and keep
         the assistant message up to date in the DB: partial text every 2 s, final text + trace + status at the end."""
+        with openrouter_key(user_key):  # this thread starts with an empty context
+            _generate_and_save()
+
+    def _generate_and_save() -> None:
         worker_db = SessionLocal()
         content, trace, status, last_save = "", [], "streaming", time.monotonic()
 
@@ -825,8 +843,9 @@ def chat_stream(
         except Exception as exc:
             logger.error("Background answer generation failed", exc_info=True)
             status = "error"
-            content = content or f"Error: {exc}"
-            events.put(_sse({"type": "error", "message": str(exc)}))
+            message = public_error(exc)
+            content = content or f"Error: {message}"
+            events.put(_sse({"type": "error", "message": message}))
         finally:
             try:
                 save(status if status != "streaming" else "error")

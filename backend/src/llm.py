@@ -1,5 +1,7 @@
 import os
-from typing import Any, Iterable
+from contextlib import contextmanager
+from contextvars import ContextVar
+from typing import Any, Iterable, Iterator
 
 import httpx
 from openai import OpenAI
@@ -13,6 +15,55 @@ SYSTEM_ONE_URL = f"{OPENROUTER_BASE_URL}/systemone"
 DEFAULT_DECISION_MODEL = "typesafe/jev-1.14"
 DECISION_TIMEOUT_S = 10.0  # one decision model call; Jev answers in about half a second
 _DECISION_RETRY_STATUS = {429, 500, 502, 503, 504, 529}  # answered once more: rate limit or an overloaded server
+
+
+# The signed-in user's own OpenRouter key (issue #108, user_keys.py), set for the duration of their request by
+# openrouter_key(). A ContextVar so concurrent requests never see each other's key; a new thread starts with an empty
+# context, so code that hands model calls to a thread or pool runs them in contextvars.copy_context().
+_user_openrouter_key: ContextVar[str | None] = ContextVar("user_openrouter_key", default=None)
+
+
+@contextmanager
+def openrouter_key(api_key: str | None) -> Iterator[None]:
+    """Within the block, OpenRouter calls (the chat model with LLM_PROVIDER=openrouter, the decision model) use
+    `api_key`; None keeps the shared OPENROUTER_API_KEY. Embeddings (embeddings.py) always use the shared key."""
+    token = _user_openrouter_key.set(api_key or None)
+    try:
+        yield
+    finally:
+        _user_openrouter_key.reset(token)
+
+
+def _shared_openrouter_key() -> str:
+    return (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_KEY") or "").strip()
+
+
+def openrouter_api_key() -> str:
+    """The OpenRouter key for this call: the user's own (openrouter_key()) if set, else the shared one ("" if none)."""
+    return _user_openrouter_key.get() or _shared_openrouter_key()
+
+
+def using_user_key() -> bool:
+    """Whether OpenRouter calls in this context run on the user's own key."""
+    return bool(_user_openrouter_key.get())
+
+
+def public_error(exc: BaseException) -> str:
+    """An error's text for the user and the saved message: the keys in use replaced by "…" + their last 4 characters,
+    and a clear message when OpenRouter refused the user's own key (401, 402 no credits, 403)."""
+    status = getattr(exc, "status_code", None) or getattr(getattr(exc, "response", None), "status_code", None)
+    if using_user_key() and status in (401, 402, 403):
+        reason = "has no credits left" if status == 402 else "was refused"
+        return f"Your OpenRouter API key {reason} (HTTP {status}). Replace or remove it in Settings."
+    return redact(str(exc))
+
+
+def redact(text: str) -> str:
+    """`text` without the user's or the shared OpenRouter key."""
+    for key in {_user_openrouter_key.get(), _shared_openrouter_key()}:
+        if key:
+            text = text.replace(key, f"…{key[-4:]}")
+    return text
 
 
 def _get_ai_gateway_key() -> str:
@@ -37,7 +88,8 @@ def chat_client_settings() -> tuple[str, str | None]:
     """(api_key, base_url) for the chat model provider; base_url None means api.openai.com."""
     provider = chat_provider()
     if provider == "openrouter":
-        api_key, base_url, key_name = (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_KEY") or "").strip(), OPENROUTER_BASE_URL, "OPENROUTER_API_KEY"
+        # The user's own key when they set one (openrouter_key()), else the shared one
+        api_key, base_url, key_name = openrouter_api_key(), OPENROUTER_BASE_URL, "OPENROUTER_API_KEY"
     elif provider == "gateway":
         api_key, base_url, key_name = _get_ai_gateway_key(), VERCEL_AI_GATEWAY_BASE_URL, "AI_GATEWAY_API_KEY"
     else:
@@ -109,9 +161,9 @@ def ask_decision_model(state: Any, questions: dict[str, dict],
     """Ask the decision model `questions` about `state` (System One format: a question's `instructions` name state
     fields in backticks; types "noul" (yes/no), "choice" and "score") and return its answers by question name, e.g.
     {"supported": {"type": "noul", "noul": 0.87}}. A rate limit or server error (429, 5xx) is asked once more.
-    Raises RuntimeError without an OpenRouter key and httpx.HTTPError when the call fails or takes longer than
-    `timeout_s`."""
-    key = (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENROUTER_KEY") or "").strip()
+    Runs on the user's own key inside openrouter_key(), else the shared one. Raises RuntimeError without an OpenRouter
+    key and httpx.HTTPError when the call fails or takes longer than `timeout_s`."""
+    key = openrouter_api_key()
     if not key:
         raise RuntimeError("OPENROUTER_API_KEY is required for the decision model")
     body = {"model": decision_model(), "state": state, "questions": questions}

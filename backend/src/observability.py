@@ -39,16 +39,11 @@ def _strip_langfuse_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_openai_client():
+    """A new client (traced by Langfuse when configured) for the chat provider. Never the module-level client with
+    its key set: the key can be the signed-in user's own (llm.openrouter_key, #108), and a shared client would hand
+    it to every other request."""
     api_key, base_url = chat_client_settings()
-    _openai_client.api_key = api_key
-    if base_url:
-        # Setting base_url on an already-constructed client bypasses the SDK's
-        # own trailing-slash normalization (which only runs in OpenAI.__init__),
-        # so without this the request path gets concatenated with no separator
-        # (e.g. ".../v1responses" instead of ".../v1/responses").
-        _openai_client.base_url = base_url.rstrip("/") + "/"
-
-    return _openai_client
+    return _openai_client.OpenAI(api_key=api_key, base_url=base_url)
 
 
 def langfuse_enabled() -> bool:
