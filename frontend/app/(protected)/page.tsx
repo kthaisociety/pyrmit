@@ -143,7 +143,7 @@ export default function Home() {
             onAllChatsCleared={handleAllChatsCleared}
           />
         ) : view === 'database' && isStaff(user) ? (
-          <DatabaseBrowser onBack={() => setView('chat')} />
+          <DatabaseBrowser onBack={() => setView('chat')} role={user?.role} />
         ) : view === 'benchmark' && isStaff(user) ? (
           <BenchmarkBrowser onBack={() => setView('chat')} canRun={isStaff(user)} />
         ) : view === 'pipeline' && isStaff(user) ? (

@@ -36,6 +36,18 @@ def get_tools():
         return _tools
 
 
+def reset_tools() -> None:
+    """After the corpus changed (localrag.service.refresh_corpus): the next question builds the tools again over the
+    same retriever (its kommun list, municipalities and documents are the new corpus's). No warm-up: the embedder is
+    already loaded."""
+    global _tools
+    with _lock:
+        if _tools is not None:
+            from agentic.tools import CorpusTools
+
+            _tools = CorpusTools(_tools.retriever)
+
+
 def source_label(chunk: dict) -> str:
     if chunk["kind"] == "law":
         return f"{chunk['title']}, {chunk['section']}"

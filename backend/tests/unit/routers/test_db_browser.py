@@ -30,12 +30,12 @@ def serve(monkeypatch):
     return use
 
 
-def test_agent_corpus_on_neon(serve):
+def test_agent_corpus_in_postgres(serve):
     store = SimpleNamespace(url="postgresql://u:p@ep-quiet-lake-123456-pooler.x.neon.tech/neondb",
                             meta={"chunks": 115127, "kommuner": ["0380"], "model": "st-bge-m3"})
     serve(SimpleNamespace(store=store, model="or-bge-m3"))
     source = db_browser.local_source()
-    assert source.name == "Agent corpus · Neon"
+    assert source.name == "Agent corpus · Postgres"  # no Neon in the Database tab any more (issue #114)
     assert "ep-quiet-lake-123456/neondb" in source.detail and "115,127 chunks of Uppsala (0380)" in source.detail
     assert "st-bge-m3 vectors, queries embedded with or-bge-m3" in source.detail
 

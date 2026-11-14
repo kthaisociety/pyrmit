@@ -238,3 +238,77 @@ def test_sync_refreshes_its_snapshots_after_a_new_load(geo):
     assert pg_store.sync_files(db) == ["geo/0188/plans.geojson"]
     assert (geo / "0188" / "plans.geojson").read_bytes() == b"second"
 
+
+
+# --- the corpus schema (issue #114) ------------------------------------------------------------------------------------
+
+def test_schema_url_sets_the_search_path_and_keeps_the_other_options():
+    from urllib.parse import parse_qs, urlsplit
+
+    url = pg_store.schema_url("postgresql://u:p@host:5432/db?sslmode=require&options=-cstatement_timeout%3D5000",
+                              "corpus_next")
+    query = parse_qs(urlsplit(url).query)
+    assert query["sslmode"] == ["require"]
+    assert query["options"] == ["-cstatement_timeout=5000 -csearch_path=corpus_next,public"]
+    assert urlsplit(url).netloc == "u:p@host:5432"
+
+
+def test_schema_url_refuses_anything_but_a_schema_name():
+    with pytest.raises(ValueError):
+        pg_store.schema_url("postgresql://h/db", "corpus; DROP TABLE users")
+
+
+def test_the_store_reads_schema_corpus(monkeypatch):
+    monkeypatch.setattr(pg_store.PgStore, "execute", lambda self, sql, params=(): [("model", "st-bge-m3")])
+    store = pg_store.PgStore("postgresql://u:p@h/db")
+    assert "search_path%3Dcorpus%2Cpublic" in store.url and store.schema == "corpus"
+    assert store.meta == {"model": "st-bge-m3"}
+
+
+class FakeCursor:
+    """Answers the catalog queries of move_public_corpus and records the statements."""
+
+    def __init__(self, corpus_exists=False, public=None, views=("chunks", "places")):
+        self.corpus_exists, self.views = corpus_exists, list(views)
+        self.public = public if public is not None else {"corpus_chunks": "r", "corpus_meta": "r", "corpus_files": "r",
+                                                         "chunks": "v", "places": "v"}
+        self.executed, self.result = [], []
+
+    def execute(self, sql, params=()):
+        self.executed.append(sql)
+        if "to_regnamespace" in sql:
+            self.result = [(self.corpus_exists,)]
+        elif "FROM pg_class" in sql:
+            self.result = list(self.public.items())
+        elif "FROM pg_views" in sql:
+            self.result = [(name,) for name in self.views]
+        else:
+            self.result = []
+
+    def fetchone(self):
+        return self.result[0]
+
+    def fetchall(self):
+        return self.result
+
+
+def test_an_older_install_moves_its_corpus_tables_into_schema_corpus():
+    cursor = FakeCursor()
+    assert pg_store.move_public_corpus(cursor) == ["corpus_chunks", "corpus_files", "corpus_meta", "chunks", "places"]
+    assert cursor.executed[-1] == (
+        "BEGIN; CREATE SCHEMA corpus; ALTER TABLE public.corpus_chunks SET SCHEMA corpus; "
+        "ALTER TABLE public.corpus_files SET SCHEMA corpus; ALTER TABLE public.corpus_meta SET SCHEMA corpus; "
+        "ALTER VIEW public.chunks SET SCHEMA corpus; ALTER VIEW public.places SET SCHEMA corpus; COMMIT")
+
+
+def test_nothing_moves_once_schema_corpus_exists_or_without_corpus_tables():
+    assert pg_store.move_public_corpus(FakeCursor(corpus_exists=True)) == []
+    cursor = FakeCursor(public={"chunks": "v"})
+    assert pg_store.move_public_corpus(cursor) == []
+    assert not any(sql.startswith("BEGIN") for sql in cursor.executed)
+
+
+def test_a_public_view_named_chunks_that_is_not_the_corpus_stays():
+    cursor = FakeCursor(views=())
+    assert "chunks" not in pg_store.move_public_corpus(cursor)
+    assert "ALTER VIEW" not in cursor.executed[-1]

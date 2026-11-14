@@ -1,8 +1,8 @@
 """
-Read-only browser over the RAG chunks: the pgvector tables (law_chunks, document_chunks) or,
-with store=local, the agent's corpus used by RETRIEVAL_BACKEND=local (loaded by localrag.service): the disk store,
-or the corpus database with LOCAL_RAG_STORE=neon. /api/db/sources says which. User/auth tables are intentionally not
-exposed.
+Read-only browser over the RAG chunks: with store=local, the agent's corpus used by RETRIEVAL_BACKEND=local (loaded by
+localrag.service): the corpus in Postgres with LOCAL_RAG_STORE=neon (schema corpus, localrag.pg_store), or the disk
+store. /api/db/sources says which. The Database tab shows only that one (issue #114); store=neon (the classic RAG's
+law_chunks / document_chunks) is still served for the legacy path. User/auth tables are intentionally not exposed.
 """
 
 import os
@@ -46,7 +46,7 @@ def _table_overview(db: Session, model, source_col) -> schemas.ChunkTableOvervie
 
 
 def database_label(url: str | None) -> str:
-    """The Neon endpoint and database of a connection URL ("ep-quiet-lake-123456/neondb"), never its password."""
+    """The host and database of a connection URL ("db-host/pyrmit"), never its password."""
     if not url:
         return "not set"
     parsed = urlparse(url)
@@ -67,7 +67,7 @@ def local_source() -> schemas.DbSource:
         meta = store.meta
         kommuner = ", ".join(kommun_label(code) for code in meta.get("kommuner", []))
         return schemas.DbSource(
-            name="Agent corpus · Neon",
+            name="Agent corpus · Postgres",
             detail=f"corpus database {database_label(store.url)}: {meta['chunks']:,} chunks of {kommuner} and the "
                    f"statutes, {meta['model']} vectors, queries embedded with {retriever.model}")
     if store is not None:  # localrag.store.DiskStore

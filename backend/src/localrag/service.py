@@ -89,6 +89,21 @@ def get_retriever():
         return _retriever
 
 
+def refresh_corpus() -> None:
+    """The corpus database changed under the app (a swap or a roll back from the Database tab, corpus_admin.py): the
+    retriever reads its meta and files again, the agent tools start over. Without a retriever yet (no corpus at
+    startup), the next question builds it."""
+    with _lock:
+        retriever = _retriever
+    if retriever is not None and hasattr(retriever, "refresh"):
+        retriever.refresh()
+    try:
+        from agentic.service import reset_tools
+    except ImportError:  # the agent's extras are not installed
+        return
+    reset_tools()
+
+
 def _row(hit) -> dict[str, Any]:
     from localrag.index import chunk_text
 

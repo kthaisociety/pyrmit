@@ -15,6 +15,11 @@ kommuner).
     chunks, places  views with the disk store's columns, so the SQL of the agent tools (_DiskCorpus) and of the
                     Database view runs unchanged (PgStore.query adapts the placeholders)
 
+All of them live in the Postgres schema `corpus` (issue #114), beside the app's tables in `public`: PgStore connects
+with search_path=corpus,public. An owner replaces the corpus from the Database tab (corpus_admin.py): a dump of
+schema `corpus_next` (localrag.export) is restored beside the live corpus, then one transaction renames `corpus` to
+`corpus_prev` and `corpus_next` to `corpus`. move_public_corpus moves the tables of an older install out of `public`.
+
 Footprint on Neon: ~5.1 KB per chunk (vector 2 KB, stems 0.9 KB, GIN, text); laws + Uppsala + Vallentuna +
 Stockholm (115k chunks) ~670 MB of the free plan's 1 GB. Neon suspends an idle compute after 5 minutes, which closes
 the connections: PgStore reconnects once on a connection error.
@@ -62,6 +67,77 @@ SYNC_STAMP = "neon_sync.json"
 STORAGE_LIMIT_MB = 1000  # the free plan's storage per project; a files load stops short of it
 FILES_BUILT = "files_built"  # corpus_meta key: when load_files last ran (the sync refreshes its files on a change)
 UPSERT_FILE = "INSERT INTO corpus_files VALUES (%s, %s) ON CONFLICT (path) DO UPDATE SET data = EXCLUDED.data"  # bytes -> bytea
+
+# Postgres schemas of the corpus (issue #114): the live one, the one being restored, the one kept for a roll back
+CORPUS_SCHEMA, NEXT_SCHEMA, PREV_SCHEMA = "corpus", "corpus_next", "corpus_prev"
+CORPUS_TABLES = ("corpus_chunks", "corpus_places", "corpus_terms", "corpus_ocr", "corpus_files", "corpus_meta",
+                 "corpus_plans")  # corpus_plans: dropped by EXTRAS_SCHEMA, still in older databases
+CORPUS_VIEWS = ("chunks", "places")
+_SCHEMA_NAME = re.compile(r"[a-z_][a-z0-9_]{0,62}")
+
+
+def schema_url(url: str, schema: str) -> str:
+    """The connection URL with search_path=<schema>,public (libpq `options`), so every connection made from it, a
+    load's worker processes included, reads and writes the corpus tables of that schema. The vector types stay in
+    public."""
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
+    if not _SCHEMA_NAME.fullmatch(schema):
+        raise ValueError(f"Not a schema name: {schema!r}")
+    parts = urlsplit(url)
+    pairs = parse_qsl(parts.query)
+    options = " ".join([*(value for key, value in pairs if key == "options"), f"-csearch_path={schema},public"])
+    query = [(key, value) for key, value in pairs if key != "options"] + [("options", options)]
+    return urlunsplit(parts._replace(query=urlencode(query)))
+
+
+def move_public_corpus(cursor) -> list[str]:
+    """An install from before the corpus schema: move public's corpus tables and views into schema `corpus` (ALTER
+    ... SET SCHEMA, instant), in one transaction, if `corpus` does not exist yet. Returns what moved (empty: nothing
+    to do). `cursor` is a psycopg2 cursor of a connection in autocommit."""
+    cursor.execute("SELECT to_regnamespace(%s) IS NOT NULL", (CORPUS_SCHEMA,))
+    if cursor.fetchone()[0]:
+        return []
+    cursor.execute("SELECT c.relname, c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                   "WHERE n.nspname = 'public' AND c.relname = ANY(%s) AND c.relkind IN ('r', 'v')",
+                   (list(CORPUS_TABLES + CORPUS_VIEWS),))
+    found = dict(cursor.fetchall())
+    if found.get("corpus_chunks") != "r":
+        return []
+    # public.chunks / public.places are the corpus views only when they read the corpus tables
+    cursor.execute("SELECT viewname FROM pg_views WHERE schemaname = 'public' AND viewname = ANY(%s) "
+                   "AND definition LIKE %s", (list(CORPUS_VIEWS), r"%corpus\_%"))
+    views = sorted(row[0] for row in cursor.fetchall())
+    tables = [name for name in CORPUS_TABLES if found.get(name) == "r"]
+    statements = [f"CREATE SCHEMA {CORPUS_SCHEMA}",
+                  *(f"ALTER TABLE public.{name} SET SCHEMA {CORPUS_SCHEMA}" for name in tables),
+                  *(f"ALTER VIEW public.{name} SET SCHEMA {CORPUS_SCHEMA}" for name in views)]
+    cursor.execute("BEGIN; " + "; ".join(statements) + "; COMMIT")
+    logger.info("Corpus tables moved from public to schema %s: %s", CORPUS_SCHEMA, ", ".join(tables + views))
+    return tables + views
+
+
+def prepare_schema(url: str, schema: str) -> None:
+    """Before a load into `schema`: pgvector in public, an older install's public tables moved to `corpus`
+    (move_public_corpus), the schema created. Refuses when corpus tables are still in public: a load's
+    `DROP TABLE IF EXISTS corpus_chunks` would otherwise find them through the search_path."""
+    import psycopg2
+
+    connection = psycopg2.connect(url)
+    connection.autocommit = True
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("CREATE EXTENSION IF NOT EXISTS vector SCHEMA public")
+            move_public_corpus(cursor)
+            cursor.execute("SELECT relname FROM pg_class WHERE relnamespace = 'public'::regnamespace "
+                           "AND relname = ANY(%s)", (list(CORPUS_TABLES),))
+            left = sorted(row[0] for row in cursor.fetchall())
+            if left:
+                raise SystemExit(f"public still holds corpus tables ({', '.join(left)}) beside schema "
+                                 f"{CORPUS_SCHEMA}: drop them before loading into {schema}")
+            cursor.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+    finally:
+        connection.close()
 
 
 class StorageLimitError(RuntimeError):
@@ -191,10 +267,14 @@ def _small_files(kommuner: list[str]) -> dict[str, Path]:
     return {"corpus/municipalities.json": MUNICIPALITIES_PATH, "corpus/plans.jsonl": PLANS_PATH, **snapshot_files(kommuner)}
 
 
-def load(model: str, url: str, skip_chunks: bool = False) -> dict:
+def load(model: str, url: str, skip_chunks: bool = False, schema: str = CORPUS_SCHEMA) -> dict:
     """skip_chunks: keep the chunks and places a previous run loaded (~17 min for 115k chunks from home), redo the
-    rest."""
+    rest. schema: the Postgres schema written (`corpus`, the one the app reads; localrag.export loads `corpus_next`).
+    """
     import psycopg2
+
+    prepare_schema(url, schema)
+    url = schema_url(url, schema)
 
     directory = store_dir(model)
     lite = sqlite3.connect(f"file:{directory / 'corpus.sqlite'}?mode=ro", uri=True)
@@ -232,7 +312,7 @@ def load(model: str, url: str, skip_chunks: bool = False) -> dict:
             "ocr": ocr, "built": datetime.now(UTC).isoformat(timespec="seconds")}
     cursor.executemany("INSERT INTO corpus_meta VALUES (%s, %s)", [(k, json.dumps(v)) for k, v in meta.items()])
     cursor.execute("SELECT relname, pg_total_relation_size(oid) FROM pg_class WHERE relname LIKE 'corpus\\_%%' "
-                   "AND relkind = 'r' ORDER BY 2 DESC", ())
+                   "AND relkind = 'r' AND relnamespace = %s::regnamespace ORDER BY 2 DESC", (schema,))
     meta["mb"] = {name: round(size / 1e6, 1) for name, size in cursor.fetchall()}
     cursor.execute("SELECT pg_database_size(current_database())")
     meta["database_mb"] = round(cursor.fetchone()[0] / 1e6, 1)
@@ -279,11 +359,17 @@ def same_vectors(model: str, other: str) -> bool:
 
 class PgStore:
     """DiskStore's read side on Postgres: query() takes the same SQLite SQL (agent tools, Database view), the
-    searches run in SQL. One connection per thread."""
+    searches run in SQL. One connection per thread, with search_path=<schema>,public (schema_url)."""
 
-    def __init__(self, url: str):
-        self.url = url
+    def __init__(self, url: str, schema: str = CORPUS_SCHEMA):
+        self.url = schema_url(url, schema)
+        self.schema = schema
         self._local = threading.local()
+        self.refresh()
+
+    def refresh(self) -> None:
+        """Read corpus_meta again and forget the cached summary and OCR ids: after a swap or a roll back renamed the
+        schemas (corpus_admin), the open connections already read the new corpus."""
         self.meta = {row[0]: row[1] for row in self.execute("SELECT key, value FROM corpus_meta")}
         self._summary: list[dict] | None = None
         self._ocr_ids: set[str] | None = None
@@ -450,6 +536,13 @@ class PgRetriever(DiskRetriever):
         sync_files(self.store)
         pdf_files.remote_ocr = self.store.ocr_bytes
 
+    def refresh(self) -> None:
+        """After a swap or a roll back (corpus_admin): the new corpus's meta, kommun places and small files. The
+        embedder stays (the swap checked the new corpus has the same vectors)."""
+        self.store.refresh()
+        self.places = PgPlaces(self.store)
+        sync_files(self.store)
+
     def _rankings(self, pool: str, vectors: list[np.ndarray], bm25_query: str | None, kommuner: list[str] | None,
                   filters: tuple, candidates: int) -> list[list[int]]:
         rankings = [self.store.dense_top(v, pool, kommuner, candidates, *filters) for v in vectors]
@@ -466,19 +559,21 @@ def main() -> None:
     parser.add_argument("--files", action="store_true", help="add or replace the place snapshots (data/geo), nothing else")
     parser.add_argument("--kommun", action="append", help="with --files: these kommun codes only (default: every snapshot)")
     parser.add_argument("--limit-mb", type=float, default=STORAGE_LIMIT_MB, help="with --files: the database's storage limit")
+    parser.add_argument("--schema", default=CORPUS_SCHEMA,
+                        help="Postgres schema to write (default: corpus, the one the app reads)")
     args = parser.parse_args()
     url = os.getenv("CORPUS_DATABASE_URL")
     if not url:
         parser.error("set CORPUS_DATABASE_URL to the target database (e.g. the Neon demo branch)")
     if args.files:
         try:
-            result = load_files(PgStore(url), args.kommun, args.limit_mb)
+            result = load_files(PgStore(url, args.schema), args.kommun, args.limit_mb)
         except StorageLimitError as error:
             raise SystemExit(str(error)) from None
         print(f"Loaded {result['files']} files of {len(result['kommuner'])} kommuner ({result['mb']} MB gzip): "
               f"database {result['database_mb']} MB")
     elif args.model:
-        load(args.model, url, args.skip_chunks)
+        load(args.model, url, args.skip_chunks, schema=args.schema)
     else:
         parser.error("give --model (the whole corpus) or --files (the place snapshots)")
 
