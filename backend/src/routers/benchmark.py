@@ -26,7 +26,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 import models
-from dependencies import get_current_user
+from dependencies import get_current_user, require_staff
 
 router = APIRouter()
 
@@ -169,7 +169,7 @@ def _run_job(job: dict, case: dict) -> None:
 
 
 @router.post("/benchmark/run")
-def run_case(request: RunRequest, _user: models.User = Depends(get_current_user)):
+def run_case(request: RunRequest, _user: models.User = Depends(require_staff)):  # spends credits
     case = _case(request.set, request.id)
     job_id = uuid.uuid4().hex[:12]
     JOBS[job_id] = {"status": "running", "progress": [], "started": time.time(), "case": request.id}

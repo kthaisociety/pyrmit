@@ -67,6 +67,16 @@ class UserPublic(BaseModel):
     id: str
     name: str
     email: EmailStr
+    role: Literal["owner", "developer", "user"] = "user"  # issue #112: the UI shows or hides admin features by it
+
+
+class UserWithRole(UserPublic):
+    """A row of the owners' user list (GET /api/users)."""
+    from_owner_emails: bool = False  # an owner through OWNER_EMAILS: the UI can't demote them
+
+
+class SetRoleRequest(BaseModel):
+    role: Literal["owner", "developer", "user"]
 
 
 class Token(BaseModel):

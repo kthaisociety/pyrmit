@@ -11,12 +11,9 @@ import PipelineBrowser from '@/components/PipelineBrowser';
 import SidebarToggle from '@/components/SidebarToggle';
 import { authFetch, clearAccessToken, getStoredAccessToken } from '@/lib/auth';
 import { useLanguage } from '@/lib/i18n';
+import { isStaff, type CurrentUser } from '@/lib/roles';
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+type User = CurrentUser; // with its role (issue #112)
 
 export default function Home() {
   const { t } = useLanguage();
@@ -142,7 +139,7 @@ export default function Home() {
         ) : view === 'database' ? (
           <DatabaseBrowser onBack={() => setView('chat')} />
         ) : view === 'benchmark' ? (
-          <BenchmarkBrowser onBack={() => setView('chat')} />
+          <BenchmarkBrowser onBack={() => setView('chat')} canRun={isStaff(user)} />
         ) : view === 'pipeline' ? (
           <PipelineBrowser onBack={() => setView('chat')} />
         ) : (

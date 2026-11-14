@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from db.database import get_db
 import models
+import roles
 import schemas
 import user_keys
 from dependencies import get_current_session, get_current_user
@@ -42,6 +43,7 @@ def _authenticate_user(db: Session, email: str, password: str) -> models.User | 
 
 
 def _issue_access_token(user: models.User, db: Session) -> schemas.Token:
+    roles.promote_if_env_owner(user)  # issue #112: OWNER_EMAILS accounts are owners from their first sign-in
     session_id = str(uuid.uuid4())
     expires_at = datetime.now(UTC).replace(microsecond=0) + timedelta(
         minutes=get_access_token_expire_minutes()
@@ -123,14 +125,14 @@ def signout(
 
 @router.get("/me", response_model=schemas.UserPublic)
 def get_me(user: models.User = Depends(get_current_user)):
-    return schemas.UserPublic(id=user.id, name=user.name, email=user.email)
+    return schemas.UserPublic(id=user.id, name=user.name, email=user.email, role=user.role or roles.USER)
 
 @router.patch("/me", response_model=schemas.UserPublic)
 def update_profile(request: schemas.UpdateProfileRequest, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
     user.name = request.name
     db.commit()
     db.refresh(user)
-    return schemas.UserPublic(id=user.id, name=user.name, email=user.email)
+    return schemas.UserPublic(id=user.id, name=user.name, email=user.email, role=user.role or roles.USER)
 
 @router.patch("/password")
 def change_password(request: schemas.ChangePasswordRequest, db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):

@@ -6,6 +6,7 @@ import LanguageSwitch from '@/components/LanguageSwitch';
 import SidebarToggle from '@/components/SidebarToggle';
 import { authFetch } from '@/lib/auth';
 import { useLanguage } from '@/lib/i18n';
+import type { CurrentUser } from '@/lib/roles';
 
 interface ChatSession {
   id: string;
@@ -13,11 +14,7 @@ interface ChatSession {
   created_at: string;
 }
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
+type User = CurrentUser; // with its role (issue #112)
 
 interface SidebarProps {
   currentSessionId: string | null;
