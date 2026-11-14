@@ -6,7 +6,7 @@ import LanguageSwitch from '@/components/LanguageSwitch';
 import SidebarToggle from '@/components/SidebarToggle';
 import { authFetch } from '@/lib/auth';
 import { useLanguage } from '@/lib/i18n';
-import type { CurrentUser } from '@/lib/roles';
+import { isStaff, type CurrentUser } from '@/lib/roles';
 
 interface ChatSession {
   id: string;
@@ -211,6 +211,8 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
           </div>
           <LanguageSwitch />
         </div>
+        {/* The work views are for owners and developers (issue #112); the backend refuses users too */}
+        {isStaff(user) && (<>
         <button
           onClick={onOpenBenchmark}
           className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-900 rounded-lg transition-colors text-zinc-700 dark:text-zinc-300"
@@ -232,6 +234,7 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
           <Database size={16} />
           <span>Database</span>
         </button>
+        </>)}
         <button
           onClick={onOpenSettings}
           className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-900 rounded-lg transition-colors text-zinc-700 dark:text-zinc-300"

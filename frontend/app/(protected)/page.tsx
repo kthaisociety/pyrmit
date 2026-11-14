@@ -63,6 +63,12 @@ export default function Home() {
       });
   }, [router]);
 
+  // Benchmark, Pipeline and Database are for owners and developers: anyone else lands on the chat (issue #112)
+  const staffView = view === 'database' || view === 'benchmark' || view === 'pipeline';
+  useEffect(() => {
+    if (user && staffView && !isStaff(user)) setView('chat');
+  }, [user, staffView]);
+
   const handleSessionCreated = (newSessionId: string) => {
     setCurrentSessionId(newSessionId);
     setRefreshSidebarTrigger(prev => prev + 1);
@@ -136,11 +142,11 @@ export default function Home() {
             onUserUpdated={(updated) => setUser(updated)}
             onAllChatsCleared={handleAllChatsCleared}
           />
-        ) : view === 'database' ? (
+        ) : view === 'database' && isStaff(user) ? (
           <DatabaseBrowser onBack={() => setView('chat')} />
-        ) : view === 'benchmark' ? (
+        ) : view === 'benchmark' && isStaff(user) ? (
           <BenchmarkBrowser onBack={() => setView('chat')} canRun={isStaff(user)} />
-        ) : view === 'pipeline' ? (
+        ) : view === 'pipeline' && isStaff(user) ? (
           <PipelineBrowser onBack={() => setView('chat')} />
         ) : (
           <Chat

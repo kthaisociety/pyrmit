@@ -274,7 +274,7 @@ Frontend (`frontend/.env`):
 - `backend/src/security.py` -- JWT creation/decoding, password hashing
 - `backend/src/user_keys.py` -- users' own OpenRouter keys (#108): Fernet-encrypted in `user_api_keys`, `key_for` gives the router the decrypted key or None. The chat runs its model calls inside `llm.openrouter_key(key)`, a ContextVar read by `chat_client_settings` (provider openrouter) and `ask_decision_model`; the agent's worker thread and the claim check's pool run in `contextvars.copy_context()`. Embeddings stay on the shared key. `llm.public_error` keeps keys out of the error texts sent and saved
 - `backend/src/dependencies.py` -- `get_current_session` checks the bearer JWT and its login session row, `get_current_user` returns its user, `require_role(*roles)` the user if their role is listed, else 403 (#112)
-- `backend/src/roles.py` -- roles owner / developer / user (`STAFF` = owner + developer: ingestion, benchmark runs), `OWNER_EMAILS` promotion at startup and sign-in, `set_role` (never the last owner, never an `OWNER_EMAILS` owner)
+- `backend/src/roles.py` -- roles owner / developer / user (`STAFF` = owner + developer: ingestion, benchmark runs, and every route of the Benchmark, Pipeline and Database views, which the sidebar hides from users), `OWNER_EMAILS` promotion at startup and sign-in, `set_role` (never the last owner, never an `OWNER_EMAILS` owner)
 - `backend/src/routers/users.py` -- owners list users and change roles
 - `backend/src/routers/access_gate.py` -- Access gate unlock
 - `backend/src/routers/auth.py` -- Signup, signin, token, signout, /me, profile, password

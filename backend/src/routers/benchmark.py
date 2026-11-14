@@ -26,7 +26,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 import models
-from dependencies import get_current_user, require_staff
+from dependencies import require_staff
 
 router = APIRouter()
 
@@ -92,14 +92,14 @@ def _results(set_name: str, case_id: str) -> list[dict]:
 
 
 @router.get("/benchmark/sets")
-def sets(_user: models.User = Depends(get_current_user)):
+def sets(_user: models.User = Depends(require_staff)):
     return [{"set": name, "title": title, "description": description, "cases": len(_cases(name))}
             for name, (_, title, description) in SETS.items()]
 
 
 @router.get("/benchmark/cases")
 def cases(set: str = Query(...), q: str | None = None, offset: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=200),
-          _user: models.User = Depends(get_current_user)):
+          _user: models.User = Depends(require_staff)):
     rows = _cases(set)
     if q:
         needle = q.lower()
@@ -111,13 +111,13 @@ def cases(set: str = Query(...), q: str | None = None, offset: int = Query(0, ge
 
 
 @router.get("/benchmark/case")
-def case_detail(set: str = Query(...), id: str = Query(...), _user: models.User = Depends(get_current_user)):
+def case_detail(set: str = Query(...), id: str = Query(...), _user: models.User = Depends(require_staff)):
     case = _case(set, id)
     return {"case": case, "results": _results(set, id)}
 
 
 @router.get("/benchmark/image/{case_id}")
-def case_image(case_id: str, _user: models.User = Depends(get_current_user)):
+def case_image(case_id: str, _user: models.User = Depends(require_staff)):
     from agentic.cases_from_plans import OUT_DIR
 
     case = next((c for c in _cases("plans") if c["id"] == case_id), None)
@@ -178,7 +178,7 @@ def run_case(request: RunRequest, _user: models.User = Depends(require_staff)): 
 
 
 @router.get("/benchmark/run/{job_id}")
-def run_status(job_id: str, _user: models.User = Depends(get_current_user)):
+def run_status(job_id: str, _user: models.User = Depends(require_staff)):
     job = JOBS.get(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Unknown job (the backend may have restarted)")
