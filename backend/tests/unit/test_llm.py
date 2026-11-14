@@ -165,14 +165,43 @@ def test_another_thread_never_sees_the_users_key(openrouter):
     assert seen == [SHARED_KEY]
 
 
-def test_embeddings_stay_on_the_shared_key(openrouter):
-    """Question embeddings (or-bge-m3 through OpenRouter) are paid by the shared key, also inside a user's request."""
-    import llm
+def _openrouter_embedder(**fields):
     from embeddings import Embedder, EmbeddingConfig
 
+    return Embedder(EmbeddingConfig(provider="openrouter", model="baai/bge-m3", dim=1024, **fields))
+
+
+def test_question_embeddings_run_on_the_users_own_key(openrouter):
+    """Question embeddings (or-bge-m3 through OpenRouter) are billed like the answers: the user's own key in their
+    request, the shared key outside it, with one client per key."""
+    import llm
+
+    embedder = _openrouter_embedder()
     with llm.openrouter_key(USER_KEY):
-        client = Embedder(EmbeddingConfig(provider="openrouter", model="baai/bge-m3", dim=1024))._get_client()
-    assert client.api_key == SHARED_KEY
+        assert embedder._get_client().api_key == USER_KEY
+    assert embedder._get_client().api_key == SHARED_KEY
+    with llm.openrouter_key(USER_KEY):
+        assert embedder._get_client().api_key == USER_KEY
+
+
+def test_question_embeddings_need_no_shared_key_when_the_user_has_one(monkeypatch):
+    """A server without OPENROUTER_API_KEY still embeds the questions of a user who entered a key."""
+    import llm
+
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("OPENROUTER_KEY", raising=False)
+    embedder = _openrouter_embedder()
+    with llm.openrouter_key(USER_KEY):
+        assert embedder._get_client().api_key == USER_KEY
+    with pytest.raises(RuntimeError, match="Settings"):
+        embedder._get_client()
+
+
+def test_a_configured_embedding_key_wins_over_the_users(openrouter):
+    import llm
+
+    with llm.openrouter_key(USER_KEY):
+        assert _openrouter_embedder(api_key="sk-or-configured")._get_client().api_key == "sk-or-configured"
 
 
 def test_an_error_never_shows_a_key(openrouter):

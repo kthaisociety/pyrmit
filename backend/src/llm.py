@@ -26,7 +26,8 @@ _user_openrouter_key: ContextVar[str | None] = ContextVar("user_openrouter_key",
 @contextmanager
 def openrouter_key(api_key: str | None) -> Iterator[None]:
     """Within the block, OpenRouter calls (the chat model with LLM_PROVIDER=openrouter, the decision model) use
-    `api_key`; None keeps the shared OPENROUTER_API_KEY. Embeddings (embeddings.py) always use the shared key."""
+    `api_key`; None keeps the shared OPENROUTER_API_KEY. So do question embeddings through OpenRouter
+    (embeddings.Embedder._api_key)."""
     token = _user_openrouter_key.set(api_key or None)
     try:
         yield
