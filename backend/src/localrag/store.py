@@ -97,7 +97,6 @@ def build(model: str) -> None:
         CREATE INDEX chunks_doc ON chunks(doc_id, chunk_index);
         CREATE INDEX chunks_id ON chunks(chunk_id);
         CREATE INDEX chunks_law ON chunks(title, section);
-        CREATE INDEX chunks_plan ON chunks(plan_id);
         CREATE INDEX places_word ON places(word);
     """)
     connection.commit()

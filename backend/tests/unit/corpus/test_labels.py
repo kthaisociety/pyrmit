@@ -192,7 +192,7 @@ def test_crawler_records_when_a_pdf_was_downloaded(tmp_path, monkeypatch):
     assert started <= datetime.fromisoformat(line["fetched_at"]) <= datetime.now(UTC)
 
 
-def test_crawler_dates_a_pdf_of_an_earlier_pass_by_its_file(tmp_path, monkeypatch):
+def test_crawler_leaves_a_pdf_of_an_earlier_pass_to_its_file_date(tmp_path, monkeypatch):
     found = crawler(tmp_path, monkeypatch)
     url = "https://www.vallentuna.se/dp/kumla_plankarta.pdf"
     path = tmp_path / "0115" / "pdf" / f"{crawl.stable_id(url)}.pdf"
@@ -201,7 +201,8 @@ def test_crawler_dates_a_pdf_of_an_earlier_pass_by_its_file(tmp_path, monkeypatc
     touch(path)
     asyncio.run(found.store_pdf(crawl.Task(-5, url, "pdf")))
     (line,) = manifest_lines(found)
-    assert line["fetched_at"] == MTIME.isoformat()
+    assert line["fetched_at"] is None  # not recorded at download: corpus.extract labels it file_mtime
+    assert fetch_date(line["fetched_at"], path) == (MTIME.isoformat(), "file_mtime")
 
 
 def test_laws_record_when_they_were_downloaded(tmp_path, monkeypatch):

@@ -39,7 +39,6 @@ from corpus.common import (
     MUNICIPALITIES_PATH,
     USER_AGENT,
     WEB_DIR,
-    fetch_date,
     now_utc,
     stable_id,
 )
@@ -493,9 +492,9 @@ class KommunCrawler:
             return
         pdf_id = stable_id(task.url)
         path = self.out / "pdf" / f"{pdf_id}.pdf"
-        if path.exists():  # downloaded by an earlier pass, which wrote the file then
+        if path.exists():  # downloaded by an earlier pass: no date recorded, corpus.extract takes the file's mtime
             content = path.read_bytes()
-            fetched_at = fetch_date(None, path).at
+            fetched_at = None
         else:
             if response is None or response.content is None:
                 response = await self.get(task.url, stream_limit=self.args.max_pdf_mb * 1024 * 1024)

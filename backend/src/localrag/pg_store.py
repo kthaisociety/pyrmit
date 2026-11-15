@@ -149,7 +149,6 @@ CREATE INDEX IF NOT EXISTS corpus_chunks_doc ON corpus_chunks (doc_id, chunk_ind
 CREATE INDEX IF NOT EXISTS corpus_chunks_id ON corpus_chunks (chunk_id);
 CREATE INDEX IF NOT EXISTS corpus_chunks_law ON corpus_chunks (title, section) WHERE kind = 'law';
 CREATE INDEX IF NOT EXISTS corpus_chunks_stems ON corpus_chunks USING gin (stems);
-CREATE INDEX IF NOT EXISTS corpus_chunks_plan ON corpus_chunks (plan_id) WHERE plan_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS corpus_places_word ON corpus_places (word);
 CREATE OR REPLACE VIEW chunks AS SELECT rowid, {", ".join(COLUMNS)} FROM corpus_chunks;
 CREATE OR REPLACE VIEW places AS SELECT word, kommun_code, count FROM corpus_places;
