@@ -134,5 +134,5 @@ def download(token: str = Query(...), db: Session = Depends(get_db)) -> Streamin
                                 kommuner=len(meta.get("kommuner") or []), built=str(meta.get("built")),
                                 detail="Download started", finished_at=datetime.now(UTC)))
     db.commit()
-    return StreamingResponse(corpus_admin.stream_dump(ops.dump_command()), media_type="application/octet-stream",
+    return StreamingResponse(corpus_admin.stream_dump(*ops.dump_command()), media_type="application/octet-stream",
                              headers={"Content-Disposition": f'attachment; filename="{name}"'})

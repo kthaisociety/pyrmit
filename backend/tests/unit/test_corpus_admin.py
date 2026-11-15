@@ -370,3 +370,20 @@ def test_the_active_manifest_says_its_schema():
     with pytest.raises(CorpusError):
         corpus_admin.active_manifest(FakeOps(schemas=()))
     assert json.dumps(corpus_admin.active_manifest(FakeOps()))  # serialisable
+
+
+def test_pg_clients_get_the_password_in_their_environment_not_their_arguments():
+    url, env = corpus_admin.client_target("postgresql://app:p%40ss:w@db.internal:5432/pyrmit?sslmode=require")
+    assert url == "postgresql://app@db.internal:5432/pyrmit?sslmode=require"
+    assert env["PGPASSWORD"] == "p@ss:w"
+    command, env = corpus_admin.PgOps("postgresql://app:secret@db/pyrmit").dump_command()
+    assert "secret" not in " ".join(command) and env["PGPASSWORD"] == "secret"
+    assert corpus_admin.client_target("postgresql://app@db/pyrmit")[0] == "postgresql://app@db/pyrmit"
+
+
+def test_a_dump_download_does_not_stall_on_a_full_stderr_pipe():
+    """pg_dump writing more to stderr than the pipe holds (~64 KB) while the download reads stdout."""
+    import sys
+
+    script = "import sys; sys.stderr.write('w' * 300_000); sys.stderr.flush(); sys.stdout.write('dump')"
+    assert b"".join(corpus_admin.stream_dump([sys.executable, "-c", script])) == b"dump"

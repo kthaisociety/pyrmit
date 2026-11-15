@@ -29,6 +29,7 @@ from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 from sqlalchemy.orm import Session
 
@@ -169,6 +170,18 @@ def discard_upload(upload_id: str) -> None:
 
 # --- Postgres -------------------------------------------------------------------------------------------------------
 
+def client_target(url: str) -> tuple[str, dict[str, str]]:
+    """The URL and environment for pg_dump / pg_restore: the password goes in PGPASSWORD, not on the command line,
+    where other users of the host would read it with ps."""
+    env = dict(os.environ)
+    parts = urlsplit(url)
+    if parts.password is None:
+        return url, env
+    userinfo, host = parts.netloc.rsplit("@", 1)
+    env["PGPASSWORD"] = unquote(userinfo.split(":", 1)[1])
+    return urlunsplit(parts._replace(netloc=f"{userinfo.split(':', 1)[0]}@{host}")), env
+
+
 def space_plan(limit: float, database: int, needed: float, next_size: int, prev_size: int | None) -> str:
     """Whether a restore fits on the database disk: "ok", "drop_prev" (it fits once the previous version goes, which
     loses the roll back), or a CorpusError. A leftover corpus_next is dropped anyway, so its space counts as free."""
@@ -248,10 +261,11 @@ class PgOps:
     def restore(self, path: Path, progress: Callable[[str], None]) -> None:
         """pg_restore -j into the schema the dump holds (corpus_next); progress(line) for every verbose line."""
         self._rows("CREATE EXTENSION IF NOT EXISTS vector SCHEMA public")
+        url, env = client_target(self.url)
         process = subprocess.Popen(
             ["pg_restore", "-j", str(RESTORE_JOBS), "--no-owner", "--no-privileges", "--exit-on-error", "--verbose",
-             "-d", self.url, str(path)],
-            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+             "-d", url, str(path)],
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, env=env)
         assert process.stderr is not None
         tail: list[str] = []
         for line in process.stderr:
@@ -307,8 +321,10 @@ class PgOps:
         finally:
             connection.close()
 
-    def dump_command(self, schema: str = CORPUS_SCHEMA) -> list[str]:
-        return ["pg_dump", "-Fc", "--compress=zstd:3", "--no-owner", "--no-privileges", "-n", schema, "-d", self.url]
+    def dump_command(self, schema: str = CORPUS_SCHEMA) -> tuple[list[str], dict[str, str]]:
+        """pg_dump of `schema` and its environment (client_target)."""
+        url, env = client_target(self.url)
+        return ["pg_dump", "-Fc", "--compress=zstd:3", "--no-owner", "--no-privileges", "-n", schema, "-d", url], env
 
 
 def get_ops() -> PgOps:
@@ -623,10 +639,20 @@ def download_user(db: Session, token: str) -> models.User:
     return user
 
 
-def stream_dump(command: list[str]) -> Iterator[bytes]:
-    """pg_dump's output as it is made. The download ends early (and the browser reports it failed) if pg_dump fails."""
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    assert process.stdout is not None
+def stream_dump(command: list[str], env: dict[str, str] | None = None) -> Iterator[bytes]:
+    """pg_dump's output as it is made. The download ends early (and the browser reports it failed) if pg_dump fails.
+    A thread drains stderr meanwhile, keeping its end for the log: a full stderr pipe (~64 KB) would stall pg_dump."""
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    assert process.stdout is not None and process.stderr is not None
+    errors = bytearray()
+
+    def drain(stream) -> None:
+        for chunk in iter(lambda: stream.read(4096), b""):
+            errors.extend(chunk)
+            del errors[:-2000]
+
+    reader = threading.Thread(target=drain, args=(process.stderr,), name="pg-dump-stderr", daemon=True)
+    reader.start()
     try:
         while data := process.stdout.read(1 << 20):
             yield data
@@ -635,9 +661,9 @@ def stream_dump(command: list[str]) -> Iterator[bytes]:
         if process.poll() is None:
             process.terminate()
         code = process.wait()
+        reader.join(timeout=5)
         if code not in (0, -15):
-            logger.error("pg_dump of the corpus failed (%s): %s", code,
-                         (process.stderr.read() if process.stderr else b"").decode(errors="replace")[-500:])
+            logger.error("pg_dump of the corpus failed (%s): %s", code, errors.decode(errors="replace")[-500:])
 
 
 def migrate_public_corpus() -> list[str]:
