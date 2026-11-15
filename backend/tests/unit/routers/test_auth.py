@@ -75,3 +75,90 @@ def test_signup_rolls_back_the_user_if_the_session_insert_fails(token, db, engin
     assert db.query(models.User).count() == 1
     assert db.query(models.Account).count() == 1
     assert db.query(models.Session).count() == 1
+
+
+# --- the user's own OpenRouter key (issue #108) -----------------------------------------------------------------------
+
+USER_KEY = "sk-or-v1-" + "ab12" * 16  # a made-up key in OpenRouter's format
+
+
+@pytest.fixture
+def encryption_key(monkeypatch):
+    from cryptography.fernet import Fernet
+    monkeypatch.setenv("API_KEY_ENCRYPTION_KEY", Fernet.generate_key().decode())
+
+
+@pytest.fixture
+def api(signup_request):
+    """The auth router over HTTP, signed in as a fresh user. Its own engine: TestClient runs the routes in another
+    thread, which the shared in-memory SQLite engine refuses."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    from db.database import get_db
+    from dependencies import get_current_user
+
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    models.Base.metadata.create_all(engine, tables=[model.__table__ for model in
+                                                    (models.User, models.Account, models.Session, models.UserApiKey)])
+    Session = sessionmaker(bind=engine)
+    with Session() as db:
+        user_id = get_current_session(auth.signup(signup_request, db).access_token, db).user_id
+
+    def db_override():
+        with Session() as db:
+            yield db
+
+    app = FastAPI()
+    app.include_router(auth.router, prefix="/api/auth")
+    app.dependency_overrides[get_db] = db_override
+    app.dependency_overrides[get_current_user] = lambda: models.User(id=user_id, name=signup_request.name,
+                                                                     email=signup_request.email)
+    yield TestClient(app)
+    engine.dispose()
+
+
+def test_a_saved_key_is_reported_by_its_last_4_characters_only(api, encryption_key):
+    saved = api.put("/api/auth/api-key", json={"api_key": USER_KEY})
+    read = api.get("/api/auth/api-key")
+    for response in (saved, read):
+        assert response.status_code == 200
+        assert response.json() == {"enabled": True, "has_key": True, "last4": "ab12"}
+        assert USER_KEY not in response.text
+
+
+def test_without_a_key_the_shared_key_is_reported(api, encryption_key):
+    assert api.get("/api/auth/api-key").json() == {"enabled": True, "has_key": False, "last4": None}
+
+
+def test_a_removed_key_is_reported_as_gone(api, encryption_key):
+    api.put("/api/auth/api-key", json={"api_key": USER_KEY})
+    response = api.delete("/api/auth/api-key")
+    assert response.json() == {"enabled": True, "has_key": False, "last4": None}
+
+
+def test_a_text_that_is_not_a_key_is_refused_without_echoing_it(api, encryption_key):
+    typo = "sk-proj-" + "secret" * 8
+    response = api.put("/api/auth/api-key", json={"api_key": typo})
+    assert response.status_code == 400
+    assert typo not in response.text
+
+
+def test_without_an_encryption_key_no_key_can_be_saved(api):
+    assert api.get("/api/auth/api-key").json() == {"enabled": False, "has_key": False, "last4": None}
+    response = api.put("/api/auth/api-key", json={"api_key": USER_KEY})
+    assert response.status_code == 503
+    assert USER_KEY not in response.text
+
+
+def test_the_key_request_hides_the_key_in_its_repr():
+    request = schemas.SetApiKeyRequest(api_key=USER_KEY)
+    assert USER_KEY not in repr(request) and USER_KEY not in str(request)
+
+
+def test_users_profile_never_carries_the_key(api, encryption_key):
+    api.put("/api/auth/api-key", json={"api_key": USER_KEY})
+    assert USER_KEY not in api.get("/api/auth/me").text
