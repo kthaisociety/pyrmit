@@ -29,7 +29,6 @@ import ssl
 import time
 import unicodedata
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from urllib.parse import unquote, urldefrag, urljoin, urlparse
 from urllib.robotparser import RobotFileParser, RuleLine
 
@@ -41,6 +40,7 @@ from corpus.common import (
     USER_AGENT,
     WEB_DIR,
     fetch_date,
+    now_utc,
     stable_id,
 )
 
@@ -456,7 +456,7 @@ class KommunCrawler:
                 (self.out / "pages").mkdir(parents=True, exist_ok=True)
                 (self.out / "pages" / f"{page_id}.json").write_text(json.dumps({
                     "url": final_url, "title": title, "text": text, "score": page_score,
-                    "fetched_at": datetime.now(UTC).isoformat(),
+                    "fetched_at": now_utc(),
                 }, ensure_ascii=False), encoding="utf-8")
                 self.record({"type": "page", "id": page_id, "url": final_url, "title": title, "score": page_score})
                 self.pages += 1
@@ -495,14 +495,14 @@ class KommunCrawler:
         path = self.out / "pdf" / f"{pdf_id}.pdf"
         if path.exists():  # downloaded by an earlier pass, which wrote the file then
             content = path.read_bytes()
-            fetched_at = fetch_date(None, path)[0]
+            fetched_at = fetch_date(None, path).at
         else:
             if response is None or response.content is None:
                 response = await self.get(task.url, stream_limit=self.args.max_pdf_mb * 1024 * 1024)
             if response is None or response.status_code != 200 or not response.content.startswith(b"%PDF"):
                 return
             content = response.content
-            fetched_at = datetime.now(UTC).isoformat()
+            fetched_at = now_utc()
         # The same file under another URL (a /download/<id>/<timestamp>/ link per page, a copy of a national guide)
         digest = hashlib.sha1(content).hexdigest()
         if digest in self.pdf_hashes:

@@ -8,6 +8,7 @@ import sys
 from collections.abc import Iterable, Iterator
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import NamedTuple
 
 from dotenv import load_dotenv
 
@@ -62,14 +63,21 @@ def now_utc() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def fetch_date(recorded: str | None, path: Path) -> tuple[str, str]:
-    """(fetched_at, fetched_at_source) of a raw file: the date written at download, else the file's modification
+class FetchDate(NamedTuple):
+    """A document's fetched_at and where it came from (fetched_at_source); both None when unknown."""
+
+    at: str | None
+    source: str | None
+
+
+def fetch_date(recorded: str | None, path: Path) -> FetchDate:
+    """The fetch date of a raw file: the date written at download, else the file's modification
     time. The crawler and corpus.laws write a raw file once, when they download it, and never rewrite it: on the
     2026-10 crawl a page file's mtime matches its recorded fetched_at within 20 ms. A copy that does not keep mtimes
     (an archive unpacked without them) gives the copy date instead."""
     if recorded:
-        return recorded, "recorded"
-    return datetime.fromtimestamp(path.stat().st_mtime, UTC).isoformat(), "file_mtime"
+        return FetchDate(recorded, "recorded")
+    return FetchDate(datetime.fromtimestamp(path.stat().st_mtime, UTC).isoformat(), "file_mtime")
 
 
 def read_jsonl(path: Path) -> Iterator[dict]:

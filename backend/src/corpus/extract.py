@@ -27,6 +27,7 @@ from corpus.common import (
     MUNICIPALITIES_PATH,
     NATIONAL,
     WEB_DIR,
+    FetchDate,
     clean_text,
     fetch_date,
     read_jsonl,
@@ -74,10 +75,10 @@ def doc_type(*texts: str) -> str:
     return "other"
 
 
-def labels(place: str | None, fetched: tuple[str | None, str | None], text: str) -> dict:
+def labels(place: str | None, fetched: FetchDate, text: str) -> dict:
     """The schema labels a document carries besides doc_id, url and kommun (docs/source-chunk-schema.md). Plan ID and
     plan stage are added by add_plan_labels once every document is extracted."""
-    return {"place": place, "fetched_at": fetched[0], "fetched_at_source": fetched[1], "content_sha1": text_sha1(text)}
+    return {"place": place, "fetched_at": fetched.at, "fetched_at_source": fetched.source, "content_sha1": text_sha1(text)}
 
 
 def law_documents() -> list[dict]:
@@ -275,7 +276,7 @@ def legacy_documents() -> list[dict]:
             "title": LEGACY_TITLES.get(source, source),
             # No address and no download date were kept for these: corpus.chunk rejects their chunks and reports them
             "url": None,
-            **labels("Vallentuna", (None, None), text),
+            **labels("Vallentuna", FetchDate(None, None), text),
             "text": text,
         })
     return documents

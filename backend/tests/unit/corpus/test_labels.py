@@ -95,10 +95,16 @@ def test_pdfs_take_the_manifest_date_else_the_file_mtime(tmp_path):
     assert old["content_sha1"] == text_sha1(old["text"]) and old["text"]
 
 
-def test_legacy_documents_have_no_fetch_date_and_are_never_guessed():
+def test_legacy_documents_have_no_fetch_date_and_are_never_guessed(tmp_path, monkeypatch):
     # The schema: an unknown date stays empty. corpus.chunk then rejects their chunks
-    labels = extract.labels("Vallentuna", (None, None), "text")
-    assert labels["fetched_at"] is None and missing_labels({"url": None, **labels}) == ["url", "fetched_at"]
+    legacy = tmp_path / "corpus.jsonl"
+    legacy.write_text(json.dumps({"table": "document", "source": "plan.pdf", "chunk_index": 0,
+                                  "content": "Section: A\n\nSome text."}) + "\n", encoding="utf-8")
+    monkeypatch.setattr(extract, "LEGACY_CORPUS", legacy)
+    [document] = extract.legacy_documents()
+    assert document["place"] == "Vallentuna"
+    assert document["fetched_at"] is None and document["fetched_at_source"] is None
+    assert missing_labels(document) == ["url", "fetched_at"]
 
 
 # --- plan ID and plan stage -----------------------------------------------------------------------------------------
