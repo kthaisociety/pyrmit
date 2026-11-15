@@ -38,7 +38,7 @@ def _create_tables() -> None:
                 connection.execute(text(f"ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS {column} {column_type}"))
 
     user_columns = {column["name"] for column in inspect(engine).get_columns("users")}
-    if "role" not in user_columns:  # issue #112: existing accounts start as plain users
+    if "role" not in user_columns:
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR NOT NULL DEFAULT 'user'"))
 

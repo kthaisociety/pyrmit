@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from db.database import get_db
 import models
-from roles import ROLES
+from roles import OWNER, ROLES, STAFF
 from security import decode_access_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
@@ -66,5 +66,5 @@ def require_role(*roles: str):
 
 
 # The two checks the routes use (module-level, so a route's default argument is not a call)
-require_owner = require_role("owner")
-require_staff = require_role("owner", "developer")  # roles.STAFF: ingestion, benchmark runs
+require_owner = require_role(OWNER)
+require_staff = require_role(*STAFF)

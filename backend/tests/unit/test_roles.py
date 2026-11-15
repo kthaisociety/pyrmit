@@ -20,7 +20,8 @@ def test_a_new_account_is_a_plain_user(token, db):
 
 def test_owner_emails_are_read_case_insensitively_and_blanks_are_ignored(monkeypatch):
     monkeypatch.setenv("OWNER_EMAILS", " Anna@KTH.se, ,bo@kth.se,")
-    assert roles.owner_emails() == {"anna@kth.se", "bo@kth.se"}
+    named = [roles.is_env_owner(models.User(email=email)) for email in ("anna@kth.se", "BO@kth.se", "", "cy@kth.se")]
+    assert named == [True, True, False, False]
 
 
 def test_without_owner_emails_startup_promotes_nobody(db, monkeypatch):

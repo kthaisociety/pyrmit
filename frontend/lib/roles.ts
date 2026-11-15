@@ -11,6 +11,7 @@ export interface CurrentUser {
   role?: Role; // missing from an older backend: treated as a plain user
 }
 
+// Owners only: the role section of Settings
 export function isOwner(user: { role?: Role } | null | undefined): boolean {
   return user?.role === 'owner';
 }
