@@ -3,7 +3,9 @@ Pipeline view: how the searchable corpus is built and how well each step works, 
 project's context (each step says what it does and how it is measured, then its numbers, then details on demand).
 Only reads the files the steps write. Separate from the Benchmark view, which grades the agent's answers end to end.
 
-- GET /api/pipeline   {corpus, steps: [{id, step, title, what, measure, status, flow, tiles, sections}]}
+- GET /api/pipeline   {corpus, steps: [{id, step, title, what, measure, status, flow, tiles, sections}], costs}
+  costs: what running the whole pipeline takes (time and cost of a rebuild), the same fields without `step`: it
+  covers every step, so the view shows it apart from the numbered ones
   sections: {title, summary, text?, table?: {columns, rows, highlight?, limit?, search?}, bars?: [{label, value,
   hint?}], meter?: {value, total, label}, checks?: [{section, level, message, examples, count}], examples?: [...]}
 
@@ -525,7 +527,8 @@ def tools_step() -> dict:
 COSTS_PATH = AGENTIC_DIR / "pipeline-costs.json"
 
 
-def costs_step() -> dict | None:
+def costs_card() -> dict | None:
+    """Time and cost of running the whole pipeline again, from the versioned file: not a step of its own."""
     costs = _load(COSTS_PATH)
     if not costs:
         return None
@@ -535,7 +538,7 @@ def costs_step() -> dict | None:
         return {key: costs[part][key] for key in ("columns", "rows", "highlight") if key in costs[part]}
 
     return {
-        "id": "costs", "step": 7, "title": "Rebuild: time and cost",
+        "id": "costs", "title": "Whole pipeline: time and cost of a rebuild",
         "what": "What it takes to build the corpus again from the kommun sites: each step's time on the laptop that "
                 "built it, then the other ways to run it (a rented GPU, paid APIs, a CPU only) and what an update "
                 "costs. OCR is almost all of the time; embeddings are cheap through an API.",
@@ -563,7 +566,7 @@ def _signature() -> tuple:
     new results (reading the filter's 70k rows takes seconds)."""
     from corpus.pdf_filter import DECISIONS_PATH, EVAL_PATH
 
-    paths = [DATA_DIR / "check.json", DECISIONS_PATH, EVAL_PATH, DATA_DIR / "ocr_jobs.jsonl", COSTS_PATH,
+    paths = [DATA_DIR / "check.json", DECISIONS_PATH, EVAL_PATH, DATA_DIR / "ocr_jobs.jsonl",
              *AGENTIC_DIR.glob("coverage-*.json"), *AGENTIC_DIR.glob("replay-*.json"), *EVAL_DIR.glob("*.json")]
     ocr_outputs = sum(1 for _ in WEB_DIR.glob("*/ocr/*.json"))
     return tuple(sorted((str(p), p.stat().st_mtime) for p in paths if p.exists())) + (ocr_outputs,)
@@ -577,19 +580,21 @@ SNAPSHOT_PATH = AGENTIC_DIR / "pipeline-national.json"
 
 def build() -> dict:
     check = _load(DATA_DIR / "check.json") or {}
-    steps = [crawl_step(check), filter_step(), ocr_step(check), documents_step(check), plans_step(check), tools_step(),
-             costs_step()]
+    steps = [crawl_step(check), filter_step(), ocr_step(check), documents_step(check), plans_step(check), tools_step()]
     return {"corpus": DATA_DIR.parent.name, "steps": [step for step in steps if step]}
 
 
 @router.get("/pipeline")
 def pipeline(_: models.User = Depends(get_current_user)) -> dict:
     if not (DATA_DIR / "check.json").exists() and SNAPSHOT_PATH.exists():
-        return _load(SNAPSHOT_PATH)  # carries "snapshot": {built, ...}, shown as such by the view
-    signature = _signature()
-    if _cache.get("signature") != signature:
-        _cache.update(signature=signature, result=build())
-    return _cache["result"]
+        result = _load(SNAPSHOT_PATH)  # carries "snapshot": {built, ...}, shown as such by the view
+    else:
+        signature = _signature()
+        if _cache.get("signature") != signature:
+            _cache.update(signature=signature, result=build())
+        result = _cache["result"]
+    # The costs come from their own versioned file on every install, snapshot or not (a few kB)
+    return {**result, "costs": costs_card()}
 
 
 def write_snapshot() -> dict:
