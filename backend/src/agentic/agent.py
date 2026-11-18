@@ -7,6 +7,7 @@ turns use a low reasoning effort and only the final answer uses the answer effor
 streamed (on_event "answer_delta"). A step budget forces the answer.
 """
 
+import contextvars
 import json
 import os
 import re
@@ -424,8 +425,11 @@ def run_agent(question: str, tools: CorpusTools, history: list[dict] | None = No
         work = [c for c in calls if c.name not in ("answer_ready", "ask_user")]
         for call in work:
             emit({"type": "tool_call", "name": call.name, "input": call.arguments or "{}"})
-        # Independent calls of one turn run in parallel (DB reads, GPU search, PDF rendering)
-        for call, arguments, result, ms in pool.map(lambda c: _run_call(tools, c), work):
+        # Independent calls of one turn run in parallel (DB reads, GPU search, PDF rendering), each in a copy of this
+        # context: a pool thread starts with an empty one, and a search embeds its query on the user's OpenRouter key
+        contexts = [contextvars.copy_context() for _ in work]
+        for call, arguments, result, ms in pool.map(lambda c, context: context.run(_run_call, tools, c),
+                                                    work, contexts):
             run.seen_chunks.extend(chunk_id for chunk_id in result.chunk_ids if chunk_id not in run.seen_chunks)
             reminder = f"\n\n{ASK_LANGUAGE_REMINDER}" if allow_ask and call is work[-1] else ""
             conversation.append({"type": "function_call_output", "call_id": call.call_id,

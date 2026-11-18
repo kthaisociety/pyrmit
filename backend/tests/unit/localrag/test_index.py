@@ -36,3 +36,15 @@ def test_unsaved_rows_are_ignored_on_reopen(tmp_path, monkeypatch):
     del store
     reopened = index.VectorStore("m")
     assert reopened.ids == ["a"] and reopened.matrix.shape == (10, 2)
+
+
+def test_adding_labels_to_embedded_chunks_needs_no_embedding(tmp_path, monkeypatch):
+    """chunks.jsonl rebuilt with the schema labels (#106): every chunk keeps its vector."""
+    monkeypatch.setattr(index, "INDEX_DIR", tmp_path)
+    before = [chunk("a", "Byggnadsarea 200 m2", "Vallentuna kommun – Plan"), chunk("b", "1 § Text.", "PBL, 1 §")]
+    store = index.VectorStore("m", writable=True)
+    store.add(before, np.ones((2, 2), dtype=np.float32))
+    store.save()
+    labels = {"place": "Vallentuna", "fetched_at": "2026-10-22T14:08:43+00:00", "fetched_at_source": "file_mtime",
+              "plan_id": "0123456789abcdef", "plan_stage": "in_force", "content_sha1": "f" * 40}
+    assert index.VectorStore("m").missing([{**c, **labels} for c in before]) == []

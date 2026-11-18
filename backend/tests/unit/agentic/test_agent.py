@@ -59,6 +59,27 @@ def test_what_the_agent_read_counts_as_seen_evidence(reading):
     assert len(reading[0].seen_chunks) == 2
 
 
+def test_the_tool_calls_run_on_the_users_own_key(monkeypatch):
+    """The tools run in a thread pool: each call keeps the request's OpenRouter key, so a search embeds its query on
+    the user's key."""
+    import llm
+
+    keys, real_run_tool = [], agent.run_tool
+
+    def run_tool(tools, name, arguments):
+        keys.append(llm.openrouter_api_key())
+        return real_run_tool(tools, name, arguments)
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-shared")
+    monkeypatch.setattr(agent, "run_tool", run_tool)
+    tools = CorpusTools.__new__(CorpusTools)
+    tools.corpus = _MemoryCorpus([])
+    monkeypatch.setattr(agent, "get_openai_client", lambda: ReadingClient())
+    with llm.openrouter_key("sk-or-user"):
+        agent.run_agent("Får vi bygga?", tools, model="test/model")
+    assert keys == ["sk-or-user"]
+
+
 def test_the_instructions_hold_the_guidance_on_a_pin():
     assert agent.PIN_GUIDE in agent.SYSTEM_PROMPT
 

@@ -19,6 +19,7 @@ Rule-based, no LLM:
 import re
 import sqlite3
 from collections import Counter, defaultdict
+from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from corpus.common import (
@@ -182,11 +183,18 @@ def chunk_for(provision_text: str, chunks: list[tuple[str, str]]) -> str | None:
     return None
 
 
-def main() -> None:
-    documents = [d for d in read_jsonl(DOCUMENTS_PATH) if d["doc_type"] == "detaljplan" and d["kind"] != "law"]
-    pages = {d["url"]: d for d in documents if d["doc_id"].startswith("page")}
-    store = sqlite3.connect(STORE_PATH)
+PlanSpec = tuple[str, str, list[dict], dict | None, list[str]]  # kommun code, name, documents, own page, linking pages
 
+
+def is_plan_document(document: dict) -> bool:
+    return document["doc_type"] == "detaljplan" and document["kind"] != "law"
+
+
+def plan_groups(documents: list[dict]) -> list[PlanSpec]:
+    """The plans of the detaljplan documents, without their provisions: needs no store, so corpus.extract labels the
+    documents with the same plan IDs as the registry."""
+    documents = [d for d in documents if is_plan_document(d)]
+    pages = {d["url"]: d for d in documents if d["doc_id"].startswith("page")}
     groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
     keys_by_page: dict[str, set[str]] = defaultdict(set)
     for document in documents:
@@ -199,7 +207,7 @@ def main() -> None:
         groups[(document["kommun_code"], key)].append(document)
         keys_by_page[document.get("source_page")].add(key)
 
-    plans = []
+    specs: list[PlanSpec] = []
     for (code, key), docs in groups.items():
         page_urls = [d.get("source_page") for d in docs if d.get("source_page")]
         page = pages.get(max(set(page_urls), key=page_urls.count)) if page_urls else None
@@ -207,10 +215,43 @@ def main() -> None:
         own_page = page is not None and keys_by_page[page["url"]] == {key}
         fallback = key if not key.startswith(("page:", "doc:")) else (docs[0]["title"] or key)
         name = page["title"] if own_page else (title_from_text([d.get("text") or "" for d in docs]) or fallback)
-        plans.append(build_plan(code, name, docs, page if own_page else None, page_urls, store))
+        specs.append((code, name, docs, page if own_page else None, page_urls))
     for url, page in pages.items():  # plan pages with no PDFs of their own
         if url not in keys_by_page and not LISTING_PAGE.search(page["title"] or "") and re.search(r"detaljplan|planområde|planförslag", page.get("text") or "", re.IGNORECASE):
-            plans.append(build_plan(page["kommun_code"], page["title"], [], page, [url], store))
+            specs.append((page["kommun_code"], page["title"], [], page, [url]))
+    return specs
+
+
+def plan_labels(documents: list[dict]) -> dict[str, dict]:
+    """doc_id -> {"plan_id", "plan_stage"} for each document of a plan (docs/source-chunk-schema.md). A plan's web page
+    gets none: the schema gives the plan labels to plan documents only."""
+    labels = {}
+    for spec in plan_groups(documents):
+        if spec[2]:
+            head = plan_head(*spec)
+            for document in spec[2]:
+                labels[document["doc_id"]] = {"plan_id": head["plan_id"], "plan_stage": head["status"]}
+    return labels
+
+
+def add_plan_labels(path: Path = DOCUMENTS_PATH) -> dict[str, int]:
+    """Plan ID and plan stage on every document of a plan, None on the others, in documents.jsonl rewritten in place
+    (run by corpus.extract, and by corpus.pdf_filter apply: a plan's generated ID hashes its document IDs). The
+    detaljplan texts are held in RAM (1-2 GB nationally, as main does), the rest streams. Returns documents per
+    stage."""
+    by_doc = plan_labels([d for d in read_jsonl(path) if is_plan_document(d)])
+    stages = dict(Counter(label["plan_stage"] for label in by_doc.values()).most_common())
+    empty = {"plan_id": None, "plan_stage": None}
+    labelled = path.with_suffix(".plans.tmp")
+    write_jsonl(labelled, ({**d, **by_doc.get(d["doc_id"], empty)} for d in read_jsonl(path)))
+    labelled.replace(path)
+    return stages
+
+
+def main() -> None:
+    documents = [d for d in read_jsonl(DOCUMENTS_PATH) if is_plan_document(d)]
+    store = sqlite3.connect(STORE_PATH)
+    plans = [build_plan(*spec, store) for spec in plan_groups(documents)]
 
     written = write_jsonl(PLANS_PATH, sorted(plans, key=lambda p: (p["kommun_code"], p["name"])))
     with_rules = [p for p in plans if p["provisions"]]
@@ -221,11 +262,24 @@ def main() -> None:
           f"  with PDFs: {sum(1 for p in plans if p['documents'])}, kommuner: {len({p['kommun_code'] for p in plans})}")
 
 
-def build_plan(code: str, name: str, docs: list[dict], page: dict | None, page_urls: list[str],
-               store: sqlite3.Connection) -> dict:
+def plan_head(code: str, name: str, docs: list[dict], page: dict | None, page_urls: list[str]) -> dict:
+    """A plan's registry entry without its provisions."""
     texts = [d.get("text") or "" for d in docs] + ([page.get("text") or ""] if page else [])
     status, laga_kraft, adopted = status_of(page_urls[0] if page_urls else "", texts)
     number = next((m.group(1) for t in [name, *texts] for m in [PLAN_NUMBER.search(t[:3000])] if m), None)
+    kommun = (docs[0] if docs else page)["kommun"]
+    return {
+        "plan_id": stable_id(code, name, *(d["doc_id"] for d in docs)),
+        "kommun_code": code, "kommun": kommun, "name": " ".join(name.split()), "plan_number": number,
+        "status": status, "laga_kraft": laga_kraft, "adopted": adopted,
+        "page": {"doc_id": page["doc_id"], "url": page["url"]} if page else None,
+        "documents": [{"doc_id": d["doc_id"], "role": role_of(d), "title": d.get("title"), "url": d.get("url"),
+                       "pages": d.get("pages"), "scanned": bool(d.get("needs_ocr"))} for d in docs],
+    }
+
+
+def build_plan(code: str, name: str, docs: list[dict], page: dict | None, page_urls: list[str],
+               store: sqlite3.Connection) -> dict:
     provisions = []
     for document in sorted(docs, key=lambda d: role_of(d) != "plankarta"):
         found = provisions_of(document.get("text") or "", is_map=role_of(document) == "plankarta")
@@ -240,16 +294,7 @@ def build_plan(code: str, name: str, docs: list[dict], page: dict | None, page_u
                              exact=chunk_id is not None)
         provisions = found
         break  # the plankarta first; a planbeskrivning only when no map text exists
-    kommun = (docs[0] if docs else page)["kommun"]
-    return {
-        "plan_id": stable_id(code, name, *(d["doc_id"] for d in docs)),
-        "kommun_code": code, "kommun": kommun, "name": " ".join(name.split()), "plan_number": number,
-        "status": status, "laga_kraft": laga_kraft, "adopted": adopted,
-        "page": {"doc_id": page["doc_id"], "url": page["url"]} if page else None,
-        "documents": [{"doc_id": d["doc_id"], "role": role_of(d), "title": d.get("title"), "url": d.get("url"),
-                       "pages": d.get("pages"), "scanned": bool(d.get("needs_ocr"))} for d in docs],
-        "provisions": provisions,
-    }
+    return {**plan_head(code, name, docs, page, page_urls), "provisions": provisions}
 
 
 if __name__ == "__main__":

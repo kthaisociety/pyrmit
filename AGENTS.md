@@ -113,12 +113,14 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | POST   | `/api/auth/signin`                 | Sign in, returns JWT                      |
 | POST   | `/api/auth/token`                  | OAuth2 password form login, returns JWT   |
 | POST   | `/api/auth/signout`                | Revoke the current login session          |
-| GET    | `/api/auth/me`                     | Current user                              |
+| GET    | `/api/auth/me`                     | Current user, with its `role` (owner / developer / user, #112) |
 | PATCH  | `/api/auth/me`                     | Update the profile name                   |
 | PATCH  | `/api/auth/password`               | Change the password                       |
 | GET    | `/api/auth/api-key`                | The user's own OpenRouter key: `enabled` (API_KEY_ENCRYPTION_KEY set), `has_key`, `last4`; never the key (#108) |
 | PUT    | `/api/auth/api-key`                | Set or replace it (`{api_key}`); 400 not an OpenRouter key, 503 feature off |
 | DELETE | `/api/auth/api-key`                | Remove it: the shared key pays again      |
+| GET    | `/api/users`                       | Owners: every user with `role` and `from_owner_emails` (#112) |
+| PATCH  | `/api/users/{user_id}/role`        | Owners: `{role}`; 409 for the last owner or an `OWNER_EMAILS` owner |
 | GET    | `/api/sessions`                    | List chat sessions                        |
 | GET    | `/api/sessions/{session_id}`       | Messages in a chat session                |
 | DELETE | `/api/sessions`                    | Delete all chat sessions                  |
@@ -155,7 +157,7 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 
 | Table              | Key Columns                                                              |
 | ------------------ | ------------------------------------------------------------------------ |
-| `users`            | id, name, email, email_verified, image                                   |
+| `users`            | id, name, email, email_verified, image, role (owner / developer / user, default user, #112) |
 | `accounts`         | id, user_id (FK), provider_id, password (hash)                           |
 | `sessions`         | id (= JWT `sid`), user_id (FK), expires_at; token unused (ADR-0001)      |
 | `user_api_keys`    | user_id (FK) + provider (`openrouter`), encrypted_key (Fernet, API_KEY_ENCRYPTION_KEY), last4 (#108) |
@@ -164,7 +166,7 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | `document_chunks`  | id, document_id, document_name, chunk_index, content, embedding (3072)  |
 | `law_chunks`       | id, law_name, source_file, chapter, section, chunk_index, content, embedding (3072) |
 
-Tables are created at startup by `Base.metadata.create_all` in `backend/src/main.py`, which never alters an existing table: columns added later (`chat_messages.trace`, `status`) are added there with an idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. Migrations/init: `backend/src/db/init.sql`. Match functions (pgvector): `backend/src/db/match_functions.sql`.
+Tables are created at startup by `Base.metadata.create_all` in `backend/src/main.py`, which never alters an existing table: columns added later (`chat_messages.trace`, `status`, `users.role`) are added there with an idempotent `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`. Migrations/init: `backend/src/db/init.sql`. Match functions (pgvector): `backend/src/db/match_functions.sql`.
 
 ---
 
@@ -244,6 +246,7 @@ Backend (`backend/.env`), names as read by the code:
 - `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` -- optional, turn on Langfuse tracing of model calls
 - `OPENAI_BASE_URL` -- optional override of the OpenAI endpoint
 - `JWT_SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`
+- `OWNER_EMAILS` -- comma-separated, case-insensitive: these accounts become owners at startup and at each sign-in / sign-up (`backend/src/roles.py`, #112). Never demotes; an owner listed here can't be demoted from the app. The first owner must sign up before anyone else can with that email (no email verification; the access gate is the only fence)
 - `ACCESS_GATE_PASSWORD`, `ACCESS_GATE_COOKIE_DOMAIN`, `ACCESS_GATE_COOKIE_SAMESITE`, `ACCESS_GATE_COOKIE_SECURE`
 - `DEV_ACCESS_PASSWORD`, `APP_ENV`, `CORS_ALLOWED_ORIGINS`, `COOKIE_SAMESITE`, `COOKIE_SECURE`
 
@@ -270,7 +273,9 @@ Frontend (`frontend/.env`):
 - `backend/src/schemas.py` -- Pydantic request/response schemas
 - `backend/src/security.py` -- JWT creation/decoding, password hashing
 - `backend/src/user_keys.py` -- users' own OpenRouter keys (#108): Fernet-encrypted in `user_api_keys`, `key_for` gives the router the decrypted key or None. The chat runs its model calls inside `llm.openrouter_key(key)`, a ContextVar read by `chat_client_settings` (provider openrouter) and `ask_decision_model`; the agent's worker thread and the claim check's pool run in `contextvars.copy_context()`. Embeddings stay on the shared key. `llm.public_error` keeps keys out of the error texts sent and saved
-- `backend/src/dependencies.py` -- `get_current_session` checks the bearer JWT and its login session row, `get_current_user` returns its user
+- `backend/src/dependencies.py` -- `get_current_session` checks the bearer JWT and its login session row, `get_current_user` returns its user, `require_role(*roles)` the user if their role is listed, else 403 (#112)
+- `backend/src/roles.py` -- roles owner / developer / user (`STAFF` = owner + developer: ingestion, benchmark runs, and every route of the Benchmark, Pipeline and Database views, which the sidebar hides from users), `OWNER_EMAILS` promotion at startup and sign-in, `set_role` (never the last owner, never an `OWNER_EMAILS` owner)
+- `backend/src/routers/users.py` -- owners list users and change roles
 - `backend/src/routers/access_gate.py` -- Access gate unlock
 - `backend/src/routers/auth.py` -- Signup, signin, token, signout, /me, profile, password
 - `backend/src/routers/chat.py` -- Chat and streaming chat endpoints, chat session CRUD; the streamed answer is generated in a background thread and saved as it goes (see Chat Request)
@@ -332,8 +337,9 @@ Frontend (`frontend/.env`):
 - `frontend/lib/corpus.ts` -- document type names / hints and number formatting shared by the Database and Pipeline views
 - `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)
 - `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage.
-  No open button for the 7 `legacy:` documents of the early prototype (963 Vallentuna chunks, in every corpus, added
-  by hand without file or URL, no crawled twin: kept for their content), a note instead; only the clicked button
+  No open button for the 7 `legacy:` documents of the early prototype (963 Vallentuna chunks added by hand without
+  file or URL, in corpora built before the schema labels: `corpus.chunk` now rejects them, they have no date and no
+  address), a note instead; only the clicked button
   waits (the latest click wins)
 - `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
 - `frontend/components/place/` -- `PlacePanel` (map panel beside the chat, opened by the pin button in the message
@@ -352,6 +358,8 @@ Frontend (`frontend/.env`):
   how it is measured, collapsible detail sections), a glossary
 - `frontend/components/Sidebar.tsx` -- Session list, new chat, Benchmark / Pipeline / Database / Settings buttons, user info
 - `frontend/components/Settings.tsx` -- Profile / password settings
+- `frontend/components/UserRoleSettings.tsx` -- Settings section for owners: every user with a role select; the last owner and `OWNER_EMAILS` owners are locked, a 409's message is shown (#112)
+- `frontend/lib/roles.ts` -- `Role`, `CurrentUser`, `isOwner` / `isStaff`, for showing or hiding admin features only (the backend checks)
 - `frontend/components/ApiKeySettings.tsx` -- Settings section for the user's own OpenRouter key: paste, replace, remove; shows "Key set (…abcd)", "Using the shared key" or that the feature is off (#108)
 - `frontend/tests/` -- Vitest suite copied from dev: `unit/` mirrors `components/` and `lib/` (reference tests
   `lib/auth.test.ts`, `components/Sidebar.test.tsx`, the rest `it.todo`), `mocks/handlers.ts` is the shared MSW fake
@@ -479,6 +487,16 @@ python -m corpus.plans            # detaljplan registry + planbestämmelser -> d
 python -m corpus.check            # data checks after a rebuild (exit 1 on an error); then agentic.replay, agentic.coverage score
 ```
 
+- Schema labels (`docs/source-chunk-schema.md`, #106): `corpus.extract` sets `place` (`national` for laws, `kommun`
+  stays null), `fetched_at` + `fetched_at_source` (`recorded` by the crawler / `corpus.laws`, else `file_mtime` of the
+  raw file), `content_sha1`, and `plan_id` / `plan_stage` from `corpus.plans.plan_groups` (no store needed; redone by
+  `pdf_filter apply`). `corpus.chunk` copies them and writes chunks missing `url`, `place` or `fetched_at` to
+  `rejected_chunks.jsonl`; `localrag.store` / `pg_store` refuse them too. A rejected chunk does not count as seen, so
+  a labelled copy of its text is kept (under its own chunk id: losing the wording is worse than embedding a few more
+  chunks). Metadata only: `chunk_text` and the chunk id are unchanged (pinned in `tests/unit/corpus/test_chunk.py`),
+  so adding labels to an embedded corpus = re-run extract, chunk, store and pg_store, then `localrag.index` for the
+  few recovered copies (it embeds only new ids; plan IDs come out the same on the same documents, so plans.jsonl
+  stays valid).
 - `corpus.plans` (rule-based, ~30 s): a plan = the detaljplan PDFs of a kommun whose file names reduce to the same
   key (role words, dates, versions, agenda numbering removed), named by the plan page that links only them, else by
   "Detaljplan för ..." on the first page; plan pages without PDFs are plans too (listing pages excluded). Status from
