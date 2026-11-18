@@ -6,15 +6,17 @@ import { authFetch } from '@/lib/auth';
 import { DOC_TYPE_LABELS, docTypeName, formatNumber } from '@/lib/corpus';
 import ChunkCard from '@/components/ChunkCard';
 import SourceViewer, { CitedChunk, Citation, openPageAtChunk } from '@/components/SourceViewer';
+import CorpusPanel from '@/components/CorpusPanel';
+import { isStaff, type Role } from '@/lib/roles';
 
 type TableName = 'law' | 'document';
 type Tab = TableName | 'search';
-// neon: pgvector tables used by RETRIEVAL_BACKEND=pgvector; local: the agent's corpus (RETRIEVAL_BACKEND=local), from
-// the disk store or the corpus database (LOCAL_RAG_STORE=neon). /api/db/sources names the real source of each.
-type Store = 'neon' | 'local';
+// The view shows only the agent's corpus (store `local` in the API: the corpus in Postgres, or the disk store on a
+// developer's machine); /api/db/sources says which. The API's older `neon` store (law_chunks / document_chunks of the
+// classic RAG) is still served but no longer shown (issue #114).
+type Store = 'local';
 
 const STORE_LABELS: Record<Store, { name: string; law: string; document: string; note: string }> = {
-  neon: { name: 'pgvector tables', law: 'law_chunks', document: 'document_chunks', note: 'RAG chunk tables' },
   local: {
     name: 'Agent corpus',
     law: 'Laws (Riksdagen)',
@@ -628,9 +630,8 @@ function SemanticSearchView({ store }: { store: Store }) {
   return (
     <div className="space-y-4">
       <p className="text-xs text-zinc-500">
-        {store === 'local'
-          ? 'Runs the local retrieval (embeddings on the GPU, kommun filter from the place names in the query), without calling the LLM. Type the query in Swedish: the chat searches with the Swedish rewrite of your question.'
-          : 'Runs the same embedding + cosine-distance retrieval as the chat, without calling the LLM. Tip: the chat searches with the English rewrite of your question (see the pipeline inspector).'}
+        Runs the agent&apos;s retrieval (kommun filter from the place names in the query), without calling the LLM. Type
+        the query in Swedish: the chat searches with the Swedish rewrite of your question.
       </p>
       <form onSubmit={runSearch} className="flex flex-wrap gap-2">
         <input
@@ -711,16 +712,17 @@ function SemanticSearchView({ store }: { store: Store }) {
   );
 }
 
-export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
+// role: owners and developers see the Corpus panel (owners with its buttons); the backend checks the role too
+export default function DatabaseBrowser({ onBack, role }: { onBack: () => void; role?: Role }) {
   const [tab, setTab] = useState<Tab>('law');
-  const [store, setStore] = useState<Store>('local');
+  const store: Store = 'local';
   const [overview, setOverview] = useState<Overview | null>(null);
-  const [loadedStore, setLoadedStore] = useState<Store | null>(null);
   const [error, setError] = useState('');
   const [viewing, setViewing] = useState<Citation | null>(null);
   const [sources, setSources] = useState<Partial<Record<Store, StoreSource>>>({});
+  const [version, setVersion] = useState(0); // bumped when the corpus panel swaps the corpus: everything reloads
   const labels = STORE_LABELS[store];
-  const currentOverview = loadedStore === store ? overview : null;
+  const currentOverview = overview;
 
   useEffect(() => {
     // The fixed labels stay when the backend cannot say (older backend, request failed)
@@ -728,7 +730,7 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
       .then((res) => (res.ok ? res.json() : {}))
       .then((data: Partial<Record<Store, StoreSource>>) => setSources(data))
       .catch(() => {});
-  }, []);
+  }, [version]);
 
   useEffect(() => {
     authFetch(`/api/db/overview?store=${store}`)
@@ -740,9 +742,8 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
         setOverview(data);
         setError('');
       })
-      .catch((err) => setError(String(err)))
-      .finally(() => setLoadedStore(store));
-  }, [store]);
+      .catch((err) => setError(String(err)));
+  }, [store, version]);
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -754,38 +755,21 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-lg font-semibold">Database</h1>
+        <span className="shrink-0 text-sm text-zinc-600 dark:text-zinc-300">{sources[store]?.name ?? labels.name}</span>
         <span className="min-w-0 truncate text-xs text-zinc-500" title={sources[store]?.detail ?? labels.note}>
-          read-only · {sources[store]?.detail ?? labels.note}
+          {sources[store]?.detail ?? labels.note}
         </span>
-        <div className="ml-auto flex shrink-0 rounded-lg border border-zinc-300 p-0.5 text-xs dark:border-zinc-700">
-          {(Object.keys(STORE_LABELS) as Store[]).map((key) => (
-            <button
-              key={key}
-              title={sources[key]?.detail}
-              onClick={() => setStore(key)}
-              className={`rounded-md px-3 py-1 transition-colors ${
-                store === key
-                  ? 'bg-blue-600 font-medium text-white'
-                  : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
-              }`}
-            >
-              {sources[key]?.name ?? STORE_LABELS[key].name}
-            </button>
-          ))}
-        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-4xl space-y-5 p-6">
+          {isStaff({ role }) && <CorpusPanel canManage={role === 'owner'} onSwapped={() => setVersion((v) => v + 1)} />}
+
           {error && <div className="text-sm text-red-500">{error}</div>}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <StatCard label={labels.law} overview={currentOverview?.law} unit="statutes" />
-            <StatCard
-              label={labels.document}
-              overview={currentOverview?.document}
-              unit={store === 'local' ? 'kommuner' : 'documents'}
-            />
+            <StatCard label={labels.document} overview={currentOverview?.document} unit="kommuner" />
           </div>
 
           <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
@@ -806,10 +790,10 @@ export default function DatabaseBrowser({ onBack }: { onBack: () => void }) {
 
           <ViewSource.Provider value={setViewing}>
             {tab === 'search' ? (
-              <SemanticSearchView key={store} store={store} />
+              <SemanticSearchView key={`${store}-${version}`} store={store} />
             ) : (
               <ChunkTableView
-                key={`${store}-${tab}`}
+                key={`${store}-${tab}-${version}`}
                 table={tab}
                 store={store}
                 sources={currentOverview?.[tab].sources ?? []}

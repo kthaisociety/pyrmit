@@ -20,7 +20,7 @@ from dev_access import (
 )
 from embeddings import EmbeddingConfig
 from routers import (access_gate, chat, auth, chunks, agents, db_browser, docs, benchmark, pipeline, place, glossary,
-                     users)
+                     users, corpus)
 from logging_config import setup_logging
 
 setup_logging()
@@ -99,12 +99,26 @@ def _open_corpus_database() -> None:
             logger.exception("Opening the corpus database failed")
 
 
+def _move_corpus_schema() -> None:
+    """LOCAL_RAG_STORE=neon: an older install's public.corpus_* tables move into schema corpus (issue #114), before
+    the corpus database is opened. Only there: a shared corpus database of developers on older code stays as it is."""
+    if os.getenv("LOCAL_RAG_STORE", "disk").strip() != "neon":
+        return
+    import corpus_admin
+
+    try:
+        corpus_admin.migrate_public_corpus()
+    except Exception:
+        logger.exception("Moving the corpus tables into schema corpus failed: the app reads them from public")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Database work runs at startup, not on import, so `import main` works without a database (the CI image check)."""
     _create_tables()
     _apply_owner_emails()
     _check_embedding_config()
+    _move_corpus_schema()
     _open_corpus_database()
     threading.Thread(target=_preload_local_corpus, name="preload-local-corpus", daemon=True).start()
     yield
@@ -150,6 +164,7 @@ app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(chunks.router, prefix="/api", tags=["chunks"])
 app.include_router(agents.router, prefix="/api", tags=["agents"])
 app.include_router(db_browser.router, prefix="/api", tags=["db-browser"])
+app.include_router(corpus.router, prefix="/api", tags=["corpus"])
 app.include_router(docs.router, prefix="/api", tags=["docs"])
 app.include_router(benchmark.router, prefix="/api", tags=["benchmark"])
 app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
