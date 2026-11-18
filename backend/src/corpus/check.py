@@ -35,7 +35,8 @@ from corpus.pdf_filter import DECISIONS_PATH
 
 CHECK_PATH = DATA_DIR / "check.json"
 MODEL = "st-bge-m3"  # the national corpus's embedding model since 2026-11-14 (st-arctic-l-v2 before): --model
-YIELD_DROP = 0.5  # a municipality whose pages + PDFs fall below half of the previous check
+ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
+YIELD_DROP = 0.5 # a municipality whose pages + PDFs fall below half of the previous check
 
 
 class Report:
@@ -274,6 +275,9 @@ def check_plans(report: Report) -> None:
     report.line("INFO", f"{with_rules} plans with extracted provisions ({with_rules / max(len(plans), 1):.0%})")
     replaced = [p["name"] for p in plans if "�" in p["name"]]
     report.check(not replaced, f"no plan name with replacement characters ({len(replaced)})", replaced, "WARN")
+    badly_dated = [f"{p['kommun']}: {p['name'][:60]}: laga kraft {p.get('laga_kraft')!r}, adopted {p.get('adopted')!r}"
+                   for p in plans for date in (p.get("laga_kraft"), p.get("adopted")) if date and not ISO_DATE.fullmatch(date)]
+    report.check(not badly_dated, f"every plan date is YYYY-MM-DD or empty ({len(badly_dated)} are not)", badly_dated)
     report.summary["plans"] = {"plans": len(plans), "without_documents": len(without), "with_provisions": with_rules,
                                "provisions": sum(len(p["provisions"]) for p in plans),
                                "status": dict(Counter(p.get("status") or "unknown" for p in plans)),
