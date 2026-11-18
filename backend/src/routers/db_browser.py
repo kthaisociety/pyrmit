@@ -18,7 +18,7 @@ import schemas
 from agents.document_agent import DocumentAgent
 from agents.law_agent import LawAgent
 from db.database import get_db
-from dependencies import get_current_user
+from dependencies import require_staff
 from observability import get_openai_client
 
 router = APIRouter()
@@ -275,7 +275,7 @@ def _store_page(store, table: str, source: str | None, doc_type: str | None, q: 
 
 
 @router.get("/db/sources", response_model=schemas.DbSources)
-def sources(_user: models.User = Depends(get_current_user)):
+def sources(_user: models.User = Depends(require_staff)):
     """What each store of the Database view reads, for its buttons."""
     return schemas.DbSources(
         neon=schemas.DbSource(name="pgvector tables",
@@ -289,7 +289,7 @@ def sources(_user: models.User = Depends(get_current_user)):
 def overview(
     store: schemas.ChunkStore = "neon",
     db: Session = Depends(get_db),
-    _user: models.User = Depends(get_current_user),
+    _user: models.User = Depends(require_staff),
 ):
     if store == "local":
         return _local_overview()
@@ -310,7 +310,7 @@ def list_chunks(
     limit: int = Query(default=25, ge=1, le=100),
     store: schemas.ChunkStore = "neon",
     db: Session = Depends(get_db),
-    _user: models.User = Depends(get_current_user),
+    _user: models.User = Depends(require_staff),
 ):
     if store == "local":
         return _local_page(table, source, doc_type, q, offset, limit, doc_id)
@@ -361,7 +361,7 @@ def list_documents(
     scanned: bool = False,
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
-    _user: models.User = Depends(get_current_user),
+    _user: models.User = Depends(require_staff),
 ):
     """Local disk store only: a kommun's documents by type, then title (q filters the title, scanned keeps the
     scanned PDFs read by the OCR)."""
@@ -375,7 +375,7 @@ def list_documents(
 def semantic_search(
     request: schemas.ChunkSearchRequest,
     db: Session = Depends(get_db),
-    _user: models.User = Depends(get_current_user),
+    _user: models.User = Depends(require_staff),
 ):
     """Run the same retrieval the chat uses, without calling the LLM."""
     if request.store == "local":

@@ -34,7 +34,7 @@ from corpus.common import (
     read_jsonl,
 )
 from corpus.ocr import ENGINE_FAMILY as OCR_ENGINE
-from dependencies import get_current_user
+from dependencies import require_staff
 
 router = APIRouter()
 
@@ -585,7 +585,7 @@ def build() -> dict:
 
 
 @router.get("/pipeline")
-def pipeline(_: models.User = Depends(get_current_user)) -> dict:
+def pipeline(_: models.User = Depends(require_staff)) -> dict:
     if not (DATA_DIR / "check.json").exists() and SNAPSHOT_PATH.exists():
         result = _load(SNAPSHOT_PATH)  # carries "snapshot": {built, ...}, shown as such by the view
     else:

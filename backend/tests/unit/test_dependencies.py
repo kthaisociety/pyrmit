@@ -59,3 +59,37 @@ def test_invalid_claims_are_rejected(token, db):
 def test_wrong_signature_is_rejected(token, db):
     claims = decode_access_token(token)
     assert_unauthorized(jwt.encode(claims, "different-test-key-at-least-32-bytes", algorithm="HS256"), db)
+
+
+# --- roles (issue #112) -----------------------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("role, allowed", [("owner", True), ("developer", True), ("user", False)])
+def test_require_role_lets_only_the_listed_roles_through(role, allowed):
+    from dependencies import require_role
+
+    check = require_role("owner", "developer")
+    user = models.User(id="u", email="u@kth.se", role=role)
+    if allowed:
+        assert check(user) is user
+    else:
+        with pytest.raises(HTTPException) as error:
+            check(user)
+        assert error.value.status_code == 403
+
+
+def test_require_role_refuses_an_unknown_role_name():
+    from dependencies import require_role
+
+    with pytest.raises(ValueError):
+        require_role("admin")
+    with pytest.raises(ValueError):
+        require_role()
+
+
+def test_me_reports_the_role(token, db):
+    from routers import auth
+
+    user = get_current_session(token, db).user
+    assert auth.get_me(user).role == "user"
+    user.role = "developer"
+    assert auth.get_me(user).role == "developer"

@@ -6,7 +6,8 @@ Configured through env vars; the defaults reproduce the original setup
 
   EMBEDDING_PROVIDER         openai (default) | openrouter | local | st
                                openai     -> api.openai.com, OPENAI_API_KEY
-                               openrouter -> openrouter.ai, OPENROUTER_API_KEY (model ids like "qwen/qwen3-embedding-8b")
+                               openrouter -> openrouter.ai, OPENROUTER_API_KEY (model ids like "qwen/qwen3-embedding-8b");
+                                             inside a user's request, their own key (llm.openrouter_key)
                                local      -> any OpenAI-compatible server at EMBEDDING_BASE_URL
                                              (Ollama, HF text-embeddings-inference, vLLM, LM Studio)
                                st         -> sentence-transformers loaded in-process from Hugging Face
@@ -93,7 +94,7 @@ class EmbeddingConfig:
 class Embedder:
     def __init__(self, config: EmbeddingConfig):
         self.config = config
-        self._client: OpenAI | None = None
+        self._clients: dict[str, OpenAI] = {}  # by API key: through OpenRouter, one per user key
         self._st_model = None
         self._lock = threading.Lock()
 
@@ -132,22 +133,38 @@ class Embedder:
         return [item.embedding for item in data]
 
     def _get_client(self) -> OpenAI:
+        api_key = self._api_key()
         with self._lock:
-            if self._client is None:
-                provider = self.config.provider
+            client = self._clients.get(api_key)
+            if client is None:
                 base_url = self.config.base_url or {
                     "openai": OPENAI_BASE_URL,
                     "openrouter": OPENROUTER_BASE_URL,
-                }.get(provider)
-                key_env = _DEFAULT_API_KEY_ENV[provider]
-                api_key = self.config.api_key or (_env(key_env) if key_env else "")
-                if provider == "openrouter":
-                    api_key = api_key or _env("OPENROUTER_KEY")
-                api_key = api_key or "not-needed"
-                if key_env and api_key == "not-needed":
-                    raise RuntimeError(f"{key_env} is required for EMBEDDING_PROVIDER={provider}")
-                self._client = OpenAI(api_key=api_key, base_url=base_url, max_retries=5)
-            return self._client
+                }.get(self.config.provider)
+                client = self._clients[api_key] = OpenAI(api_key=api_key, base_url=base_url, max_retries=5)
+            return client
+
+    def _api_key(self) -> str:
+        """The configured key (EMBEDDING_API_KEY, a model's api_key), else the provider's. Through OpenRouter that is
+        llm.openrouter_api_key(): the user's own key inside their request (llm.openrouter_key), so their question
+        embeddings are billed to them like their answers, else the shared OPENROUTER_API_KEY."""
+        provider = self.config.provider
+        key_env = _DEFAULT_API_KEY_ENV[provider]
+        if self.config.api_key:
+            return self.config.api_key
+        if provider == "openrouter":
+            # Imported here: llm brings the chat client code, which the indexing scripts never need
+            from llm import openrouter_api_key
+
+            api_key = openrouter_api_key()
+            if not api_key:
+                raise RuntimeError("No OpenRouter key for the embeddings: add your own in Settings, "
+                                   "or set OPENROUTER_API_KEY on the server")
+            return api_key
+        api_key = _env(key_env) if key_env else ""
+        if key_env and not api_key:
+            raise RuntimeError(f"{key_env} is required for EMBEDDING_PROVIDER={provider}")
+        return api_key or "not-needed"
 
     def _embed_sentence_transformers(self, texts: list[str]) -> list[list[float]]:
         with self._lock:

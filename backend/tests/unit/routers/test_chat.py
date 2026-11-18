@@ -23,16 +23,8 @@ os.environ.pop("DEV_ACCESS_PASSWORD", None)
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-
-
-@compiles(JSONB, "sqlite")
-def _jsonb_as_json(element, compiler, **kw):
-    return "JSON"
-
 
 import agentic.service
 import models
