@@ -28,4 +28,23 @@ describe('PipelineBrowser', () => {
     expect(await screen.findByText('corpus: data')).toBeInTheDocument();
     expect(screen.queryByText(/hosted on Neon/)).not.toBeInTheDocument();
   });
+
+  it('shows the rebuild costs after the steps, unnumbered and outside the strip', async () => {
+    /** The costs cover running every step: a 7th numbered step would read as a step after the tools. */
+    const card = (id: string, title: string, step?: number) => ({
+      id, ...(step ? { step } : {}), title, what: '', measure: '', status: { level: 'info', label: 'ok' },
+      flow: { value: 1, caption: '' }, tiles: [], sections: [],
+    });
+    server.use(
+      http.get('*/api/pipeline', () =>
+        HttpResponse.json({ corpus: 'data', steps: [card('crawl', 'Crawl the sites', 1)], costs: card('costs', 'Whole pipeline: time and cost') }),
+      ),
+    );
+    render(<PipelineBrowser onBack={vi.fn()} />);
+
+    expect(await screen.findByText('Running the whole pipeline')).toBeInTheDocument();
+    expect(screen.getByText('Whole pipeline: time and cost')).toBeInTheDocument();
+    expect(screen.getByLabelText('All steps')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  });
 });

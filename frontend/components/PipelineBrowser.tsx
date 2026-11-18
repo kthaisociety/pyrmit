@@ -10,6 +10,7 @@ import {
   Info,
   Loader2,
   RefreshCw,
+  Sigma,
   XCircle,
 } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
@@ -39,7 +40,8 @@ interface Section {
 }
 interface Step {
   id: string;
-  step: number;
+  // None on the costs card: it covers running every step, so it has no number
+  step?: number;
   title: string;
   what: string;
   measure: string;
@@ -275,7 +277,7 @@ function StepCard({ step, open, onToggle }: { step: Step; open: boolean; onToggl
     <section id={`step-${step.id}`} className="scroll-mt-4 rounded-xl border border-zinc-200 dark:border-zinc-800">
       <button onClick={onToggle} className="flex w-full items-center gap-3 px-4 pt-3 text-left">
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
-          {step.step}
+          {step.step ?? <Sigma size={13} aria-label="All steps" />}
         </span>
         <h2 className="flex-1 text-base font-semibold text-zinc-900 dark:text-zinc-100">{step.title}</h2>
         <StatusPill status={step.status} />
@@ -288,7 +290,9 @@ function StepCard({ step, open, onToggle }: { step: Step; open: boolean; onToggl
           <div className="space-y-3">
             <div className="grid gap-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400 md:grid-cols-2">
               <div>
-                <p className="mb-0.5 font-semibold text-zinc-800 dark:text-zinc-200">What this step does</p>
+                <p className="mb-0.5 font-semibold text-zinc-800 dark:text-zinc-200">
+                  {step.step ? 'What this step does' : 'What it covers'}
+                </p>
                 <p>{step.what}</p>
               </div>
               <div>
@@ -343,6 +347,8 @@ function FlowStrip({ steps, onSelect }: { steps: Step[]; onSelect: (id: string) 
 
 export default function PipelineBrowser({ onBack }: { onBack: () => void }) {
   const [steps, setSteps] = useState<Step[] | null>(null);
+  // What running the whole pipeline takes: shown after the steps, outside the strip and unnumbered
+  const [costs, setCosts] = useState<Step | null>(null);
   const [corpus, setCorpus] = useState('');
   // Set when this install has no corpus (corpus on Neon): the page is the national corpus's, as measured where it is built
   const [snapshot, setSnapshot] = useState<{ built: string } | null>(null);
@@ -355,6 +361,7 @@ export default function PipelineBrowser({ onBack }: { onBack: () => void }) {
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))))
       .then((data) => {
         setSteps(data.steps);
+        setCosts(data.costs ?? null);
         setCorpus(data.corpus);
         setSnapshot(data.snapshot ?? null);
       })
@@ -423,6 +430,12 @@ export default function PipelineBrowser({ onBack }: { onBack: () => void }) {
               {steps.map((step) => (
                 <StepCard key={step.id} step={step} open={open.has(step.id)} onToggle={() => toggle(step.id)} />
               ))}
+              {costs && (
+                <>
+                  <h2 className="pt-2 text-base font-semibold text-zinc-900 dark:text-zinc-100">Running the whole pipeline</h2>
+                  <StepCard step={costs} open={open.has(costs.id)} onToggle={() => toggle(costs.id)} />
+                </>
+              )}
               <section className="rounded-xl border border-zinc-200 dark:border-zinc-800">
                 <button onClick={() => setGlossary((g) => !g)} className="flex w-full items-center gap-2 px-4 py-3 text-left">
                   {glossary ? <ChevronDown size={16} className="text-zinc-400" /> : <ChevronRight size={16} className="text-zinc-400" />}
