@@ -415,7 +415,7 @@ def chat_stream(
     an off-topic answer (mode "off_topic", #102) are not checked and have no "claim_check" event.
 
     The model calls (the chat model with LLM_PROVIDER=openrouter, the claim check) run on the user's own OpenRouter key
-    when they set one, else on the shared key (#108, llm.openrouter_key); question embeddings stay on the shared key."""
+    when they set one, else on the shared key (#108, llm.openrouter_key); so do the question embeddings."""
     if not request.messages:
         raise HTTPException(status_code=400, detail="No messages provided")
 

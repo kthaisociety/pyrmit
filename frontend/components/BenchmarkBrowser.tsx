@@ -199,8 +199,7 @@ function RunPanel({ set, caseId }: { set: string; caseId: string }) {
   );
 }
 
-// canRun: owners and developers (issue #112); the backend refuses a run from anyone else anyway
-export default function BenchmarkBrowser({ onBack, canRun = true }: { onBack: () => void; canRun?: boolean }) {
+export default function BenchmarkBrowser({ onBack }: { onBack: () => void }) {
   const [sets, setSets] = useState<CaseSet[]>([]);
   const [current, setCurrent] = useState<string>('cases');
   const [query, setQuery] = useState('');
@@ -327,12 +326,10 @@ export default function BenchmarkBrowser({ onBack, canRun = true }: { onBack: ()
                 )}
                 {detail.case.label_explanation && <p className="text-xs italic text-zinc-500">Reference reading of the map: {detail.case.label_explanation}</p>}
               </section>
-              {canRun && (
-                <section className="space-y-2">
-                  <h2 className="text-sm font-semibold">Test it now</h2>
-                  <RunPanel key={`${current}:${detail.case.id}`} set={current} caseId={detail.case.id} />
-                </section>
-              )}
+              <section className="space-y-2">
+                <h2 className="text-sm font-semibold">Test it now</h2>
+                <RunPanel key={`${current}:${detail.case.id}`} set={current} caseId={detail.case.id} />
+              </section>
               <section className="space-y-2">
                 <h2 className="text-sm font-semibold">Past benchmark results ({detail.results.length})</h2>
                 <PastResults results={detail.results} />

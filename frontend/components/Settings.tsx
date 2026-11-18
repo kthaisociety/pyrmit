@@ -218,7 +218,6 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
           {/* Own OpenRouter key (issue #108) */}
           <ApiKeySettings />
 
-          {/* Users and roles, owners only (issue #112); the backend checks the role too */}
           {isOwner(user) && <UserRoleSettings currentUserId={user.id} />}
 
           {/* Danger Zone */}

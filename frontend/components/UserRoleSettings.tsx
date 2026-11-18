@@ -90,7 +90,6 @@ export default function UserRoleSettings({ currentUserId }: { currentUserId: str
       ) : (
         <ul className="divide-y divide-zinc-200 dark:divide-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl">
           {rows.map((row) => {
-            // Locked: set by OWNER_EMAILS, or the only owner left (the backend refuses either way)
             const locked = row.role === 'owner' && (row.from_owner_emails || owners <= 1);
             return (
               <li key={row.id} className="flex items-center justify-between gap-3 px-3 py-2">

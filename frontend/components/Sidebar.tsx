@@ -211,7 +211,6 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
           </div>
           <LanguageSwitch />
         </div>
-        {/* The work views are for owners and developers (issue #112); the backend refuses users too */}
         {isStaff(user) && (<>
         <button
           onClick={onOpenBenchmark}

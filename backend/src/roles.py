@@ -23,7 +23,7 @@ DEVELOPER = "developer"
 USER = "user"
 ROLES = (OWNER, DEVELOPER, USER)
 
-# Roles that may use the work tools: writes to the shared database, runs that spend credits
+# Roles that may use the work tools and the Benchmark, Pipeline and Database views
 STAFF = (OWNER, DEVELOPER)
 
 
@@ -31,12 +31,14 @@ class RoleChangeRefused(Exception):
     """A role change that would break a rule (last owner, an owner set by OWNER_EMAILS). The message says why."""
 
 
-def owner_emails() -> frozenset[str]:
+def _owner_emails() -> frozenset[str]:
+    """The lower-cased addresses of OWNER_EMAILS, blanks dropped."""
     return frozenset(email.strip().lower() for email in os.getenv("OWNER_EMAILS", "").split(",") if email.strip())
 
 
 def is_env_owner(user: models.User) -> bool:
-    return (user.email or "").lower() in owner_emails()
+    """True if OWNER_EMAILS names this user's email, whatever its letter case."""
+    return (user.email or "").lower() in _owner_emails()
 
 
 def promote_if_env_owner(user: models.User) -> None:
@@ -50,7 +52,7 @@ def promote_if_env_owner(user: models.User) -> None:
 def apply_owner_emails(db: Session) -> int:
     """At startup: every account named in OWNER_EMAILS becomes owner. Never demotes anyone. Returns how many accounts
     changed. Commits."""
-    emails = owner_emails()
+    emails = _owner_emails()
     if not emails:
         return 0
     promoted = db.query(models.User).filter(func.lower(models.User.email).in_(emails),
@@ -72,7 +74,6 @@ def set_role(db: Session, target: models.User, role: str) -> models.User:
             raise RoleChangeRefused(
                 f"{target.email} is an owner through OWNER_EMAILS: remove them from it first"
             )
-        # Lock the owner rows, so two owners demoting each other at once can't leave none (Postgres; SQLite ignores it)
         owners = db.query(models.User.id).filter(models.User.role == OWNER).with_for_update().all()
         if len(owners) <= 1:
             raise RoleChangeRefused("This is the last owner: make someone else owner first")

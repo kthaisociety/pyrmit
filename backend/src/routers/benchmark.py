@@ -169,7 +169,7 @@ def _run_job(job: dict, case: dict) -> None:
 
 
 @router.post("/benchmark/run")
-def run_case(request: RunRequest, _user: models.User = Depends(require_staff)):  # spends credits
+def run_case(request: RunRequest, _user: models.User = Depends(require_staff)):
     case = _case(request.set, request.id)
     job_id = uuid.uuid4().hex[:12]
     JOBS[job_id] = {"status": "running", "progress": [], "started": time.time(), "case": request.id}
