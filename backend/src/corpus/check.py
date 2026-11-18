@@ -6,6 +6,7 @@ fine in the totals. Each check prints OK / WARN / ERROR with examples; the exit 
     cd backend && python -m corpus.check                 # everything (~1 min)
     python -m corpus.check --only crawl laws             # some sections
     python -m corpus.check --delete-orphan-pdfs          # also delete the PDFs no crawl manifest references
+    python -m corpus.check --model st-arctic-l-v2        # the index and store of another model (default st-bge-m3)
 
 Results go to data/corpus/check.json; the next run compares each municipality's crawl yield with it.
 """
@@ -33,7 +34,7 @@ from corpus.common import (
 from corpus.pdf_filter import DECISIONS_PATH
 
 CHECK_PATH = DATA_DIR / "check.json"
-MODEL = "st-arctic-l-v2"
+MODEL = "st-bge-m3"  # the national corpus's embedding model since 2026-11-14 (st-arctic-l-v2 before): --model
 YIELD_DROP = 0.5  # a municipality whose pages + PDFs fall below half of the previous check
 
 
@@ -221,8 +222,8 @@ def check_laws(report: Report) -> None:
                               "backwards": len(backwards), "missing_chapters": len(gaps)}
 
 
-def check_index(report: Report) -> None:
-    report.start(f"Index and store ({MODEL})")
+def check_index(report: Report, model: str = MODEL) -> None:
+    report.start(f"Index and store ({model})")
     ids, docs, empty_header = set(), set(), 0
     duplicate_ids = 0
     for chunk in read_jsonl(CHUNKS_PATH):
@@ -236,7 +237,7 @@ def check_index(report: Report) -> None:
     orphan_chunks = docs - known_docs
     report.check(not orphan_chunks, f"every chunk's document is in documents.jsonl ({len(orphan_chunks)} not)",
                  sorted(orphan_chunks), "WARN")
-    dense = INDEX_DIR / "dense" / MODEL / "ids.json"
+    dense = INDEX_DIR / "dense" / model / "ids.json"
     if dense.exists():
         vector_ids = set(json.loads(dense.read_text()))
         missing = ids - vector_ids
@@ -244,7 +245,7 @@ def check_index(report: Report) -> None:
         report.line("INFO", f"{len(vector_ids - ids)} vectors of chunks no longer in the corpus (dropped by localrag.store)")
     else:
         report.line("ERROR", f"no dense index at {dense.parent}")
-    store = INDEX_DIR / "store" / MODEL / "corpus.sqlite"
+    store = INDEX_DIR / "store" / model / "corpus.sqlite"
     if store.exists():
         db = sqlite3.connect(f"file:{store}?mode=ro", uri=True)
         stored = db.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
@@ -284,7 +285,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Check the corpus after a rebuild")
     parser.add_argument("--only", nargs="*", choices=list(sections), help="sections to run (default: all)")
     parser.add_argument("--delete-orphan-pdfs", action="store_true", help="delete PDFs no crawl manifest references")
+    parser.add_argument("--model", default=MODEL, help=f"the index and store to check (default {MODEL})")
     args = parser.parse_args()
+    sections["index"] = lambda report: check_index(report, args.model)
 
     previous = json.loads(CHECK_PATH.read_text(encoding="utf-8")) if CHECK_PATH.exists() else {}
     report = Report()

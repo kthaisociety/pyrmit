@@ -1,0 +1,83 @@
+# A local copy of the Dokploy staging setup (kthaisociety/deployments, projects/pyrmit-*): one empty
+# pgvector Postgres, the backend with only the env Dokploy gives it, the frontend, and Caddy standing in for
+# Traefik (/api to the backend, everything else to the frontend, one origin).
+#
+#   cd deploy/staging-sim
+#   cp .env.example .env              # fill OPENROUTER_API_KEY; the rest has local defaults
+#   docker compose up -d --build      # http://localhost:8080
+#
+# Load the corpus into it from the host (port 5434) with localrag.pg_store, or restore the dump meant for IT:
+#   pg_restore -d postgresql://pyrmit_backend:pyrmit_backend@localhost:5434/pyrmit_backend pyrmit_corpus.dump
+#
+# The backend is built from this checkout by default; BACKEND_IMAGE=ghcr.io/kthaisociety/pyrmit-backend:<tag>
+# runs the image CI published instead (`docker compose up -d --no-build`).
+
+name: pyrmit-staging-sim
+
+services:
+  db:
+    # project.yaml: databases.postgres.image. Dokploy names the database and its user after the project.
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: pyrmit_backend
+      POSTGRES_PASSWORD: pyrmit_backend
+      POSTGRES_DB: pyrmit_backend
+    volumes:
+      - db:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pyrmit_backend -d pyrmit_backend"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${BACKEND_IMAGE:-pyrmit-backend:staging-sim}
+    build: ../../backend
+    # Only what project.yaml lists (env + secrets), plus the additions proposed for it. No CORPUS_DATABASE_URL:
+    # Dokploy gives one DATABASE_URL, the corpus tables sit beside the users and chats.
+    environment:
+      DATABASE_URL: postgresql://pyrmit_backend:pyrmit_backend@db:5432/pyrmit_backend
+      APP_ENV: development
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      ACCESS_GATE_COOKIE_SECURE: "false"   # "true" on Dokploy (HTTPS); plain HTTP here
+      ACCESS_GATE_COOKIE_SAMESITE: lax
+      CORS_ALLOWED_ORIGINS: http://localhost:8080
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-staging-sim-not-a-secret}
+      ACCESS_GATE_PASSWORD: ${ACCESS_GATE_PASSWORD:-staging-sim}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # Proposed additions to project.yaml: the agent over the corpus in Postgres
+      LLM_PROVIDER: openrouter
+      CHAT_MODE: agent
+      RETRIEVAL_BACKEND: local
+      LOCAL_RAG_STORE: neon
+      LOCAL_RAG_MODEL: or-bge-m3
+      LOCAL_RAG_DENSE_QUERY: sv
+      PDF_CACHE_DIR: /cache/pdf
+    volumes:
+      - pdf-cache:/cache/pdf               # a persistent volume on Dokploy, or the PDFs are fetched again each deploy
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/kthaisociety/pyrmit:sha-5b4d9a3}
+    depends_on:
+      - backend
+
+  proxy:
+    # Traefik on Dokploy routes by path on one host: /api to the backend (port 8000), the rest to port 3000
+    image: caddy:2.10
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  db:
+  pdf-cache:

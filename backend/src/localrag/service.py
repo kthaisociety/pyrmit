@@ -11,6 +11,8 @@ agents' debug rows, so chat.py and the pipeline inspector work unchanged.
                                      # chunks.jsonl in RAM (needed for the compound BM25 analyzer / reranker);
                                      # neon: the corpus database at CORPUS_DATABASE_URL (localrag.pg_store), no
                                      # local data (LOCAL_RAG_MODEL=or-bge-m3: queries embedded through OpenRouter)
+    CORPUS_DATABASE_URL=             # unset: DATABASE_URL, the corpus tables beside the users and chats (the
+                                     # deployed app has only the one database Dokploy gives it)
 
 Defaults follow localrag/eval.py (45 questions): the Swedish query beats the English one by
 ~25 points of recall@5; neither BM25 fusion nor the reranker improved on dense-sv.
@@ -51,6 +53,12 @@ def local_backend_enabled() -> bool:
     return os.getenv("RETRIEVAL_BACKEND", "pgvector").strip().lower() == "local"
 
 
+def corpus_database_url() -> str:
+    """The corpus database (LOCAL_RAG_STORE=neon): CORPUS_DATABASE_URL, else DATABASE_URL. Raises KeyError when
+    neither is set."""
+    return os.getenv("CORPUS_DATABASE_URL", "").strip() or os.environ["DATABASE_URL"]
+
+
 def get_retriever():
     from localrag.index import VectorStore, load_chunks
     from localrag.retriever import LocalRetriever
@@ -62,7 +70,7 @@ def get_retriever():
             if os.getenv("LOCAL_RAG_STORE", "disk").strip() == "neon":
                 from localrag.pg_store import PgRetriever
 
-                _retriever = PgRetriever(model, os.environ["CORPUS_DATABASE_URL"])
+                _retriever = PgRetriever(model, corpus_database_url())
                 logger.info("Local retrieval: corpus database (%s chunks of %s, queries with %s)",
                             _retriever.store.meta["chunks"], _retriever.store.meta["model"], model)
                 return _retriever
