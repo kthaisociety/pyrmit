@@ -299,3 +299,15 @@ def test_postgres_chunks_carry_the_store_columns():
     for column in ("place text NOT NULL", "fetched_at text NOT NULL", "url text NOT NULL", "plan_id text",
                    "plan_stage text", "content_sha1 text"):
         assert column in schema
+
+
+def test_chunk_ranges_split_the_store_without_gap_or_overlap(monkeypatch):
+    """The parallel load's workers each copy one rowid range: together, every labelled chunk exactly once."""
+    monkeypatch.setattr(pg_store, "BATCH", 3)
+    lite = lite_store(COLUMNS, [labelled_row(f"c{i}") for i in range(10)])
+    cursor, reports = RecordingCursor(), []
+    counts = [pg_store._copy_range(cursor, lite, np.zeros((10, 4), dtype=np.float16), low, high, reports.append)
+              for low, high in [(0, 4), (4, 10)]]
+    assert counts == [4, 6]
+    assert sorted(int(row[0]) for row in cursor.copied if len(row) == len(COLUMNS) + 3) == list(range(10))
+    assert reports == [3, 4, 3, 6]  # after every batch of each range, the last one partial
