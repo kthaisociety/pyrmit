@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ArrowLeft, LogOut, Trash2, Check, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
 import { useLanguage } from '@/lib/i18n';
+import ApiKeySettings from '@/components/ApiKeySettings';
 
 interface User {
   id: string;
@@ -212,6 +213,9 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
               </button>
             </form>
           </section>
+
+          {/* Own OpenRouter key (issue #108) */}
+          <ApiKeySettings />
 
           {/* Danger Zone */}
           <section>

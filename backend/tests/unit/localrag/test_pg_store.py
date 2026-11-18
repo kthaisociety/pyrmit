@@ -1,3 +1,4 @@
+import csv
 import gzip
 import json
 import re
@@ -5,6 +6,7 @@ import sqlite3
 import threading
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from agentic.tools import _DiskCorpus
@@ -240,37 +242,72 @@ def test_sync_refreshes_its_snapshots_after_a_new_load(geo):
 
 
 
-class _CopyCursor:
-    """Records the rows each COPY sends (the chunk load's only contact with Postgres besides plain statements)."""
+# --- schema labels (#106) -------------------------------------------------------------------------------------------
 
+LABELS = {"place": "Vallentuna", "fetched_at": "2026-10-22T14:08:43+00:00", "fetched_at_source": "file_mtime",
+          "plan_id": None, "plan_stage": None, "content_sha1": "f" * 40}
+
+
+def lite_store(columns, rows):
+    connection = sqlite3.connect(":memory:")
+    connection.row_factory = sqlite3.Row
+    connection.execute(f"CREATE TABLE chunks (rowid INTEGER PRIMARY KEY, {', '.join(f'{c} TEXT' for c in columns)})")
+    for rowid, values in enumerate(rows):
+        connection.execute(f"INSERT INTO chunks VALUES ({', '.join('?' * (len(columns) + 1))})",
+                           (rowid, *[values.get(c) for c in columns]))
+    connection.execute("CREATE TABLE places (word TEXT, kommun_code TEXT, count INTEGER)")
+    return connection
+
+
+def labelled_row(chunk_id, **labels):
+    return {"chunk_id": chunk_id, "doc_id": "pdf:0115:a", "chunk_index": "0", "kind": "pdf", "url": "https://x.se/a",
+            "header": "Plan", "text": "Byggnadsarea 200.", **LABELS, **labels}
+
+
+class RecordingCursor:
     def __init__(self):
-        self.copied, self.statements = [], []
+        self.sql, self.copied = [], []
 
-    def execute(self, sql, params=()):
-        self.statements.append(sql)
+    def execute(self, sql, params=None):
+        self.sql.append(sql)
 
     def copy_expert(self, sql, buffer):
-        self.copied.extend(line.split(",")[0] for line in buffer.getvalue().splitlines())
+        self.copied.extend(csv.reader(buffer))
 
 
-def _chunk_store(n: int) -> sqlite3.Connection:
-    lite = sqlite3.connect(":memory:")
-    lite.row_factory = sqlite3.Row
-    lite.execute(f"CREATE TABLE chunks (rowid INTEGER PRIMARY KEY, {', '.join(COLUMNS)})")
-    lite.executemany(f"INSERT INTO chunks VALUES ({', '.join('?' * (len(COLUMNS) + 1))})",
-                     [(i, f"c{i}", "pdf:0180:x", i, "pdf", "detaljplan", "0180", "Stockholm", "Plan", "u", None, None,
-                       None, None, "Stockholm - Plan", f"Byggnadshöjd {i} meter") for i in range(n)])
-    return lite
+def test_load_leaves_out_store_rows_missing_a_required_label():
+    lite = lite_store(COLUMNS, [labelled_row("a"), labelled_row("b", fetched_at=None), labelled_row("c", place=""),
+                                labelled_row("d")])
+    assert pg_store.labelled_chunks(lite) == (2, 2)
+    cursor = RecordingCursor()
+    pg_store._load_chunks(cursor, lite, np.zeros((4, 2), dtype=np.float16), 2, 0.0)
+    staged = [row for row in cursor.copied if len(row) == len(COLUMNS) + 3]
+    assert [row[1] for row in staged] == ["a", "d"]
+    assert staged[0][1 + COLUMNS.index("place")] == "Vallentuna"
+    insert = next(sql for sql in cursor.sql if "INSERT INTO corpus_chunks" in sql)
+    assert "place" in insert and "content_sha1" in insert
+
+
+def test_load_refuses_a_store_built_before_the_labels():
+    old_columns = COLUMNS[:COLUMNS.index("place")]
+    with pytest.raises(SystemExit, match="built before the schema labels"):
+        pg_store.labelled_chunks(lite_store(old_columns, [labelled_row("a")]))
+
+
+def test_postgres_chunks_carry_the_store_columns():
+    schema = pg_store.CHUNKS_SCHEMA.format(dim=4)
+    for column in ("place text NOT NULL", "fetched_at text NOT NULL", "url text NOT NULL", "plan_id text",
+                   "plan_stage text", "content_sha1 text"):
+        assert column in schema
 
 
 def test_chunk_ranges_split_the_store_without_gap_or_overlap(monkeypatch):
-    """The parallel load's workers each copy one rowid range: together, every chunk exactly once."""
-    import numpy as np
-
+    """The parallel load's workers each copy one rowid range: together, every labelled chunk exactly once."""
     monkeypatch.setattr(pg_store, "BATCH", 3)
-    lite, vectors = _chunk_store(10), np.zeros((10, 4), dtype=np.float16)
-    cursor, reports = _CopyCursor(), []
-    counts = [pg_store._copy_range(cursor, lite, vectors, low, high, reports.append) for low, high in [(0, 4), (4, 10)]]
+    lite = lite_store(COLUMNS, [labelled_row(f"c{i}") for i in range(10)])
+    cursor, reports = RecordingCursor(), []
+    counts = [pg_store._copy_range(cursor, lite, np.zeros((10, 4), dtype=np.float16), low, high, reports.append)
+              for low, high in [(0, 4), (4, 10)]]
     assert counts == [4, 6]
-    assert sorted(map(int, cursor.copied)) == list(range(10))
+    assert sorted(int(row[0]) for row in cursor.copied if len(row) == len(COLUMNS) + 3) == list(range(10))
     assert reports == [3, 4, 3, 6]  # after every batch of each range, the last one partial

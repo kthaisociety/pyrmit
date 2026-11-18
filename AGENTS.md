@@ -116,6 +116,9 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | GET    | `/api/auth/me`                     | Current user                              |
 | PATCH  | `/api/auth/me`                     | Update the profile name                   |
 | PATCH  | `/api/auth/password`               | Change the password                       |
+| GET    | `/api/auth/api-key`                | The user's own OpenRouter key: `enabled` (API_KEY_ENCRYPTION_KEY set), `has_key`, `last4`; never the key (#108) |
+| PUT    | `/api/auth/api-key`                | Set or replace it (`{api_key}`); 400 not an OpenRouter key, 503 feature off |
+| DELETE | `/api/auth/api-key`                | Remove it: the shared key pays again      |
 | GET    | `/api/sessions`                    | List chat sessions                        |
 | GET    | `/api/sessions/{session_id}`       | Messages in a chat session                |
 | DELETE | `/api/sessions`                    | Delete all chat sessions                  |
@@ -155,6 +158,7 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | `users`            | id, name, email, email_verified, image                                   |
 | `accounts`         | id, user_id (FK), provider_id, password (hash)                           |
 | `sessions`         | id (= JWT `sid`), user_id (FK), expires_at; token unused (ADR-0001)      |
+| `user_api_keys`    | user_id (FK) + provider (`openrouter`), encrypted_key (Fernet, API_KEY_ENCRYPTION_KEY), last4 (#108) |
 | `chat_sessions`    | id, user_id (FK), title, updated_at                                      |
 | `chat_messages`    | id, session_id (FK), role, content, trace (JSONB, pipeline events), status (streaming / done / error, assistant only), created_at |
 | `document_chunks`  | id, document_id, document_name, chunk_index, content, embedding (3072)  |
@@ -225,6 +229,7 @@ Backend (`backend/.env`), names as read by the code:
 - `DATABASE_URL`
 - `AI_GATEWAY_API_KEY` (if set, model calls go through the Vercel AI Gateway) or `OPENAI_API_KEY`
 - `LLM_PROVIDER` (openai | gateway | openrouter, with `OPENROUTER_API_KEY` or `OPENROUTER_KEY`), `LLM_MODEL` -- optional chat override (`backend/src/llm.py`)
+- `API_KEY_ENCRYPTION_KEY` -- Fernet key (`python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`) that encrypts users' own OpenRouter keys (`backend/src/user_keys.py`, #108). Unset: users can't store a key and the shared `OPENROUTER_API_KEY` pays for everything. Comma-separated to rotate (the first encrypts, all decrypt); losing it makes stored keys unreadable (they count as no key)
 - `LLM_TIMEOUT_S` (default 180) -- max wait per API response or stream chunk, one retry
 - `LLM_REASONING_EFFORT` (answers), `LLM_REWRITE_REASONING_EFFORT` (query rewrite, default low)
 - `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIM`, `EMBEDDING_QUERY_PREFIX`, `EMBEDDING_DOCUMENT_PREFIX` -- embedding model of the pgvector tables (`backend/src/embeddings.py`; default openai text-embedding-3-large at 3072, PCR-0004); `EMBEDDING_RUNTIME` (auto | torch | onnx) for local models
@@ -264,6 +269,7 @@ Frontend (`frontend/.env`):
 - `backend/src/models.py` -- SQLAlchemy ORM models
 - `backend/src/schemas.py` -- Pydantic request/response schemas
 - `backend/src/security.py` -- JWT creation/decoding, password hashing
+- `backend/src/user_keys.py` -- users' own OpenRouter keys (#108): Fernet-encrypted in `user_api_keys`, `key_for` gives the router the decrypted key or None. The chat runs its model calls inside `llm.openrouter_key(key)`, a ContextVar read by `chat_client_settings` (provider openrouter) and `ask_decision_model`; the agent's worker thread and the claim check's pool run in `contextvars.copy_context()`. Embeddings stay on the shared key. `llm.public_error` keeps keys out of the error texts sent and saved
 - `backend/src/dependencies.py` -- `get_current_session` checks the bearer JWT and its login session row, `get_current_user` returns its user
 - `backend/src/routers/access_gate.py` -- Access gate unlock
 - `backend/src/routers/auth.py` -- Signup, signin, token, signout, /me, profile, password
@@ -326,8 +332,9 @@ Frontend (`frontend/.env`):
 - `frontend/lib/corpus.ts` -- document type names / hints and number formatting shared by the Database and Pipeline views
 - `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)
 - `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage.
-  No open button for the 7 `legacy:` documents of the early prototype (963 Vallentuna chunks, in every corpus, added
-  by hand without file or URL, no crawled twin: kept for their content), a note instead; only the clicked button
+  No open button for the 7 `legacy:` documents of the early prototype (963 Vallentuna chunks added by hand without
+  file or URL, in corpora built before the schema labels: `corpus.chunk` now rejects them, they have no date and no
+  address), a note instead; only the clicked button
   waits (the latest click wins)
 - `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
 - `frontend/components/place/` -- `PlacePanel` (map panel beside the chat, opened by the pin button in the message
@@ -346,6 +353,7 @@ Frontend (`frontend/.env`):
   how it is measured, collapsible detail sections), a glossary
 - `frontend/components/Sidebar.tsx` -- Session list, new chat, Benchmark / Pipeline / Database / Settings buttons, user info
 - `frontend/components/Settings.tsx` -- Profile / password settings
+- `frontend/components/ApiKeySettings.tsx` -- Settings section for the user's own OpenRouter key: paste, replace, remove; shows "Key set (…abcd)", "Using the shared key" or that the feature is off (#108)
 - `frontend/tests/` -- Vitest suite copied from dev: `unit/` mirrors `components/` and `lib/` (reference tests
   `lib/auth.test.ts`, `components/Sidebar.test.tsx`, the rest `it.todo`), `mocks/handlers.ts` is the shared MSW fake
   backend (override with `server.use(...)`), and `setup.ts` fails any test whose request has no handler.
@@ -472,6 +480,16 @@ python -m corpus.plans            # detaljplan registry + planbestämmelser -> d
 python -m corpus.check            # data checks after a rebuild (exit 1 on an error); then agentic.replay, agentic.coverage score
 ```
 
+- Schema labels (`docs/source-chunk-schema.md`, #106): `corpus.extract` sets `place` (`national` for laws, `kommun`
+  stays null), `fetched_at` + `fetched_at_source` (`recorded` by the crawler / `corpus.laws`, else `file_mtime` of the
+  raw file), `content_sha1`, and `plan_id` / `plan_stage` from `corpus.plans.plan_groups` (no store needed; redone by
+  `pdf_filter apply`). `corpus.chunk` copies them and writes chunks missing `url`, `place` or `fetched_at` to
+  `rejected_chunks.jsonl`; `localrag.store` / `pg_store` refuse them too. A rejected chunk does not count as seen, so
+  a labelled copy of its text is kept (under its own chunk id: losing the wording is worse than embedding a few more
+  chunks). Metadata only: `chunk_text` and the chunk id are unchanged (pinned in `tests/unit/corpus/test_chunk.py`),
+  so adding labels to an embedded corpus = re-run extract, chunk, store and pg_store, then `localrag.index` for the
+  few recovered copies (it embeds only new ids; plan IDs come out the same on the same documents, so plans.jsonl
+  stays valid).
 - `corpus.plans` (rule-based, ~30 s): a plan = the detaljplan PDFs of a kommun whose file names reduce to the same
   key (role words, dates, versions, agenda numbering removed), named by the plan page that links only them, else by
   "Detaljplan för ..." on the first page; plan pages without PDFs are plans too (listing pages excluded). Status from
