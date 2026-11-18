@@ -6,7 +6,9 @@ import os
 import re
 import sys
 from collections.abc import Iterable, Iterator
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import NamedTuple
 
 from dotenv import load_dotenv
 
@@ -26,6 +28,11 @@ WEB_DIR = RAW_DIR / "web"
 MUNICIPALITIES_PATH = DATA_DIR / "municipalities.json"
 DOCUMENTS_PATH = DATA_DIR / "documents.jsonl"
 CHUNKS_PATH = DATA_DIR / "chunks.jsonl"
+REJECTED_CHUNKS_PATH = DATA_DIR / "rejected_chunks.jsonl"  # corpus.chunk: chunks missing a required label
+
+# docs/source-chunk-schema.md: the place of a law, and the labels a chunk is rejected without (source = `url`)
+NATIONAL = "national"
+REQUIRED_LABELS = ("url", "place", "fetched_at")
 
 USER_AGENT = "PyrmitCorpusBuilder/0.1 (research prototype on Swedish planning documents)"
 
@@ -38,6 +45,39 @@ for stream in (sys.stdout, sys.stderr):
 
 def stable_id(*parts: str, length: int = 16) -> str:
     return hashlib.sha256("\x1f".join(parts).encode("utf-8")).hexdigest()[:length]
+
+
+def missing_labels(row: dict) -> list[str]:
+    """The required labels a document or chunk lacks (empty when it can be loaded)."""
+    return [label for label in REQUIRED_LABELS if not row.get(label)]
+
+
+def text_sha1(text: str, lower: bool = False) -> str:
+    """Content fingerprint: SHA-1 of the whitespace-normalised text (lowercased too for chunks: the digest their id
+    is built from)."""
+    normalised = " ".join(text.split())
+    return hashlib.sha1((normalised.lower() if lower else normalised).encode()).hexdigest()
+
+
+def now_utc() -> str:
+    return datetime.now(UTC).isoformat()
+
+
+class FetchDate(NamedTuple):
+    """A document's fetched_at and where it came from (fetched_at_source); both None when unknown."""
+
+    at: str | None
+    source: str | None
+
+
+def fetch_date(recorded: str | None, path: Path) -> FetchDate:
+    """The fetch date of a raw file: the date written at download, else the file's modification
+    time. The crawler and corpus.laws write a raw file once, when they download it, and never rewrite it: on the
+    2026-10 crawl a page file's mtime matches its recorded fetched_at within 20 ms. A copy that does not keep mtimes
+    (an archive unpacked without them) gives the copy date instead."""
+    if recorded:
+        return FetchDate(recorded, "recorded")
+    return FetchDate(datetime.fromtimestamp(path.stat().st_mtime, UTC).isoformat(), "file_mtime")
 
 
 def read_jsonl(path: Path) -> Iterator[dict]:
