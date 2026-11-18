@@ -11,7 +11,7 @@ import json
 
 import httpx
 
-from corpus.common import LAWS_DIR, USER_AGENT
+from corpus.common import LAWS_DIR, USER_AGENT, now_utc
 
 # SFS number -> short slug. The first eight are the laws already in the database.
 LAWS = {
@@ -46,7 +46,8 @@ def main() -> None:
             text = client.get(f"{API}/dokument/{doc_id}.text").text
             title = text.splitlines()[0].strip() if text else slug
             (LAWS_DIR / f"{slug}.txt").write_text(text, encoding="utf-8")
-            index.append({"slug": slug, "sfs": sfs, "title": title, "url": f"https://data.riksdagen.se/dokument/{doc_id}.html"})
+            index.append({"slug": slug, "sfs": sfs, "title": title, "url": f"https://data.riksdagen.se/dokument/{doc_id}.html",
+                          "fetched_at": now_utc()})
             print(f"{sfs:<10} {title} ({len(text) // 1000} kB)")
     (LAWS_DIR / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1), encoding="utf-8")
 

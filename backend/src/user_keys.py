@@ -1,5 +1,5 @@
-"""Users' own OpenRouter keys (issue #108). A user can store their OpenRouter API key; their chat answers then run on
-it (llm.openrouter_key), and the shared OPENROUTER_API_KEY pays when they have none.
+"""Users' own OpenRouter keys (issue #108). A user can store their OpenRouter API key; their chat answers and question
+embeddings then run on it (llm.openrouter_key), and the shared OPENROUTER_API_KEY pays when they have none.
 
 The key is stored encrypted (Fernet) under API_KEY_ENCRYPTION_KEY, in user_api_keys with its last 4 characters, the
 only part ever sent back to the browser. Without API_KEY_ENCRYPTION_KEY (or with an invalid one) the feature is off:
