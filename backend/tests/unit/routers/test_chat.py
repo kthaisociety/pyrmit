@@ -794,3 +794,22 @@ def test_a_refused_own_key_tells_the_user_what_to_do_without_showing_it(harness,
     assert message.status == "error"
     assert "Settings" in message.content
     assert USER_KEY not in message.content and USER_KEY not in response.text
+
+
+def test_no_model_key_is_refused_with_a_reason(harness, monkeypatch):
+    """No shared key and none of the user's: a 400 saying what to do, not a 500 the chat shows as nothing."""
+    def no_key():
+        raise RuntimeError("OPENROUTER_API_KEY is required for LLM_PROVIDER=openrouter")
+    monkeypatch.setattr(chat, "get_openai_client", no_key)
+    monkeypatch.setattr(chat, "chat_provider", lambda: "openrouter")
+    monkeypatch.setattr(chat.user_keys, "enabled", lambda: True)
+    monkeypatch.setattr(chat.user_keys, "key_for", lambda db, user_id: None)
+    response = ask(harness)
+    assert response.status_code == 400
+    assert response.json()["detail"] == "No OpenRouter API key: add yours in Settings to chat."
+
+
+def test_no_model_key_on_a_server_without_user_keys_points_to_an_owner(monkeypatch):
+    monkeypatch.setattr(chat, "chat_provider", lambda: "openrouter")
+    monkeypatch.setattr(chat.user_keys, "enabled", lambda: False)
+    assert "ask an owner" in chat.missing_key_message()
