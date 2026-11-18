@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from db.database import get_db
 import models
 import schemas
+import user_keys
 from dependencies import get_current_session, get_current_user
 from security import (
     DUMMY_PASSWORD_HASH,
@@ -144,3 +145,33 @@ def change_password(request: schemas.ChangePasswordRequest, db: Session = Depend
     account.password = get_password_hash(request.new_password)
     db.commit()
     return {"message": "Password changed successfully"}
+
+
+# --- the user's own OpenRouter key (issue #108, user_keys.py) ---------------------------------------------------------
+# Only whether a key is set and its last 4 characters ever come back; the key itself never leaves the backend.
+
+@router.get("/api-key", response_model=schemas.ApiKeyStatus)
+def get_api_key(db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    return schemas.ApiKeyStatus(**user_keys.status(db, user.id))
+
+
+@router.put("/api-key", response_model=schemas.ApiKeyStatus)
+def set_api_key(request: schemas.SetApiKeyRequest, db: Session = Depends(get_db),
+                user: models.User = Depends(get_current_user)):
+    """Set or replace the key. 503 when the feature is off (no API_KEY_ENCRYPTION_KEY), 400 for a text that is not an
+    OpenRouter key."""
+    if not user_keys.enabled():
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Own API keys are turned off on this server")
+    try:
+        user_keys.save(db, user.id, request.api_key.get_secret_value())
+    except user_keys.InvalidApiKey as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from None
+    return schemas.ApiKeyStatus(**user_keys.status(db, user.id))
+
+
+@router.delete("/api-key", response_model=schemas.ApiKeyStatus)
+def delete_api_key(db: Session = Depends(get_db), user: models.User = Depends(get_current_user)):
+    """Remove the key: the shared key pays again. Works with the feature off too."""
+    user_keys.delete(db, user.id)
+    return schemas.ApiKeyStatus(**user_keys.status(db, user.id))

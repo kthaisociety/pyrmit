@@ -22,6 +22,7 @@ The question's wording was chosen on 380 claim-source pairs refereed by another 
 8 % of backed claims flagged, against 86 % and 14 % for the LLM judge it replaced.
 """
 
+import contextvars
 import logging
 import os
 import re
@@ -138,9 +139,11 @@ def check_claims(answer: str, get_chunk: Callable[[str], dict | None], place: st
         return ClaimCheck(status="failed")
     cited = [stretch for stretch in stretches if stretch.chunk_ids]
     uncited = [stretch for stretch in stretches if not stretch.chunk_ids]
-    calls: list[Future] = [_POOL.submit(_judge_cited, stretch, get_chunk, place) for stretch in cited]
+    # Each call in its own copy of this context, so Jev runs on the user's own key (llm.openrouter_key, #108)
+    calls: list[Future] = [_POOL.submit(contextvars.copy_context().run, _judge_cited, stretch, get_chunk, place)
+                           for stretch in cited]
     if uncited:
-        calls.append(_POOL.submit(_needs_source, uncited, place))
+        calls.append(_POOL.submit(contextvars.copy_context().run, _needs_source, uncited, place))
     done, late = wait(calls, timeout=timeout_s)
     for call in late:
         call.cancel()

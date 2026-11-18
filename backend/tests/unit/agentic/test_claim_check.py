@@ -293,3 +293,22 @@ def test_the_supporting_sentence_names_the_chunk_the_id_resolved_to(jev):
     jev(supported={HOUSE: 0.9})
     result = check(f"{HOUSE} [c:{A[:10]}].", get=lambda chunk_id: CHUNKS[A] if A.startswith(chunk_id) else None)
     assert (result.claims[0].chunk_ids, result.claims[0].supporting[0].chunk_id) == ([A], A)
+
+
+def test_the_claims_are_checked_on_the_users_own_key(jev, monkeypatch):
+    """Every decision model call, each in the claim check's thread pool, runs on the key of the request (#108)."""
+    import llm
+    from agentic import claim_check
+
+    fake = jev(supported={HOUSE: 0.9})
+    keys = []
+
+    def asking(state, questions, timeout_s=20.0):
+        keys.append(llm.openrouter_api_key())
+        return fake(state, questions, timeout_s)
+
+    monkeypatch.setattr(claim_check, "ask_decision_model", asking)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-shared")
+    with llm.openrouter_key("sk-or-user"):
+        check_claims(RAW, get_chunk)
+    assert len(keys) == 2 and set(keys) == {"sk-or-user"}

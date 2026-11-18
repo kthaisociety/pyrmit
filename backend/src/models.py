@@ -57,6 +57,21 @@ class Session(Base):
 
     user = relationship("User", back_populates="sessions")
 
+class UserApiKey(Base):
+    """A user's own API key for a model provider (issue #108, user_keys.py): Fernet-encrypted under
+    API_KEY_ENCRYPTION_KEY, with its last 4 characters, the only part shown back. One key per user and provider."""
+    __tablename__ = "user_api_keys"
+
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    provider = Column(String, primary_key=True)  # "openrouter"
+    encrypted_key = Column(Text, nullable=False)
+    last4 = Column(String(4), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    def __repr__(self) -> str:  # never the encrypted key
+        return f"UserApiKey(user_id={self.user_id!r}, provider={self.provider!r}, last4={self.last4!r})"
+
 class DocumentChunk(Base):
     __tablename__ = "document_chunks"
 

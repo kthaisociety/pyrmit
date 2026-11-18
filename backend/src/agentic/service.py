@@ -9,6 +9,7 @@ progress into the chat's SSE events and pipeline-inspector records.
     AGENT_MAX_STEPS=10
 """
 
+import contextvars
 import os
 import queue
 import re
@@ -183,7 +184,8 @@ def stream_agent(question: str, history: list[dict], record: Callable[..., None]
         finally:
             events.put(None)
 
-    threading.Thread(target=worker, daemon=True).start()
+    # In a copy of this context: the agent's model calls keep the user's own key (llm.openrouter_key, #108)
+    threading.Thread(target=contextvars.copy_context().run, args=(worker,), daemon=True).start()
     seen: list[str] = []  # chunks the tools showed: a miscopied cited id resolves against them
     numberer = CitationNumberer(lambda chunk_id: resolve_cited(tools.get_chunk, chunk_id, seen))
     answer = ""

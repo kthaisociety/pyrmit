@@ -228,6 +228,7 @@ source = { editable = "." }
 dependencies = [
     { name = "argon2-cffi" },
     { name = "bm25s" },
+    { name = "cryptography" },
     { name = "email-validator" },
     { name = "fastapi" },
     { name = "google-generativeai" },
@@ -280,6 +281,7 @@ dev = [
 requires-dist = [
     { name = "argon2-cffi", specifier = ">=23.1.0" },
     { name = "bm25s", specifier = ">=0.2.0" },
+    { name = "cryptography", specifier = ">=44.0.0" },
     { name = "email-validator", specifier = ">=2.1.0" },
     { name = "fastapi", specifier = ">=0.109.0" },
     { name = "google-generativeai", specifier = ">=0.8.5" },
