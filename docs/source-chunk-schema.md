@@ -63,6 +63,6 @@ How things are today (2026-11-13, #106), from `corpus/extract.py`, `chunk.py`, `
 
 Also set today and copied from document to chunk: document link (`doc_id`).
 
-The labels are metadata only: what gets embedded (header plus text) and the chunk ID do not depend on them, so adding them re-embeds nothing. `corpus.chunk` writes a chunk missing source, place or fetch date to `rejected_chunks.jsonl` instead of `chunks.jsonl`; `localrag.store` and `localrag.pg_store` refuse such a row too.
+The labels are metadata only: what gets embedded (header plus text) and the chunk ID do not depend on them, so adding them re-embeds nothing, except the chunks recovered when a copy of a rejected chunk's text carries all its labels (it keeps its own chunk ID and is embedded by the next `localrag.index`). `corpus.chunk` writes a chunk missing source, place or fetch date to `rejected_chunks.jsonl` instead of `chunks.jsonl`; `localrag.store` and `localrag.pg_store` refuse such a row too.
 
 Not covered here: the older `document_chunks` and `law_chunks` tables (current corpus only), a law-version label (possible later addition) and a job that refreshes stale laws.

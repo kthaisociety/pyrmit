@@ -121,10 +121,18 @@ def test_a_chunk_missing_a_required_label_is_rejected_and_reported():
     assert counts["law"] == 2
 
 
-def test_a_rejected_chunk_still_hides_its_later_copies():
-    # Rejecting before the duplicate check would keep the second copy under a new chunk id, which has no vector
+def test_a_rejected_chunk_does_not_hide_its_later_copies():
     first, copy = documents()[1], {**documents()[1], "doc_id": "page:0115:copy"}
     rows = [{**first, "place": None}, copy]
     counts = Counter()
     kept = list(keep_labelled(chunk_rows(rows, 1500, counts), counts, io.StringIO()))
-    assert kept == [] and counts["duplicates"] == 2 and counts["rejected"] == 2
+    assert kept and {c["doc_id"] for c in kept} == {"page:0115:copy"}
+    assert counts["duplicates"] == 0 and counts["rejected"] == 2
+
+
+def test_two_labelled_copies_are_still_deduplicated():
+    first, copy = documents()[1], {**documents()[1], "doc_id": "page:0115:copy"}
+    counts = Counter()
+    kept = list(keep_labelled(chunk_rows([first, copy], 1500, counts), counts, io.StringIO()))
+    assert {c["doc_id"] for c in kept} == {"page:0115:abc"}
+    assert counts["duplicates"] == 2 and counts["rejected"] == 0

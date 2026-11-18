@@ -248,14 +248,16 @@ def document_chunks(document: dict, max_chars: int) -> list[dict]:
 
 # The document's labels each chunk carries a copy of (docs/source-chunk-schema.md). They are metadata only: what gets
 # embedded (localrag.index.chunk_text: header + text) and the chunk id do not depend on them, so adding them re-embeds
-# nothing (tests/unit/corpus/test_chunk.py pins both)
+# nothing (tests/unit/corpus/test_chunk.py pins both). The one exception: a labelled copy of a text whose first copy
+# was rejected is now kept, and its new chunk id gets embedded
 CHUNK_LABELS = ("place", "fetched_at", "fetched_at_source", "plan_id", "plan_stage")
 
 
 def chunk_rows(documents: Iterable[dict], max_chars: int, counts: Counter) -> Iterator[dict]:
-    """The chunks of the documents, duplicates dropped (counts["duplicates"]). Chunks missing a required label are
-    yielded too, for keep_labelled to reject after the duplicate check: a rejected chunk still hides its later
-    copies, so the chunks kept are a subset of the ones before the labels and no new chunk id needs embedding."""
+    """The chunks of the documents, duplicates dropped (counts["duplicates"], real duplicates only). Chunks missing a
+    required label are yielded too, for keep_labelled to reject, but they do not count as seen: a later labelled copy
+    of the same text is kept, under its own chunk id (the id includes the doc_id and index), so the next
+    localrag.index embeds it. Losing the wording is worse than embedding a few extra chunks."""
     seen_hashes: set[str] = set()
     for document in documents:
         if not document.get("text"):
@@ -271,8 +273,7 @@ def chunk_rows(documents: Iterable[dict], max_chars: int, counts: Counter) -> It
             if key in seen_hashes:
                 counts["duplicates"] += 1
                 continue
-            seen_hashes.add(key)
-            yield {
+            row = {
                 "chunk_id": stable_id(document["doc_id"], str(index), digest),
                 "doc_id": document["doc_id"],
                 "chunk_index": index,
@@ -286,6 +287,11 @@ def chunk_rows(documents: Iterable[dict], max_chars: int, counts: Counter) -> It
                 "content_sha1": digest,
                 **chunk,
             }
+            # Only a complete chunk shadows its copies: a rejected one (keep_labelled drops it) must not make the
+            # wording vanish from the corpus
+            if not missing_labels(row):
+                seen_hashes.add(key)
+            yield row
 
 
 def keep_labelled(rows: Iterable[dict], counts: Counter, rejected: TextIO) -> Iterator[dict]:
