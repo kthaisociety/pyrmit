@@ -106,11 +106,11 @@ def read_date(text: str) -> str | None:
         day, month, year = match.groups()
     elif match := DAY_MONTH_NAME.fullmatch(text):
         day, name, year = match.groups()
-        month = MONTHS.get(name)
+        month = MONTHS.get(name, 0)
     else:
         return None
     try:
-        date = datetime(int(year), int(month or 0), int(day), tzinfo=UTC)
+        date = datetime(int(year), int(month), int(day), tzinfo=UTC)
     except ValueError:
         return None
     return date.strftime("%Y-%m-%d") if FIRST_YEAR <= date.year <= datetime.now(UTC).year else None
