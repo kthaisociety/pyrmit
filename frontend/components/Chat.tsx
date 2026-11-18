@@ -960,6 +960,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     let announced = false;
     let gotDone = false;
     let stalled = false;
+    // The server refused the question before answering (no API key...): nothing was saved, so nothing to reload
+    let refused = false;
     let watchdog: ReturnType<typeof setInterval> | undefined;
     // A new chat shows up in the sidebar as soon as the server created it, not only at the end
     const announceSession = (createdSessionId: string | null | undefined) => {
@@ -980,7 +982,12 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
         signal: controller.signal,
       });
 
-      if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+      if (!res.ok) {
+        refused = true;
+        // The server says why (no API key, a bad pin...): show its words, not just the status
+        const detail = await res.json().then((body) => body?.detail, () => null);
+        throw new Error(typeof detail === 'string' ? detail : `Request failed: ${res.status}`);
+      }
       if (!res.body) throw new Error('No response body');
 
       setLoading(false);
@@ -1130,8 +1137,16 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       // Aborted because the user opened another chat: the server finishes the answer in the history
       if (controller.signal.aborted && !stalled) return;
       console.error('Error sending message:', error);
-      // The server keeps generating once it has the session: show the saved answer instead
-      if (!streamSessionRef.current) setMessages((prev) => prev.slice(0, -1));
+      // The server keeps generating once it has the session: show the saved answer instead. Before that, the reply
+      // says what went wrong rather than vanishing with no word
+      if (refused || !streamSessionRef.current) {
+        const message = error instanceof Error ? error.message : String(error);
+        setMessages((prev) =>
+          prev.length === 0
+            ? prev
+            : [...prev.slice(0, -1), { ...prev[prev.length - 1], content: fill(t('chat.streamError'), { message }), status: 'error' }],
+        );
+      }
     } finally {
       clearInterval(watchdog);
       if (abortRef.current === controller) {
@@ -1142,7 +1157,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       pendingSessionIdRef.current = null;
       // Stream cut before "done": reload the session, its message is polled until the server finishes
       const streamedSession = streamSessionRef.current;
-      if (!gotDone && streamedSession && sessionIdRef.current === streamedSession && (stalled || !controller.signal.aborted)) {
+      if (!refused && !gotDone && streamedSession && sessionIdRef.current === streamedSession && (stalled || !controller.signal.aborted)) {
         loadHistory(streamedSession, false);
       }
     }

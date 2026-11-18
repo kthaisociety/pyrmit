@@ -109,6 +109,22 @@ describe('the pinned place in the chat', () => {
     expect(sent!.place).toEqual({ lat: 59.8505, lon: 17.641, label: 'Uppsala Kungsängen 7:8' });
   });
 
+  it('says why the server refused the question', async () => {
+    /** No API key (or any refusal before the answer): the reply shows the server's reason instead of vanishing. */
+    server.use(
+      http.post('*/api/chat/stream', () =>
+        HttpResponse.json({ detail: 'No OpenRouter API key: add yours in Settings to chat.' }, { status: 400 }),
+      ),
+    );
+    chat();
+
+    await userEvent.type(screen.getByPlaceholderText('Ask about building permits...'), 'Hello');
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByText(/No OpenRouter API key: add yours in Settings to chat\./)).toBeInTheDocument();
+    expect(screen.getByText('Hello')).toBeInTheDocument();
+  });
+
   it('sends no place when nothing is pinned', async () => {
     /** Without a pin the question goes as today. */
     let sent: Record<string, unknown> | null = null;

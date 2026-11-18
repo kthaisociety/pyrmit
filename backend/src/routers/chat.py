@@ -28,6 +28,7 @@ from agentic.service import agent_enabled
 from localrag.service import SWEDISH_QUERY_SUFFIX, local_backend_enabled, retrieve as local_retrieve, split_rewrite
 from llm import (
     build_responses_input,
+    chat_provider,
     get_response_output_text,
     openrouter_key,
     public_error,
@@ -394,6 +395,13 @@ Latest User Message: {original_content}"""
         return ai_message
 
 
+def missing_key_message() -> str:
+    """Why the chat cannot answer when the model provider has no key: the user's to fix in Settings, or the server's."""
+    if chat_provider() == "openrouter" and user_keys.enabled():
+        return "No OpenRouter API key: add yours in Settings to chat."
+    return "The server has no API key for the chat model: ask an owner to configure one."
+
+
 @router.post("/chat/stream")
 def chat_stream(
         request: schemas.ChatRequest,
@@ -422,7 +430,10 @@ def chat_stream(
     # All setup done eagerly so HTTPException can still be raised before streaming
     user_key = user_keys.key_for(db, user.id)
     with openrouter_key(user_key):
-        client = get_openai_client()
+        try:
+            client = get_openai_client()
+        except RuntimeError as e:  # no key for the model provider: a 500 here showed nothing in the chat
+            raise HTTPException(status_code=400, detail=missing_key_message()) from e
 
     session_id = request.session_id
     is_new_session = not session_id
