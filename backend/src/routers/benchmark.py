@@ -91,6 +91,14 @@ def _results(set_name: str, case_id: str) -> list[dict]:
     return out
 
 
+@router.get("/benchmark/summary")
+def summary(_user: models.User = Depends(require_staff)) -> dict:
+    """The studies the project ran, their configurations and success rates, from the versioned result files (#116)."""
+    from agentic.bench_summary import summary as build
+
+    return build()
+
+
 @router.get("/benchmark/sets")
 def sets(_user: models.User = Depends(require_staff)):
     return [{"set": name, "title": title, "description": description, "cases": len(_cases(name))}
