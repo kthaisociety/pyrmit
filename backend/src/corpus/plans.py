@@ -52,8 +52,11 @@ NOISE_WORDS = (r"plankarta|plankort|karta|planbeskrivning|beskrivning|bestämmel
 
 STATUS_PAGE = [("in_force", r"gallande|gällande|antagna|laga-?kraft|vunnit"), ("in_progress", r"pagaende|pågående|samrad|granskning"),
                ("repealed", r"upphavd|upphävd")]
-LAGA_KRAFT = re.compile(r"laga\s*kraft\s*(?:den\s*)?[:\-–]?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\s+\w+\s+\d{4})", re.IGNORECASE)
-ANTAGEN = re.compile(r"antag(?:en|ande|ningsbeslut)[^\n]{0,40}?(\d{4}-\d{2}-\d{2})", re.IGNORECASE)
+# The text of a date as a document writes it: read_date decides whether it is one (a month word that is not Swedish
+# or a day that does not exist gives no date; a number with a two-digit year or no separators is not found at all)
+DATE_TEXT = r"(\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{4}|\d{1,2}\s+[^\W\d_]+\.?\s+\d{4})"
+LAGA_KRAFT = re.compile(rf"laga\s*kraft\s*(?:den\s*)?[:\-–]?\s*{DATE_TEXT}", re.IGNORECASE)
+ANTAGEN = re.compile(rf"antag(?:en|et|ande|ningsbeslut)[^\n]{{0,40}}?{DATE_TEXT}", re.IGNORECASE)
 STAGES = [("in_force", r"laga\s*kraft"), ("adopted", r"antagandehandling"), ("review", r"granskningshandling"),
           ("consultation", r"samrådshandling|samradshandling")]
 PLAN_NUMBER = re.compile(r"\b(?:Dp|DP|Detaljplan nr\.?|Plan nr\.?|Akt(?:nr)?\.?)\s*([0-9][0-9A-Za-z:/\-.]{0,14})")
@@ -155,20 +158,21 @@ def status_of(page_url: str, texts: list[str]) -> tuple[str, str | None, str | N
     """(status, laga kraft date, adoption date) from the linking page and the documents' text."""
     joined = "\n".join(texts)
     laga = LAGA_KRAFT.search(joined)
-    adopted = ANTAGEN.search(joined)
+    adoption = ANTAGEN.search(joined)
+    adopted = read_date(adoption.group(1)) if adoption else None
     if laga:
-        return "in_force", laga.group(1), adopted.group(1) if adopted else None
+        return "in_force", read_date(laga.group(1)), adopted
     for status, pattern in STATUS_PAGE:
         if re.search(pattern, (page_url or "").lower()):
             if status == "in_progress":
                 for stage, stage_pattern in STAGES[1:]:
                     if re.search(stage_pattern, joined, re.IGNORECASE):
-                        return stage, None, adopted.group(1) if adopted else None
-            return status, None, adopted.group(1) if adopted else None
+                        return stage, None, adopted
+            return status, None, adopted
     for stage, pattern in STAGES:
         if re.search(pattern, joined, re.IGNORECASE):
-            return stage, None, adopted.group(1) if adopted else None
-    return "unknown", None, adopted.group(1) if adopted else None
+            return stage, None, adopted
+    return "unknown", None, adopted
 
 
 def provisions_of(text: str, is_map: bool) -> list[dict]:
