@@ -332,8 +332,9 @@ Frontend (`frontend/.env`):
 - `frontend/lib/corpus.ts` -- document type names / hints and number formatting shared by the Database and Pipeline views
 - `frontend/components/ChunkCard.tsx` -- Expandable chunk card (source, chunk index, distance badge, content)
 - `frontend/components/SourceViewer.tsx` -- Side panel for a clicked citation [n]: cited chunks + the original document at the passage.
-  No open button for the 7 `legacy:` documents of the early prototype (963 Vallentuna chunks, in every corpus, added
-  by hand without file or URL, no crawled twin: kept for their content), a note instead; only the clicked button
+  No open button for the 7 `legacy:` documents of the early prototype (963 Vallentuna chunks added by hand without
+  file or URL, in corpora built before the schema labels: `corpus.chunk` now rejects them, they have no date and no
+  address), a note instead; only the clicked button
   waits (the latest click wins)
 - `frontend/components/CitedMarkdown.tsx` -- Answer markdown with [n] citation chips (`linkCitations`), shared by Chat and Benchmark
 - `frontend/components/place/` -- `PlacePanel` (map panel beside the chat, opened by the pin button in the message
@@ -479,6 +480,16 @@ python -m corpus.plans            # detaljplan registry + planbestämmelser -> d
 python -m corpus.check            # data checks after a rebuild (exit 1 on an error); then agentic.replay, agentic.coverage score
 ```
 
+- Schema labels (`docs/source-chunk-schema.md`, #106): `corpus.extract` sets `place` (`national` for laws, `kommun`
+  stays null), `fetched_at` + `fetched_at_source` (`recorded` by the crawler / `corpus.laws`, else `file_mtime` of the
+  raw file), `content_sha1`, and `plan_id` / `plan_stage` from `corpus.plans.plan_groups` (no store needed; redone by
+  `pdf_filter apply`). `corpus.chunk` copies them and writes chunks missing `url`, `place` or `fetched_at` to
+  `rejected_chunks.jsonl`; `localrag.store` / `pg_store` refuse them too. A rejected chunk does not count as seen, so
+  a labelled copy of its text is kept (under its own chunk id: losing the wording is worse than embedding a few more
+  chunks). Metadata only: `chunk_text` and the chunk id are unchanged (pinned in `tests/unit/corpus/test_chunk.py`),
+  so adding labels to an embedded corpus = re-run extract, chunk, store and pg_store, then `localrag.index` for the
+  few recovered copies (it embeds only new ids; plan IDs come out the same on the same documents, so plans.jsonl
+  stays valid).
 - `corpus.plans` (rule-based, ~30 s): a plan = the detaljplan PDFs of a kommun whose file names reduce to the same
   key (role words, dates, versions, agenda numbering removed), named by the plan page that links only them, else by
   "Detaljplan för ..." on the first page; plan pages without PDFs are plans too (listing pages excluded). Status from
