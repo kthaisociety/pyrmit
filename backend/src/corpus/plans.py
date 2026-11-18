@@ -19,6 +19,7 @@ Rule-based, no LLM:
 import re
 import sqlite3
 from collections import Counter, defaultdict
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -79,6 +80,37 @@ TOPICS = {
     "noise": r"buller|\bdB\b",
     "design": r"utformning|fasad|material|kulör",
 }
+
+
+MONTHS = {name: number for number, names in enumerate(
+    [("jan", "januari"), ("feb", "februari"), ("mar", "mars"), ("apr", "april"), ("maj",), ("jun", "juni"),
+     ("jul", "juli"), ("aug", "augusti"), ("sep", "sept", "september"), ("okt", "oktober"), ("nov", "november"),
+     ("dec", "december")], start=1) for name in names}
+FIRST_YEAR = 1700
+YEAR_FIRST = re.compile(r"(\d{4})[./-](\d{1,2})[./-](\d{1,2})")
+YEAR_LAST = re.compile(r"(\d{1,2})[./-](\d{1,2})[./-](\d{4})")
+DAY_MONTH_NAME = re.compile(r"(\d{1,2})\s+([^\W\d_]+)\.?\s+(\d{4})")
+
+
+def read_date(text: str) -> str | None:
+    """The date a plan's document wrote as YYYY-MM-DD, or None when the text is not a real date: a day, Swedish
+    month name and year, or three numbers separated by . / or - (year first or last, the month in the middle, read in
+    Swedish order). Digit-only dates and two-digit years are not read; nothing is guessed."""
+    text = " ".join((text or "").split()).lower()
+    if match := YEAR_FIRST.fullmatch(text):
+        year, month, day = match.groups()
+    elif match := YEAR_LAST.fullmatch(text):
+        day, month, year = match.groups()
+    elif match := DAY_MONTH_NAME.fullmatch(text):
+        day, name, year = match.groups()
+        month = MONTHS.get(name)
+    else:
+        return None
+    try:
+        date = datetime(int(year), int(month or 0), int(day), tzinfo=UTC)
+    except ValueError:
+        return None
+    return date.strftime("%Y-%m-%d") if FIRST_YEAR <= date.year <= datetime.now(UTC).year else None
 
 
 def file_stem(url: str) -> str:
