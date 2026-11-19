@@ -19,6 +19,8 @@ Scores per answer:
               string match, no LLM
   wrong_place statements about the place that contradict the reference (judge)
   unsupported specific rules / facts in neither the reference, the place data shown nor the cited sources (judge)
+  claim_support  (--claim-check) share of the answer's claims the chat's live claim check finds supported by the
+              sources they cite, the pinned place's data counting as a source (agentic.bench.claim_support)
   asks        whether the answer asks which place it is about (judge); right when it matches the condition
               (expected for address, vague and conflict, not for pin, general and general_pin)
   offers_pin  whether the answer offers to pin a place for an exact answer (judge)
@@ -179,8 +181,10 @@ class AnswerBench:
 
     def __init__(self, cases: list[dict], *, judge_model: str = JUDGE_MODEL, run_agent=None, tools=None,
                  profile_of=None, sources_of=None, grade=None, max_cost: float = MAX_COST_USD,
-                 law_texts: bool = True):
+                 law_texts: bool = True, claim_support=None):
         self.cases = {case["id"]: case for case in cases}
+        # (run, tools, place text) -> the claim check's row fields (agentic.bench.claim_support); None: not checked
+        self._claim_support = claim_support
         self.judge_model, self.max_cost, self.law_texts = judge_model, max_cost, law_texts
         self._run_agent, self._tools, self._profile_of = run_agent, tools, profile_of
         self._sources_of, self._grade = sources_of, grade or judge
@@ -236,6 +240,8 @@ class AnswerBench:
         row["facts_share"] = (len(row["facts_named"]) / row["facts"] if row["facts_named"] is not None and row["facts"]
                               else None)
         row["seen"], row["place_text"] = list(run.seen_chunks), place_text
+        if self._claim_support:
+            row.update(self._claim_support(run, tools, place_text))
         self.add_grade(row, self.judge_model)
         with self._lock:
             self.spent += row["cost"] + row["grades"][self.judge_model]["cost"]
@@ -273,8 +279,11 @@ def summarise(rows: list[dict], judge_model: str) -> dict:
     """Means per condition under one judge: {condition: {"answers", "errors", "points", "facts" (for general_pin, the
     pinned place's facts the general answer brought in), "wrong_place", "unsupported", "asks" (share asking for the
     place), "asks_ok", "offers_pin" (share offering to pin), "seconds", "first_token_s", "cost", "tool_calls",
-    "searches" (calls of SEARCH_TOOLS; None for a run that did not record its tools)}}, plus "by_case": the points and
-    facts per case and condition."""
+    "searches" (calls of SEARCH_TOOLS; None for a run that did not record its tools), and for rows put to the claim
+    check "claims" (claims checked) with "claim_support" / "claim_unsupported" / "claim_uncited" (their shares over
+    all claims of the condition)}}, plus "by_case": the points and facts per case and condition."""
+    from agentic.bench import claim_support_summary
+
     def mean(values):
         values = [value for value in values if value is not None]
         return round(fmean(values), 3) if values else None
@@ -296,6 +305,13 @@ def summarise(rows: list[dict], judge_model: str) -> dict:
             "cost": mean(row.get("cost") for row in mine), "tool_calls": mean(row.get("tool_calls") for row in mine),
             "searches": mean(None if row.get("tools") is None else float(sum(tool in SEARCH_TOOLS for tool in row["tools"]))
                              for row in mine)}
+        support = claim_support_summary(mine)
+        if support:
+            def share(verdict: str) -> float | None:
+                return None if support[verdict] is None else round(support[verdict], 3)  # noqa: B023 - called within this iteration only
+            out[condition].update(claims=support["claims"], claim_checks_failed=support["failed"],
+                                  claim_support=share("supported"), claim_unsupported=share("unsupported"),
+                                  claim_uncited=share("uncited"))
     by_case: dict = {}
     for row in rows:
         grade = (row.get("grades") or {}).get(judge_model)
@@ -334,6 +350,8 @@ def run_bench(cases: list[dict], *, conditions=CONDITIONS, repeats: int = 3, wor
                             "effort": os.getenv("AGENT_EFFORT", "medium"),
                             "explore_effort": os.getenv("AGENT_EXPLORE_EFFORT", "medium"),
                             "max_steps": int(os.getenv("AGENT_MAX_STEPS", "10")), "law_texts": bench.law_texts},
+                  # Which corpus the agent read: the disk store or the hosted one (LOCAL_RAG_STORE)
+                  "corpus": os.getenv("LOCAL_RAG_STORE", "disk").strip() or "disk",
                   "judge": bench.judge_model, "cases": [case["id"] for case in cases], "rows": []}
     done = {(row["case"], row["condition"], row["repeat"]) for row in result["rows"]}
     todo = [job for job in jobs(cases, conditions, repeats) if job not in done]
@@ -404,6 +422,8 @@ def main() -> None:
     run.add_argument("--max-cost", type=float, default=MAX_COST_USD, help="stop starting answers past this spend (USD)")
     run.add_argument("--label")
     run.add_argument("--resume", type=Path)
+    run.add_argument("--claim-check", action="store_true",
+                     help="put each answer to the chat's live claim check (decision model calls)")
     run.add_argument("--no-law-texts", action="store_true", help="leave the permits' statute text out (before 2026-10-25)")
     again = sub.add_parser("rejudge")
     again.add_argument("path", type=Path)
@@ -419,8 +439,10 @@ def main() -> None:
     cases = load_cases()
     if args.command == "run":
         chosen = [case for case in cases if not args.cases or case["id"] in set(args.cases)]
+        from agentic.bench import claim_support
+
         bench = AnswerBench(cases, judge_model=args.judge_model, max_cost=args.max_cost,
-                            law_texts=not args.no_law_texts)
+                            law_texts=not args.no_law_texts, claim_support=claim_support if args.claim_check else None)
         result = run_bench(chosen, conditions=args.conditions, repeats=args.repeats, workers=args.workers,
                            bench=bench, label=args.label, resume=args.resume)
         print(f"{len(result['rows'])} answers, ${result['spent']} -> {result['path']}")

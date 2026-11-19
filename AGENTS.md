@@ -291,7 +291,7 @@ Frontend (`frontend/.env`):
 - `reports/` -- the benchmark, technical, hosting and place-evaluation reports (generated into `../pyrmit_doc/` by `agentic.report`, `agentic.report_technical`, `place.report`: copy them here after regenerating) and the hand-written architecture report and status deck (HTML, printed to PDF with headless Chrome)
 - `backend/src/place/` -- `sources.py` (layers, attribute mapping, pilot kommuner), `fetch.py` (snapshot CLI), `registry.py` (`plan_sources.json`, built from the survey in `docs/research/`), `plan_layers.py`, `plan_links.py`, `review.py` (review mode, ADR-0008), `store.py` (`PlaceStore`, STRtree per layer), `live.py`, `profile.py` (`build_profile`), `permits.py`, `context.py` (the place as text for the agent), `geocode.py`, `check_sources.py` / `check_search.py` / `bench_answers.py` / `bench.py` / `report.py` (the evaluation, see Place Lookup)
 - `backend/src/localrag/` -- `analyzer.py` (Swedish BM25 tokens), `gazetteer.py`, `index.py` (VectorStore), `store.py` (disk store), `retriever.py` (`LocalRetriever`), `service.py` (chat integration), `eval.py` + `questions.jsonl`, `rewrite_queries.py`, `models.toml`, `pg_store.py` (the hosted corpus: loader + `PgStore` / `PgRetriever`). Never `pip install` a package that depends on torch without the CUDA index
-- `backend/src/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat integration, `CitationNumberer`), `claim_check.py` (live claim check of a chat answer by the decision model Jev: `check_claims`), `run.py` (CLI), `bench.py` + `cases*.jsonl`, `cases_from_caselaw.py`, `cases_from_corpus.py`, `cases_from_plans.py`, `rejudge.py`, `grounding.py`, `health.py`, `replay.py`, `coverage.py`, `report.py` / `report_technical.py` (PDF reports)
+- `backend/src/agentic/` -- `tools.py` (CorpusTools + tool schemas), `agent.py` (tool loop), `service.py` (chat integration, `CitationNumberer`), `claim_check.py` (live claim check of a chat answer by the decision model Jev: `check_claims`), `claim_audit.py` (the claim-support eval: recheck, audit, report), `run.py` (CLI), `bench.py` + `cases*.jsonl`, `cases_from_caselaw.py`, `cases_from_corpus.py`, `cases_from_plans.py`, `rejudge.py`, `grounding.py`, `health.py`, `replay.py`, `coverage.py`, `report.py` / `report_technical.py` (PDF reports)
 - `backend/src/corpus/` -- the offline corpus steps (see Offline Corpus): `common.py` (paths: `BACKEND_DIR` = `backend/`, `DATA_ROOT` from `CORPUS_DATA_DIR`), `municipalities.py`, `laws.py`, `crawl.py`, `ocr.py` + `ocr_engines.py` (run in `backend/.venv-ocr`), `extract.py`, `pdf_filter.py`, `chunk.py`, `plans.py`, `check.py`, `snapshot.py`, `caselaw.py` (MÖD rulings for the case benchmark, not searchable), `pdf_files.py` (where the serving code reads crawled PDFs and OCR outputs: crawl folder, else a cache filled from the PDF's URL)
 - `backend/src/db/database.py` -- SQLAlchemy engine + `get_db` session factory
 - `backend/src/db/push_db.py` -- `PushDB` class: psycopg2 inserts into chunk tables
@@ -809,7 +809,17 @@ from memory get this wrong: check them against the law chunks.
 Benchmark: `python -m agentic.bench` (14 feasibility cases in `agentic/cases.jsonl`: evidence recall, LLM-judge
 key points, cost, latency, first-token time; RAG vs agent; `--cases-file cases_caselaw.jsonl --store disk` for cases
 from any kommun on the full disk store) and `python -m agentic.grounding <results.json>` (claims supported by the
-cited sources). Results in `data/agentic/`; report in `../pyrmit_doc/pyrmit_agentic_rag_report.md`.
+cited sources). Each agent answer is also put to the live claim check (`claim_support` in `bench.py`, the same
+`check_claims` the chat runs): the row gets `claim_check`, `claims_checked`, `claims_supported` / `_unsupported` /
+`_uncited` and `claim_support` (supported / checked), and the summary prints the shares over all claims
+(`claim_support_summary`, also the "Claim support" column of the reports). It calls the decision model, so it needs
+`OPENROUTER_API_KEY`; `--no-claim-check` skips it. The pin benchmark does the same with `python -m place.bench_answers
+run --claim-check` (the pinned place's data counts as a source; `claim_support` per condition in its summary).
+What is behind the numbers: `python -m agentic.claim_audit recheck | audit | report <results.json>` (`recheck` puts
+stored answers to the check again, `audit` has a model of another family label each claim's kind and form and say
+whether its cited chunks back it, `report` writes `reports/claim_support_eval.md`: support with an interval, per kind
+/ form / source / stretch length, the check against the auditor, the flagged claims, and what the numbers suggest;
+hand-written findings go in `reports/claim_support_eval.findings.md`, which the report includes). Results in `data/agentic/`; report in `../pyrmit_doc/pyrmit_agentic_rag_report.md`.
 Real-decision cases: `python -m corpus.caselaw` downloads MÖD precedents 2011- from lagen.nu (robots.txt allows the
 case pages; 1 req/s, resumable) to `data/corpus/raw/caselaw/mod.jsonl` (headnote, keywords, statutes, full text,
 `relevant` by topic); `python -m agentic.cases_from_caselaw` (one LLM call per ruling, spends credits) turns each into
