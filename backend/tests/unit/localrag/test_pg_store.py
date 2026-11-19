@@ -385,3 +385,25 @@ def test_a_public_view_named_chunks_that_is_not_the_corpus_stays():
     cursor = FakeCursor(views=())
     assert "chunks" not in pg_store.move_public_corpus(cursor)
     assert "ALTER VIEW" not in cursor.executed[-1]
+
+
+# --- a smaller corpus: some kommuner and the laws -----------------------------------------------------------------
+
+def test_kommun_scope_keeps_the_kommuner_and_the_laws():
+    lite = lite_store(COLUMNS, [labelled_row("u", kommun_code="0380"), labelled_row("s", kommun_code="0180"),
+                                labelled_row("g", kommun_code="1480"), labelled_row("law", kommun_code=None)])
+    scope = pg_store.kommun_scope(["0380", "0180"])
+    assert pg_store.labelled_chunks(lite, scope) == (3, 0)
+    cursor = RecordingCursor()
+    assert pg_store._copy_range(cursor, lite, np.zeros((4, 4), dtype=np.float16), 0, 4, lambda n: None, scope) == 3
+    copied = {row[COLUMNS.index("chunk_id") + 1] for row in cursor.copied if len(row) == len(COLUMNS) + 3}
+    assert copied == {"u", "s", "law"}
+
+
+def test_no_kommun_scope_keeps_everything():
+    assert pg_store.kommun_scope(None) == pg_store.kommun_scope([]) == "1 = 1"
+
+
+def test_kommun_scope_takes_only_kommun_codes():
+    with pytest.raises(ValueError, match="Not kommun codes"):
+        pg_store.kommun_scope(["0380", "0380'); DROP TABLE x; --"])
