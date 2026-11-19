@@ -249,20 +249,36 @@ def _copy(cursor, table: str, columns: str, rows: list[list]) -> None:
 LABELLED = " AND ".join(f"COALESCE({label}, '') != ''" for label in REQUIRED_LABELS)
 
 
-def labelled_chunks(lite: sqlite3.Connection) -> tuple[int, int]:
-    """(rows carrying every required label, rows missing one) of a disk store. A store built before the labels has
-    none of their columns: refused, so it is never loaded without them."""
+_KOMMUN_CODE = re.compile(r"\d{4}")
+
+
+def kommun_scope(kommuner: list[str] | None) -> str:
+    """The SQL condition on a chunk (or place) row keeping `kommuner` and what belongs to no kommun (the laws), for a
+    smaller corpus (a database with little disk): None or empty keeps every row."""
+    if not kommuner:
+        return "1 = 1"
+    bad = [code for code in kommuner if not _KOMMUN_CODE.fullmatch(code)]
+    if bad:
+        raise ValueError(f"Not kommun codes: {', '.join(bad)}")
+    codes = ", ".join(f"'{code}'" for code in sorted(set(kommuner)))
+    return f"(kommun_code IS NULL OR kommun_code IN ({codes}))"
+
+
+def labelled_chunks(lite: sqlite3.Connection, scope: str = "1 = 1") -> tuple[int, int]:
+    """(rows carrying every required label, rows missing one) of a disk store, within `scope` (kommun_scope). A store
+    built before the labels has none of their columns: refused, so it is never loaded without them."""
     columns = {row[1] for row in lite.execute("PRAGMA table_info(chunks)")}
     if not set(REQUIRED_LABELS) <= columns:
         raise SystemExit(f"The disk store has no {', '.join(sorted(set(REQUIRED_LABELS) - columns))} column: it was "
                          "built before the schema labels. Re-run corpus.extract, corpus.chunk and localrag.store")
-    labelled = lite.execute(f"SELECT COUNT(*) FROM chunks WHERE {LABELLED}").fetchone()[0]
-    return labelled, lite.execute("SELECT COUNT(*) FROM chunks").fetchone()[0] - labelled
+    labelled = lite.execute(f"SELECT COUNT(*) FROM chunks WHERE {LABELLED} AND {scope}").fetchone()[0]
+    return labelled, lite.execute(f"SELECT COUNT(*) FROM chunks WHERE {scope}").fetchone()[0] - labelled
 
 
-def _copy_range(cursor, lite: sqlite3.Connection, vectors: np.ndarray, low: int, high: int, report) -> int:
-    """Copy the chunks with low <= rowid < high that carry every required label (labelled_chunks); report(done)
-    after every batch. Returns the chunks copied."""
+def _copy_range(cursor, lite: sqlite3.Connection, vectors: np.ndarray, low: int, high: int, report,
+                scope: str = "1 = 1") -> int:
+    """Copy the chunks with low <= rowid < high that carry every required label (labelled_chunks) and fall within
+    `scope` (kommun_scope); report(done) after every batch. Returns the chunks copied."""
     # Staging table with the stems as text: to_tsvector keeps their positions (term frequencies for ranking).
     # Emptied after every batch: the vectors as text would take ~1.2 GB of the compute's temp space
     cursor.execute(f"CREATE TEMP TABLE staging (rowid integer, {', '.join(f'{c} text' for c in COLUMNS)}, "
@@ -277,8 +293,8 @@ def _copy_range(cursor, lite: sqlite3.Connection, vectors: np.ndarray, low: int,
                            FROM staging""")
         cursor.execute("TRUNCATE staging")
 
-    for row in lite.execute(f"SELECT * FROM chunks WHERE rowid >= ? AND rowid < ? AND {LABELLED} ORDER BY rowid",
-                            (low, high)):
+    for row in lite.execute(f"SELECT * FROM chunks WHERE rowid >= ? AND rowid < ? AND {LABELLED} AND {scope} "
+                            "ORDER BY rowid", (low, high)):
         chunk = {key: _clean(value) for key, value in dict(row).items()}
         vector = "[" + ",".join(map(str, vectors[chunk["rowid"]].tolist())) + "]"  # float16 values, exact
         rows.append([chunk["rowid"], *[chunk[c] for c in COLUMNS], " ".join(analyze(chunk_text(chunk), "stem")),
@@ -299,7 +315,7 @@ def _load_range(job: tuple) -> int:
     """One worker of a parallel load (multiprocessing): its own SQLite reader and Postgres connection."""
     import psycopg2
 
-    model, url, low, high, worker = job
+    model, url, low, high, worker, scope = job
     directory = store_dir(model)
     lite = sqlite3.connect(f"file:{directory / 'corpus.sqlite'}?mode=ro", uri=True)
     lite.row_factory = sqlite3.Row
@@ -313,13 +329,13 @@ def _load_range(job: tuple) -> int:
             print(f"  worker {worker}: {done} chunks ({time.perf_counter() - started:.0f}s)", flush=True)
 
     try:
-        return _copy_range(connection.cursor(), lite, vectors, low, high, report)
+        return _copy_range(connection.cursor(), lite, vectors, low, high, report, scope)
     finally:
         connection.close()
 
 
 def _load_chunks(cursor, lite: sqlite3.Connection, vectors: np.ndarray, total: int, started: float,
-                 model: str = "", url: str = "", workers: int = 1) -> None:
+                 model: str = "", url: str = "", workers: int = 1, scope: str = "1 = 1") -> None:
     """workers > 1: that many processes copy one rowid range each (the time goes into the Python side, the Swedish
     stems and the vectors as text: 8 workers ~5x faster, 2.4M chunks in ~32 min instead of ~2.5 h)."""
     cursor.execute(CHUNKS_SCHEMA.format(dim=vectors.shape[1]))
@@ -328,19 +344,19 @@ def _load_chunks(cursor, lite: sqlite3.Connection, vectors: np.ndarray, total: i
         done = 0
     elif workers <= 1:
         done = _copy_range(cursor, lite, vectors, low, high + 1, lambda n: print(
-            f"  {n}/{total} chunks ({time.perf_counter() - started:.0f}s)", flush=True))
+            f"  {n}/{total} chunks ({time.perf_counter() - started:.0f}s)", flush=True), scope)
     else:
         import multiprocessing
 
         step = -(-(high + 1 - low) // workers)
-        jobs = [(model, url, low + k * step, min(low + (k + 1) * step, high + 1), k) for k in range(workers)]
+        jobs = [(model, url, low + k * step, min(low + (k + 1) * step, high + 1), k, scope) for k in range(workers)]
         with multiprocessing.Pool(workers) as pool:
             done = sum(pool.map(_load_range, jobs))
         print(f"  {done}/{total} chunks with {workers} workers ({time.perf_counter() - started:.0f}s)", flush=True)
     if done != total:
         raise SystemExit(f"copied {done} of the store's {total} chunks")
     _copy(cursor, "corpus_places", "word, kommun_code, count",
-          [list(r) for r in lite.execute("SELECT word, kommun_code, count FROM places")])
+          [list(r) for r in lite.execute(f"SELECT word, kommun_code, count FROM places WHERE {scope}")])
 
 
 def _small_files(kommuner: list[str]) -> dict[str, Path]:
@@ -349,10 +365,12 @@ def _small_files(kommuner: list[str]) -> dict[str, Path]:
     return {"corpus/municipalities.json": MUNICIPALITIES_PATH, "corpus/plans.jsonl": PLANS_PATH, **snapshot_files(kommuner)}
 
 
-def load(model: str, url: str, skip_chunks: bool = False, workers: int = 1, schema: str = CORPUS_SCHEMA) -> dict:
+def load(model: str, url: str, skip_chunks: bool = False, workers: int = 1, schema: str = CORPUS_SCHEMA,
+         kommuner: list[str] | None = None) -> dict:
     """skip_chunks: keep the chunks and places a previous run loaded (~17 min for 115k chunks from home), redo the
     rest. workers: processes copying the chunks (_load_chunks). schema: the Postgres schema written (`corpus`, the one
-    the app reads; localrag.export loads `corpus_next`)."""
+    the app reads; localrag.export loads `corpus_next`). kommuner: only these kommuner and the laws (kommun_scope),
+    with their OCR outputs and place snapshots, for a database with little disk."""
     import psycopg2
 
     prepare_schema(url, schema)
@@ -366,7 +384,8 @@ def load(model: str, url: str, skip_chunks: bool = False, workers: int = 1, sche
     connection.autocommit = True
     cursor = connection.cursor()
     started = time.perf_counter()
-    total, rejected = labelled_chunks(lite)
+    scope = kommun_scope(kommuner)
+    total, rejected = labelled_chunks(lite, scope)
     if rejected:
         print(f"  {rejected} chunks of the disk store rejected for a missing label {REQUIRED_LABELS}: not loaded",
               flush=True)
@@ -377,15 +396,20 @@ def load(model: str, url: str, skip_chunks: bool = False, workers: int = 1, sche
         if cursor.fetchone()[0] != total:
             raise SystemExit("corpus_chunks does not hold this store's chunks: run without --skip-chunks")
     else:
-        _load_chunks(cursor, lite, vectors, total, started, model, url, workers)
+        _load_chunks(cursor, lite, vectors, total, started, model, url, workers, scope)
 
     cursor.execute(EXTRAS_SCHEMA)  # corpus_terms: ts_stat over every chunk, ~30 s
-    kommuner = sorted(r[0] for r in lite.execute("SELECT DISTINCT kommun_code FROM chunks WHERE kommun_code IS NOT NULL"))
+    asked = kommuner
+    kommuner = sorted(r[0] for r in lite.execute(
+        f"SELECT DISTINCT kommun_code FROM chunks WHERE kommun_code IS NOT NULL AND {scope}"))
+    missing = sorted(set(asked or []) - set(kommuner))
+    if missing:
+        raise SystemExit(f"No chunk of the disk store for kommun {', '.join(missing)}")
     files = _small_files(kommuner)
     for name, path in files.items():
         cursor.execute(UPSERT_FILE, (name, gzip.compress(path.read_bytes(), 6)))
     ocr = 0
-    for (doc_id,) in lite.execute("SELECT DISTINCT doc_id FROM chunks WHERE kind = 'pdf'"):
+    for (doc_id,) in lite.execute(f"SELECT DISTINCT doc_id FROM chunks WHERE kind = 'pdf' AND {scope}"):
         path = pdf_files.ocr_path(doc_id)
         if path is not None:
             cursor.execute("INSERT INTO corpus_ocr VALUES (%s, %s)",
@@ -646,7 +670,9 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=1,
                         help="processes copying the chunks (8: the national corpus in ~32 min instead of ~2.5 h)")
     parser.add_argument("--files", action="store_true", help="add or replace the place snapshots (data/geo), nothing else")
-    parser.add_argument("--kommun", action="append", help="with --files: these kommun codes only (default: every snapshot)")
+    parser.add_argument("--kommun", action="append",
+                        help="these kommun codes only, repeatable: with --files their snapshots, with --model their "
+                             "chunks and the laws (a smaller corpus); default every kommun")
     parser.add_argument("--limit-mb", type=float, default=STORAGE_LIMIT_MB, help="with --files: the database's storage limit")
     parser.add_argument("--schema", default=CORPUS_SCHEMA,
                         help="Postgres schema to write (default: corpus, the one the app reads)")
@@ -662,7 +688,7 @@ def main() -> None:
         print(f"Loaded {result['files']} files of {len(result['kommuner'])} kommuner ({result['mb']} MB gzip): "
               f"database {result['database_mb']} MB")
     elif args.model:
-        load(args.model, url, args.skip_chunks, args.workers, schema=args.schema)
+        load(args.model, url, args.skip_chunks, args.workers, schema=args.schema, kommuner=args.kommun)
     else:
         parser.error("give --model (the whole corpus) or --files (the place snapshots)")
 

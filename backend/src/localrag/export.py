@@ -118,6 +118,8 @@ def main() -> None:
     parser.add_argument("--from-schema", help="dump this schema instead (renamed to corpus_next for the dump, then "
                                               "back), e.g. corpus for a downloaded dump restored locally")
     parser.add_argument("--workers", type=int, default=1, help="processes copying the chunks, if pg_store supports it")
+    parser.add_argument("--kommun", action="append", help="only these kommun codes and the laws, repeatable: a smaller "
+                                                          "corpus for a database with little disk (pg_store.kommun_scope)")
     parser.add_argument("--pg-dump", default="pg_dump",
                         help='pg_dump 17 command, e.g. "docker exec -i pyrmit-export pg_dump"')
     parser.add_argument("--dump-url", help="the database URL as pg_dump sees it (default: --url)")
@@ -135,6 +137,8 @@ def main() -> None:
         renamed = True
     elif not args.skip_load:
         options = {"workers": args.workers} if "workers" in inspect.signature(pg_store.load).parameters else {}
+        if args.kommun:
+            options["kommuner"] = args.kommun
         pg_store.load(args.model, args.url, schema=NEXT_SCHEMA, **options)
     try:
         facts = schema_facts(args.url, NEXT_SCHEMA)
