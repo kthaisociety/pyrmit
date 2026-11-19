@@ -200,8 +200,10 @@ class AnswerBench:
             cached = self._profiles.get((lat, lon))
         if cached is None:  # the same pin gives the same profile in every repeat
             cached = self._profile_of(lat, lon)
-            with self._lock:
-                self._profiles[(lat, lon)] = cached
+            # ...unless its plan documents could not be read: the next repeat asks the corpus again
+            if not any(plan.get("text_status") == "unavailable" for plan in cached.get("plans") or []):
+                with self._lock:
+                    self._profiles[(lat, lon)] = cached
         return cached
 
     def _agent(self):
@@ -438,7 +440,8 @@ def main() -> None:
 
     cases = load_cases()
     if args.command == "run":
-        chosen = [case for case in cases if not args.cases or case["id"] in set(args.cases)]
+        os.environ.setdefault("CHAT_MODE", "agent")  # the answers are the agent chat's: its pin reads the plan texts
+        chosen =[case for case in cases if not args.cases or case["id"] in set(args.cases)]
         from agentic.bench import claim_support
 
         bench = AnswerBench(cases, judge_model=args.judge_model, max_cost=args.max_cost,

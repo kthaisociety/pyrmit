@@ -44,8 +44,12 @@ _MIN_WORDS = 4  # a shorter stretch (a label, "See below") is not judged
 _MAX_PARALLEL = 16  # Jev calls in flight at once, over all answers being checked
 _POOL = ThreadPoolExecutor(max_workers=_MAX_PARALLEL, thread_name_prefix="claim-check")
 
-# One citation group as the agent writes it: "[c:<id>]", "[c:<id>; c:<id>]", "[PBL 9 kap. 4 §; c:<id>]"
-_CITATION_GROUP = re.compile(r"\s*\[[^\[\]\n]*c:[0-9a-f]{8,16}[^\[\]\n]*\]")
+# One citation group as the agent writes it: "[c:<id>]", "[c:<id>; c:<id>]", "[PBL 9 kap. 4 §; c:<id>]", also with
+# the statute as its own bracket group right before or after it ("[FBL 3 kap. 1 §][c:<id>]"): left in the text, its
+# brackets made the claim unmarkable and it was dropped (~10 % of the cited stretches of answers without a pin)
+_CITATION_GROUP = re.compile(r"(?:\s*\[[^\[\]\n]*\](?=\s*\[[^\[\]\n]*c:[0-9a-f]{8,16}))*"
+                             r"\s*\[[^\[\]\n]*c:[0-9a-f]{8,16}[^\[\]\n]*\]"
+                             r"(?:\s*\[[^\[\]\n]*\](?![(\[]))*")
 # What leads a line without being part of a claim: a blockquote, a list marker ("-", "1.", "1)") and a bold label
 _LEAD = re.compile(r"^\s*(?:>\s*)*(?:[-*+]\s+|\d+[.)]\s+)?(?:\*\*[^*\n]{1,60}:\*\*\s*)?")
 # A sentence ends at ".", "!" or "?" before a capital letter or an opening quote or bracket, so "4 kap. 2 §" stays

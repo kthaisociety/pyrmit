@@ -1009,7 +1009,8 @@ rerunning `agentic.rejudge` continues. A run that sits a long time before its fi
    kommun from the snapshot boundaries (a plan-layer kommun: the plans at the point from `_plan`, property
    "not_covered", sections "not_covered", a note when no plan was found since the layer is not known to be complete;
    every plan row carries `document_ids` / `document_match` from the link table, [] / None before a match run, and
-   `corpus_documents` (role, title, address, read from the corpus at the pin, at most 8 s) with `text_status`: read,
+   `corpus_documents` (role, title, address, read from the corpus at the pin, at most 8 s; the corpus counts with `RETRIEVAL_BACKEND=local` or
+   `CHAT_MODE=agent`, and `place.bench_answers` never caches a profile whose plans were not read) with `text_status`: read,
    none, or unavailable when the corpus cannot be reached, which also adds a note),
    the property live from Uppsala's layer 51 (place.live, cached per point),
    features that contain the pin or cover >= 2 % of the property, plans newest first matched to the corpus registry by

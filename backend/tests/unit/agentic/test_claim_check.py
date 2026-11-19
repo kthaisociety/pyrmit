@@ -281,6 +281,18 @@ def test_a_cited_repeat_of_an_uncited_sentence_is_judged_as_cited():
         ("Bygglov krävs för ett nytt hus", True)]
 
 
+@pytest.mark.parametrize("cited", [f"[FBL 3 kap. 1 §][c:{A}]", f"[FBL 3 kap. 1 §] [c:{A}]", f"[c:{A}][FBL 3 kap. 1 §]"])
+def test_a_law_label_in_its_own_brackets_beside_the_citation_keeps_the_claim(cited):
+    """The agent sometimes writes the statute as its own bracket group next to the citation; the claim was dropped."""
+    assert stretches(f"Avstyckning kräver en godtagbar vatten- och avloppslösning. {cited}") == [
+        ("Avstyckning kräver en godtagbar vatten- och avloppslösning", True)]
+
+
+def test_a_markdown_link_after_a_citation_is_not_taken_for_a_label():
+    assert stretches(f"Bygglov krävs för ett nytt hus [c:{A}] [läs mer](https://x.se).")[0] == (
+        "Bygglov krävs för ett nytt hus", True)
+
+
 def test_a_wrapped_statute_line_is_one_sentence():
     """Hard-wrapped statute text gives whole sentences as supporting sentences, and only the title line is dropped."""
     text = "Plan- och bygglag (2010:900), 9 kap. 2 §\nDet krävs bygglov för\nnybyggnad av ett hus.\nEnligt miljöbalken (1998:808) gäller också annat här."

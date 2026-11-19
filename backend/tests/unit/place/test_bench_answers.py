@@ -263,3 +263,18 @@ def test_a_run_without_the_claim_check_reports_no_claim_support(tmp_path):
     result = run_bench(CASES, conditions=("pin",), repeats=1, workers=1, bench=make_bench(), out_dir=tmp_path)
     assert "claim_support" not in result["summary"]["pin"] and "claim_check" not in result["rows"][0]
 
+
+
+def test_a_profile_whose_plan_texts_could_not_be_read_is_asked_for_again():
+    """A cached failure gave all three repeats of a case a pin without its plan documents (2026-11-18)."""
+    calls = []
+
+    def profile(lat, lon):
+        calls.append((lat, lon))
+        status = "unavailable" if len(calls) == 1 else "read"
+        return {"plans": [{"text_status": status}]}
+    bench = AnswerBench(CASES, run_agent=fake_agent, tools=object(), profile_of=profile)
+    assert bench.profile_of(1, 2)["plans"][0]["text_status"] == "unavailable"
+    assert bench.profile_of(1, 2)["plans"][0]["text_status"] == "read"
+    bench.profile_of(1, 2)
+    assert len(calls) == 2
