@@ -152,3 +152,129 @@ def run_set(items: list[dict], answer: Callable[[dict], dict], check: Callable[[
         list(pool.map(one, [item for item in items if item["id"] not in done]))
     _save(path, result)
     return result
+
+
+# --- the referee ---------------------------------------------------------------------------------------------------
+
+def referee_input(row: dict, chunk_of: Callable[[str], dict | None], chunk_text: Callable[[dict], str]) -> str:
+    """The referee's prompt for one answer: the question, the place data in full, then every item numbered, each
+    claim with the full text of its cited chunks."""
+    parts = [f"Question: {row.get('question') or row['id']}",
+             f"Place data the assistant was given:\n{row.get('place_text') or '(none)'}"]
+    for n, entry in enumerate(row["items"], start=1):
+        if not entry["cited"]:
+            parts.append(f"[{n}] UNCITED: {entry['text']}")
+            continue
+        sources = []
+        for chunk_id in entry["chunk_ids"]:
+            chunk = chunk_of(chunk_id)
+            sources.append(f"--- source {chunk_id}: {chunk.get('header') or chunk.get('title') or ''}\n{chunk_text(chunk)}"
+                           if chunk else f"--- source {chunk_id}: (unreadable)")
+        parts.append(f"[{n}] CLAIM: {entry['text']}\n" + "\n".join(sources))
+    return "\n\n".join(parts)
+
+
+def parse_referee(text: str, items: list[dict]) -> list[dict] | None:
+    """The referee's labels, one per item in order, or None when the reply is unreadable (not JSON, an item missing or
+    a label outside its values)."""
+    try:
+        entries = json.loads(text[text.find("{"):text.rfind("}") + 1])["items"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return None
+    by_n = {entry.get("n"): entry for entry in entries if isinstance(entry, dict)}
+    labels = []
+    for n, item in enumerate(items, start=1):
+        entry = by_n.get(n)
+        if entry is None:
+            return None
+        if not item["cited"]:
+            if not isinstance(entry.get("needed"), bool):
+                return None
+            labels.append({"needed": entry["needed"]})
+        elif entry.get("supported") in BACKED and entry.get("needs_source") in NEEDS and entry.get("split") in SPLIT_LABELS:
+            labels.append({"supported": entry["supported"], "missing": str(entry.get("missing") or "")[:300],
+                           "needs_source": entry["needs_source"], "split": entry["split"]})
+        else:
+            return None
+    return labels
+
+
+def ask_referee(model: str, prompt: str) -> tuple[str, float]:
+    """The referee's reply to one answer's items, and what the call cost (USD)."""
+    from llm import get_openai_client, get_response_output_text
+
+    response = get_openai_client().responses.create(model=model, reasoning={"effort": "medium"},
+                                                    instructions=REFEREE_INSTRUCTIONS, input=prompt)
+    return get_response_output_text(response).strip(), float(getattr(response.usage, "cost", 0) or 0)
+
+
+def _to_referee(rows: list[dict]) -> list[dict]:
+    return [row for row in rows if row["status"] == "answered" and row["items"]]
+
+
+def _chunk_of(get_chunk: Callable[[str], dict | None], row: dict) -> Callable[[str], dict | None]:
+    from agentic.tools import resolve_cited
+
+    return lambda chunk_id: resolve_cited(get_chunk, chunk_id, row.get("seen") or [])
+
+
+def estimate(rows: list[dict], get_chunk: Callable[[str], dict | None], chunk_text: Callable[[dict], str]) -> dict:
+    """What the referee will cost: {"calls", "input_tokens", "output_tokens", "dollars"} at its price, one call per
+    answered row (a retry costs again)."""
+    todo = _to_referee(rows)
+    chars = sum(len(REFEREE_INSTRUCTIONS) + len(referee_input(row, _chunk_of(get_chunk, row), chunk_text)) for row in todo)
+    tokens_in = chars // CHARS_PER_TOKEN
+    tokens_out = OUTPUT_TOKENS_PER_ITEM * sum(len(row["items"]) for row in todo)
+    return {"calls": len(todo), "input_tokens": tokens_in, "output_tokens": tokens_out,
+            "dollars": (tokens_in * PRICE_IN + tokens_out * PRICE_OUT) / 1e6}
+
+
+def referee(rows: list[dict], get_chunk: Callable[[str], dict | None], *, model: str = REFEREE_MODEL,
+            ask: Callable[[str, str], tuple[str, float]] = ask_referee, chunk_text: Callable[[dict], str] | None = None,
+            announce: Callable[[dict], None] = print, workers: int = 4,
+            on_row: Callable[[], None] | None = None) -> dict:
+    """Have the referee label every item of the answered rows: each item gets `referee`. The cost estimate goes to
+    `announce` before any call. An unreadable reply is asked again once; after a second one the row gets
+    `referee` = "no_verdict" and its items no labels. Returns {"rows", "no_verdict", "cost", "estimate"}."""
+    if chunk_text is None:
+        from localrag.index import chunk_text
+    expected = estimate(rows, get_chunk, chunk_text)
+    announce(expected)
+    todo = _to_referee(rows)
+    stats = {"rows": len(todo), "no_verdict": 0, "cost": 0.0, "estimate": expected}
+    lock = threading.Lock()
+
+    def one(row: dict) -> None:
+        prompt, labels, cost = referee_input(row, _chunk_of(get_chunk, row), chunk_text), None, 0.0
+        for _ in range(2):
+            try:
+                reply, spent = ask(model, prompt)
+            except Exception as exc:  # noqa: BLE001 - a failed call counts as an unreadable reply
+                reply, spent = type(exc).__name__, 0.0
+            cost += spent
+            labels = parse_referee(reply, row["items"])
+            if labels is not None:
+                break
+        with lock:
+            stats["cost"] += cost
+            if labels is None:
+                row["referee"] = "no_verdict"
+                stats["no_verdict"] += 1
+            else:
+                row["referee"] = model
+                for entry, label in zip(row["items"], labels, strict=True):
+                    entry["referee"] = label
+            if on_row:
+                on_row()
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        list(pool.map(one, todo))
+    stats["cost"] = round(stats["cost"], 4)
+    return stats
+
+
+def freeze(rows: list[dict], path: Path, *, meta: dict | None = None) -> None:
+    """Save the reference: the answers, the check's verdicts and the referee's labels, tagged with the check's
+    version."""
+    _save(Path(path), {"date": datetime.now(SWEDEN_TZ).isoformat(timespec="seconds"), "check_version": check_version(),
+                       "referee_model": REFEREE_MODEL, **(meta or {}), "rows": rows})
