@@ -369,3 +369,131 @@ def report(rows: list[dict], *, title: str = "Claim check against the referee", 
                        d["missing"].replace("|", "\\|")] for d in numbers["disagreements"]])
               if numbers["disagreements"] else "None."]
     return "\n".join(lines) + "\n"
+
+
+# --- the recheck ---------------------------------------------------------------------------------------------------
+
+def recheck(reference: dict, check: Callable[[str, list, str | None], dict], *, workers: int = 4) -> dict:
+    """Run the current check on the reference's validation answers (no new agent answers) and set its agreement with
+    the frozen referee labels next to the frozen one: {"frozen", "now" (support stats), "no_claims", "no_still_flagged"
+    (share of the referee's "no" claims the check does not call supported), "frozen_version", "version"}. The
+    reference is not changed."""
+    rows = [row for row in reference["rows"] if row["split"] == "validation"]
+    fresh = [{**row, "items": [dict(entry) for entry in row.get("items") or []]} for row in rows]
+
+    def one(row: dict) -> None:
+        labels = {entry["text"]: entry["referee"] for entry in row["items"] if entry.get("referee")}
+        judge_row(row, check)
+        for entry in row["items"]:
+            if entry["text"] in labels:
+                entry["referee"] = labels[entry["text"]]
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        list(pool.map(one, fresh))
+    no = [entry for entry in _entries(fresh)
+          if entry["cited"] and (entry.get("referee") or {}).get("supported") == "no" and entry["check"] != "not_checked"]
+    return {"frozen": split_numbers(rows)["support"], "now": split_numbers(fresh)["support"], "no_claims": len(no),
+            "no_still_flagged": sum(entry["check"] != "supported" for entry in no) / len(no) if no else None,
+            "frozen_version": reference.get("check_version"), "version": check_version()}
+
+
+# --- command line --------------------------------------------------------------------------------------------------
+
+def agent_answer(cases: list[dict]) -> Callable[[dict], dict]:
+    """The chat agent answering one question of the set as the chat asks it: a place case with its pin's data or
+    with the address typed, a general question with nothing pinned."""
+    from place.bench_answers import AnswerBench, prompt
+    from place.context import question_with_place
+
+    bench = AnswerBench(cases)
+
+    def answer(item: dict) -> dict:
+        run_agent, tools = bench._agent()
+        if item["condition"] == "general":
+            typed, place_text = item["question"], None
+            question = question_with_place(typed, None)
+        else:
+            typed, question, place_text = prompt(bench.cases[item["case"]], item["condition"], bench.cases,
+                                                 bench.profile_of, AnswerBench._law_text(tools))
+        item["question"] = typed
+        try:
+            run = run_agent(question, tools, effort=os.getenv("AGENT_EFFORT", "medium").strip(),
+                            explore_effort=os.getenv("AGENT_EXPLORE_EFFORT", "medium").strip() or None,
+                            max_steps=int(os.getenv("AGENT_MAX_STEPS", "10")))
+        except Exception as exc:  # noqa: BLE001 - a failed run is a saved row, not a crash of the run
+            return {"error": f"{type(exc).__name__}: {str(exc)[:300]}"}
+        return {"answer": run.answer, "questions": [{"question": q.question, "options": q.options} for q in run.questions],
+                "seen": list(run.seen_chunks), "place_text": place_text, "mode": run.mode, "error": run.error}
+    return answer
+
+
+def live_check(tools) -> Callable[[str, list, str | None], dict]:
+    """The claim check as the chat runs it, on a stored answer."""
+    from agentic.claim_check import check_claims
+    from agentic.tools import resolve_cited
+
+    def check(answer: str, seen: list, place_text: str | None) -> dict:
+        return check_claims(answer, lambda chunk_id: resolve_cited(tools.get_chunk, chunk_id, seen), place_text).as_dict()
+    return check
+
+
+def main() -> None:
+    from dotenv import load_dotenv
+
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+    os.environ.setdefault("LLM_PROVIDER", "openrouter")
+    parser = argparse.ArgumentParser(description="Grade the claim check against a referee model")
+    sub = parser.add_subparsers(dest="command", required=True)
+    run = sub.add_parser("run", help="answer the question set and check the answers (paid; resumes)")
+    run.add_argument("--out", type=Path, required=True)
+    run.add_argument("--workers", type=int, default=2)
+    ref = sub.add_parser("referee", help="label the saved answers and freeze the reference (paid)")
+    ref.add_argument("path", type=Path)
+    ref.add_argument("--out", type=Path, required=True)
+    ref.add_argument("--model", default=REFEREE_MODEL)
+    ref.add_argument("--workers", type=int, default=4)
+    ref.add_argument("--yes", action="store_true", help="skip the confirmation after the cost estimate")
+    write = sub.add_parser("report")
+    write.add_argument("path", type=Path)
+    write.add_argument("--out", type=Path, required=True)
+    again = sub.add_parser("recheck", help="run the current check on the reference's validation answers")
+    again.add_argument("path", type=Path)
+    again.add_argument("--workers", type=int, default=4)
+    args = parser.parse_args()
+
+    if args.command == "report":
+        data = json.loads(args.path.read_text(encoding="utf-8"))
+        args.out.write_text(report(data["rows"], meta={"Reference": args.path.name, "check": data.get("check_version"),
+                                                       "referee": data.get("referee_model")}), encoding="utf-8")
+        print(f"-> {args.out}")
+        return
+
+    from agentic.service import get_tools
+
+    tools = get_tools()
+    if args.command == "run":
+        from place.bench_answers import load_cases
+
+        cases = load_cases()
+        result = run_set(question_set(cases, load_questions()), agent_answer(cases), live_check(tools), args.out,
+                         workers=args.workers)
+        print(f"{len(result['rows'])} answers -> {args.out}")
+    elif args.command == "referee":
+        data = json.loads(args.path.read_text(encoding="utf-8"))
+
+        def announce(cost: dict) -> None:
+            print(f"Referee {args.model}: {cost['calls']} calls, ~{cost['input_tokens']:,} input and "
+                  f"~{cost['output_tokens']:,} output tokens, ~${cost['dollars']:.2f}")
+            if not args.yes and input("Go on? [y/N] ").strip().lower() != "y":
+                raise SystemExit("stopped before any call")
+        stats = referee(data["rows"], tools.get_chunk, model=args.model, announce=announce, workers=args.workers,
+                        on_row=lambda: freeze(data["rows"], args.out))
+        freeze(data["rows"], args.out)
+        print(f"{stats['rows']} answers refereed ({stats['no_verdict']} without a verdict), ${stats['cost']} -> {args.out}")
+    else:
+        out = recheck(json.loads(args.path.read_text(encoding="utf-8")), live_check(tools), workers=args.workers)
+        print(json.dumps(out, indent=2))
+
+
+if __name__ == "__main__":
+    main()
