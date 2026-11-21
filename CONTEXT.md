@@ -175,6 +175,10 @@ _Avoid_: statement, fact (when one claim of an answer is meant)
 The live check of an agent answer once it has streamed: each **Claim** gets a claim verdict against the full text of the chunks it cites, *supported* (with the sentences that back it), *unsupported* or *uncited*. What is not supported goes back once to be re-cited or removed; what is still not supported is flagged in the answer. A check that could not run leaves the answer with a notice. The sentences that back a claim are underlined in the cited chunk when its source panel opens.
 _Avoid_: verdict (alone: that is the feasibility **Verdict**), grounding (the benchmark's offline judge)
 
+**Referee**:
+A stronger model (Claude Opus 5.5) that labels the **Claims** of saved answers, against the full text of their cited chunks and the place data, to grade the **Claim check**: is each claim supported (yes / partly / no), what kind of claim it is, and did an uncited sentence need a source. Its labels are frozen with the check's version, so a later check can be measured against them. Not a live step of the chat.
+_Avoid_: auditor, judge (the benchmark's answer grader)
+
 **Text report**:
 `data/geo/<code>/plan_text_report.md`, written by a match against the hosted corpus: the share of a kommun's plan polygons with documents, and for each of the others why it has none.
 

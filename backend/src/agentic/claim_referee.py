@@ -39,6 +39,9 @@ REFEREE_MODEL = "anthropic/claude-opus-5.5"
 PRICE_IN, PRICE_OUT = 4.0, 20.0  # USD per million tokens of the referee model
 CHARS_PER_TOKEN = 4
 OUTPUT_TOKENS_PER_ITEM = 60  # a label is a short JSON object
+REFEREE_ATTEMPTS = 2  # an unreadable reply is asked again once
+MISSING_CHARS = 300  # of the referee's "missing", and of a failed run's error, kept
+VERSION_CHARS = 12
 PLACE_CONDITIONS = ("pin", "address")
 SPLITS = ("tuning", "validation")
 BACKED = ("yes", "partly", "no")
@@ -66,7 +69,11 @@ Reply with JSON only: {"items": [{"n": 1, "supported": ..., "missing": ..., "nee
 
 def check_version() -> str:
     """The claim check's version: a hash of its source, so a reference tells which check it froze."""
-    return hashlib.sha256(CLAIM_CHECK_PATH.read_bytes()).hexdigest()[:12]
+    return hashlib.sha256(CLAIM_CHECK_PATH.read_bytes()).hexdigest()[:VERSION_CHARS]
+
+
+def _load(path: Path) -> dict:
+    return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
 def _save(path: Path, data: dict) -> None:
@@ -78,7 +85,7 @@ def _save(path: Path, data: dict) -> None:
 
 def load_questions(path: Path = QUESTIONS_PATH) -> dict:
     """The general questions and the validation place cases. Raises ValueError when the set is not locked."""
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    data = _load(path)
     if not data.get("locked"):
         raise ValueError(f"the question set {path} is not locked")
     return data
@@ -97,7 +104,7 @@ def question_set(cases: list[dict], questions: dict) -> list[dict]:
 
 # --- the run -------------------------------------------------------------------------------------------------------
 
-def judged_items(answer: str, check: dict) -> list[dict]:
+def _judged_items(answer: str, check: dict) -> list[dict]:
     """Every stretch of the answer with the check's verdict on it: a cited claim "supported" / "unsupported" /
     "uncited" (no cited chunk readable), or "not_checked" when the check left it out; an uncited sentence "uncited"
     when flagged, "passed" when not, or "not_checked" when the whole check failed."""
@@ -116,13 +123,13 @@ def judged_items(answer: str, check: dict) -> list[dict]:
     return items
 
 
-def judge_row(row: dict, check: Callable[[str, list, str | None], dict]) -> None:
+def _judge_row(row: dict, check: Callable[[str, list, str | None], dict]) -> None:
     """Put a saved answer to the claim check and store its items; a question card or an empty answer gets none."""
     if row["status"] != "answered":
         row["check"], row["items"] = None, []
         return
     result = check(row["answer"], row.get("seen") or [], row.get("place_text"))
-    row["check"], row["items"] = result.get("status"), judged_items(row["answer"], result)
+    row["check"], row["items"] = result.get("status"), _judged_items(row["answer"], result)
 
 
 def run_set(items: list[dict], answer: Callable[[dict], dict], check: Callable[[str, list, str | None], dict],
@@ -131,7 +138,7 @@ def run_set(items: list[dict], answer: Callable[[dict], dict], check: Callable[[
     already in `path` are not answered again. `answer(item)` -> {"answer", "questions", "seen", "place_text", "mode",
     "error"?}; `check(answer, seen, place_text)` -> {"status", "claims": [{"text", "verdict", "chunk_ids"}]}."""
     path = Path(path)
-    result = (json.loads(path.read_text(encoding="utf-8")) if path.exists()
+    result = (_load(path) if path.exists()
               else {"date": datetime.now(SWEDEN_TZ).isoformat(timespec="seconds"), "check_version": check_version(), "rows": []})
     done = {row["id"] for row in result["rows"]}
     lock = threading.Lock()
@@ -143,7 +150,7 @@ def run_set(items: list[dict], answer: Callable[[dict], dict], check: Callable[[
         row = {**item, "answer": got.get("answer") or "", "questions": got.get("questions") or [],
                "seen": list(got.get("seen") or []), "place_text": got.get("place_text"), "mode": got.get("mode"),
                "error": got.get("error"), "status": status}
-        judge_row(row, check)
+        _judge_row(row, check)
         with lock:
             result["rows"].append(row)
             _save(path, result)
@@ -156,7 +163,7 @@ def run_set(items: list[dict], answer: Callable[[dict], dict], check: Callable[[
 
 # --- the referee ---------------------------------------------------------------------------------------------------
 
-def referee_input(row: dict, chunk_of: Callable[[str], dict | None], chunk_text: Callable[[dict], str]) -> str:
+def _referee_input(row: dict, chunk_of: Callable[[str], dict | None], chunk_text: Callable[[dict], str]) -> str:
     """The referee's prompt for one answer: the question, the place data in full, then every item numbered, each
     claim with the full text of its cited chunks."""
     parts = [f"Question: {row.get('question') or row['id']}",
@@ -174,7 +181,7 @@ def referee_input(row: dict, chunk_of: Callable[[str], dict | None], chunk_text:
     return "\n\n".join(parts)
 
 
-def parse_referee(text: str, items: list[dict]) -> list[dict] | None:
+def _parse_referee(text: str, items: list[dict]) -> list[dict] | None:
     """The referee's labels, one per item in order, or None when the reply is unreadable (not JSON, an item missing or
     a label outside its values)."""
     try:
@@ -192,14 +199,14 @@ def parse_referee(text: str, items: list[dict]) -> list[dict] | None:
                 return None
             labels.append({"needed": entry["needed"]})
         elif entry.get("supported") in BACKED and entry.get("needs_source") in NEEDS and entry.get("split") in SPLIT_LABELS:
-            labels.append({"supported": entry["supported"], "missing": str(entry.get("missing") or "")[:300],
+            labels.append({"supported": entry["supported"], "missing": str(entry.get("missing") or "")[:MISSING_CHARS],
                            "needs_source": entry["needs_source"], "split": entry["split"]})
         else:
             return None
     return labels
 
 
-def ask_referee(model: str, prompt: str) -> tuple[str, float]:
+def _ask_referee(model: str, prompt: str) -> tuple[str, float]:
     """The referee's reply to one answer's items, and what the call cost (USD)."""
     from llm import get_openai_client, get_response_output_text
 
@@ -218,11 +225,11 @@ def _chunk_of(get_chunk: Callable[[str], dict | None], row: dict) -> Callable[[s
     return lambda chunk_id: resolve_cited(get_chunk, chunk_id, row.get("seen") or [])
 
 
-def estimate(rows: list[dict], get_chunk: Callable[[str], dict | None], chunk_text: Callable[[dict], str]) -> dict:
+def _estimate(rows: list[dict], get_chunk: Callable[[str], dict | None], chunk_text: Callable[[dict], str]) -> dict:
     """What the referee will cost: {"calls", "input_tokens", "output_tokens", "dollars"} at its price, one call per
     answered row (a retry costs again)."""
     todo = _to_referee(rows)
-    chars = sum(len(REFEREE_INSTRUCTIONS) + len(referee_input(row, _chunk_of(get_chunk, row), chunk_text)) for row in todo)
+    chars = sum(len(REFEREE_INSTRUCTIONS) + len(_referee_input(row, _chunk_of(get_chunk, row), chunk_text)) for row in todo)
     tokens_in = chars // CHARS_PER_TOKEN
     tokens_out = OUTPUT_TOKENS_PER_ITEM * sum(len(row["items"]) for row in todo)
     return {"calls": len(todo), "input_tokens": tokens_in, "output_tokens": tokens_out,
@@ -230,7 +237,7 @@ def estimate(rows: list[dict], get_chunk: Callable[[str], dict | None], chunk_te
 
 
 def referee(rows: list[dict], get_chunk: Callable[[str], dict | None], *, model: str = REFEREE_MODEL,
-            ask: Callable[[str, str], tuple[str, float]] = ask_referee, chunk_text: Callable[[dict], str] | None = None,
+            ask: Callable[[str, str], tuple[str, float]] = _ask_referee, chunk_text: Callable[[dict], str] | None = None,
             announce: Callable[[dict], None] = print, workers: int = 4,
             on_row: Callable[[], None] | None = None) -> dict:
     """Have the referee label every item of the answered rows: each item gets `referee`. The cost estimate goes to
@@ -238,21 +245,21 @@ def referee(rows: list[dict], get_chunk: Callable[[str], dict | None], *, model:
     `referee` = "no_verdict" and its items no labels. Returns {"rows", "no_verdict", "cost", "estimate"}."""
     if chunk_text is None:
         from localrag.index import chunk_text
-    expected = estimate(rows, get_chunk, chunk_text)
+    expected = _estimate(rows, get_chunk, chunk_text)
     announce(expected)
     todo = _to_referee(rows)
     stats = {"rows": len(todo), "no_verdict": 0, "cost": 0.0, "estimate": expected}
     lock = threading.Lock()
 
     def one(row: dict) -> None:
-        prompt, labels, cost = referee_input(row, _chunk_of(get_chunk, row), chunk_text), None, 0.0
-        for _ in range(2):
+        prompt, labels, cost = _referee_input(row, _chunk_of(get_chunk, row), chunk_text), None, 0.0
+        for _ in range(REFEREE_ATTEMPTS):
             try:
                 reply, spent = ask(model, prompt)
             except Exception as exc:  # noqa: BLE001 - a failed call counts as an unreadable reply
                 reply, spent = type(exc).__name__, 0.0
             cost += spent
-            labels = parse_referee(reply, row["items"])
+            labels = _parse_referee(reply, row["items"])
             if labels is not None:
                 break
         with lock:
@@ -309,7 +316,7 @@ def _entries(rows: list[dict]) -> list[dict]:
     return [{**entry, "row": row} for row in rows for entry in row.get("items") or []]
 
 
-def split_numbers(rows: list[dict]) -> dict:
+def _split_numbers(rows: list[dict]) -> dict:
     """The agreement of one split's rows: on cited claims overall, per condition, per form (the referee's
     needs_source) and per split label, and on uncited sentences."""
     entries = _entries(rows)
@@ -321,7 +328,7 @@ def split_numbers(rows: list[dict]) -> dict:
 
 
 def summary(rows: list[dict]) -> dict:
-    """The report's numbers: the agreement per split (see split_numbers), every disagreement, and the counts kept
+    """The report's numbers: the agreement per split (see _split_numbers), every disagreement, and the counts kept
     apart: question cards ("asked"), errors, items the check did not judge ("not_checked") and answers without a
     referee verdict ("no_verdict")."""
     disagreements = []
@@ -337,7 +344,7 @@ def summary(rows: list[dict]) -> dict:
             "errors": sum(row["status"] == "error" for row in rows),
             "not_checked": sum(entry["check"] == "not_checked" for entry in _entries(rows)),
             "no_verdict": sum(row.get("referee") == "no_verdict" for row in rows),
-            **{split: split_numbers([row for row in rows if row["split"] == split]) for split in SPLITS},
+            **{split: _split_numbers([row for row in rows if row["split"] == split]) for split in SPLITS},
             "disagreements": disagreements}
 
 
@@ -383,7 +390,7 @@ def recheck(reference: dict, check: Callable[[str, list, str | None], dict], *, 
 
     def one(row: dict) -> None:
         labels = {entry["text"]: entry["referee"] for entry in row["items"] if entry.get("referee")}
-        judge_row(row, check)
+        _judge_row(row, check)
         for entry in row["items"]:
             if entry["text"] in labels:
                 entry["referee"] = labels[entry["text"]]
@@ -392,23 +399,24 @@ def recheck(reference: dict, check: Callable[[str, list, str | None], dict], *, 
         list(pool.map(one, fresh))
     no = [entry for entry in _entries(fresh)
           if entry["cited"] and (entry.get("referee") or {}).get("supported") == "no" and entry["check"] != "not_checked"]
-    return {"frozen": split_numbers(rows)["support"], "now": split_numbers(fresh)["support"], "no_claims": len(no),
+    return {"frozen": _split_numbers(rows)["support"], "now": _split_numbers(fresh)["support"], "no_claims": len(no),
             "no_still_flagged": sum(entry["check"] != "supported" for entry in no) / len(no) if no else None,
             "frozen_version": reference.get("check_version"), "version": check_version()}
 
 
 # --- command line --------------------------------------------------------------------------------------------------
 
-def agent_answer(cases: list[dict]) -> Callable[[dict], dict]:
+def _agent_answer(cases: list[dict]) -> Callable[[dict], dict]:
     """The chat agent answering one question of the set as the chat asks it: a place case with its pin's data or
     with the address typed, a general question with nothing pinned."""
+    from agentic.agent import run_agent
+    from agentic.service import get_tools
     from place.bench_answers import AnswerBench, prompt
     from place.context import question_with_place
 
-    bench = AnswerBench(cases)
+    bench, tools = AnswerBench(cases), get_tools()
 
     def answer(item: dict) -> dict:
-        run_agent, tools = bench._agent()
         if item["condition"] == "general":
             typed, place_text = item["question"], None
             question = question_with_place(typed, None)
@@ -421,13 +429,13 @@ def agent_answer(cases: list[dict]) -> Callable[[dict], dict]:
                             explore_effort=os.getenv("AGENT_EXPLORE_EFFORT", "medium").strip() or None,
                             max_steps=int(os.getenv("AGENT_MAX_STEPS", "10")))
         except Exception as exc:  # noqa: BLE001 - a failed run is a saved row, not a crash of the run
-            return {"error": f"{type(exc).__name__}: {str(exc)[:300]}"}
+            return {"error": f"{type(exc).__name__}: {str(exc)[:MISSING_CHARS]}"}
         return {"answer": run.answer, "questions": [{"question": q.question, "options": q.options} for q in run.questions],
                 "seen": list(run.seen_chunks), "place_text": place_text, "mode": run.mode, "error": run.error}
     return answer
 
 
-def live_check(tools) -> Callable[[str, list, str | None], dict]:
+def _live_check(tools) -> Callable[[str, list, str | None], dict]:
     """The claim check as the chat runs it, on a stored answer."""
     from agentic.claim_check import check_claims
     from agentic.tools import resolve_cited
@@ -438,6 +446,7 @@ def live_check(tools) -> Callable[[str, list, str | None], dict]:
 
 
 def main() -> None:
+    """The command line: run, referee, report and recheck (see the module docstring)."""
     from dotenv import load_dotenv
 
     load_dotenv(Path(__file__).resolve().parents[2] / ".env")
@@ -462,7 +471,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "report":
-        data = json.loads(args.path.read_text(encoding="utf-8"))
+        data = _load(args.path)
         args.out.write_text(report(data["rows"], meta={"Reference": args.path.name, "check": data.get("check_version"),
                                                        "referee": data.get("referee_model")}), encoding="utf-8")
         print(f"-> {args.out}")
@@ -475,11 +484,11 @@ def main() -> None:
         from place.bench_answers import load_cases
 
         cases = load_cases()
-        result = run_set(question_set(cases, load_questions()), agent_answer(cases), live_check(tools), args.out,
+        result = run_set(question_set(cases, load_questions()), _agent_answer(cases), _live_check(tools), args.out,
                          workers=args.workers)
         print(f"{len(result['rows'])} answers -> {args.out}")
     elif args.command == "referee":
-        data = json.loads(args.path.read_text(encoding="utf-8"))
+        data = _load(args.path)
 
         def announce(cost: dict) -> None:
             print(f"Referee {args.model}: {cost['calls']} calls, ~{cost['input_tokens']:,} input and "
@@ -491,7 +500,7 @@ def main() -> None:
         freeze(data["rows"], args.out)
         print(f"{stats['rows']} answers refereed ({stats['no_verdict']} without a verdict), ${stats['cost']} -> {args.out}")
     else:
-        out = recheck(json.loads(args.path.read_text(encoding="utf-8")), live_check(tools), workers=args.workers)
+        out = recheck(_load(args.path), _live_check(tools), workers=args.workers)
         print(json.dumps(out, indent=2))
 
 
