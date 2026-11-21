@@ -278,3 +278,94 @@ def freeze(rows: list[dict], path: Path, *, meta: dict | None = None) -> None:
     version."""
     _save(Path(path), {"date": datetime.now(SWEDEN_TZ).isoformat(timespec="seconds"), "check_version": check_version(),
                        "referee_model": REFEREE_MODEL, **(meta or {}), "rows": rows})
+
+
+# --- the report ----------------------------------------------------------------------------------------------------
+
+def _agrees(entry: dict) -> bool | None:
+    """Whether check and referee agree on an item; None when either has no verdict on it."""
+    label = entry.get("referee")
+    if not label or entry["check"] == "not_checked":
+        return None
+    if entry["cited"]:
+        return (entry["check"] == "supported") == (label["supported"] == "yes")
+    return (entry["check"] == "uncited") == label["needed"]
+
+
+def _stats(entries: list[dict]) -> dict:
+    agree = [_agrees(entry) for entry in entries]
+    judged = [value for value in agree if value is not None]
+    return {"claims": len(judged), "agree": sum(judged), "share": sum(judged) / len(judged) if judged else None}
+
+
+def _grouped(entries: list[dict], key: Callable[[dict], str]) -> dict[str, dict]:
+    groups: dict[str, list[dict]] = {}
+    for entry in entries:
+        groups.setdefault(key(entry), []).append(entry)
+    return {name: _stats(mine) for name, mine in groups.items()}
+
+
+def _entries(rows: list[dict]) -> list[dict]:
+    return [{**entry, "row": row} for row in rows for entry in row.get("items") or []]
+
+
+def split_numbers(rows: list[dict]) -> dict:
+    """The agreement of one split's rows: on cited claims overall, per condition, per form (the referee's
+    needs_source) and per split label, and on uncited sentences."""
+    entries = _entries(rows)
+    cited = [entry for entry in entries if entry["cited"] and _agrees(entry) is not None]
+    return {"support": _stats(cited), "condition": _grouped(cited, lambda e: e["row"]["condition"]),
+            "form": _grouped(cited, lambda e: e["referee"]["needs_source"]),
+            "split": _grouped(cited, lambda e: e["referee"]["split"]),
+            "uncited": _stats([entry for entry in entries if not entry["cited"]])}
+
+
+def summary(rows: list[dict]) -> dict:
+    """The report's numbers: the agreement per split (see split_numbers), every disagreement, and the counts kept
+    apart: question cards ("asked"), errors, items the check did not judge ("not_checked") and answers without a
+    referee verdict ("no_verdict")."""
+    disagreements = []
+    for entry in _entries(rows):
+        if _agrees(entry) is False:
+            label = entry["referee"]
+            disagreements.append({"id": entry["row"]["id"], "split": entry["row"]["split"],
+                                  "condition": entry["row"]["condition"], "text": entry["text"], "check": entry["check"],
+                                  "referee": (label["supported"] if entry["cited"]
+                                              else "needed" if label["needed"] else "not needed"),
+                                  "missing": label.get("missing", "")})
+    return {"answers": len(rows), "asked": sum(row["status"] == "asked" for row in rows),
+            "errors": sum(row["status"] == "error" for row in rows),
+            "not_checked": sum(entry["check"] == "not_checked" for entry in _entries(rows)),
+            "no_verdict": sum(row.get("referee") == "no_verdict" for row in rows),
+            **{split: split_numbers([row for row in rows if row["split"] == split]) for split in SPLITS},
+            "disagreements": disagreements}
+
+
+def _pct(stats: dict) -> str:
+    return "–" if stats["share"] is None else f"{stats['share']:.0%} ({stats['agree']}/{stats['claims']})"
+
+
+def _table(head: list[str], body: list[list[str]]) -> str:
+    return "\n".join(["| " + " | ".join(head) + " |", "|" + "---|" * len(head)] + ["| " + " | ".join(r) + " |" for r in body])
+
+
+def report(rows: list[dict], *, title: str = "Claim check against the referee", meta: dict | None = None) -> str:
+    """The report as Markdown: agreement per split, condition, form and split label, then every disagreement."""
+    numbers = summary(rows)
+    lines = [f"# {title}", ""]
+    lines += [f"- {key}: {value}" for key, value in (meta or {}).items()]
+    lines += [f"- Answers: {numbers['answers']} (question cards {numbers['asked']}, errors {numbers['errors']})",
+              f"- Items the check did not judge: {numbers['not_checked']}",
+              f"- Answers without a referee verdict: {numbers['no_verdict']}", ""]
+    for split in SPLITS:
+        block = numbers[split]
+        lines += [f"## {split.capitalize()}", "",
+                  f"Cited claims: {_pct(block['support'])}. Uncited sentences: {_pct(block['uncited'])}.", ""]
+        for name, key in (("Condition", "condition"), ("Form", "form"), ("Split label", "split")):
+            lines += [_table([name, "Agreement"], [[group, _pct(stats)] for group, stats in sorted(block[key].items())]), ""]
+    lines += ["## Disagreements", ""]
+    lines += [_table(["Answer", "Split", "Check", "Referee", "Claim", "Lacks a source"],
+                     [[d["id"], d["split"], d["check"], d["referee"], d["text"].replace("|", "\\|"),
+                       d["missing"].replace("|", "\\|")] for d in numbers["disagreements"]])
+              if numbers["disagreements"] else "None."]
+    return "\n".join(lines) + "\n"
