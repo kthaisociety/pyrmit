@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { ExternalLink, FileText, Loader2, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ExternalLink, FileText, Flag, Loader2, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
 import { fill, useLanguage } from '@/lib/i18n';
 import Term from '@/components/Term';
 import ChunkCard from '@/components/ChunkCard';
+import type { ClaimFlag } from '@/components/CitedMarkdown';
 
 // One numbered source of an agent answer: what "[n]" stands for (pipeline event "citations")
 export interface CitedChunk {
@@ -65,16 +66,63 @@ function WithKommun({ text }: { text: string }) {
   return after === undefined ? <>{text}</> : <>{before}<Term term="kommun" />{after}</>;
 }
 
+// The text of a flagged claim, cut where its sentences without backing start and end. No cut (one part, not
+// lacking) when the check named none, or when they make up the whole claim: there is then nothing to tell apart.
+function claimParts(claim: ClaimFlag): { text: string; lacking: boolean }[] {
+  const parts: { text: string; lacking: boolean }[] = [];
+  let pos = 0;
+  for (const sentence of claim.unbacked ?? []) {
+    const at = sentence ? claim.text.indexOf(sentence, pos) : -1;
+    if (at < 0) continue;
+    if (at > pos) parts.push({ text: claim.text.slice(pos, at), lacking: false });
+    parts.push({ text: sentence, lacking: true });
+    pos = at + sentence.length;
+  }
+  if (pos < claim.text.length) parts.push({ text: claim.text.slice(pos), lacking: false });
+  const partly = parts.some((part) => part.lacking) && parts.some((part) => !part.lacking && /[\p{L}\p{N}]/u.test(part.text));
+  return partly ? parts : [{ text: claim.text, lacking: false }];
+}
+
+// The claim a flag was clicked on, on top of the panel (#138): the whole claim with the sentences lacking backing
+// pointed out, and why it is flagged in one sentence
+function ClaimView({ claim }: { claim: ClaimFlag }) {
+  const { t } = useLanguage();
+  const parts = claimParts(claim);
+  const partly = parts.length > 1;
+  const reason = claim.verdict === 'uncited' ? 'claim.reasonUncited'
+    : partly ? 'claim.reasonPartly' : 'claim.reasonUnsupported';
+  return (
+    <section aria-label={t('claim.panelTitle')}
+             className="rounded-xl border border-red-200 bg-red-50/70 px-4 py-3 dark:border-red-900/70 dark:bg-red-950/30">
+      <p className="text-sm leading-relaxed text-zinc-800 dark:text-zinc-100">
+        {parts.map((part, index) => part.lacking ? (
+          <mark key={index} title={t('claim.lacksBacking')}
+                className="rounded-sm bg-red-200/80 px-0.5 text-inherit dark:bg-red-900/70">{part.text}</mark>
+        ) : <span key={index}>{part.text}</span>)}
+      </p>
+      <p className="mt-2 flex items-start gap-1.5 text-xs text-red-700 dark:text-red-300">
+        <Flag size={12} fill="currentColor" aria-hidden className="mt-0.5 shrink-0" />
+        <span>{t(reason)}</span>
+      </p>
+    </section>
+  );
+}
+
+const CLOSE_MS = 160; // the glide out, a little under the animation's length so no frame shows it gone
+
 // Side panel: the cited chunks, and the original document opened where the chunk is
 // (PDF at its page with the chunk highlighted, or the web page / statute scrolled to it by Chrome).
 // n = 0: not a citation (Database view); autoOpen: open the first chunk's document right away.
 // supporting: chunk_id -> the sentences of that chunk that back a claim of the answer (claim check, issue #84),
-// underlined in that chunk's card only; a chunk missing from it, or no `supporting` at all, shows no underline
-export default function SourceViewer({ citation, onClose, autoOpen = false, supporting = {} }: {
+// underlined in that chunk's card only; a chunk missing from it, or no `supporting` at all, shows no underline.
+// claim: the flagged claim the panel was opened for (#138), shown on top of the chunks it cites (`citation` then
+// holds those chunks, none for an uncited claim, with n = 0); like `supporting`, beside the citation (ADR-0015)
+export default function SourceViewer({ citation, onClose, autoOpen = false, supporting = {}, claim }: {
   citation: Citation;
   onClose: () => void;
   autoOpen?: boolean;
   supporting?: Record<string, string[]>;
+  claim?: ClaimFlag;
 }) {
   const { t } = useLanguage();
   const [pdf, setPdf] = useState<{ blobUrl: string; url: string; page: number; note: string } | null>(null);
@@ -97,11 +145,21 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
   }, [citation]);
   useEffect(() => () => { if (pdf) URL.revokeObjectURL(pdf.blobUrl); }, [pdf]);
 
+  // Closing glides the panel out before it is taken away (CLOSE_MS matches the animation in globals.css); at
+  // once where motion is reduced or cannot be asked about
+  const [closing, setClosing] = useState(false);
+  const close = useCallback(() => {
+    const still = typeof window.matchMedia !== 'function' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (still) return onClose();
+    setClosing(true);
+    setTimeout(onClose, CLOSE_MS);
+  }, [onClose]);
+
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') close(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [close]);
 
   // Fetched with the auth header, shown from a blob URL: the browser's PDF viewer opens it at #page
   const showPdf = async (pdfUrl: string, page: number, view: Location['view'], note: string, mine: number) => {
@@ -167,25 +225,27 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
   }, [citation, autoOpen]);
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={onClose}>
+    <div className={`source-backdrop fixed inset-0 z-50 flex justify-end bg-black/30 ${closing ? 'closing' : ''}`} onClick={close}>
       <aside
-        className={`flex h-full w-full flex-col bg-white shadow-xl dark:bg-zinc-900 ${pdf ? 'max-w-6xl' : 'max-w-xl'}`}
+        className={`source-panel flex h-full w-full flex-col bg-white shadow-xl dark:bg-zinc-900 ${pdf ? 'max-w-6xl' : 'max-w-xl'}`}
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex items-start gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-700">
+          {claim && <Flag size={14} fill="currentColor" aria-hidden className="mt-0.5 shrink-0 text-red-600 dark:text-red-500" />}
           {citation.n > 0 && (
             <span className="mt-0.5 rounded-md bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300">
               {citation.n}
             </span>
           )}
           <h2 className="min-w-0 flex-1 text-sm font-semibold text-zinc-800 dark:text-zinc-100">{citation.label}</h2>
-          <button onClick={onClose} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800" title={t('source.close')}>
+          <button onClick={close} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800" title={t('source.close')}>
             <X size={16} />
           </button>
         </header>
 
         <div className={`flex min-h-0 flex-1 ${pdf ? 'flex-row' : 'flex-col'}`}>
           <div className={`space-y-3 overflow-y-auto px-5 py-4 ${pdf ? 'w-72 shrink-0 border-r border-zinc-200 dark:border-zinc-700' : ''}`}>
+            {claim && <ClaimView claim={claim} />}
             {citation.chunks.map((chunk) => (
               <div key={chunk.chunk_id} className="space-y-1.5">
                 <ChunkCard source={chunk.source} chunkIndex={chunk.chunk_index} content={chunk.content} defaultOpen={!pdf}

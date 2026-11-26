@@ -278,7 +278,7 @@ const HOUSE = 'Bygglov is needed for a new house';
 const FEE = 'The fee is 12 000 kr';
 const SOURCES = '\n\n---\n**Sources**\n- [1] PBL, 9 kap. 4 §\n- [2] Ydre – Bygglovstaxa';
 const ANSWER = `${HOUSE} [1]. ${FEE} [2].${SOURCES}`;
-const NOT_SUPPORTED = 'Not supported by the cited sources';
+const MAY_NOT_BACK = 'The sources may not back this claim';
 const NO_SOURCE = 'No source cited';
 const NOTICE = 'The claims in this answer could not be checked.';
 
@@ -331,93 +331,222 @@ async function ask() {
 }
 
 describe('claims the sources do not back', () => {
-  it('marks an unsupported claim in the answer', async () => {
-    /** A claim still unsupported after the check is marked in the answer as not supported by its sources. */
+  const FEE_FLAGGED = { text: FEE, verdict: 'unsupported', chunk_ids: [B], supporting: [], unbacked: [FEE] };
+  const FEE_UNCITED = { text: FEE, verdict: 'uncited', chunk_ids: [], supporting: [], unbacked: [] };
+  const flags = () => [...screen.queryAllByRole('button', { name: MAY_NOT_BACK }),
+                       ...screen.queryAllByRole('button', { name: NO_SOURCE })];
+  // The text a flag is about: tinted while the flag is hovered
+  const tinted = () => [...document.querySelectorAll('[data-tinted="true"]')].map((element) => element.textContent);
+
+  it('puts a red flag after a claim its sources do not back', async () => {
+    /** A claim the check found unsupported gets a flag saying the sources may not back it. */
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, FEE_FLAGGED)]));
+    chat('s1');
+
+    expect(await screen.findByRole('button', { name: MAY_NOT_BACK })).toBeInTheDocument();
+  });
+
+  it('puts a flag with its own text after a claim with no source', async () => {
+    /** A claim with no source cited gets a flag saying so. */
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, FEE_UNCITED)]));
+    chat('s1');
+
+    expect(await screen.findByRole('button', { name: NO_SOURCE })).toBeInTheDocument();
+  });
+
+  it('flags only the claims the sources do not back', async () => {
+    /** A supported claim gets no flag beside a flagged one. */
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, FEE_FLAGGED)]));
+    chat('s1');
+
+    await screen.findByRole('button', { name: MAY_NOT_BACK });
+    expect(flags()).toHaveLength(1);
+  });
+
+  it('leaves the flagged text without an underline', async () => {
+    /** The answer text is unmarked: only the flag shows. */
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, FEE_FLAGGED)]));
+    chat('s1');
+
+    await screen.findByRole('button', { name: MAY_NOT_BACK });
+    expect(screen.getByText(FEE).className).not.toContain('underline');
+    expect(tinted()).toEqual([]);
+  });
+
+  it('tints the text a flag is about while the flag is hovered', async () => {
+    /** Hovering a flag shows which text it concerns. */
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, FEE_FLAGGED)]));
+    chat('s1');
+
+    await userEvent.hover(await screen.findByRole('button', { name: MAY_NOT_BACK }));
+    expect(tinted()).toEqual([FEE]);
+  });
+
+  it('puts the flag after the sentence that lacks backing, not after the whole claim', async () => {
+    /** When only part of a claim lacks backing, the flag is about that sentence alone. */
+    const LATE = 'It is paid in advance';
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED,
+      { text: `${FEE}. ${LATE}`, verdict: 'unsupported', chunk_ids: [B], supporting: [], unbacked: [LATE] })],
+      { content: `${HOUSE} [1]. ${FEE}. ${LATE} [2].${SOURCES}` }));
+    chat('s1');
+
+    await userEvent.hover(await screen.findByRole('button', { name: MAY_NOT_BACK }));
+    expect(tinted()).toEqual([LATE]);
+  });
+
+  it('puts the flag after the whole claim when the result names no sentence', async () => {
+    /** A check result saved before it named the sentences lacking backing flags the whole claim. */
     history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED,
       { text: FEE, verdict: 'unsupported', chunk_ids: [B], supporting: [] })]));
     chat('s1');
 
-    expect(await screen.findByTitle(NOT_SUPPORTED)).toHaveTextContent(FEE);
-  });
-
-  it('marks an uncited claim in the answer', async () => {
-    /** A claim with no source is marked in the answer as having none. */
-    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED,
-      { text: FEE, verdict: 'uncited', chunk_ids: [], supporting: [] })]));
-    chat('s1');
-
-    expect(await screen.findByTitle(NO_SOURCE)).toHaveTextContent(FEE);
-  });
-
-  it('marks only the claims the sources do not back', async () => {
-    /** A supported claim is left unmarked beside a flagged one. */
-    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED,
-      { text: FEE, verdict: 'unsupported', chunk_ids: [B], supporting: [] })]));
-    chat('s1');
-
-    await screen.findByTitle(NOT_SUPPORTED);
-    const flagged = [...screen.queryAllByTitle(NOT_SUPPORTED), ...screen.queryAllByTitle(NO_SOURCE)];
-    expect(flagged.map((element) => element.textContent)).toEqual([FEE]);
+    await userEvent.hover(await screen.findByRole('button', { name: MAY_NOT_BACK }));
+    expect(tinted()).toEqual([FEE]);
   });
 
   it('lists a flagged claim below the answer when its text is not in the answer', async () => {
-    /** A flag whose text cannot be found in the answer is still shown, under the answer. */
+    /** A flag whose text cannot be found in the answer is still shown, under the answer, with its flag. */
     history(answer(2, [CITATIONS, checked(
-      { text: 'Bygglov takes ten weeks', verdict: 'unsupported', chunk_ids: [B], supporting: [] })]));
+      { text: 'Bygglov takes ten weeks', verdict: 'unsupported', chunk_ids: [B], supporting: [], unbacked: [] })]));
     chat('s1');
 
-    expect(await screen.findByText(/Unchecked claim: Bygglov takes ten weeks/)).toBeInTheDocument();
+    expect(await screen.findByText('Bygglov takes ten weeks')).toBeInTheDocument();
+    expect(flags()).toHaveLength(1);
+  });
+
+  it('gives the hover text in Swedish on the Swedish page', async () => {
+    /** The flag's text follows the page language. */
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'sv');
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, FEE_FLAGGED)]));
+    chat('s1');
+
+    expect(await screen.findByRole('button', { name: 'Källorna stöder kanske inte det här påståendet' }))
+      .toBeInTheDocument();
+    expect(screen.getByText('1 påstående kunde inte bekräftas av källorna.')).toBeInTheDocument();
   });
 });
 
-describe('a flagged claim says what its marking means', () => {
-  const FLAGGED = () => history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED,
-    { text: FEE, verdict: 'uncited', chunk_ids: [], supporting: [] })]));
+describe('the count of claims that could not be confirmed', () => {
+  const flagged = (text: string) => ({ text, verdict: 'unsupported', chunk_ids: [B], supporting: [], unbacked: [] });
 
-  it('explains the dotted underline under an answer with a flagged claim', async () => {
-    /** One line under the answer says that underlined text could not be confirmed by the sources (#105). */
-    FLAGGED();
+  it('says that one claim could not be confirmed', async () => {
+    /** One line under the answer counts the flagged claims. */
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, flagged(FEE))]));
     chat('s1');
 
-    expect(await screen.findByText(/Text with a dotted underline could not be confirmed by the sources/)).toBeInTheDocument();
+    expect(await screen.findByText('1 claim could not be confirmed by the sources.')).toBeInTheDocument();
   });
 
-  it('gives no explanation when no claim is flagged', async () => {
-    /** An answer whose claims are all supported carries no note about markings. */
+  it('counts every flagged claim', async () => {
+    /** Two flagged claims give a count of two. */
+    history(answer(2, [CITATIONS, checked(flagged(HOUSE), flagged(FEE))]));
+    chat('s1');
+
+    expect(await screen.findByText('2 claims could not be confirmed by the sources.')).toBeInTheDocument();
+  });
+
+  it('shows no count and no flag when nothing is flagged', async () => {
+    /** An answer whose claims are all supported carries neither. */
     history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED)]));
     chat('s1');
 
     await screen.findByText(new RegExp(HOUSE));
-    expect(screen.queryByText(/dotted underline/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/could not be confirmed/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: MAY_NOT_BACK })).not.toBeInTheDocument();
   });
 
-  it('shows the reason in the text when the warning sign is pressed', async () => {
-    /** The ⚠ after a flagged claim shows its reason on a press, so a touch screen gets it too. */
-    FLAGGED();
+  it('shows no count and no flag on an answer saved before the check', async () => {
+    /** An answer without a check result is shown as it was. */
+    history(answer(2, [CITATIONS]));
     chat('s1');
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Why is this marked?' }));
-    expect(screen.getByText('(No source cited)')).toBeInTheDocument();
+    await screen.findByText(new RegExp(HOUSE));
+    expect(screen.queryByText(/could not be confirmed/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: MAY_NOT_BACK })).not.toBeInTheDocument();
+  });
+});
+
+describe('a flag opens the claim with its sources', () => {
+  const CLAIM_VIEW = { name: 'Claim that could not be confirmed' };
+  const FEE_FLAGGED = { text: FEE, verdict: 'unsupported', chunk_ids: [B], supporting: [], unbacked: [FEE] };
+  const FEE_UNCITED = { text: FEE, verdict: 'uncited', chunk_ids: [], supporting: [], unbacked: [] };
+
+  it('shows the claim and why it is flagged', async () => {
+    /** Clicking a flag opens the source panel with the claim and its reason on top. */
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, FEE_FLAGGED)]));
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', { name: MAY_NOT_BACK }));
+    const view = within(screen.getByRole('region', CLAIM_VIEW));
+    expect(view.getByText(FEE)).toBeInTheDocument();
+    expect(view.getByText('The cited sources do not say this.')).toBeInTheDocument();
   });
 
-  it('marks a flagged claim with a dotted underline, not a highlight', async () => {
-    /** The marking reads as unconfirmed, not as a spelling error: a dotted underline and no background. */
-    FLAGGED();
+  it('shows the source texts the claim cites', async () => {
+    /** The cited chunks follow the claim, so the reader can compare. */
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, FEE_FLAGGED)]));
     chat('s1');
 
-    const mark = await screen.findByTitle(NO_SOURCE);
-    expect(mark.className).toContain('decoration-dotted');
-    expect(mark.className).not.toContain('decoration-wavy');
+    await userEvent.click(await screen.findByRole('button', { name: MAY_NOT_BACK }));
+    const panel = within(screen.getByRole('complementary'));
+    expect(panel.getAllByText('Taxa.').length).toBeGreaterThan(0);
+    expect(panel.queryByText('Bygglov krävs.')).not.toBeInTheDocument();
+  });
+
+  it('shows a claim with no source without a source part', async () => {
+    /** An uncited claim opens the panel with the claim and the reason only. */
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, FEE_UNCITED)]));
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', { name: NO_SOURCE }));
+    const panel = within(screen.getByRole('complementary'));
+    expect(panel.getByText('No source is cited for this claim.')).toBeInTheDocument();
+    expect(panel.queryByText('Taxa.')).not.toBeInTheDocument();
+    expect(panel.queryByText('Bygglov krävs.')).not.toBeInTheDocument();
+  });
+
+  it('shows the other claim when another flag is clicked', async () => {
+    /** The panel follows the flag clicked last. */
+    history(answer(2, [CITATIONS, checked(
+      { text: HOUSE, verdict: 'unsupported', chunk_ids: [A], supporting: [], unbacked: [HOUSE] }, FEE_UNCITED)]));
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', { name: MAY_NOT_BACK }));
+    await userEvent.click(screen.getByRole('button', { name: NO_SOURCE }));
+    const view = within(screen.getByRole('region', CLAIM_VIEW));
+    expect(view.getByText(FEE)).toBeInTheDocument();
+    expect(view.queryByText(HOUSE)).not.toBeInTheDocument();
+  });
+
+  it('opens a claim listed under the answer', async () => {
+    /** A flagged claim whose text is not in the answer opens the same panel from its line under the answer. */
+    history(answer(2, [CITATIONS, checked(
+      { text: 'Bygglov takes ten weeks', verdict: 'unsupported', chunk_ids: [B], supporting: [], unbacked: [] })]));
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', { name: MAY_NOT_BACK }));
+    expect(within(screen.getByRole('region', CLAIM_VIEW)).getByText('Bygglov takes ten weeks')).toBeInTheDocument();
+  });
+
+  it('opens a citation number without a claim view', async () => {
+    /** A citation chip still opens its source alone. */
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, FEE_FLAGGED)]));
+    chat('s1');
+
+    await screen.findByRole('button', { name: MAY_NOT_BACK });
+    await userEvent.click(screen.getByRole('button', { name: '1' }));
+    expect(screen.getByRole('complementary')).toBeInTheDocument();
+    expect(screen.queryByRole('region', CLAIM_VIEW)).not.toBeInTheDocument();
   });
 
   it('gives the reason in Swedish on the Swedish page', async () => {
-    /** The reason and the note follow the page language. */
+    /** The claim view follows the page language. */
     window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'sv');
-    FLAGGED();
+    history(answer(2, [CITATIONS, checked(HOUSE_SUPPORTED, FEE_UNCITED)]));
     chat('s1');
 
-    expect(await screen.findByTitle('Ingen källa angiven')).toHaveTextContent(FEE);
-    expect(screen.getByText(/Text med prickad understrykning kunde inte bekräftas av källorna/)).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole('button', { name: 'Ingen källa angiven' }));
+    expect(screen.getByText('Ingen källa anges för det här påståendet.')).toBeInTheDocument();
   });
 });
 
@@ -447,30 +576,6 @@ describe('an answer whose check could not run', () => {
     await screen.findByText(NOTICE);
     expect(screen.getAllByText(NOTICE)).toHaveLength(1);
   });
-});
-
-describe('while the claims are being checked', () => {
-  it('shows it under the streamed answer', async () => {
-    /** Once the answer has streamed and the check starts, the answer says its claims are being checked. */
-    server.use(http.post('*/api/chat/stream', () => openStream(
-      { type: 'session_id', session_id: 's9' },
-      { type: 'response.output_text.delta', delta: ANSWER },
-      { type: 'thinking', label: 'Checking the claims' },
-    )));
-    chat();
-    await ask();
-
-    expect(await screen.findByText('Checking claims…')).toBeInTheDocument();
-  });
-
-  it('shows it on an answer reopened before its check is done', async () => {
-    /** An answer saved with its text but no check yet, still generating, shows that its claims are being checked. */
-    history(answer(2, [CITATIONS], { status: 'streaming' }));
-    chat('s1');
-
-    expect(await screen.findByText('Checking claims…')).toBeInTheDocument();
-  });
-
 });
 
 describe('the source panel of a checked answer', () => {
@@ -616,7 +721,7 @@ describe('typing while an answer is on its way', () => {
     /** An answer left to finish in the background (saved as streaming) keeps Send off until it is done. */
     history(answer(2, [CITATIONS], { status: 'streaming' }));
     chat('s1');
-    await screen.findByText('Checking claims…');
+    await screen.findByText(CHECKING);
 
     await userEvent.type(screen.getByPlaceholderText(INPUT), 'And in Uppsala?');
 
@@ -870,5 +975,354 @@ describe('the question card', () => {
     chatWith([QUESTION, card({ options: ['A permanent home', 'A holiday home'] }, USE)]);
     const use = await screen.findByRole('group', { name: USE });
     expect(within(use).getByRole('button', { name: 'A permanent home' })).toBeInTheDocument();
+  });
+});
+
+// --- the claim check runs while the reader carries on (#137) ----------------------------------------
+
+const CHECKING = 'Checking the claims';
+const CHECK_FLAGGED = { status: 'checked', claims: [
+  HOUSE_SUPPORTED, { text: FEE, verdict: 'unsupported', chunk_ids: [B], supporting: [], unbacked: [FEE] }] };
+const CHECK_FAILED = { status: 'failed', claims: [] };
+
+// The events of an answer up to the start of its check: the text is complete, the check result is still to come
+const UNTIL_CHECK = [
+  { type: 'session_id', session_id: 's1' },
+  { type: 'response.output_text.delta', delta: ANSWER },
+  { type: 'pipeline', ...CITATIONS },
+  { type: 'thinking', label: CHECKING },
+];
+const result = (data: object) => [
+  { type: 'pipeline', stage: 'claim_check', data },
+  { type: 'response.completed' },
+  { type: 'done', session_id: 's1' },
+];
+
+// A stream the test feeds as it goes: the events given first, more with push, the end with push(..., close)
+function fedStream(...first: object[]) {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const encode = (event: object) => new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
+  const body = new ReadableStream<Uint8Array>({
+    start(started) {
+      controller = started;
+      first.forEach((event) => controller.enqueue(encode(event)));
+    },
+  });
+  return {
+    response: () => new HttpResponse(body, { headers: { 'Content-Type': 'text/event-stream' } }),
+    push: (...events: object[]) => events.forEach((event) => controller.enqueue(encode(event))),
+    close: () => controller.close(),
+  };
+}
+
+// Each question sent gets the next of `streams`
+function answerWith(...streams: ReturnType<typeof fedStream>[]) {
+  let sent = 0;
+  server.use(http.post('*/api/chat/stream', () => streams[sent++].response()));
+  return () => sent;
+}
+
+describe('sending while an answer is checked', () => {
+  it('lets the next question be sent once the answer text is finished', async () => {
+    /** The check of an answer does not hold the next question back. */
+    answerWith(fedStream(...UNTIL_CHECK));
+    chat();
+    await ask();
+    await screen.findByText(CHECKING);
+
+    await userEvent.type(screen.getByPlaceholderText('Ask about building permits...'), 'And the fee?');
+    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+  });
+
+  it('sends the next question while the earlier answer is checked', async () => {
+    /** A question sent during the check reaches the server. */
+    const sent = answerWith(fedStream(...UNTIL_CHECK), fedStream({ type: 'session_id', session_id: 's1' }));
+    chat();
+    await ask();
+    await screen.findByText(CHECKING);
+
+    await ask();
+    await waitFor(() => expect(sent()).toBe(2));
+  });
+
+  it('puts the check result on the earlier answer when a later one is streaming', async () => {
+    /** A result that arrives after the next question was sent lands on the answer it checked. */
+    const first = fedStream(...UNTIL_CHECK);
+    const second = fedStream({ type: 'session_id', session_id: 's1' },
+                              { type: 'response.output_text.delta', delta: 'The second answer' });
+    answerWith(first, second);
+    chat();
+    await ask();
+    await screen.findByText(CHECKING);
+    await ask();
+    await screen.findByText('The second answer');
+
+    first.push(...result(CHECK_FLAGGED));
+    first.close();
+
+    await userEvent.hover(await screen.findByRole('button', { name: MAY_NOT_BACK }));
+    const tinted = [...document.querySelectorAll('[data-tinted="true"]')].map((element) => element.textContent);
+    expect(tinted).toEqual([FEE]);
+    expect(screen.getByText('The second answer')).toBeInTheDocument();
+  });
+
+  it('keeps writing the later answer after the earlier check has landed', async () => {
+    /** The later answer goes on streaming into its own message once the earlier result is in. */
+    const first = fedStream(...UNTIL_CHECK);
+    const second = fedStream({ type: 'session_id', session_id: 's1' },
+                              { type: 'response.output_text.delta', delta: 'The second' });
+    answerWith(first, second);
+    chat();
+    await ask();
+    await screen.findByText(CHECKING);
+    await ask();
+    await screen.findByText('The second');
+
+    first.push(...result(CHECK_FLAGGED));
+    first.close();
+    await screen.findByRole('button', { name: MAY_NOT_BACK });
+    second.push({ type: 'response.output_text.delta', delta: ' answer goes on' });
+
+    expect(await screen.findByText('The second answer goes on')).toBeInTheDocument();
+    expect(screen.getAllByText(new RegExp(FEE))).toHaveLength(1);
+  });
+});
+
+describe('the status line of an answer being checked', () => {
+  it('pulses on the answer while its claims are checked', async () => {
+    /** A discreet line that pulses says the check is running, with no spinner. */
+    answerWith(fedStream(...UNTIL_CHECK));
+    chat();
+    await ask();
+
+    const line = await screen.findByText(CHECKING);
+    expect(line.className).toContain('animate-pulse');
+    expect(line.parentElement?.querySelector('.animate-spin')).toBeNull();
+  });
+
+  it('is in Swedish on the Swedish page', async () => {
+    /** The status line follows the page language. */
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'sv');
+    answerWith(fedStream(...UNTIL_CHECK));
+    chat();
+    await userEvent.type(screen.getByRole('textbox'), 'Behöver jag bygglov i Ydre?');
+    await userEvent.click(screen.getByRole('button', { name: 'Skicka' }));
+
+    expect(await screen.findByText('Kontrollerar påståendena')).toBeInTheDocument();
+  });
+
+  it('goes away when the check is done and its result shows', async () => {
+    /** With nothing sent meanwhile, the result replaces the status line. */
+    const stream = fedStream(...UNTIL_CHECK);
+    answerWith(stream);
+    chat();
+    await ask();
+    await screen.findByText(CHECKING);
+
+    stream.push(...result(CHECK_FLAGGED));
+    stream.close();
+
+    expect(await screen.findByRole('button', { name: MAY_NOT_BACK })).toBeInTheDocument();
+    expect(screen.queryByText(CHECKING)).not.toBeInTheDocument();
+  });
+
+  it('stays on the earlier answer while a later one streams', async () => {
+    /** Sending the next question does not end the earlier answer's status line. */
+    answerWith(fedStream(...UNTIL_CHECK), fedStream({ type: 'session_id', session_id: 's1' },
+                                                       { type: 'response.output_text.delta', delta: 'The second answer' }));
+    chat();
+    await ask();
+    await screen.findByText(CHECKING);
+    await ask();
+    await screen.findByText('The second answer');
+
+    expect(screen.getByText(CHECKING)).toBeInTheDocument();
+  });
+
+  it('pulses on an answer still being checked when its chat is reopened', async () => {
+    /** A chat reopened during the check shows the pulsing line on that answer. */
+    history(answer(2, [CITATIONS], { status: 'streaming' }));
+    chat('s1');
+
+    expect((await screen.findByText(CHECKING)).className).toContain('animate-pulse');
+  });
+
+  it('gives way to the result of a reopened answer once its check is done', async () => {
+    /** The reopened answer gets its result without a reload by the reader. */
+    history(answer(2, [CITATIONS], { status: 'streaming' }));
+    chat('s1');
+    await screen.findByText(CHECKING);
+
+    history(answer(2, [CITATIONS, { stage: 'claim_check', data: CHECK_FLAGGED }]));
+
+    expect(await screen.findByRole('button', { name: MAY_NOT_BACK }, { timeout: 4000 })).toBeInTheDocument();
+    expect(screen.queryByText(CHECKING)).not.toBeInTheDocument();
+  });
+
+  it('is absent from an answer saved before the check existed', async () => {
+    /** An old answer without a check result shows no status line. */
+    history(answer(2, [CITATIONS]));
+    chat('s1');
+
+    await screen.findByText(new RegExp(FEE));
+    expect(screen.queryByText(CHECKING)).not.toBeInTheDocument();
+    expect(screen.queryByText('Checking claims…')).not.toBeInTheDocument();
+  });
+});
+
+describe('a check that could not run', () => {
+  it('leaves a grey line in place of the status line', async () => {
+    /** A failed check says so in grey, not amber, and the status line goes away. */
+    const stream = fedStream(...UNTIL_CHECK);
+    answerWith(stream);
+    chat();
+    await ask();
+    await screen.findByText(CHECKING);
+
+    stream.push(...result(CHECK_FAILED));
+    stream.close();
+
+    const notice = await screen.findByText(NOTICE);
+    expect(notice.className).not.toContain('amber');
+    expect(notice.className).toContain('zinc');
+    expect(screen.queryByText(CHECKING)).not.toBeInTheDocument();
+  });
+});
+
+// --- retrying a claim check that could not run (#139) -----------------------------------------------
+
+describe('retrying a check that could not run', () => {
+  const RETRY = { name: 'Try again' };
+  // A failed check saved with what a retry needs, and one saved before retries existed
+  const failed = { stage: 'claim_check', data: { ...CHECK_FAILED, message_id: 2, retry: { answer: 'raw' } } };
+  const failedBefore = { stage: 'claim_check', data: CHECK_FAILED };
+  // The retry of message 2 answers with `data`, once `release` is called when given `held`
+  const retryAnswers = (data: object, held?: Promise<void>) => {
+    const asked: string[] = [];
+    server.use(http.post('*/api/chat/messages/:id/claim-check', async ({ params }) => {
+      asked.push(String(params.id));
+      await held;
+      return HttpResponse.json(data);
+    }));
+    return asked;
+  };
+
+  it('offers to try again on an answer whose check could not run', async () => {
+    /** The grey line of a failed check carries a retry button. */
+    history(answer(2, [CITATIONS, failed]));
+    chat('s1');
+
+    await screen.findByText(NOTICE);
+    expect(screen.getByRole('button', RETRY)).toBeInTheDocument();
+  });
+
+  it('asks the server to check that answer again', async () => {
+    /** The button asks for the check of the answer it sits on. */
+    history(answer(2, [CITATIONS, failed]));
+    const asked = retryAnswers(CHECK_FLAGGED);
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    await waitFor(() => expect(asked).toEqual(['2']));
+  });
+
+  it('shows the pulsing status line while the retry runs', async () => {
+    /** During a retry the grey line and its button give way to the status line. */
+    history(answer(2, [CITATIONS, failed]));
+    let release: () => void = () => {};
+    retryAnswers(CHECK_FLAGGED, new Promise<void>((resolve) => { release = resolve; }));
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    expect((await screen.findByText(CHECKING)).className).toContain('animate-pulse');
+    expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', RETRY)).not.toBeInTheDocument();
+    release();
+  });
+
+  it('shows the flags once the retry has run', async () => {
+    /** A retry that ran replaces the grey line by the result. */
+    history(answer(2, [CITATIONS, failed]));
+    retryAnswers(CHECK_FLAGGED);
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    expect(await screen.findByRole('button', { name: MAY_NOT_BACK })).toBeInTheDocument();
+    expect(screen.getByText('1 claim could not be confirmed by the sources.')).toBeInTheDocument();
+    expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(screen.queryByText(CHECKING)).not.toBeInTheDocument();
+  });
+
+  it('brings the grey line and the button back when the retry could not run either', async () => {
+    /** A retry that fails again leaves the answer as it was, to be retried once more. */
+    history(answer(2, [CITATIONS, failed]));
+    const asked = retryAnswers(failed.data);
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    await waitFor(() => expect(asked).toHaveLength(1));
+    expect(await screen.findByText(NOTICE)).toBeInTheDocument();
+    expect(screen.getByRole('button', RETRY)).toBeInTheDocument();
+  });
+
+  it('brings the grey line and the button back when the server cannot be reached', async () => {
+    /** A retry the server refuses or drops is no result: the answer stays retryable. */
+    history(answer(2, [CITATIONS, failed]));
+    server.use(http.post('*/api/chat/messages/:id/claim-check', () => HttpResponse.json({ detail: 'down' }, { status: 500 })));
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    expect(await screen.findByRole('button', RETRY)).toBeInTheDocument();
+    expect(screen.getByText(NOTICE)).toBeInTheDocument();
+  });
+
+  it('lets the next question be sent while a retry runs', async () => {
+    /** A retry holds nothing back. */
+    history(answer(2, [CITATIONS, failed]));
+    let release: () => void = () => {};
+    retryAnswers(CHECK_FLAGGED, new Promise<void>((resolve) => { release = resolve; }));
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    await screen.findByText(CHECKING);
+    await userEvent.type(screen.getByPlaceholderText('Ask about building permits...'), 'And the fee?');
+    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+    release();
+  });
+
+  it('offers no retry on a failed check saved without what a retry needs', async () => {
+    /** A check that failed before retries existed keeps its grey line alone. */
+    history(answer(2, [CITATIONS, failedBefore]));
+    chat('s1');
+
+    await screen.findByText(NOTICE);
+    expect(screen.queryByRole('button', RETRY)).not.toBeInTheDocument();
+  });
+
+  it('offers no retry on an answer whose check ran', async () => {
+    /** A check that ran, whatever it found, is not offered again. */
+    history(answer(2, [CITATIONS, { stage: 'claim_check', data: CHECK_FLAGGED }]));
+    chat('s1');
+
+    await screen.findByRole('button', { name: MAY_NOT_BACK });
+    expect(screen.queryByRole('button', RETRY)).not.toBeInTheDocument();
+  });
+
+  it('offers no retry on an answer saved before the check existed', async () => {
+    /** An answer that was never checked has no retry. */
+    history(answer(2, [CITATIONS]));
+    chat('s1');
+
+    await screen.findByText(new RegExp(FEE));
+    expect(screen.queryByRole('button', RETRY)).not.toBeInTheDocument();
+  });
+
+  it('names the button in Swedish on the Swedish page', async () => {
+    /** The button follows the page language. */
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'sv');
+    history(answer(2, [CITATIONS, failed]));
+    chat('s1');
+
+    expect(await screen.findByRole('button', { name: 'Försök igen' })).toBeInTheDocument();
   });
 });

@@ -172,8 +172,26 @@ One factual statement of a chat answer (a rule, number, deadline, fee, document 
 _Avoid_: statement, fact (when one claim of an answer is meant)
 
 **Claim check**:
-The live check of an agent answer once it has streamed: each **Claim** gets a claim verdict against the full text of the chunks it cites, *supported* (with the sentences that back it), *unsupported* or *uncited*. What is not supported goes back once to be re-cited or removed; what is still not supported is flagged in the answer. A check that could not run leaves the answer with a notice. The sentences that back a claim are underlined in the cited chunk when its source panel opens.
+The live check of an agent answer once it has streamed: each **Claim** gets a claim verdict against the full text of the chunks it cites, *supported* (with the sentences that back it), *unsupported* or *uncited*. What is not supported goes back once to be re-cited or removed; what is still not supported is flagged in the answer. A check that could not run leaves the answer with a notice. The sentences that back a claim are underlined in the cited chunk when its source panel opens. A fourth verdict, *skipped*, marks a hedge (a caution, a "may", a referral) the check left unjudged; it is never flagged, and only given when the check is set to skip hedges (off in the live check).
 _Avoid_: verdict (alone: that is the feasibility **Verdict**), grounding (the benchmark's offline judge)
+
+**Referee**:
+A stronger model (Claude Opus 5.5) that labels the **Claims** of saved answers, against the full text of their cited chunks and the place data, to grade the **Claim check**: is each claim supported (yes / partly / no), what kind of claim it is, and did an uncited sentence need a source. Its labels are frozen with the check's version, so a later check can be measured against them. Not a live step of the chat.
+_Avoid_: auditor, judge (the benchmark's answer grader)
+
+**Second referee**:
+A model of another family than the **Referee** (GPT-6 Luna) that labels the same stretches. Its labels sit beside the referee's and never replace them.
+
+**Disputed stretch**:
+A claim or uncited sentence the **Referee** and the **Second referee** label differently on two levels: one says the claim is supported ("yes") and the other does not ("partly" or "no"), or they differ on whether an uncited sentence needed a source. Left out of every agreement figure; an _agreed_ stretch is one they label alike.
+
+**Known-answer case**:
+A claim whose right verdict is known by construction, built by rule from a claim both referees call supported: the claim untouched (should pass), with a number changed, or with its source swapped (should be flagged). Used to measure the **Claim check** without trusting a referee.
+_Avoid_: synthetic claim, test claim
+
+**Partly supported claim**:
+A **Claim** whose sources state some of what it says and not the rest, often a conclusion or advice added on top of a rule the source does state. The **Claim check** flags it like an unsupported one; when asked for levels it also says full, partly or none, and when it judges a claim sentence by sentence it names the sentences its sources do not back.
+_Avoid_: half-true claim
 
 **Text report**:
 `data/geo/<code>/plan_text_report.md`, written by a match against the hosted corpus: the share of a kommun's plan polygons with documents, and for each of the others why it has none.

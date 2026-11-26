@@ -42,6 +42,7 @@ RESULT_FILE = re.compile(r"bench-(\d{8}-\d{6})-(?P<systems>[a-z-]+?)-(?P<answer>
                          r"(?:-explore-(?P<explore>low|medium|high|same))?(?P<tag>-cases_[a-z]+)?(?:-no-(?P<off>[a-z_-]+?))?(?:-x-(?P<label>[\w.-]+))?\.json$")
 RESULT_KEYS = ("task", "verdict", "verdict_ok", "points", "point_scores", "points_obstacle", "points_lever", "points_ask",
                "anchors", "anchors_hit", "proposals", "proposals_sourced", "mode", "mode_ok", "evidence", "grounded",
+               "claim_check", "claims_checked", "claims_supported", "claims_unsupported", "claims_uncited", "claim_support", "claim_list",
                "tool_calls", "map_views", "seconds", "cost", "comment", "answer", "judge_model")
 JOBS: dict[str, dict] = {}
 

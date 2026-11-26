@@ -16,6 +16,9 @@ Per case and system:
   anchors   propose: share of the `min_anchors` places of the reference the answer names (string match, no LLM)
   proposals propose: options the answer gives, and the share the cited sources support (LLM judge)
   mode      agent: the kind of question it chose in answer_ready, and whether it is the case's task
+  claim_support  agent: share of the answer's claims the live claim check (agentic.claim_check, the check the chat
+            runs) finds supported by the sources they cite; the rest are unsupported or uncited. --no-claim-check
+            leaves it out
   cost, seconds, tool calls
 
 The judge defaults to the systems' model (GPT-6 Luna): cheap but self-preferential, so read its scores as
@@ -45,11 +48,13 @@ from agentic.agent import (
     ANSWER_FORMAT,
     DEFAULT_MODEL,
     MODES_GUIDE,
+    OFF_TOPIC,
     ROLE,
     AgentRun,
     _add_usage,
     run_agent,
 )
+from agentic.claim_check import check_claims
 from agentic.health import health_lines
 from agentic.run import build_tools
 from agentic.tools import resolve_cited
@@ -322,6 +327,55 @@ def grade_answer(case: dict, answer: str, tools, judge_model: str, seen=()) -> d
     return row
 
 
+CLAIM_VERDICTS = ("supported", "unsupported", "uncited")
+
+
+def claim_support(run: AgentRun, tools, place: str | None = None) -> dict:
+    """The live claim check (agentic.claim_check.check_claims, as the chat runs it) on an agent run's answer, as stored
+    in a result row:
+
+    - `claim_check`: "checked", "failed" (the check could not run), or None when there is nothing to check: no answer
+      (an error, a question card) or an off-topic answer, which the chat does not check either.
+    - `claims_checked` and `claims_supported` / `claims_unsupported` / `claims_uncited`: the claims per verdict.
+    - `claim_support`: claims_supported / claims_checked; None when not checked or the answer makes no claim.
+    - `claim_list`: every claim, [{"text", "verdict", "chunk_ids"}], for agentic.claim_audit: what kind of claim
+      fails, and whether the check is right about it.
+
+    A cited id the agent shortened is resolved against the chunks it read. `place` is the pinned place's registry data
+    as the agent got it (place.context.place_context), which counts as a source of every claim; None when nothing is
+    pinned, as in agentic.bench's own runs."""
+    row = {"claim_check": None, "claims_checked": None, "claim_support": None, "claim_list": None,
+           **{f"claims_{verdict}": None for verdict in CLAIM_VERDICTS}}
+    if not run.answer or run.mode == OFF_TOPIC:
+        return row
+    check = check_claims(run.answer, lambda chunk_id: resolve_cited(tools.get_chunk, chunk_id, run.seen_chunks), place)
+    row["claim_check"] = check.status
+    if check.status != "checked":
+        return row
+    row["claims_checked"] = len(check.claims)
+    row["claim_list"] = [{"text": claim.text, "verdict": claim.verdict, "chunk_ids": claim.chunk_ids}
+                         for claim in check.claims]
+    for verdict in CLAIM_VERDICTS:
+        row[f"claims_{verdict}"] = sum(claim.verdict == verdict for claim in check.claims)
+    if check.claims:
+        row["claim_support"] = row["claims_supported"] / len(check.claims)
+    return row
+
+
+def claim_support_summary(rows: list[dict]) -> dict | None:
+    """The claim check over a system's rows: `answers` checked, `failed` checks, `claims`, and the share of all claims
+    per verdict (`supported`, `unsupported`, `uncited`; pooled over the answers, so a long answer weighs more than a
+    short one; None without claims). None when no row was put to the check."""
+    put = [row for row in rows if row.get("claim_check")]
+    if not put:
+        return None
+    checked = [row for row in put if row["claim_check"] == "checked"]
+    claims = sum(row["claims_checked"] for row in checked)
+    return {"answers": len(checked), "failed": len(put) - len(checked), "claims": claims,
+            **{verdict: sum(row[f"claims_{verdict}"] for row in checked) / claims if claims else None
+               for verdict in CLAIM_VERDICTS}}
+
+
 # The missing-info eval (#91): should-ask cases miss a fact only the user knows that changes the answer, should-answer
 # cases are general or complete questions; each half must reach MISSING_INFO_PASS
 MISSING_INFO_PATH = Path(__file__).resolve().parent / "cases_missing_info.jsonl"
@@ -542,6 +596,8 @@ def main() -> None:
     parser.add_argument("--baseline", type=Path,
                         help="missing-info cases: results file of the same cases before the change; the should-answer "
                              "half must score at least its key points")
+    parser.add_argument("--no-claim-check", action="store_true",
+                        help="agent: skip the live claim check of each answer (no decision model calls)")
     parser.add_argument("--leakage", action="store_true",
                         help="no LLM: print the rank of each evidence group in a plain search on the question, then exit")
     args = parser.parse_args()
@@ -631,6 +687,8 @@ def main() -> None:
             "comment": grade.get("comment"), "answer": run.answer, "steps": run.steps, "error": run.error,
             **asked_row,
         }
+        if system == "agent" and not args.no_claim_check:
+            row.update(claim_support(run, tools))
         if missing_info:
             row["judge_cost"] += row.pop("ask_judge_cost", 0.0)
             if case["expect"] == "answer" and row.get("asked"):  # a card where an answer was due scores nothing
@@ -685,6 +743,13 @@ def main() -> None:
         print(f"{system:<8} {shown('verdict_ok'):>10}  {mean('points'):>6.2f}  {mean('evidence'):>8.2f}  "
               f"{mean('unsupported'):>11.2f}  {mean('tool_calls'):>10.1f}  {mean('seconds'):>7.0f}  ${mean('cost'):.4f}"
               f"  llm_calls {mean('llm_calls'):.1f}  first_token {sum(first) / len(first) if first else 0:.0f}s")
+        support = claim_support_summary(mine)
+        if support:  # the live claim check (agentic.claim_check), over all claims of the checked answers
+            def share(verdict: str) -> str:
+                return "-" if support[verdict] is None else f"{support[verdict]:.0%}"  # noqa: B023 - the closure is called within this iteration only
+            print(f"         claim check: {support['answers']} answers, {support['claims']} claims: "
+                  f"supported {share('supported')}, unsupported {share('unsupported')}, uncited {share('uncited')}"
+                  + (f"; {support['failed']} checks failed" if support["failed"] else ""))
         tasks = sorted({row.get("task", "verdict") for row in mine})
         if tasks != ["verdict"]:  # the task-specific scores, per task
             for task in tasks:

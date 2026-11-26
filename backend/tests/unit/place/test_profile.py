@@ -424,6 +424,14 @@ def test_hosted_documents_without_a_local_corpus_raises(monkeypatch):
         hosted_documents([MAP_ID])
 
 
+def test_hosted_documents_are_read_from_the_agents_corpus(monkeypatch):
+    """The agent chat serves the corpus without RETRIEVAL_BACKEND=local: its pin still gets the plan documents."""
+    serve_corpus(monkeypatch, FakeCorpus())
+    monkeypatch.delenv("RETRIEVAL_BACKEND")
+    monkeypatch.setenv("CHAT_MODE", "agent")
+    assert MAP_ID in hosted_documents([MAP_ID])
+
+
 def test_hosted_documents_with_an_unreachable_corpus_raises(monkeypatch):
     """A driver error comes out as CorpusUnavailable."""
     serve_corpus(monkeypatch, DownCorpus())
