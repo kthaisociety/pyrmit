@@ -5,10 +5,18 @@ import { ArrowLeft, LogOut, Trash2, Check, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
 import { useLanguage } from '@/lib/i18n';
 import ApiKeySettings from '@/components/ApiKeySettings';
+import LanguageSwitch from '@/components/LanguageSwitch';
 import UserRoleSettings, { ROLE_LABEL } from '@/components/UserRoleSettings';
 import { isOwner, type CurrentUser } from '@/lib/roles';
 
 type User = CurrentUser;
+
+// The grouped-card look shared by every section of the view (ApiKeySettings and UserRoleSettings repeat CARD and
+// HEADING): a white rounded card on the light grey page (header and page one colour), as in iOS settings and the place card.
+const CARD = 'rounded-xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-zinc-800 dark:ring-white/10';
+const HEADING = 'px-1 text-[13px] font-semibold text-zinc-500 dark:text-zinc-400';
+const INPUT = 'px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm';
+const PRIMARY = 'shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2';
 
 interface SettingsProps {
   user: User;
@@ -110,33 +118,42 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
   };
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full bg-zinc-50 dark:bg-zinc-900">
       {/* Header */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800 px-6 py-4 flex items-center gap-3">
+      <div className="px-6 py-3 flex items-center gap-3">
         <button
           onClick={onBack}
-          className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+          className="p-1.5 rounded-lg hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-lg font-semibold">{t('settings.title')}</h1>
       </div>
 
-      {/* Content */}
+      {/* Content: iOS-style grouped cards, a small grey heading above each */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-lg mx-auto p-6 space-y-8">
+        <div className="max-w-lg mx-auto px-4 py-5 space-y-5">
+
+          {/* Language */}
+          <section className="space-y-1.5">
+            <h2 className={HEADING}>{t('settings.language')}</h2>
+            <div className={`${CARD} flex items-center justify-between gap-3 px-4 py-3`}>
+              <span className="text-sm">{t('language.switch')}</span>
+              <LanguageSwitch />
+            </div>
+          </section>
 
           {/* Account Info */}
-          <section>
-            <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">{t('settings.account')}</h2>
-            <div className="flex items-center gap-4 p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
-              <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-lg">
+          <section className="space-y-1.5">
+            <h2 className={HEADING}>{t('settings.account')}</h2>
+            <div className={`${CARD} flex items-center gap-3 px-4 py-3`}>
+              <div className="w-11 h-11 shrink-0 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold">
                 {user.name.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <p className="font-medium">{user.name}</p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">{user.email}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              <div className="min-w-0">
+                <p className="font-medium truncate">{user.name}</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 truncate">{user.email}</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {t('settings.role')}: {t(ROLE_LABEL[user.role ?? 'user'])}
                 </p>
               </div>
@@ -144,74 +161,78 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
           </section>
 
           {/* Change Name */}
-          <section>
-            <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">{t('settings.displayName')}</h2>
-            <form onSubmit={handleUpdateName} className="space-y-3">
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                minLength={2}
-                maxLength={100}
-              />
+          <section className="space-y-1.5">
+            <h2 className={HEADING}>{t('settings.displayName')}</h2>
+            <form onSubmit={handleUpdateName} className={`${CARD} p-3 space-y-2`}>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={`${INPUT} flex-1 min-w-0`}
+                  minLength={2}
+                  maxLength={100}
+                />
+                <button
+                  type="submit"
+                  disabled={nameLoading || name.trim() === user.name || name.trim().length < 2}
+                  className={PRIMARY}
+                >
+                  {nameSuccess ? (
+                    <>
+                      <Check size={14} />
+                      {t('settings.saved')}
+                    </>
+                  ) : nameLoading ? t('settings.saving') : t('settings.updateName')}
+                </button>
+              </div>
               {nameError && (
                 <p className="text-red-500 text-sm">{nameError}</p>
               )}
-              <button
-                type="submit"
-                disabled={nameLoading || name.trim() === user.name || name.trim().length < 2}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {nameSuccess ? (
-                  <>
-                    <Check size={14} />
-                    {t('settings.saved')}
-                  </>
-                ) : nameLoading ? t('settings.saving') : t('settings.updateName')}
-              </button>
             </form>
           </section>
 
           {/* Change Password */}
-          <section>
-            <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">{t('settings.changePasswordHeading')}</h2>
-            <form onSubmit={handleChangePassword} className="space-y-3">
-              <div>
-                <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">{t('settings.currentPassword')}</label>
+          <section className="space-y-1.5">
+            <h2 className={HEADING}>{t('settings.changePasswordHeading')}</h2>
+            <form onSubmit={handleChangePassword} className={`${CARD} p-3 space-y-2`}>
+              <label className="block">
+                <span className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('settings.currentPassword')}</span>
                 <input
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  className={`${INPUT} w-full`}
                   minLength={8}
                 />
-              </div>
-              <div>
-                <label className="block text-sm text-zinc-600 dark:text-zinc-400 mb-1">{t('settings.newPassword')}</label>
+              </label>
+              <label className="block">
+                <span className="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">{t('settings.newPassword')}</span>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                  className={`${INPUT} w-full`}
                   minLength={8}
                 />
-              </div>
+              </label>
               {passwordError && (
                 <p className="text-red-500 text-sm">{passwordError}</p>
               )}
-              <button
-                type="submit"
-                disabled={passwordLoading || !currentPassword || !newPassword || newPassword.length < 8}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {passwordSuccess ? (
-                  <>
-                    <Check size={14} />
-                    {t('settings.changed')}
-                  </>
-                ) : passwordLoading ? t('settings.changing') : t('settings.changePassword')}
-              </button>
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  disabled={passwordLoading || !currentPassword || !newPassword || newPassword.length < 8}
+                  className={PRIMARY}
+                >
+                  {passwordSuccess ? (
+                    <>
+                      <Check size={14} />
+                      {t('settings.changed')}
+                    </>
+                  ) : passwordLoading ? t('settings.changing') : t('settings.changePassword')}
+                </button>
+              </div>
             </form>
           </section>
 
@@ -221,11 +242,11 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
           {isOwner(user) && <UserRoleSettings currentUserId={user.id} />}
 
           {/* Danger Zone */}
-          <section>
-            <h2 className="text-sm font-semibold text-red-500 uppercase tracking-wider mb-4">{t('settings.dangerZone')}</h2>
-            <div className="space-y-3 p-4 border border-red-200 dark:border-red-900 rounded-xl">
+          <section className="space-y-1.5">
+            <h2 className="px-1 text-[13px] font-semibold text-red-500">{t('settings.dangerZone')}</h2>
+            <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-red-200 dark:bg-zinc-800 dark:ring-red-900/70 divide-y divide-zinc-200/70 dark:divide-white/10">
               {/* Clear All Chats */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <div>
                   <p className="text-sm font-medium">{t('settings.clearAllChats')}</p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('settings.clearAllChatsHint')}</p>
@@ -249,7 +270,7 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
                 ) : (
                   <button
                     onClick={() => setConfirmClear(true)}
-                    className="px-3 py-1.5 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-medium rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+                    className="shrink-0 px-3 py-1.5 border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-medium rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
                   >
                     <span className="flex items-center gap-1.5">
                       <Trash2 size={12} />
@@ -259,27 +280,26 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
                 )}
               </div>
 
-              {/* Divider */}
-              <div className="border-t border-red-100 dark:border-red-900"></div>
-
               {/* Sign Out */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">{t('settings.signOutHeading')}</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('settings.signOutHint')}</p>
+              <div className="px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium">{t('settings.signOutHeading')}</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('settings.signOutHint')}</p>
+                  </div>
+                  <button
+                    onClick={onLogout}
+                    disabled={logoutLoading}
+                    className="shrink-0 px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-medium rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <LogOut size={12} />
+                      {logoutLoading ? t('settings.signingOut') : t('settings.signOut')}
+                    </span>
+                  </button>
                 </div>
-                <button
-                  onClick={onLogout}
-                  disabled={logoutLoading}
-                  className="px-3 py-1.5 border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 text-xs font-medium rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
-                >
-                  <span className="flex items-center gap-1.5">
-                    <LogOut size={12} />
-                    {logoutLoading ? t('settings.signingOut') : t('settings.signOut')}
-                  </span>
-                </button>
+                {logoutError && <p role="alert" className="mt-2 text-xs text-red-600">{logoutError}</p>}
               </div>
-              {logoutError && <p role="alert" className="text-xs text-red-600">{logoutError}</p>}
             </div>
           </section>
 

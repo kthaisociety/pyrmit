@@ -40,6 +40,7 @@ export const en = {
 
   'settings.title': 'Settings',
   'settings.account': 'Account',
+  'settings.language': 'Language',
   'settings.displayName': 'Display Name',
   'settings.updateNameFailed': 'Failed to update name',
   'settings.saved': 'Saved',
@@ -308,6 +309,7 @@ export const sv: Record<MessageKey, string> = {
 
   'settings.title': 'Inställningar',
   'settings.account': 'Konto',
+  'settings.language': 'Språk',
   'settings.displayName': 'Visningsnamn',
   'settings.updateNameFailed': 'Det gick inte att uppdatera namnet',
   'settings.saved': 'Sparat',

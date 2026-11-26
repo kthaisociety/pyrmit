@@ -1,5 +1,6 @@
 // Unit tests for components/Settings.tsx.
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -44,5 +45,37 @@ describe('Settings', () => {
   it.each<Role>(['developer', 'user'])('hides the users and roles section from a %s', (role) => {
     renderSettings(role);
     expect(screen.queryByText('Users and roles')).not.toBeInTheDocument();
+  });
+
+  it('has a language section', () => {
+    /** The settings view carries a Language heading. */
+    renderSettings('developer');
+
+    expect(screen.getByRole('heading', { name: 'Language' })).toBeInTheDocument();
+  });
+
+  it('places the language section first', () => {
+    /** Language is the first section heading of the settings view. */
+    renderSettings('developer');
+
+    expect(screen.getAllByRole('heading', { level: 2 })[0]).toHaveTextContent('Language');
+  });
+
+  it('switches the page to Swedish from settings', async () => {
+    /** Choosing Svenska in settings turns the settings texts Swedish at once. */
+    renderSettings('developer');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Svenska' }));
+
+    expect(await screen.findByRole('heading', { name: 'Inställningar' })).toBeInTheDocument();
+  });
+
+  it('names the language section in Swedish once Svenska is chosen', async () => {
+    /** The section's own heading reads Språk on the Swedish page. */
+    renderSettings('developer');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Svenska' }));
+
+    expect(await screen.findByRole('heading', { name: 'Språk' })).toBeInTheDocument();
   });
 });

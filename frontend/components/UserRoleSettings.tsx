@@ -78,21 +78,21 @@ export default function UserRoleSettings({ currentUserId }: { currentUserId: str
   };
 
   return (
-    <section>
-      <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
+    <section className="space-y-1.5">
+      <h2 className="px-1 text-[13px] font-semibold text-zinc-500 dark:text-zinc-400">
         {t('settings.roles.heading')}
       </h2>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">{t('settings.roles.hint')}</p>
+      <p className="px-1 text-xs text-zinc-500 dark:text-zinc-400">{t('settings.roles.hint')}</p>
       {loadError ? (
         <p role="alert" className="text-red-500 text-sm">{loadError}</p>
       ) : !rows ? (
         <p className="text-sm text-zinc-500">{t('settings.roles.loading')}</p>
       ) : (
-        <ul className="divide-y divide-zinc-200 dark:divide-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl">
+        <ul className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-zinc-800 dark:ring-white/10 divide-y divide-zinc-200/70 dark:divide-white/10">
           {rows.map((row) => {
             const locked = row.role === 'owner' && (row.from_owner_emails || owners <= 1);
             return (
-              <li key={row.id} className="flex items-center justify-between gap-3 px-3 py-2">
+              <li key={row.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">
                     {row.name || row.email}

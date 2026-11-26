@@ -93,21 +93,22 @@ export default function ApiKeySettings() {
   const showForm = status?.enabled && (!status.has_key || editing);
 
   return (
-    <section>
-      <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">
+    <section className="space-y-1.5">
+      <h2 className="px-1 text-[13px] font-semibold text-zinc-500 dark:text-zinc-400">
         {t('settings.apiKey.heading')}
       </h2>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">{t('settings.apiKey.hint')}</p>
+      <div className="rounded-xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-zinc-800 dark:ring-white/10 p-3 space-y-3">
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('settings.apiKey.hint')}</p>
 
       {loadError ? (
         <p role="alert" className="text-red-500 text-sm">{loadError}</p>
       ) : !status ? (
         <p className="text-sm text-zinc-500">{t('settings.apiKey.loading')}</p>
       ) : !status.enabled ? (
-        <p className="text-sm p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">{t('settings.apiKey.off')}</p>
+        <p className="text-sm p-3 bg-zinc-50 dark:bg-zinc-700/40 rounded-lg">{t('settings.apiKey.off')}</p>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
+          <div className="flex items-center justify-between gap-3 p-3 bg-zinc-50 dark:bg-zinc-700/40 rounded-lg">
             <span className="flex items-center gap-2 text-sm">
               <KeyRound size={14} className="text-zinc-500" />
               {status.has_key && status.last4
@@ -151,7 +152,7 @@ export default function ApiKeySettings() {
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   placeholder={t('settings.apiKey.placeholder')}
-                  className="w-full px-4 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
+                  className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
                 />
               </label>
               <div className="flex items-center gap-2">
@@ -180,6 +181,7 @@ export default function ApiKeySettings() {
           {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
         </div>
       )}
+      </div>
     </section>
   );
 }
