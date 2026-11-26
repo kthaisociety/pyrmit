@@ -154,6 +154,10 @@ function getCitations(pipeline: PipelineEvent[]): Citation[] {
 // The claim check of an answer (#82): null for an answer saved before the check existed, or not checked yet
 interface ClaimCheck {
   status: 'checked' | 'failed';
+  // A check that could not run, saved with what running it again needs (#139): the chat message to ask for.
+  // Absent from a check that ran, and from one that failed before retries existed.
+  message_id?: number;
+  retry?: unknown;
   claims: {
     text: string;
     verdict: 'supported' | 'unsupported' | 'uncited';
@@ -751,8 +755,27 @@ function AssistantBubble({
   // Agent answers saved mid-run: their trace already holds the tool calls made so far
   const steps = inBackground ? stepsFromTrace(message.pipeline ?? []) : message.steps ?? [];
   const showProgress = (isStreaming || inBackground) && !hasBody && steps.length > 0;
-  const claimCheck = getClaimCheck(message.pipeline ?? []);
-  const checking = hasBody && !claimCheck && (inBackground || (isStreaming && startedChecking(message.steps)));
+  // A check run again from the retry button (#139): its result stands in for the failed one until the chat is
+  // loaded again, which brings the saved result
+  const [retried, setRetried] = useState<ClaimCheck | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const claimCheck = retried ?? getClaimCheck(message.pipeline ?? []);
+  const canRetry = claimCheck?.status === 'failed' && Boolean(claimCheck.retry) && claimCheck.message_id != null;
+  const retryCheck = async () => {
+    if (!canRetry) return;
+    setRetrying(true);
+    try {
+      const response = await authFetch(`/api/chat/messages/${claimCheck.message_id}/claim-check`, { method: 'POST' });
+      // A retry the server refused or dropped is no result: the answer stays as it was, to be retried again
+      if (response.ok) setRetried((await response.json()) as ClaimCheck);
+    } catch (error) {
+      console.error('Could not run the claim check again', error);
+    } finally {
+      setRetrying(false);
+    }
+  };
+  const checking = retrying
+    || (hasBody && !claimCheck && (inBackground || (isStreaming && startedChecking(message.steps))));
   // A question card replaces the text of its questions once the answer is done (the text is the same questions)
   const showCard = card !== null && !isStreaming && !inBackground;
 
@@ -794,9 +817,15 @@ function AssistantBubble({
               {t('chat.checkingClaims')}
             </p>
           )}
-          {claimCheck?.status === 'failed' && (
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-              {t('chat.claimsNotChecked')}
+          {claimCheck?.status === 'failed' && !retrying && (
+            <p className="mt-2 text-xs">
+              <span className="text-zinc-500 dark:text-zinc-400">{t('chat.claimsNotChecked')}</span>
+              {canRetry && (
+                <button type="button" onClick={() => void retryCheck()}
+                        className="ml-2 font-medium text-zinc-700 underline underline-offset-2 hover:text-zinc-900 dark:text-zinc-200 dark:hover:text-white">
+                  {t('chat.retryCheck')}
+                </button>
+              )}
             </p>
           )}
         </div>

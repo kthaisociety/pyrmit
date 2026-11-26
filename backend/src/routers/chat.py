@@ -6,6 +6,7 @@ import re
 import threading
 import time
 import uuid
+from types import SimpleNamespace
 from typing import Generator
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -122,7 +123,8 @@ def _failed_check(run, place: str | None, message_id: int) -> dict:
     "message_id": the answer's chat message, "retry": {"answer": the agent's raw answer, "seen_chunks": the chunk
     ids the agent read, "place": the place data it was given, or None}}. `retry` is what `retry_claim_check` needs to
     run the same check again; a check that ran carries neither key."""
-    raise NotImplementedError
+    return {"status": "failed", "claims": [], "message_id": message_id,
+            "retry": {"answer": run.answer, "seen_chunks": list(run.seen_chunks), "place": place}}
 
 
 def _agent_output_for_trace(output: dict) -> dict:
@@ -543,7 +545,10 @@ def chat_stream(
                     run = outcome.get("run")
                     if _makes_claims(run, asked):
                         yield _sse({"type": "thinking", "label": "Checking the claims"})
-                        yield emit("claim_check", **_check_claims(run, place))
+                        check = _check_claims(run, place)
+                        if check["status"] == "failed":  # kept with what a retry needs (#139)
+                            check = _failed_check(run, place, assistant_id)
+                        yield emit("claim_check", **check)
                     yield _sse({"type": "response.completed"})
                     yield _sse({"type": "done", "session_id": session_id})
                     return
@@ -914,7 +919,25 @@ def retry_claim_check(message_id: int, db: Session = Depends(get_db),
 
     404 when the message does not exist or its chat session is not the user's. 409 when the message has no failed
     check that can be run again: its check ran, it was never checked, or it failed before `retry` was saved."""
-    raise NotImplementedError
+    message = db.get(models.ChatMessage, message_id)
+    if message is None or message.session_id is None:
+        raise HTTPException(status_code=404, detail="Message not found")
+    _get_user_session(message.session_id, user.id, db)
+    trace = list(message.trace or [])
+    at = next((index for index, event in enumerate(trace) if event.get("stage") == "claim_check"), None)
+    failed = trace[at]["data"] if at is not None else {}
+    retry = failed.get("retry")
+    if failed.get("status") != "failed" or not retry:
+        raise HTTPException(status_code=409, detail="This answer has no failed claim check to run again")
+    run = SimpleNamespace(answer=retry["answer"], seen_chunks=retry.get("seen_chunks") or [])
+    with openrouter_key(user_keys.key_for(db, user.id)):
+        check = _check_claims(run, retry.get("place"))
+    if check["status"] == "failed":
+        return failed  # as it was: the next retry needs the same data
+    trace[at] = {**trace[at], "data": check}
+    message.trace = trace
+    db.commit()
+    return check
 
 
 @router.get("/history", response_model=list[schemas.MessageResponse])
