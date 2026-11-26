@@ -49,7 +49,7 @@ _Avoid_: page language (the UI's language choice, which never affects the answer
 The Swedish domain terms an English text keeps in Swedish (bygglov, strandskydd, detaljplan, ...), each explained in English on first use: in an answer by the model, in the **Place card**'s notes and permits in parentheses, and on the English page as a tooltip. A term not in it stays in Swedish without explanation.
 
 **Page language**:
-The language of the page's own texts, Swedish or English, chosen with the language switch and remembered per browser; a first visit follows the browser's preferred language (Swedish for sv, else English). It also sets the language of the **Place card**, but never that of an answer.
+The language of the page's own texts, Swedish or English, chosen with the language switch (in Settings, and on the access gate and sign-in page) and remembered per browser; a first visit follows the browser's preferred language (Swedish for sv, else English). It also sets the language of the **Place card**, but never that of an answer.
 _Avoid_: answer language (decided per question by the model)
 
 **Law agent**:

@@ -321,7 +321,7 @@ Frontend (`frontend/.env`):
 - `frontend/lib/auth.ts` -- Token storage (localStorage), `authFetch`, access-gate redirect
 - `frontend/lib/i18n.tsx` -- `LanguageProvider` (page language, remembered in localStorage `pyrmit.language`, glossary fetched once), `useLanguage().t`, `fill` for `{name}` placeholders (ADR-0012)
 - `frontend/lib/messages.ts` -- the page's texts, `en` and `sv`, one key per text
-- `frontend/components/LanguageSwitch.tsx` -- SV / EN switch, on the access gate, the sign-in page and in the sidebar footer
+- `frontend/components/LanguageSwitch.tsx` -- SV / EN switch, on the access gate, the sign-in page and first in Settings (#133)
 - `frontend/components/Term.tsx` -- a Swedish domain term, with its glossary explanation as tooltip on the English page (ADR-0014)
 - `frontend/lib/dev-access.ts`, `frontend/lib/access-gate-server.ts` -- Access-gate cookie helpers
 - `frontend/app/(protected)/page.tsx` -- Main page: Sidebar + Chat
@@ -370,8 +370,8 @@ Frontend (`frontend/.env`):
 - `frontend/components/PipelineBrowser.tsx` -- Pipeline view (sidebar, below Benchmark), progressive: an introduction,
   a strip of the six steps (key number + status, click to open), one card per step (status, tiles; opened: what it does,
   how it is measured, collapsible detail sections), a glossary
-- `frontend/components/Sidebar.tsx` -- Session list, new chat, Benchmark / Pipeline / Database / Settings buttons, user info
-- `frontend/components/Settings.tsx` -- Profile / password settings
+- `frontend/components/Sidebar.tsx` -- Session list, new chat, Benchmark / Pipeline / Database buttons, and at the bottom the profile button (initial + name) that opens Settings (#133)
+- `frontend/components/Settings.tsx` -- Language, profile, password and the other settings
 - `frontend/components/UserRoleSettings.tsx` -- Settings section for owners: every user with a role select; the last owner and `OWNER_EMAILS` owners are locked, a 409's message is shown (#112)
 - `frontend/lib/roles.ts` -- `Role`, `CurrentUser`, `isOwner` / `isStaff`, for showing or hiding admin features only (the backend checks)
 - `frontend/components/ApiKeySettings.tsx` -- Settings section for the user's own OpenRouter key: paste, replace, remove; shows "Key set (…abcd)", "Using the shared key" or that the feature is off (#108)

@@ -5,7 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 
 import Sidebar from '@/components/Sidebar';
-import { LanguageProvider } from '@/lib/i18n';
+import { LANGUAGE_STORAGE_KEY, LanguageProvider } from '@/lib/i18n';
 
 import { server } from '../../mocks/server';
 
@@ -78,14 +78,6 @@ describe('Sidebar', () => {
     expect(props.onNewChat).toHaveBeenCalled();
   });
 
-  it('shows the user initial and email', async () => {
-    renderSidebar();
-
-    expect(screen.getByText('A')).toBeInTheDocument();
-    expect(screen.getByText('anna@example.com')).toBeInTheDocument();
-    await screen.findByText('Bygglov Storgatan 3');
-  });
-
   it('opens the Database view from the sidebar', async () => {
     const props = renderSidebar();
 
@@ -119,22 +111,14 @@ describe('Sidebar', () => {
     for (const name of [/Benchmark/, /Pipeline/, /Database/]) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
     }
-    expect(screen.getByRole('button', { name: /Settings/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /anna/ })).toBeInTheDocument();
   });
 
-  it('carries the language switch', () => {
-    /** The sidebar has the Svenska / English switch. */
-    renderSidebar();
-
-    expect(screen.getByRole('button', { name: 'Svenska' })).toBeInTheDocument();
-  });
-
-  it('shows its texts in Swedish once Svenska is chosen', async () => {
-    /** Choosing Svenska in the sidebar turns its texts Swedish. */
+  it('shows its texts in Swedish when Swedish is the chosen language', async () => {
+    /** With Swedish chosen (in settings, remembered per browser), the sidebar's texts are Swedish. */
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'sv');
     server.use(http.get('*/api/sessions', () => HttpResponse.json([])));
     renderSidebar();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Svenska' }));
 
     expect(await screen.findByRole('button', { name: 'Ny chatt' })).toBeInTheDocument();
   });
