@@ -19,6 +19,7 @@ Rule-based, no LLM:
 import re
 import sqlite3
 from collections import Counter, defaultdict
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
@@ -51,8 +52,11 @@ NOISE_WORDS = (r"plankarta|plankort|karta|planbeskrivning|beskrivning|bestämmel
 
 STATUS_PAGE = [("in_force", r"gallande|gällande|antagna|laga-?kraft|vunnit"), ("in_progress", r"pagaende|pågående|samrad|granskning"),
                ("repealed", r"upphavd|upphävd")]
-LAGA_KRAFT = re.compile(r"laga\s*kraft\s*(?:den\s*)?[:\-–]?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\s+\w+\s+\d{4})", re.IGNORECASE)
-ANTAGEN = re.compile(r"antag(?:en|ande|ningsbeslut)[^\n]{0,40}?(\d{4}-\d{2}-\d{2})", re.IGNORECASE)
+# The text of a date as a document writes it: read_date decides whether it is one (a month word that is not Swedish
+# or a day that does not exist gives no date; a number with a two-digit year or no separators is not found at all)
+DATE_TEXT = r"(\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{4}|\d{1,2}\s+[^\W\d_]+\.?\s+\d{4})"
+LAGA_KRAFT = re.compile(rf"laga\s*kraft\s*(?:den\s*)?[:\-–]?\s*{DATE_TEXT}", re.IGNORECASE)
+ANTAGEN = re.compile(rf"antag(?:en|et|ande|ningsbeslut)[^\n]{{0,40}}?{DATE_TEXT}", re.IGNORECASE)
 STAGES = [("in_force", r"laga\s*kraft"), ("adopted", r"antagandehandling"), ("review", r"granskningshandling"),
           ("consultation", r"samrådshandling|samradshandling")]
 PLAN_NUMBER = re.compile(r"\b(?:Dp|DP|Detaljplan nr\.?|Plan nr\.?|Akt(?:nr)?\.?)\s*([0-9][0-9A-Za-z:/\-.]{0,14})")
@@ -79,6 +83,37 @@ TOPICS = {
     "noise": r"buller|\bdB\b",
     "design": r"utformning|fasad|material|kulör",
 }
+
+
+MONTHS = {name: number for number, names in enumerate(
+    [("jan", "januari"), ("feb", "februari"), ("mar", "mars"), ("apr", "april"), ("maj",), ("jun", "juni"),
+     ("jul", "juli"), ("aug", "augusti"), ("sep", "sept", "september"), ("okt", "oktober"), ("nov", "november"),
+     ("dec", "december")], start=1) for name in names}
+FIRST_YEAR = 1700
+YEAR_FIRST = re.compile(r"(\d{4})[./-](\d{1,2})[./-](\d{1,2})")
+YEAR_LAST = re.compile(r"(\d{1,2})[./-](\d{1,2})[./-](\d{4})")
+DAY_MONTH_NAME = re.compile(r"(\d{1,2})\s+([^\W\d_]+)\.?\s+(\d{4})")
+
+
+def read_date(text: str) -> str | None:
+    """The date a plan's document wrote as YYYY-MM-DD, or None when the text is not a real date: a day, Swedish
+    month name and year, or three numbers separated by . / or - (year first or last, the month in the middle, read in
+    Swedish order). Digit-only dates and two-digit years are not read; nothing is guessed."""
+    text = " ".join((text or "").split()).lower()
+    if match := YEAR_FIRST.fullmatch(text):
+        year, month, day = match.groups()
+    elif match := YEAR_LAST.fullmatch(text):
+        day, month, year = match.groups()
+    elif match := DAY_MONTH_NAME.fullmatch(text):
+        day, name, year = match.groups()
+        month = MONTHS.get(name, 0)
+    else:
+        return None
+    try:
+        date = datetime(int(year), int(month), int(day), tzinfo=UTC)
+    except ValueError:
+        return None
+    return date.strftime("%Y-%m-%d") if FIRST_YEAR <= date.year <= datetime.now(UTC).year else None
 
 
 def file_stem(url: str) -> str:
@@ -123,20 +158,21 @@ def status_of(page_url: str, texts: list[str]) -> tuple[str, str | None, str | N
     """(status, laga kraft date, adoption date) from the linking page and the documents' text."""
     joined = "\n".join(texts)
     laga = LAGA_KRAFT.search(joined)
-    adopted = ANTAGEN.search(joined)
+    adoption = ANTAGEN.search(joined)
+    adopted = read_date(adoption.group(1)) if adoption else None
     if laga:
-        return "in_force", laga.group(1), adopted.group(1) if adopted else None
+        return "in_force", read_date(laga.group(1)), adopted
     for status, pattern in STATUS_PAGE:
         if re.search(pattern, (page_url or "").lower()):
             if status == "in_progress":
                 for stage, stage_pattern in STAGES[1:]:
                     if re.search(stage_pattern, joined, re.IGNORECASE):
-                        return stage, None, adopted.group(1) if adopted else None
-            return status, None, adopted.group(1) if adopted else None
+                        return stage, None, adopted
+            return status, None, adopted
     for stage, pattern in STAGES:
         if re.search(pattern, joined, re.IGNORECASE):
-            return stage, None, adopted.group(1) if adopted else None
-    return "unknown", None, adopted.group(1) if adopted else None
+            return stage, None, adopted
+    return "unknown", None, adopted
 
 
 def provisions_of(text: str, is_map: bool) -> list[dict]:

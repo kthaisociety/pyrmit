@@ -514,7 +514,11 @@ python -m corpus.check            # data checks after a rebuild (exit 1 on an er
 - `corpus.plans` (rule-based, ~30 s): a plan = the detaljplan PDFs of a kommun whose file names reduce to the same
   key (role words, dates, versions, agenda numbering removed), named by the plan page that links only them, else by
   "Detaljplan för ..." on the first page; plan pages without PDFs are plans too (listing pages excluded). Status from
-  the page URL and the documents (laga kraft date, ANTAGANDE/GRANSKNINGS/SAMRÅDSHANDLING). Provisions = coded lines
+  the page URL and the documents (laga kraft date, ANTAGANDE/GRANSKNINGS/SAMRÅDSHANDLING). The `laga_kraft` and
+  `adopted` dates are `YYYY-MM-DD` or null (#121): `plans.read_date` reads ISO, "5 mars 2010" (month names, full or
+  abbreviated) and three numbers with `.` `/` or `-` (year first or last, month in the middle), and gives null for a
+  date that does not exist, a year outside 1700 to now, digit-only dates and two-digit years; `corpus.check` errors on
+  any other form (plans.jsonl built before #121 fails it until `corpus.plans` is re-run). Provisions = coded lines
   (e1, h1, f2, B, +0.0...) and measure sentences after "PLANBESTÄMMELSER" (looser on plankartor, stricter in
   planbeskrivningar), with law ref, topics (building_area, height, storeys, plot_size, no_building, ...) and numbers.
   Each is tied to its chunk for citation; `corpus.chunk` drops paragraphs repeated across the corpus (standard plan
