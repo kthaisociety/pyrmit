@@ -32,6 +32,31 @@ body {
   to { transform: none; opacity: 1; }
 }
 
+/* The source panel glides in from the right over a backdrop that fades in, and back out when closed
+   (components/SourceViewer.tsx) */
+@keyframes source-panel-in {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+@keyframes source-backdrop-in {
+  from { background-color: rgb(0 0 0 / 0); }
+}
+.source-backdrop { animation: source-backdrop-in 180ms ease-out; }
+.source-panel { animation: source-panel-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+/* Closing: the same glide back out, kept at its end state until the panel is taken away */
+/* (own keyframes: reversing the finished glide in would not play again) */
+@keyframes source-panel-out {
+  to { transform: translateX(100%); }
+}
+@keyframes source-backdrop-out {
+  to { background-color: rgb(0 0 0 / 0); }
+}
+.source-backdrop.closing { animation: source-backdrop-out 180ms ease-in forwards; }
+.source-backdrop.closing .source-panel { animation: source-panel-out 180ms ease-in forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .source-backdrop, .source-panel { animation: none; }
+}
+
 /* Map panel controls as floating glass, like Apple Maps (components/place/PlacePanel.tsx) */
 .place-map .maplibregl-ctrl-top-right { top: 3rem; }
 .place-map .maplibregl-ctrl-top-left { top: 3.25rem; } /* the attribution, under the search field */

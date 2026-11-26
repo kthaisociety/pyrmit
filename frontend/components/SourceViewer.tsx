@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ExternalLink, FileText, Flag, Loader2, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
 import { fill, useLanguage } from '@/lib/i18n';
@@ -108,6 +108,8 @@ function ClaimView({ claim }: { claim: ClaimFlag }) {
   );
 }
 
+const CLOSE_MS = 160; // the glide out, a little under the animation's length so no frame shows it gone
+
 // Side panel: the cited chunks, and the original document opened where the chunk is
 // (PDF at its page with the chunk highlighted, or the web page / statute scrolled to it by Chrome).
 // n = 0: not a citation (Database view); autoOpen: open the first chunk's document right away.
@@ -143,11 +145,21 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
   }, [citation]);
   useEffect(() => () => { if (pdf) URL.revokeObjectURL(pdf.blobUrl); }, [pdf]);
 
+  // Closing glides the panel out before it is taken away (CLOSE_MS matches the animation in globals.css); at
+  // once where motion is reduced or cannot be asked about
+  const [closing, setClosing] = useState(false);
+  const close = useCallback(() => {
+    const still = typeof window.matchMedia !== 'function' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (still) return onClose();
+    setClosing(true);
+    setTimeout(onClose, CLOSE_MS);
+  }, [onClose]);
+
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') close(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }, [close]);
 
   // Fetched with the auth header, shown from a blob URL: the browser's PDF viewer opens it at #page
   const showPdf = async (pdfUrl: string, page: number, view: Location['view'], note: string, mine: number) => {
@@ -213,9 +225,9 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
   }, [citation, autoOpen]);
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={onClose}>
+    <div className={`source-backdrop fixed inset-0 z-50 flex justify-end bg-black/30 ${closing ? 'closing' : ''}`} onClick={close}>
       <aside
-        className={`flex h-full w-full flex-col bg-white shadow-xl dark:bg-zinc-900 ${pdf ? 'max-w-6xl' : 'max-w-xl'}`}
+        className={`source-panel flex h-full w-full flex-col bg-white shadow-xl dark:bg-zinc-900 ${pdf ? 'max-w-6xl' : 'max-w-xl'}`}
         onClick={(event) => event.stopPropagation()}
       >
         <header className="flex items-start gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-700">
@@ -226,7 +238,7 @@ export default function SourceViewer({ citation, onClose, autoOpen = false, supp
             </span>
           )}
           <h2 className="min-w-0 flex-1 text-sm font-semibold text-zinc-800 dark:text-zinc-100">{citation.label}</h2>
-          <button onClick={onClose} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800" title={t('source.close')}>
+          <button onClick={close} className="rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800" title={t('source.close')}>
             <X size={16} />
           </button>
         </header>

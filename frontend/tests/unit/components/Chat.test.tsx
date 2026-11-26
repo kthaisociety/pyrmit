@@ -1041,7 +1041,7 @@ describe('sending while an answer is checked', () => {
     await ask();
     await screen.findByText(CHECKING);
 
-    await ask('And the fee?');
+    await ask();
     await waitFor(() => expect(sent()).toBe(2));
   });
 
@@ -1054,7 +1054,7 @@ describe('sending while an answer is checked', () => {
     chat();
     await ask();
     await screen.findByText(CHECKING);
-    await ask('And the fee?');
+    await ask();
     await screen.findByText('The second answer');
 
     first.push(...result(CHECK_FLAGGED));
@@ -1075,7 +1075,7 @@ describe('sending while an answer is checked', () => {
     chat();
     await ask();
     await screen.findByText(CHECKING);
-    await ask('And the fee?');
+    await ask();
     await screen.findByText('The second');
 
     first.push(...result(CHECK_FLAGGED));
@@ -1133,7 +1133,7 @@ describe('the status line of an answer being checked', () => {
     chat();
     await ask();
     await screen.findByText(CHECKING);
-    await ask('And the fee?');
+    await ask();
     await screen.findByText('The second answer');
 
     expect(screen.getByText(CHECKING)).toBeInTheDocument();
