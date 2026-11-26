@@ -1,0 +1,88 @@
+{
+ "locked": "2026-11-21",
+ "note": "The question set of the claim-check referee eval (agentic.claim_referee, #125): the place cases of place/cases_answers.jsonl, each with a pin and with the address typed, plus these general Uppsala questions that need no place. Split by case: validation_places and the general questions marked validation are kept for the final check, the rest is for tuning.",
+ "validation_places": [
+  "kungsgatan-pabyggnad",
+  "dalbysaby-bastu",
+  "falhagen-fasad",
+  "librobak-bostader",
+  "slassbo-nytt-hus"
+ ],
+ "general": [
+  {
+   "id": "general-01",
+   "question": "Hur lång tid tar det att få bygglov i Uppsala kommun?",
+   "split": "tuning"
+  },
+  {
+   "id": "general-02",
+   "question": "Vad kostar ett bygglov för ett enbostadshus i Uppsala?",
+   "split": "tuning"
+  },
+  {
+   "id": "general-03",
+   "question": "Hur ansöker jag om bygglov hos Uppsala kommun?",
+   "split": "validation"
+  },
+  {
+   "id": "general-04",
+   "question": "Vilka handlingar behöver jag lämna in med en bygglovsansökan i Uppsala?",
+   "split": "tuning"
+  },
+  {
+   "id": "general-05",
+   "question": "När behöver jag göra en anmälan i stället för att söka bygglov i Uppsala?",
+   "split": "tuning"
+  },
+  {
+   "id": "general-06",
+   "question": "Hur fungerar startbesked och slutbesked i Uppsala kommun?",
+   "split": "tuning"
+  },
+  {
+   "id": "general-07",
+   "question": "Vad gäller för attefallsåtgärder i Uppsala kommun?",
+   "split": "validation"
+  },
+  {
+   "id": "general-08",
+   "question": "Behöver jag bygglov för solceller på taket i Uppsala?",
+   "split": "tuning"
+  },
+  {
+   "id": "general-09",
+   "question": "Vad säger Uppsalas översiktsplan om nya bostäder på landsbygden?",
+   "split": "tuning"
+  },
+  {
+   "id": "general-10",
+   "question": "Hur överklagar jag ett bygglovsbeslut från Uppsala kommun?",
+   "split": "validation"
+  },
+  {
+   "id": "general-11",
+   "question": "Vad är strandskydd och hur söker jag dispens i Uppsala?",
+   "split": "tuning"
+  },
+  {
+   "id": "general-12",
+   "question": "Behöver jag marklov för att fälla träd i Uppsala?",
+   "split": "validation"
+  },
+  {
+   "id": "general-13",
+   "question": "Vad gör en kontrollansvarig och när behövs en i Uppsala?",
+   "split": "tuning"
+  },
+  {
+   "id": "general-14",
+   "question": "Hur ansöker jag om förhandsbesked hos Uppsala kommun?",
+   "split": "tuning"
+  },
+  {
+   "id": "general-15",
+   "question": "Behövs rivningslov för att riva en byggnad i Uppsala, och vad kostar det?",
+   "split": "validation"
+  }
+ ]
+}

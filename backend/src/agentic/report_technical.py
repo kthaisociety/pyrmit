@@ -807,6 +807,9 @@ useful passages would count as irrelevant, and more so for the agent, which read
 <td><code>reading_metrics</code></td></tr>
 <tr><td>grounded</td><td>supported claims / claims, second judge with the full text of the cited chunks</td>
 <td>{code('agentic/grounding.py')}</td></tr>
+<tr><td>claim_support</td><td>supported claims / claims, by the live claim check the chat runs (decision model, each
+claim against the full text of the chunks it cites); the other claims are unsupported or uncited</td>
+<td>{code('agentic/claim_check.py')}</td></tr>
 <tr><td>unsupported</td><td>claims in neither the reference nor the cited sources (first judge)</td><td><code>judge</code></td></tr>
 <tr><td>mode_ok</td><td>the agent's <code>answer_ready(mode)</code> equals the case's task (explain / propose / develop
 sets)</td><td><code>run_case</code></td></tr>
@@ -1217,6 +1220,9 @@ passage.</p>
 <td><code>evidence_recall</code></td></tr>
 <tr><td>grounded</td><td>affirmations soutenues / affirmations, second juge avec le texte complet des passages cités</td>
 <td>{code('agentic/grounding.py')}</td></tr>
+<tr><td>claim_support</td><td>affirmations étayées / affirmations, par la vérification en direct du chat (modèle de
+décision, chaque affirmation face au texte complet des passages qu'elle cite) ; les autres sont non étayées ou sans source</td>
+<td>{code('agentic/claim_check.py')}</td></tr>
 <tr><td>unsupported</td><td>affirmations ni dans la référence ni dans les sources citées (premier juge)</td><td><code>judge</code></td></tr>
 <tr><td>seconds, first_token_s, cost</td><td>temps total ; temps jusqu'au premier token de la réponse streamée ;
 <code>usage.cost</code> d'OpenRouter sommé sur les appels</td><td>{code('agentic/agent.py')} <code>AgentRun</code></td></tr>

@@ -242,3 +242,39 @@ def test_compare_leaves_a_metric_an_older_run_did_not_record_empty():
 def test_the_real_cases_carry_general_questions():
     """The locked cases hold general questions, so the conditions run on the real file."""
     assert sum(bool(case.get("question_general")) for case in load_cases()) >= 3
+
+
+def test_a_run_puts_each_answer_to_the_claim_check_with_its_place_data(tmp_path):
+    """The pin condition hands the place data over as a source; the address condition has none."""
+    seen = []
+
+    def support(run, tools, place_text):
+        seen.append(place_text)
+        return {"claim_check": "checked", "claims_checked": 4, "claims_supported": 3, "claims_unsupported": 1,
+                "claims_uncited": 0, "claim_support": 0.75}
+    result = run_bench(CASES, conditions=("pin", "address"), repeats=1, workers=1,
+                       bench=make_bench(claim_support=support), out_dir=tmp_path)
+    assert sum(text is not None for text in seen) == 2 and sum(text is None for text in seen) == 2
+    pin = result["summary"]["pin"]
+    assert (pin["claims"], pin["claim_support"], pin["claim_unsupported"]) == (8, 0.75, 0.25)
+
+
+def test_a_run_without_the_claim_check_reports_no_claim_support(tmp_path):
+    result = run_bench(CASES, conditions=("pin",), repeats=1, workers=1, bench=make_bench(), out_dir=tmp_path)
+    assert "claim_support" not in result["summary"]["pin"] and "claim_check" not in result["rows"][0]
+
+
+
+def test_a_profile_whose_plan_texts_could_not_be_read_is_asked_for_again():
+    """A cached failure gave all three repeats of a case a pin without its plan documents (2026-11-18)."""
+    calls = []
+
+    def profile(lat, lon):
+        calls.append((lat, lon))
+        status = "unavailable" if len(calls) == 1 else "read"
+        return {"plans": [{"text_status": status}]}
+    bench = AnswerBench(CASES, run_agent=fake_agent, tools=object(), profile_of=profile)
+    assert bench.profile_of(1, 2)["plans"][0]["text_status"] == "unavailable"
+    assert bench.profile_of(1, 2)["plans"][0]["text_status"] == "read"
+    bench.profile_of(1, 2)
+    assert len(calls) == 2
