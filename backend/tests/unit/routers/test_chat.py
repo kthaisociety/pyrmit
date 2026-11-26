@@ -813,3 +813,178 @@ def test_no_model_key_on_a_server_without_user_keys_points_to_an_owner(monkeypat
     monkeypatch.setattr(chat, "chat_provider", lambda: "openrouter")
     monkeypatch.setattr(chat.user_keys, "enabled", lambda: False)
     assert "ask an owner" in chat.missing_key_message()
+
+
+# --- retrying a claim check that could not run (#139) ----------------------------------------------------------
+
+CHECKED = {"status": "checked", "claims": [HOUSE_SUPPORTED, FEE_UNSUPPORTED]}
+
+
+def failed_answer(checked_chat, jev) -> models.ChatMessage:
+    """An answer saved with a check that could not run (the decision model was down)."""
+    jev(error=RuntimeError("model down"))
+    stream_events(checked_chat)
+    return saved_answer(checked_chat)
+
+
+def retry(checked_chat, message_id: int):
+    return checked_chat.client.post(f"/api/chat/messages/{message_id}/claim-check")
+
+
+def test_a_failed_check_names_its_message(checked_chat, jev):
+    """A check that could not run says which chat message it belongs to, so the chat can ask for it again."""
+    message = failed_answer(checked_chat, jev)
+    assert claim_events(message)[0]["message_id"] == message.id
+
+
+def test_a_failed_check_is_saved_with_what_a_retry_needs(checked_chat, jev):
+    """A check that could not run keeps the raw answer, the chunks read and the place data it was given."""
+    message = failed_answer(checked_chat, jev)
+    assert claim_events(message)[0]["retry"] == {"answer": RAW, "seen_chunks": [A, B, C], "place": None}
+
+
+def test_a_failed_check_is_still_failed_with_no_claims(checked_chat, jev):
+    """The retry data sits beside the failed status and the empty claims, which stay as they were."""
+    event = claim_events(failed_answer(checked_chat, jev))[0]
+    assert (event["status"], event["claims"]) == ("failed", [])
+
+
+def test_a_check_that_ran_keeps_no_retry_data(checked_chat, jev):
+    """Only a check that could not run keeps what a retry needs."""
+    jev(supported={HOUSE: 0.9, FEE: 0.1})
+    stream_events(checked_chat)
+    assert claim_events(saved_answer(checked_chat)) == [CHECKED]
+
+
+def test_a_retry_answers_with_the_verdicts(checked_chat, jev):
+    """Retrying a failed check, with the decision model back, gives the verdicts of the answer's claims."""
+    message = failed_answer(checked_chat, jev)
+    jev(supported={HOUSE: 0.9, FEE: 0.1})
+    assert retry(checked_chat, message.id).json() == CHECKED
+
+
+def test_a_retry_checks_the_agents_raw_answer(checked_chat, jev):
+    """The retry puts the same claims to the decision model as the first check did."""
+    message = failed_answer(checked_chat, jev)
+    fake = jev(supported={HOUSE: 0.9})
+    retry(checked_chat, message.id)
+    assert sorted(fake.claims_asked()) == sorted([HOUSE, FEE])
+
+
+def test_a_retry_replaces_the_failed_check_of_the_saved_answer(checked_chat, jev):
+    """The result of a retry is saved in place of the failed check, so a reopened chat shows it."""
+    message = failed_answer(checked_chat, jev)
+    jev(supported={HOUSE: 0.9, FEE: 0.1})
+    retry(checked_chat, message.id)
+    assert claim_events(saved_answer(checked_chat)) == [CHECKED]
+
+
+def test_a_retry_leaves_the_answer_text_as_it_was(checked_chat, jev):
+    """A retry changes the check of an answer, never its text."""
+    message = failed_answer(checked_chat, jev)
+    jev(supported={HOUSE: 0.9, FEE: 0.1})
+    retry(checked_chat, message.id)
+    assert saved_answer(checked_chat).content == message.content
+
+
+def test_a_retry_that_cannot_run_answers_failed(checked_chat, jev):
+    """A retry with the decision model still down answers that the check could not run."""
+    message = failed_answer(checked_chat, jev)
+    assert retry(checked_chat, message.id).json()["status"] == "failed"
+
+
+def test_a_retry_that_cannot_run_can_be_retried_again(checked_chat, jev):
+    """A retry that could not run leaves the failed check as it was, with what the next retry needs."""
+    message = failed_answer(checked_chat, jev)
+    before = claim_events(message)
+    retry(checked_chat, message.id)
+    assert claim_events(saved_answer(checked_chat)) == before
+
+
+def test_a_second_retry_can_succeed(checked_chat, jev):
+    """After a retry that could not run, the next one gives the verdicts."""
+    message = failed_answer(checked_chat, jev)
+    retry(checked_chat, message.id)
+    jev(supported={HOUSE: 0.9, FEE: 0.1})
+    assert retry(checked_chat, message.id).json() == CHECKED
+
+
+def test_a_check_that_ran_cannot_be_retried(checked_chat, jev):
+    """An answer whose check ran, whatever it found, is not checked again."""
+    jev(supported={HOUSE: 0.9, FEE: 0.1})
+    stream_events(checked_chat)
+    assert retry(checked_chat, saved_answer(checked_chat).id).status_code == 409
+
+
+def test_a_refused_retry_asks_the_decision_model_nothing(checked_chat, jev):
+    """Refusing a retry costs no decision model call."""
+    jev(supported={HOUSE: 0.9, FEE: 0.1})
+    stream_events(checked_chat)
+    fake = jev(supported={HOUSE: 0.9})
+    retry(checked_chat, saved_answer(checked_chat).id)
+    assert fake.calls == []
+
+
+def test_a_check_that_failed_before_retries_existed_cannot_be_retried(checked_chat, jev):
+    """A failed check saved without retry data has nothing to run again."""
+    message = failed_answer(checked_chat, jev)
+    with checked_chat.Session() as db:
+        saved = db.get(models.ChatMessage, message.id)
+        saved.trace = [{"stage": "claim_check", "data": {"status": "failed", "claims": []}}]
+        db.commit()
+    assert retry(checked_chat, message.id).status_code == 409
+
+
+def test_a_question_cannot_be_retried(checked_chat, jev):
+    """A user's own message has no check to run again."""
+    failed_answer(checked_chat, jev)
+    with checked_chat.Session() as db:
+        question = db.query(models.ChatMessage).filter(models.ChatMessage.role == "user").one()
+    assert retry(checked_chat, question.id).status_code == 409
+
+
+def test_a_message_that_does_not_exist_cannot_be_retried(checked_chat):
+    """An unknown message is not found."""
+    assert retry(checked_chat, 999).status_code == 404
+
+
+def test_another_users_answer_cannot_be_retried(checked_chat, jev):
+    """Only the owner of the chat can retry its answers: to anyone else the message is not found."""
+    message = failed_answer(checked_chat, jev)
+    checked_chat.client.app.dependency_overrides[get_current_user] = lambda: types.SimpleNamespace(id="u2")
+    assert retry(checked_chat, message.id).status_code == 404
+
+
+def test_another_users_retry_leaves_the_check_as_it_was(checked_chat, jev):
+    """A retry by someone else changes nothing and asks the decision model nothing."""
+    message = failed_answer(checked_chat, jev)
+    fake = jev(supported={HOUSE: 0.9, FEE: 0.1})
+    checked_chat.client.app.dependency_overrides[get_current_user] = lambda: types.SimpleNamespace(id="u2")
+    retry(checked_chat, message.id)
+    assert (fake.calls, claim_events(saved_answer(checked_chat))) == ([], claim_events(message))
+
+
+def test_a_retry_gets_the_place_data_of_the_first_check(checked_chat, jev, monkeypatch):
+    """The place data the agent was given counts as a source in the retry too."""
+    message = failed_answer(checked_chat, jev)
+    with checked_chat.Session() as db:
+        saved = db.get(models.ChatMessage, message.id)
+        event = claim_events(saved)[0]
+        event["retry"]["place"] = "Property: Uppsala Kvarngärdet 27:2."
+        saved.trace = [{"stage": "claim_check", "data": event}]
+        db.commit()
+    given = {}
+    monkeypatch.setattr(chat, "check_claims", lambda answer, get, place=None: given.update(place=place)
+                        or ClaimCheck(status="checked"))
+    retry(checked_chat, message.id)
+    assert given["place"] == "Property: Uppsala Kvarngärdet 27:2."
+
+
+def test_a_retry_reads_a_miscopied_citation_from_the_chunks_the_agent_read(checked_chat, jev, monkeypatch):
+    """A cited id the agent miscopied resolves against the chunks it read, in the retry as in the first check."""
+    message = failed_answer(checked_chat, jev)
+    read = {}
+    monkeypatch.setattr(chat, "check_claims", lambda answer, get, place=None: read.update(chunk=get(A[:12] + "0000"))
+                        or ClaimCheck(status="checked"))
+    retry(checked_chat, message.id)
+    assert read["chunk"] == get_chunk(A)

@@ -117,6 +117,14 @@ def _check_claims(run, place: str | None = None) -> dict:
     return check_claims(run.answer, get_chunk, place).as_event()
 
 
+def _failed_check(run, place: str | None, message_id: int) -> dict:
+    """The data of the "claim_check" event of a check that could not run (#139): {"status": "failed", "claims": [],
+    "message_id": the answer's chat message, "retry": {"answer": the agent's raw answer, "seen_chunks": the chunk
+    ids the agent read, "place": the place data it was given, or None}}. `retry` is what `retry_claim_check` needs to
+    run the same check again; a check that ran carries neither key."""
+    raise NotImplementedError
+
+
 def _agent_output_for_trace(output: dict) -> dict:
     return {key: value for key, value in output.items() if key not in {"retrieval", "sources"}}
 
@@ -890,6 +898,23 @@ def chat_stream(
             "Connection": "keep-alive",
         },
     )
+
+
+@router.post("/chat/messages/{message_id}/claim-check")
+def retry_claim_check(message_id: int, db: Session = Depends(get_db),
+                      user: models.User = Depends(get_current_user)) -> dict:
+    """Run again the claim check of an answer whose check could not run (#139), and answer with the data of its
+    "claim_check" event, as `ClaimCheck.as_event()` gives it for a check that ran and `_failed_check` for one that
+    again could not.
+
+    The check is the one the chat runs after an answer has streamed, on the raw answer, the chunks read and the place
+    data saved in the failed event's `retry`, with the user's own OpenRouter key when they set one. Its result takes
+    the place of the failed event in the message's saved trace; the answer's text and status are left as they are.
+    Waits for the check (about a second, CLAIM_CHECK_TIMEOUT_S at most).
+
+    404 when the message does not exist or its chat session is not the user's. 409 when the message has no failed
+    check that can be run again: its check ran, it was never checked, or it failed before `retry` was saved."""
+    raise NotImplementedError
 
 
 @router.get("/history", response_model=list[schemas.MessageResponse])

@@ -1188,3 +1188,141 @@ describe('a check that could not run', () => {
     expect(screen.queryByText(CHECKING)).not.toBeInTheDocument();
   });
 });
+
+// --- retrying a claim check that could not run (#139) -----------------------------------------------
+
+describe('retrying a check that could not run', () => {
+  const RETRY = { name: 'Try again' };
+  // A failed check saved with what a retry needs, and one saved before retries existed
+  const failed = { stage: 'claim_check', data: { ...CHECK_FAILED, message_id: 2, retry: { answer: 'raw' } } };
+  const failedBefore = { stage: 'claim_check', data: CHECK_FAILED };
+  // The retry of message 2 answers with `data`, once `release` is called when given `held`
+  const retryAnswers = (data: object, held?: Promise<void>) => {
+    const asked: string[] = [];
+    server.use(http.post('*/api/chat/messages/:id/claim-check', async ({ params }) => {
+      asked.push(String(params.id));
+      await held;
+      return HttpResponse.json(data);
+    }));
+    return asked;
+  };
+
+  it('offers to try again on an answer whose check could not run', async () => {
+    /** The grey line of a failed check carries a retry button. */
+    history(answer(2, [CITATIONS, failed]));
+    chat('s1');
+
+    await screen.findByText(NOTICE);
+    expect(screen.getByRole('button', RETRY)).toBeInTheDocument();
+  });
+
+  it('asks the server to check that answer again', async () => {
+    /** The button asks for the check of the answer it sits on. */
+    history(answer(2, [CITATIONS, failed]));
+    const asked = retryAnswers(CHECK_FLAGGED);
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    await waitFor(() => expect(asked).toEqual(['2']));
+  });
+
+  it('shows the pulsing status line while the retry runs', async () => {
+    /** During a retry the grey line and its button give way to the status line. */
+    history(answer(2, [CITATIONS, failed]));
+    let release: () => void = () => {};
+    retryAnswers(CHECK_FLAGGED, new Promise<void>((resolve) => { release = resolve; }));
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    expect((await screen.findByText(CHECKING)).className).toContain('animate-pulse');
+    expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', RETRY)).not.toBeInTheDocument();
+    release();
+  });
+
+  it('shows the flags once the retry has run', async () => {
+    /** A retry that ran replaces the grey line by the result. */
+    history(answer(2, [CITATIONS, failed]));
+    retryAnswers(CHECK_FLAGGED);
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    expect(await screen.findByRole('button', { name: MAY_NOT_BACK })).toBeInTheDocument();
+    expect(screen.getByText('1 claim could not be confirmed by the sources.')).toBeInTheDocument();
+    expect(screen.queryByText(NOTICE)).not.toBeInTheDocument();
+    expect(screen.queryByText(CHECKING)).not.toBeInTheDocument();
+  });
+
+  it('brings the grey line and the button back when the retry could not run either', async () => {
+    /** A retry that fails again leaves the answer as it was, to be retried once more. */
+    history(answer(2, [CITATIONS, failed]));
+    const asked = retryAnswers(failed.data);
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    await waitFor(() => expect(asked).toHaveLength(1));
+    expect(await screen.findByText(NOTICE)).toBeInTheDocument();
+    expect(screen.getByRole('button', RETRY)).toBeInTheDocument();
+  });
+
+  it('brings the grey line and the button back when the server cannot be reached', async () => {
+    /** A retry the server refuses or drops is no result: the answer stays retryable. */
+    history(answer(2, [CITATIONS, failed]));
+    server.use(http.post('*/api/chat/messages/:id/claim-check', () => HttpResponse.json({ detail: 'down' }, { status: 500 })));
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    expect(await screen.findByRole('button', RETRY)).toBeInTheDocument();
+    expect(screen.getByText(NOTICE)).toBeInTheDocument();
+  });
+
+  it('lets the next question be sent while a retry runs', async () => {
+    /** A retry holds nothing back. */
+    history(answer(2, [CITATIONS, failed]));
+    let release: () => void = () => {};
+    retryAnswers(CHECK_FLAGGED, new Promise<void>((resolve) => { release = resolve; }));
+    chat('s1');
+
+    await userEvent.click(await screen.findByRole('button', RETRY));
+    await screen.findByText(CHECKING);
+    await userEvent.type(screen.getByPlaceholderText('Ask about building permits...'), 'And the fee?');
+    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+    release();
+  });
+
+  it('offers no retry on a failed check saved without what a retry needs', async () => {
+    /** A check that failed before retries existed keeps its grey line alone. */
+    history(answer(2, [CITATIONS, failedBefore]));
+    chat('s1');
+
+    await screen.findByText(NOTICE);
+    expect(screen.queryByRole('button', RETRY)).not.toBeInTheDocument();
+  });
+
+  it('offers no retry on an answer whose check ran', async () => {
+    /** A check that ran, whatever it found, is not offered again. */
+    history(answer(2, [CITATIONS, { stage: 'claim_check', data: CHECK_FLAGGED }]));
+    chat('s1');
+
+    await screen.findByRole('button', { name: MAY_NOT_BACK });
+    expect(screen.queryByRole('button', RETRY)).not.toBeInTheDocument();
+  });
+
+  it('offers no retry on an answer saved before the check existed', async () => {
+    /** An answer that was never checked has no retry. */
+    history(answer(2, [CITATIONS]));
+    chat('s1');
+
+    await screen.findByText(new RegExp(FEE));
+    expect(screen.queryByRole('button', RETRY)).not.toBeInTheDocument();
+  });
+
+  it('names the button in Swedish on the Swedish page', async () => {
+    /** The button follows the page language. */
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'sv');
+    history(answer(2, [CITATIONS, failed]));
+    chat('s1');
+
+    expect(await screen.findByRole('button', { name: 'Försök igen' })).toBeInTheDocument();
+  });
+});
