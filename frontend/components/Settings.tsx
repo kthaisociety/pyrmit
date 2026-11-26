@@ -15,7 +15,7 @@ type User = CurrentUser;
 // HEADING): a white rounded card on the light grey page (header and page one colour), as in iOS settings and the place card.
 const CARD = 'rounded-xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-zinc-800 dark:ring-white/10';
 const HEADING = 'px-1 text-[13px] font-semibold text-zinc-500 dark:text-zinc-400';
-const INPUT = 'px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm';
+const INPUT = 'px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm';
 const PRIMARY = 'shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2';
 
 interface SettingsProps {
