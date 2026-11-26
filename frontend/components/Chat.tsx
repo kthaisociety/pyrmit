@@ -44,6 +44,9 @@ interface Message {
   pipeline?: PipelineEvent[];
   trace?: PipelineEvent[] | null; // saved pipeline events, from the history endpoint
   status?: string | null; // assistant messages from the history: "streaming" | "done" | "error"
+  // An answer this page is receiving over its own stream (#137): "writing" until its text is finished, then
+  // "checking" while its claims are checked; unset once the stream has ended. Never sent by the server.
+  live?: 'writing' | 'checking';
 }
 
 interface Step {
@@ -769,12 +772,7 @@ function AssistantBubble({
       </div>
 
       {showProgress && <LiveProgress steps={steps} />}
-      {checking ? (
-        <div className="mb-2 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-          <Loader2 size={12} className="animate-spin" />
-          Checking claims…
-        </div>
-      ) : inBackground && hasBody && (
+      {!checking && inBackground && hasBody && (
         <div className="mb-2 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
           <Loader2 size={12} className="animate-spin" />
           {t('chat.stillGenerating')}
@@ -790,8 +788,14 @@ function AssistantBubble({
             <CitedMarkdown body={body} citations={citations} onOpen={setOpenCitation} flags={claimFlags(claimCheck)}
                            onOpenFlag={openFlag} />
           </div>
+          {checking && (
+            // Discreet and pulsing, no spinner: the check runs beside whatever the reader does next (#137)
+            <p role="status" className="mt-2 animate-pulse text-xs text-zinc-400 dark:text-zinc-500">
+              {t('chat.checkingClaims')}
+            </p>
+          )}
           {claimCheck?.status === 'failed' && (
-            <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
               {t('chat.claimsNotChecked')}
             </p>
           )}
@@ -825,7 +829,6 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [streaming, setStreaming] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
   // The chat's pinned place: the pin and, once looked up, its label (kept apart so a label never moves the pin)
@@ -841,6 +844,8 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
   // The in-flight stream and the session it belongs to: opening another chat aborts the local stream only;
   // the server keeps generating and saving the answer in the history.
   const abortRef = useRef<AbortController | null>(null);
+  // Every stream still open: the latest one (abortRef) and the earlier ones whose answers are still being checked
+  const streamsRef = useRef(new Set<AbortController>());
   const streamSessionRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(sessionId);
   sessionIdRef.current = sessionId;
@@ -899,10 +904,10 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
 
   useEffect(() => {
     followLatest();
-    if (abortRef.current && sessionId !== streamSessionRef.current) {
-      abortRef.current.abort();
+    if (streamsRef.current.size > 0 && sessionId !== streamSessionRef.current) {
+      streamsRef.current.forEach((controller) => controller.abort());
+      streamsRef.current.clear();
       abortRef.current = null;
-      setStreaming(false);
     }
     if (sessionId && sessionId === createdSessionIdRef.current) {
       createdSessionIdRef.current = null;
@@ -920,15 +925,20 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
 
   // An answer generated in the background (the user left during streaming): refresh until it is finished
   const hasBackgroundAnswer = messages.some((msg) => msg.status === 'streaming');
-  // One answer at a time: the next question can be typed, but not sent, while an answer streams or is checked, here
-  // or in the background (an answer the user left and came back to)
-  const busy = loading || streaming || hasBackgroundAnswer;
+  // An answer whose text is still being written here, and any answer this page still receives (written or checked)
+  const writing = messages.some((msg) => msg.live === 'writing');
+  const receiving = messages.some((msg) => msg.live !== undefined);
+  // One answer written at a time: the next question can be typed, but not sent, while an answer's text streams, or
+  // while an answer the user left and came back to is not finished. An answer whose text is finished and whose
+  // claims are being checked here holds nothing back (#137): its stream goes on beside the next answer's.
+  const busy = loading || writing || hasBackgroundAnswer;
   useEffect(() => {
-    if (streaming || !sessionId || !hasBackgroundAnswer) return;
+    // Reloading the chat would replace the answers still being received
+    if (receiving || !sessionId || !hasBackgroundAnswer) return;
     const timer = setTimeout(() => loadHistory(sessionId, false), 2000);
     return () => clearTimeout(timer);
      
-  }, [messages, streaming, sessionId, hasBackgroundAnswer]);
+  }, [messages, receiving, sessionId, hasBackgroundAnswer]);
 
   const handleCopy = async (content: string, index: number) => {
     try {
@@ -966,14 +976,27 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
     followLatest();
     const userMsg: Message = { role: 'user', content: trimmedInput };
     const newHistory = [...messages, userMsg];
-    const placeholder: Message = { role: 'assistant', content: '', steps: [] };
+    const placeholder: Message = { role: 'assistant', content: '', steps: [], live: 'writing' };
+    // Where this answer sits in the conversation: its stream writes there, also once a later answer follows it
+    const at = newHistory.length;
     setMessages([...newHistory, placeholder]);
     setInput('');
     setLoading(true);
-    setStreaming(true);
     pendingSessionIdRef.current = null;
     const controller = new AbortController();
     abortRef.current = controller;
+    streamsRef.current.add(controller);
+    // This stream's own answer, wherever the conversation has got to; nothing once the chat was replaced
+    const updateLast = (updater: (msg: Message) => Message) => {
+      setMessages((prev) => {
+        if (!prev[at]?.live) {
+          return prev;
+        }
+        const updated = [...prev];
+        updated[at] = updater(prev[at]);
+        return updated;
+      });
+    };
     streamSessionRef.current = sessionId;
     let announced = false;
     let gotDone = false;
@@ -1014,22 +1037,13 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       const decoder = new TextDecoder();
       let buffer = '';
 
-      const updateLast = (updater: (msg: Message) => Message) => {
-        setMessages((prev) => {
-          if (prev.length === 0) {
-            return prev;
-          }
-          const updated = [...prev];
-          updated[updated.length - 1] = updater(updated[updated.length - 1]);
-          return updated;
-        });
-      };
-
       const handleStreamEvent = (event: StreamEvent) => {
         switch (event.type) {
           case 'thinking':
             updateLast((msg) => ({
               ...msg,
+              // The text is finished once the check starts: the next question can be sent from here on
+              live: event.label === CHECKING_LABEL ? 'checking' : msg.live,
               steps: [...(msg.steps ?? []), { type: 'thinking', label: event.label, done: false }],
             }));
             break;
@@ -1159,23 +1173,25 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
       // says what went wrong rather than vanishing with no word
       if (refused || !streamSessionRef.current) {
         const message = error instanceof Error ? error.message : String(error);
-        setMessages((prev) =>
-          prev.length === 0
-            ? prev
-            : [...prev.slice(0, -1), { ...prev[prev.length - 1], content: fill(t('chat.streamError'), { message }), status: 'error' }],
-        );
+        updateLast((msg) => ({ ...msg, content: fill(t('chat.streamError'), { message }), status: 'error' }));
       }
     } finally {
       clearInterval(watchdog);
+      streamsRef.current.delete(controller);
       if (abortRef.current === controller) {
         abortRef.current = null;
         setLoading(false);
-        setStreaming(false);
       }
       pendingSessionIdRef.current = null;
-      // Stream cut before "done": reload the session, its message is polled until the server finishes
+      // Stream cut before "done": the server goes on, so the saved message is polled until it is finished. The
+      // session is reloaded at once, unless another answer is still being received here: the reload would replace
+      // it, so this answer waits as a background one until that stream has ended.
       const streamedSession = streamSessionRef.current;
-      if (!refused && !gotDone && streamedSession && sessionIdRef.current === streamedSession && (stalled || !controller.signal.aborted)) {
+      const cut = !refused && !gotDone && streamedSession !== null && sessionIdRef.current === streamedSession
+        && (stalled || !controller.signal.aborted);
+      updateLast((msg) => ({ ...msg, live: undefined,
+                             ...(cut && streamsRef.current.size > 0 ? { status: 'streaming' } : {}) }));
+      if (cut && streamsRef.current.size === 0) {
         loadHistory(streamedSession, false);
       }
     }
@@ -1228,7 +1244,7 @@ export default function Chat({ sessionId, onSessionCreated, user }: ChatProps) {
               ) : (
                 <AssistantBubble
                   copied={copiedIndex === i}
-                  isStreaming={streaming && i === lastIdx}
+                  isStreaming={msg.live !== undefined}
                   message={msg}
                   onCopy={() => handleCopy(msg.content, i)}
                   onAnswer={i === lastIdx && !loading ? (answer) => void send(answer, true) : undefined}
