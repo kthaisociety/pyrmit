@@ -154,7 +154,9 @@ interface ClaimCheck {
   claims: {
     text: string;
     verdict: 'supported' | 'unsupported' | 'uncited';
+    chunk_ids?: string[];
     supporting?: { chunk_id: string; sentence: string }[];
+    unbacked?: string[]; // the sentences of the claim its sources do not back; absent from older answers
   }[];
 }
 
@@ -166,7 +168,17 @@ function getClaimCheck(pipeline: PipelineEvent[]): ClaimCheck | null {
 function claimFlags(check: ClaimCheck | null): ClaimFlag[] {
   return (check?.claims ?? [])
     .filter((claim) => claim.verdict !== 'supported')
-    .map((claim) => ({ text: claim.text, verdict: claim.verdict as ClaimFlag['verdict'] }));
+    .map((claim) => ({ text: claim.text, verdict: claim.verdict as ClaimFlag['verdict'],
+                       unbacked: claim.unbacked ?? [], chunk_ids: claim.chunk_ids ?? [] }));
+}
+
+// What the source panel lists for a flagged claim (#138): the chunks the claim cites, in its order, under `label`.
+// n = 0: not one numbered source. An uncited claim has none.
+function claimSources(flag: ClaimFlag, citations: Citation[], label: string): Citation {
+  const cited = citations.flatMap((citation) => citation.chunks);
+  const ids = [...new Set(flag.chunk_ids ?? [])];
+  const chunks = ids.flatMap((id) => cited.find((chunk) => chunk.chunk_id === id) ?? []);
+  return { n: 0, label, chunks };
 }
 
 // chunk_id -> the sentences of that chunk that back a claim of the answer, for the source panel (#84)
@@ -726,7 +738,11 @@ function AssistantBubble({
   const hasBody = Boolean(body.trim());
   const citations = getCitations(message.pipeline ?? []);
   const card = cardOf(message);
-  const [openCitation, setOpenCitation] = useState<Citation | null>(null);
+  // The source panel: opened by a citation number, or by a flag, then with the flagged claim on top
+  const [openSource, setOpenSource] = useState<{ citation: Citation; claim?: ClaimFlag } | null>(null);
+  const setOpenCitation = (citation: Citation) => setOpenSource({ citation });
+  const openFlag = (flag: ClaimFlag) =>
+    setOpenSource({ citation: claimSources(flag, citations, t('claim.panelTitle')), claim: flag });
   // Answer still being generated on the server (the user left and came back): refreshed by polling
   const inBackground = !isStreaming && message.status === 'streaming';
   // Agent answers saved mid-run: their trace already holds the tool calls made so far
@@ -771,7 +787,8 @@ function AssistantBubble({
       ) : hasBody ? (
         <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
           <div className="prose prose-sm max-w-none dark:prose-invert">
-            <CitedMarkdown body={body} citations={citations} onOpen={setOpenCitation} flags={claimFlags(claimCheck)} />
+            <CitedMarkdown body={body} citations={citations} onOpen={setOpenCitation} flags={claimFlags(claimCheck)}
+                           onOpenFlag={openFlag} />
           </div>
           {claimCheck?.status === 'failed' && (
             <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
@@ -795,8 +812,9 @@ function AssistantBubble({
           onOpenCitation={setOpenCitation}
         />
       )}
-      {openCitation && (
-        <SourceViewer citation={openCitation} onClose={() => setOpenCitation(null)} supporting={supportingSentences(claimCheck)} />
+      {openSource && (
+        <SourceViewer citation={openSource.citation} claim={openSource.claim} onClose={() => setOpenSource(null)}
+                      supporting={supportingSentences(claimCheck)} />
       )}
     </div>
   );

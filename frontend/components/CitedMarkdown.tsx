@@ -3,7 +3,8 @@
 import { useState, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import type { Citation } from '@/components/SourceViewer';
-import { useLanguage } from '@/lib/i18n';
+import { Flag } from 'lucide-react';
+import { fill, useLanguage } from '@/lib/i18n';
 
 // "[1]", "[2; 4]", "[1, 3]" -> one markdown link per number (#cite-n), rendered as clickable chips.
 // The agent also mixes law references into the group, sometimes nested: "[2; MB 7 kap. 15 §]",
@@ -38,34 +39,46 @@ export function linkCitations(body: string): string {
 }
 
 // A claim of the answer that its sources do not back after the claim check (issue #82). `text` is an exact
-// substring of the answer without citation markers.
+// substring of the answer without citation markers; `unbacked` the sentences of it that lack backing, each an exact
+// substring of `text` (absent or empty: the check did not say, the whole claim is flagged); `chunk_ids` the chunks
+// the claim cites (none for an uncited claim).
 export interface ClaimFlag {
   text: string;
   verdict: 'unsupported' | 'uncited';
+  unbacked?: string[];
+  chunk_ids?: string[];
 }
 
-// Markdown answer whose [n] citations are chips opening the cited source (onOpen); used by the chat and the
-// benchmark view. Each flag's text is marked in the answer with a dotted underline (<mark>, titled with its reason:
-// "Not supported by the cited sources" or "No source cited", in the page language) and followed by a ⚠ button that
-// shows the reason in the text, for touch screens too; a flag whose text is not in the answer is listed below it
-// instead, as "Unchecked claim: <text>". When any claim is flagged, one line under the answer says what the
-// underline means (#105).
-const FLAG_REASONS = { unsupported: 'claim.unsupported', uncited: 'claim.uncited' } as const;
+// What a flag says on hover, by verdict (the page's dictionaries)
+export const FLAG_HOVER = { unsupported: 'claim.unsupported', uncited: 'claim.uncited' } as const;
 
-function FlaggedClaim({ reason, children }: { reason: string; children: ReactNode }) {
-  const { t } = useLanguage();
-  const [shown, setShown] = useState(false);
+// The red flag after a flagged text (#138): its hover text is its name, a click opens the claim
+function FlagButton({ label, onClick, onHover }: {
+  label: string;
+  onClick: () => void;
+  onHover?: (hovered: boolean) => void;
+}) {
+  return (
+    <button type="button" title={label} aria-label={label} onClick={onClick}
+            onMouseEnter={() => onHover?.(true)} onMouseLeave={() => onHover?.(false)}
+            onFocus={() => onHover?.(true)} onBlur={() => onHover?.(false)}
+            className="ml-0.5 inline-flex translate-y-[1px] rounded p-0.5 align-baseline text-red-600 transition hover:bg-red-50 hover:text-red-700 dark:text-red-500 dark:hover:bg-red-950/60">
+      <Flag size={12} fill="currentColor" aria-hidden />
+    </button>
+  );
+}
+
+// A text of the answer a flag is about: unmarked, tinted only while its flag is hovered or focused
+function FlaggedText({ label, onOpen, children }: { label: string; onOpen: () => void; children: ReactNode }) {
+  const [hovered, setHovered] = useState(false);
   return (
     <>
-      <mark title={reason}
-            className="bg-transparent text-inherit underline decoration-amber-500 decoration-dotted decoration-2 underline-offset-4">
+      <mark data-tinted={hovered}
+            className={`rounded-sm text-inherit transition-colors ${hovered ? 'bg-red-100 dark:bg-red-950/70' : 'bg-transparent'}`}>
         {children}
       </mark>
-      <button type="button" aria-label={t('claim.showReason')} aria-expanded={shown} onClick={() => setShown(!shown)}
-              className="ml-0.5 align-baseline text-xs text-amber-600 hover:text-amber-800 dark:text-amber-400">
-        ⚠
-      </button>
-      {shown && <span className="ml-1 text-xs text-amber-700 dark:text-amber-400">({reason})</span>}
+      {'⁠' /* word joiner: the flag never wraps to a line of its own */}
+      <FlagButton label={label} onClick={onOpen} onHover={setHovered} />
     </>
   );
 }
@@ -73,27 +86,37 @@ function FlaggedClaim({ reason, children }: { reason: string; children: ReactNod
 // A flag's text becomes markdown link text, which cannot hold brackets
 const canMark = (text: string) => text.length > 0 && !/[[\]]/.test(text);
 
-// Each flag's text found in the body -> a link to #flag-<verdict>, rendered as a <mark>; the flags not found
+// Each flag's texts found in the body -> links to #flag-<its index>, rendered as a FlaggedText: the sentences that
+// lack backing when the check named them and the answer holds them, else the whole claim. `missing`: the flags
+// with no text found in the body.
 function markFlags(body: string, flags: ClaimFlag[]): { marked: string; missing: ClaimFlag[] } {
   let marked = body;
   const missing: ClaimFlag[] = [];
-  for (const flag of flags) {
-    const text = flag.text.trim();
+  const mark = (text: string, index: number): boolean => {
     const at = canMark(text) ? marked.indexOf(text) : -1;
-    if (at < 0) {
-      missing.push(flag);
-      continue;
-    }
-    marked = `${marked.slice(0, at)}[${text}](#flag-${flag.verdict})${marked.slice(at + text.length)}`;
-  }
+    if (at < 0) return false;
+    marked = `${marked.slice(0, at)}[${text}](#flag-${index})${marked.slice(at + text.length)}`;
+    return true;
+  };
+  flags.forEach((flag, index) => {
+    const sentences = (flag.unbacked ?? []).map((sentence) => sentence.trim());
+    const found = sentences.filter((sentence) => mark(sentence, index)).length > 0 || mark(flag.text.trim(), index);
+    if (!found) missing.push(flag);
+  });
   return { marked, missing };
 }
 
-export default function CitedMarkdown({ body, citations, onOpen, flags = [] }: {
+// Markdown answer whose [n] citations are chips opening the cited source (onOpen); used by the chat and the
+// benchmark view. Each flag's text is left unmarked and followed by a red flag (#138) whose hover text says that
+// the sources may not back the claim, or that it cites none, in the page language; hovering the flag tints the text
+// it is about, a click hands the flag to onOpenFlag. A flag whose text is not in the answer is listed below it with
+// its flag. When any claim is flagged, one line under the answer counts them.
+export default function CitedMarkdown({ body, citations, onOpen, flags = [], onOpenFlag }: {
   body: string;
   citations: Citation[];
   onOpen: (citation: Citation) => void;
   flags?: ClaimFlag[];
+  onOpenFlag?: (flag: ClaimFlag) => void;
 }) {
   const { marked, missing } = markFlags(citations.length > 0 ? linkCitations(body) : body, flags);
   const { t } = useLanguage();
@@ -117,9 +140,13 @@ export default function CitedMarkdown({ body, citations, onOpen, flags = [] }: {
               </button>
             );
           }
-          if (href === '#flag-unsupported' || href === '#flag-uncited') {
-            const reason = t(FLAG_REASONS[href === '#flag-uncited' ? 'uncited' : 'unsupported']);
-            return <FlaggedClaim reason={reason}>{children}</FlaggedClaim>;
+          const flag = href?.startsWith('#flag-') ? flags[Number(href.slice(6))] : undefined;
+          if (flag) {
+            return (
+              <FlaggedText label={t(FLAG_HOVER[flag.verdict])} onOpen={() => onOpenFlag?.(flag)}>
+                {children}
+              </FlaggedText>
+            );
           }
           return <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
         },
@@ -128,16 +155,19 @@ export default function CitedMarkdown({ body, citations, onOpen, flags = [] }: {
       {marked}
     </ReactMarkdown>
     {missing.length > 0 && (
-      <ul className="mt-2 space-y-1 text-xs text-amber-700 dark:text-amber-400">
+      <ul className="mt-2 list-none space-y-1 pl-0 text-xs text-zinc-600 dark:text-zinc-300">
         {missing.map((flag) => (
-          <li key={flag.text} title={t(FLAG_REASONS[flag.verdict])}>
-            {t('claim.unchecked').replace('{text}', flag.text)}
+          <li key={flag.text} className="pl-0">
+            <FlagButton label={t(FLAG_HOVER[flag.verdict])} onClick={() => onOpenFlag?.(flag)} />{' '}
+            <span>{flag.text}</span>
           </li>
         ))}
       </ul>
     )}
     {flags.length > 0 && (
-      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{t('claim.note')}</p>
+      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+        {flags.length === 1 ? t('claim.countOne') : fill(t('claim.countMany'), { n: String(flags.length) })}
+      </p>
     )}
     </>
   );
