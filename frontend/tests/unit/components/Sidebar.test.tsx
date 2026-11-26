@@ -1,5 +1,5 @@
 // Component tests for components/Sidebar.tsx.
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
@@ -121,5 +121,81 @@ describe('Sidebar', () => {
     renderSidebar();
 
     expect(await screen.findByRole('button', { name: 'Ny chatt' })).toBeInTheDocument();
+  });
+
+  it('shows the user name on a button', async () => {
+    /** The bottom of the sidebar has one button named by the user's name. */
+    renderSidebar();
+    await screen.findByText('Bygglov Storgatan 3');
+
+    expect(screen.getByRole('button', { name: /anna/ })).toBeInTheDocument();
+  });
+
+  it('shows the user initial inside the profile button', async () => {
+    /** The initial sits on the same button as the name. */
+    renderSidebar();
+    await screen.findByText('Bygglov Storgatan 3');
+
+    expect(within(screen.getByRole('button', { name: /anna/ })).getByText('A')).toBeInTheDocument();
+  });
+
+  it('says on hover that the profile button opens settings', async () => {
+    /** The profile button's tooltip reads Settings. */
+    renderSidebar();
+    await screen.findByText('Bygglov Storgatan 3');
+
+    expect(screen.getByRole('button', { name: /anna/ })).toHaveAttribute('title', 'Settings');
+  });
+
+  it('opens settings when the profile button is clicked', async () => {
+    /** Clicking the profile button opens the settings view. */
+    const props = renderSidebar();
+    await screen.findByText('Bygglov Storgatan 3');
+
+    await userEvent.click(screen.getByRole('button', { name: /anna/ }));
+
+    expect(props.onOpenSettings).toHaveBeenCalled();
+  });
+
+  it('has no separate settings button', async () => {
+    /** The old Settings button is gone from the sidebar. */
+    renderSidebar();
+    await screen.findByText('Bygglov Storgatan 3');
+
+    expect(screen.queryByRole('button', { name: /Settings/ })).not.toBeInTheDocument();
+  });
+
+  it('has no language switch', async () => {
+    /** The language is chosen in settings, not in the sidebar. */
+    renderSidebar();
+    await screen.findByText('Bygglov Storgatan 3');
+
+    expect(screen.queryByRole('button', { name: 'Svenska' })).not.toBeInTheDocument();
+  });
+
+  it('does not show the email', async () => {
+    /** The sidebar shows the name only, not the email. */
+    renderSidebar();
+    await screen.findByText('Bygglov Storgatan 3');
+
+    expect(screen.queryByText('anna@example.com')).not.toBeInTheDocument();
+  });
+
+  it('keeps the staff views above the profile button', async () => {
+    /** Staff see Database placed before the profile button. */
+    renderSidebar();
+    await screen.findByText('Bygglov Storgatan 3');
+
+    const database = screen.getByRole('button', { name: /Database/ });
+    const profile = screen.getByRole('button', { name: /anna/ });
+    expect(database.compareDocumentPosition(profile) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows a fallback initial for a user without a name', async () => {
+    /** A user with an empty name gets "U" on the profile button. */
+    renderSidebar({ user: { id: 'u1', name: '', email: 'anna@example.com', role: 'developer' } });
+    await screen.findByText('Bygglov Storgatan 3');
+
+    expect(within(screen.getByTitle('Settings')).getByText('U')).toBeInTheDocument();
   });
 });
