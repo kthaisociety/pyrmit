@@ -88,7 +88,7 @@ export default function UserRoleSettings({ currentUserId }: { currentUserId: str
       ) : !rows ? (
         <p className="text-sm text-zinc-500">{t('settings.roles.loading')}</p>
       ) : (
-        <ul className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-zinc-900 dark:ring-white/10 divide-y divide-zinc-200/70 dark:divide-white/10">
+        <ul className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-zinc-800 dark:ring-white/10 divide-y divide-zinc-200/70 dark:divide-white/10">
           {rows.map((row) => {
             const locked = row.role === 'owner' && (row.from_owner_emails || owners <= 1);
             return (

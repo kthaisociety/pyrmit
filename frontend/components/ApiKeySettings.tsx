@@ -97,7 +97,7 @@ export default function ApiKeySettings() {
       <h2 className="px-1 text-[13px] font-semibold text-zinc-500 dark:text-zinc-400">
         {t('settings.apiKey.heading')}
       </h2>
-      <div className="rounded-xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-zinc-900 dark:ring-white/10 p-3 space-y-3">
+      <div className="rounded-xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-zinc-800 dark:ring-white/10 p-3 space-y-3">
       <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('settings.apiKey.hint')}</p>
 
       {loadError ? (
@@ -105,10 +105,10 @@ export default function ApiKeySettings() {
       ) : !status ? (
         <p className="text-sm text-zinc-500">{t('settings.apiKey.loading')}</p>
       ) : !status.enabled ? (
-        <p className="text-sm p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">{t('settings.apiKey.off')}</p>
+        <p className="text-sm p-3 bg-zinc-50 dark:bg-zinc-700/40 rounded-lg">{t('settings.apiKey.off')}</p>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-lg">
+          <div className="flex items-center justify-between gap-3 p-3 bg-zinc-50 dark:bg-zinc-700/40 rounded-lg">
             <span className="flex items-center gap-2 text-sm">
               <KeyRound size={14} className="text-zinc-500" />
               {status.has_key && status.last4

@@ -12,8 +12,8 @@ import { isOwner, type CurrentUser } from '@/lib/roles';
 type User = CurrentUser;
 
 // The grouped-card look shared by every section of the view (ApiKeySettings and UserRoleSettings repeat CARD and
-// HEADING): a white rounded card on the grey page, as in iOS settings and the place card.
-const CARD = 'rounded-xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-zinc-900 dark:ring-white/10';
+// HEADING): a white rounded card on the light grey page (header and page one colour), as in iOS settings and the place card.
+const CARD = 'rounded-xl bg-white shadow-sm ring-1 ring-black/5 dark:bg-zinc-800 dark:ring-white/10';
 const HEADING = 'px-1 text-[13px] font-semibold text-zinc-500 dark:text-zinc-400';
 const INPUT = 'px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-blue-500 outline-none text-sm';
 const PRIMARY = 'shrink-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2';
@@ -118,12 +118,12 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-zinc-100 dark:bg-zinc-950">
+    <div className="flex flex-col h-full w-full bg-zinc-50 dark:bg-zinc-900">
       {/* Header */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-6 py-3 flex items-center gap-3">
+      <div className="px-6 py-3 flex items-center gap-3">
         <button
           onClick={onBack}
-          className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+          className="p-1.5 rounded-lg hover:bg-zinc-200/70 dark:hover:bg-zinc-800 transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
@@ -244,7 +244,7 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
           {/* Danger Zone */}
           <section className="space-y-1.5">
             <h2 className="px-1 text-[13px] font-semibold text-red-500">{t('settings.dangerZone')}</h2>
-            <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-red-200 dark:bg-zinc-900 dark:ring-red-900/70 divide-y divide-zinc-200/70 dark:divide-white/10">
+            <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-red-200 dark:bg-zinc-800 dark:ring-red-900/70 divide-y divide-zinc-200/70 dark:divide-white/10">
               {/* Clear All Chats */}
               <div className="flex items-center justify-between gap-3 px-4 py-3">
                 <div>
