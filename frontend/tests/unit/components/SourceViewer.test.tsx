@@ -1,5 +1,5 @@
 // Component tests for components/SourceViewer.tsx.
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -223,5 +223,58 @@ describe('SourceViewer with supporting sentences', () => {
       { wrapper: LanguageProvider });
 
     expect(underlined()).toEqual(['Taket ska vara rött.']);
+  });
+});
+
+describe('SourceViewer with a flagged claim', () => {
+  const CLAIM_VIEW = { name: 'Claim that could not be confirmed' };
+  const LACKS_BACKING = 'Not backed by the sources';
+  const sources: Citation = {
+    n: 0,
+    label: 'Claim that could not be confirmed',
+    chunks: [{ chunk_id: 'c1', source: 'Bygglovstaxa', chunk_index: 0, content: 'Avgiften är 12 000 kr.' }],
+  };
+  const view = () => within(screen.getByRole('region', CLAIM_VIEW));
+
+  it('shows the claim and that its sources do not say it', () => {
+    /** A claim none of whose sentences is named as lacking backing is shown whole, with the plain reason. */
+    render(<SourceViewer citation={sources} onClose={vi.fn()}
+      claim={{ text: 'The fee is 12 000 kr', verdict: 'unsupported', unbacked: [] }} />, { wrapper: LanguageProvider });
+
+    expect(view().getByText('The fee is 12 000 kr')).toBeInTheDocument();
+    expect(view().getByText('The cited sources do not say this.')).toBeInTheDocument();
+  });
+
+  it('points out the sentence that lacks backing in a partly backed claim', () => {
+    /** Only the sentence the sources do not back is pointed out, and the reason says the rest is backed. */
+    render(<SourceViewer citation={sources} onClose={vi.fn()}
+      claim={{ text: 'The fee is 12 000 kr. It is paid in advance.', verdict: 'unsupported',
+               unbacked: ['It is paid in advance.'] }} />, { wrapper: LanguageProvider });
+
+    expect(view().getAllByTitle(LACKS_BACKING).map((element) => element.textContent)).toEqual(['It is paid in advance.']);
+    expect(view().getByText('The cited sources back part of this claim, but not the marked text.')).toBeInTheDocument();
+  });
+
+  it('says that a claim has no source', () => {
+    /** An uncited claim is shown with the reason that no source is cited. */
+    render(<SourceViewer citation={{ ...sources, chunks: [] }} onClose={vi.fn()}
+      claim={{ text: 'The fee is 12 000 kr', verdict: 'uncited', unbacked: [] }} />, { wrapper: LanguageProvider });
+
+    expect(view().getByText('No source is cited for this claim.')).toBeInTheDocument();
+  });
+
+  it('keeps the cited source texts under the claim', () => {
+    /** The chunks the claim cites are listed as for a citation. */
+    render(<SourceViewer citation={sources} onClose={vi.fn()}
+      claim={{ text: 'The fee is 12 000 kr', verdict: 'unsupported', unbacked: [] }} />, { wrapper: LanguageProvider });
+
+    expect(screen.getAllByText('Avgiften är 12 000 kr.').length).toBeGreaterThan(0);
+  });
+
+  it('shows no claim view for a citation alone', () => {
+    /** A panel opened from a citation number has no claim view. */
+    render(<SourceViewer citation={{ ...sources, n: 1 }} onClose={vi.fn()} />, { wrapper: LanguageProvider });
+
+    expect(screen.queryByRole('region', CLAIM_VIEW)).not.toBeInTheDocument();
   });
 });
