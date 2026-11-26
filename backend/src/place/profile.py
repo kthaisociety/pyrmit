@@ -236,10 +236,12 @@ def _read_documents(doc_ids: list[str]) -> dict[str, dict]:
 def hosted_documents(doc_ids: list[str]) -> dict[str, dict]:
     """{doc_id: {"title", "url"}} of the documents in the corpus the app serves from (LOCAL_RAG_STORE), those it does
     not hold left out. Waits at most CORPUS_LOOKUP_SECONDS. Raises CorpusUnavailable when the corpus cannot be reached
-    in that time, or when the app has no local corpus."""
+    in that time, or when the app has no local corpus: neither the local retrieval backend nor the agent, which
+    reads the same corpus (before 2026-11-19 the agent alone did not count, so a pin's plans said "not read")."""
+    from agentic.service import agent_enabled
     from localrag.service import local_backend_enabled
 
-    if not local_backend_enabled():
+    if not (local_backend_enabled() or agent_enabled()):
         raise CorpusUnavailable("the app has no local corpus")
     try:
         return _corpus_worker.submit(_read_documents, doc_ids).result(timeout=CORPUS_LOOKUP_SECONDS)

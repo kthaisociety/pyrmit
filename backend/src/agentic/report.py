@@ -19,7 +19,7 @@ from collections import Counter, defaultdict
 from datetime import date
 from pathlib import Path
 
-from agentic.bench import CASES_PATH, RESULTS_DIR, sample_cases
+from agentic.bench import CASES_PATH, RESULTS_DIR, claim_support_summary, sample_cases
 from corpus.common import DATA_DIR, RESULTS_ROOT, read_jsonl
 from localrag.eval import matches
 from localrag.index import INDEX_DIR
@@ -168,6 +168,8 @@ def load_runs() -> list[dict]:
                 "file": ", ".join(p.name for p in paths), "n": len(mine), "repeats": len(repeats),
                 "verdict": mean([float(r["verdict_ok"]) for r in mine]), "points": mean([r["points"] for r in mine]),
                 "evidence": mean([r["evidence"] for r in mine]), "grounded": mean([r.get("grounded") for r in mine]),
+                # The live claim check: supported claims / claims, over all checked answers (None before it was run)
+                "claim_support": (claim_support_summary(mine) or {}).get("supported"),
                 "unsupported": mean([r["unsupported"] for r in mine]), "tools": mean([r["tool_calls"] for r in mine]),
                 "llm_calls": mean([r["llm_calls"] for r in mine]), "seconds": mean([r["seconds"] for r in mine]),
                 "first": mean([r.get("first_token_s") for r in mine]), "cost": mean([r["cost"] for r in mine]),
@@ -676,21 +678,21 @@ def runs_table(runs: list[dict], map_views: bool = False) -> str:
     """One row per configuration; `map_views` adds the mean number of map images looked at (plankarta cases)."""
     extra = f"<th>{tr('Vues de carte', 'Map views')}</th>" if map_views else ""
     head = tr("<tr><th>Configuration</th><th>n</th><th>Verdict</th><th>Points clés</th><th>Preuves vues</th>"
-              "<th>Preuves citées</th><th>Ancrage</th><th>Passages vus</th>"
+              "<th>Preuves citées</th><th>Ancrage</th><th>Affirmations étayées</th><th>Passages vus</th>"
               f"<th>Appels outils</th>{extra}<th>Latence</th><th>1er token</th><th>Coût / question</th></tr>",
               "<tr><th>Configuration</th><th>n</th><th>Verdict</th><th>Key points</th><th>Evidence seen</th>"
-              "<th>Evidence cited</th><th>Grounding</th><th>Passages seen</th>"
+              "<th>Evidence cited</th><th>Grounding</th><th>Claim support</th><th>Passages seen</th>"
               f"<th>Tool calls</th>{extra}<th>Latency</th><th>1st token</th><th>Cost / question</th></tr>")
     body = []
     best = {key: max((r[key] for r in runs if r[key] is not None), default=None)
-            for key in ("verdict", "points", "evidence", "cited", "grounded")}
+            for key in ("verdict", "points", "evidence", "cited", "grounded", "claim_support")}
     for run in runs:
         def cell(key):
             value = run[key]  # noqa: B023 - the closure is called within this iteration only
             text = fmt(value)
             return f"<td class='{'best' if value is not None and value == best[key] else ''}'>{text}</td>"
         body.append(f"<tr><td>{esc(label(run))}</td><td>{run['n']}</td>{cell('verdict')}{cell('points')}"
-                    f"{cell('evidence')}{cell('cited')}{cell('grounded')}<td>{fmt(run['seen'], 0)}</td>"
+                    f"{cell('evidence')}{cell('cited')}{cell('grounded')}{cell('claim_support')}<td>{fmt(run['seen'], 0)}</td>"
                     f"<td>{fmt(run['tools'], 1)}</td>"
                     + (f"<td>{fmt(run['map_views'], 1)}</td>" if map_views else "")
                     + f"<td>{fmt(run['seconds'], 0)} s</td><td>{fmt(run['first'], 0)} s</td>"
@@ -762,10 +764,10 @@ def examples_html(runs: list[dict], cases_key: str, cases: list[dict]) -> str:
 def overview_table(pairs: list[tuple[str, list[dict]]]) -> str:
     """Per benchmark set, the systems side by side (main metrics only)."""
     head = tr("<tr><th>Jeu de cas</th><th>Système</th><th>n</th><th>Verdict</th><th>Points clés</th><th>Preuves vues</th>"
-              "<th>Preuves citées</th><th>Ancrage</th><th>Passages vus</th><th>Latence</th><th>1er token</th>"
+              "<th>Preuves citées</th><th>Ancrage</th><th>Affirmations étayées</th><th>Passages vus</th><th>Latence</th><th>1er token</th>"
               "<th>Coût / question</th></tr>",
               "<tr><th>Case set</th><th>System</th><th>n</th><th>Verdict</th><th>Key points</th><th>Evidence seen</th>"
-              "<th>Evidence cited</th><th>Grounding</th><th>Passages seen</th><th>Latency</th><th>1st token</th>"
+              "<th>Evidence cited</th><th>Grounding</th><th>Claim support</th><th>Passages seen</th><th>Latency</th><th>1st token</th>"
               "<th>Cost / question</th></tr>")
     body = []
     for name, runs in pairs:
@@ -774,7 +776,7 @@ def overview_table(pairs: list[tuple[str, list[dict]]]) -> str:
             first = f"<td rowspan='{len(runs)}'><b>{esc(name)}</b></td>" if i == 0 else ""
             system = "RAG" if run["system"] == "rag" else f"Agent ({run['explore']} / {run['answer']})"
             body.append(f"<tr>{first}<td>{esc(system)}</td><td>{run['n']}</td>"
-                        + "".join(f"<td>{fmt(run[k])}</td>" for k in ("verdict", "points", "evidence", "cited", "grounded"))
+                        + "".join(f"<td>{fmt(run[k])}</td>" for k in ("verdict", "points", "evidence", "cited", "grounded", "claim_support"))
                         + f"<td>{fmt(run['seen'], 0)}</td><td>{fmt(run['seconds'], 0)} s</td><td>{fmt(run['first'], 0)} s</td>"
                           f"<td>{money(run['cost'])}</td></tr>")
     return f"<table>{head}{''.join(body)}</table>"

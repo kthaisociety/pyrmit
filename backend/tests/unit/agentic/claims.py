@@ -21,11 +21,15 @@ CHUNKS = {
 HOUSE = "Bygglov is needed for a new house"
 FEE = "The fee is 12 000 kr"
 RAW = f"{HOUSE} [c:{A}]. {FEE} [c:{B}]."
+EARLIER = "Detaljplanen gäller sedan länge"
+TWO_SENTENCES = f"{EARLIER}. {HOUSE} [c:{A}]."  # one stretch, or two when cut per sentence
 
 HOUSE_SUPPORTED = {"text": HOUSE, "verdict": "supported", "chunk_ids": [A],
-                   "supporting": [{"chunk_id": A, "sentence": "Bygglov krävs för nybyggnad av en byggnad."}]}
-FEE_UNSUPPORTED = {"text": FEE, "verdict": "unsupported", "chunk_ids": [B], "supporting": []}
-FEE_UNCITED = {"text": FEE, "verdict": "uncited", "chunk_ids": [], "supporting": []}
+                   "supporting": [{"chunk_id": A, "sentence": "Bygglov krävs för nybyggnad av en byggnad."}],
+                   "level": None, "unbacked": []}
+FEE_UNSUPPORTED = {"text": FEE, "verdict": "unsupported", "chunk_ids": [B], "supporting": [], "level": None,
+                   "unbacked": []}
+FEE_UNCITED = {"text": FEE, "verdict": "uncited", "chunk_ids": [], "supporting": [], "level": None, "unbacked": []}
 
 
 def get_chunk(chunk_id: str) -> dict | None:
@@ -35,14 +39,22 @@ def get_chunk(chunk_id: str) -> dict | None:
 class FakeJev:
     """The decision model, scripted: `supported` maps a claim's text to the probability that its sources state it
     (0 when absent), `needs_source` an uncited sentence's text to the probability that it needs a source (0 when
-    absent), `place_backs` an uncited sentence's text to the probability that the pinned place's data backs it. The
+    absent), `place_backs` an uncited sentence's text to the probability that the pinned place's data backs it,
+    `hedge` a claim's or sentence's text to the probability that it is a hedge (a "hedge" question in a claim's call,
+    "hedge_<i>" in the uncited sentences' call; 0 when absent). For a claim's call also: `addition` maps a claim's text
+    to the probability that it says something its sources do not state (an "addition" question; 0 when absent), `fact`
+    to the probability that it states a fact (a "fact" question; 1 when absent) and `part` to the probability that
+    its sources state at least part of it (a "part" question; 0 when absent). The
     sentence choice picks the first sentence. `error` is raised on every call, and a RuntimeError on the call
     about the claim `fail_on`; `delay` (s) stalls each.
     `calls` holds every (state, questions) sent."""
 
-    def __init__(self, supported=None, needs_source=None, place_backs=None, error: BaseException | None = None,
-                 delay: float = 0.0, fail_on: str | None = None):
+    def __init__(self, supported=None, needs_source=None, place_backs=None, hedge=None,
+                 error: BaseException | None = None, delay: float = 0.0, fail_on: str | None = None,
+                 addition=None, fact=None, part=None):
         self.supported = supported or {}
+        self.hedge = hedge or {}
+        self.addition, self.fact, self.part = addition or {}, fact or {}, part or {}
         self.needs_source = needs_source or {}
         self.place_backs = place_backs or {}
         self.fail_on = fail_on
@@ -57,14 +69,23 @@ class FakeJev:
             time.sleep(self.delay)
         if self.error or (self.fail_on is not None and state.get("claim") == self.fail_on):
             raise self.error or RuntimeError("one call failed")
-        if "supported" in questions:
-            answers = {"supported": {"type": "noul", "noul": self.supported.get(state["claim"], 0.0)}}
+        if "claim" in state:
+            answers = {}
+            if "supported" in questions:
+                answers["supported"] = {"type": "noul", "noul": self.supported.get(state["claim"], 0.0)}
             if "sentence" in questions:
                 answers["sentence"] = {"type": "choice", "choice": next(iter(questions["sentence"]["criteria"]))}
+            if "hedge" in questions:
+                answers["hedge"] = {"type": "noul", "noul": self.hedge.get(state["claim"], 0.0)}
+            for name, script, absent in (("addition", self.addition, 0.0), ("fact", self.fact, 1.0),
+                                         ("part", self.part, 0.0)):
+                if name in questions:
+                    answers[name] = {"type": "noul", "noul": script.get(state["claim"], absent)}
             return answers
         def noul(name: str) -> float:
             text = state[f"sentence_{name.split('_')[1]}"]
-            return (self.place_backs if name.startswith("place_") else self.needs_source).get(text, 0.0)
+            script = {"place": self.place_backs, "hedge": self.hedge}.get(name.split("_")[0], self.needs_source)
+            return script.get(text, 0.0)
         return {name: {"type": "noul", "noul": noul(name)} for name in questions}
 
     def claims_asked(self) -> list[str]:

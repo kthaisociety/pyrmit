@@ -10,6 +10,7 @@ import agentic.agent
 from agentic import bench
 from agentic.agent import AgentRun, AskedQuestion
 from corpus.common import read_jsonl
+from tests.unit.agentic.claims import FEE, HOUSE, RAW, A, B, get_chunk
 from tests.unit.agentic.judge_client import JudgeClient
 from tests.unit.agentic.test_agent_ask_user import AskIfAllowedClient
 
@@ -295,3 +296,86 @@ def test_every_should_answer_case_has_key_points(cases):
 
 def test_case_ids_are_unique(cases):
     assert cases and len({case["id"] for case in cases}) == len(cases)
+
+
+# --- claim support: the live claim check on a benchmark answer ----------------------------------------------------
+
+class ClaimTools:
+    get_chunk = staticmethod(get_chunk)
+
+
+def test_the_row_counts_the_claims_per_verdict(jev):
+    """RAW makes two cited claims: the model backs the house rule, not the fee."""
+    jev(supported={HOUSE: 0.9, FEE: 0.1})
+    row = bench.claim_support(AgentRun(answer=RAW), ClaimTools())
+    assert row == {"claim_check": "checked", "claims_checked": 2, "claims_supported": 1, "claims_unsupported": 1,
+                   "claims_uncited": 0, "claim_support": 0.5,
+                   "claim_list": [{"text": HOUSE, "verdict": "supported", "chunk_ids": [A]},
+                                  {"text": FEE, "verdict": "unsupported", "chunk_ids": [B]}]}
+
+
+def test_the_pinned_places_data_counts_as_a_source(jev):
+    """An uncited sentence the place data backs is not flagged."""
+    jev(supported={HOUSE: 0.9}, needs_source={FEE: 0.9}, place_backs={FEE: 0.9})
+    answer = f"{HOUSE} [c:{A}]. {FEE}."
+    assert bench.claim_support(AgentRun(answer=answer), ClaimTools())["claims_uncited"] == 1
+    assert bench.claim_support(AgentRun(answer=answer), ClaimTools(), "[Place] fee 12 000 kr")["claims_uncited"] == 0
+
+
+def test_a_claim_without_a_citation_counts_as_uncited(jev):
+    jev(supported={HOUSE: 0.9}, needs_source={FEE: 0.9})
+    row = bench.claim_support(AgentRun(answer=f"{HOUSE} [c:{A}]. {FEE}."), ClaimTools())
+    assert (row["claims_supported"], row["claims_uncited"], row["claim_support"]) == (1, 1, 0.5)
+
+
+def test_a_shortened_citation_is_resolved_against_the_chunks_the_agent_read(jev):
+    jev(supported={HOUSE: 0.9})
+    run = AgentRun(answer=f"{HOUSE} [c:{A[:8]}].", seen_chunks=[A])
+    assert bench.claim_support(run, ClaimTools())["claims_supported"] == 1
+
+
+def test_a_failed_check_reports_no_support(jev):
+    jev(error=RuntimeError("down"))
+    row = bench.claim_support(AgentRun(answer=RAW), ClaimTools())
+    assert (row["claim_check"], row["claims_checked"], row["claim_support"]) == ("failed", None, None)
+
+
+def test_an_answer_without_claims_has_no_support_share(jev):
+    jev()
+    row = bench.claim_support(AgentRun(answer="Contact the kommun early to discuss your plans."), ClaimTools())
+    assert (row["claim_check"], row["claims_checked"], row["claim_support"]) == ("checked", 0, None)
+
+
+@pytest.mark.parametrize("run", [AgentRun(error="boom"), AgentRun(answer="Hello!", mode="off_topic")])
+def test_a_run_with_nothing_to_check_is_not_put_to_the_model(jev, run):
+    """No answer (an error, a question card) and an off-topic answer are left alone, as in the chat."""
+    fake = jev(supported={HOUSE: 0.9})
+    assert bench.claim_support(run, ClaimTools())["claim_check"] is None
+    assert fake.calls == []
+
+
+def support_row(supported: int, unsupported: int, uncited: int = 0, status: str | None = "checked") -> dict:
+    if status != "checked":
+        return {"claim_check": status, "claims_checked": None}
+    return {"claim_check": status, "claims_checked": supported + unsupported + uncited, "claims_supported": supported,
+            "claims_unsupported": unsupported, "claims_uncited": uncited}
+
+
+def test_the_summary_pools_the_claims_of_all_answers():
+    """9 of 10 claims supported: not the mean of the answers' shares (0.95)."""
+    summary = bench.claim_support_summary([support_row(8, 0), support_row(1, 1)])
+    assert summary == {"answers": 2, "failed": 0, "claims": 10, "supported": 0.9, "unsupported": 0.1, "uncited": 0.0}
+
+
+def test_the_summary_counts_failed_checks_apart():
+    summary = bench.claim_support_summary([support_row(1, 1), support_row(0, 0, status="failed")])
+    assert (summary["answers"], summary["failed"], summary["supported"]) == (1, 1, 0.5)
+
+
+def test_rows_that_were_not_checked_give_no_summary():
+    """RAG rows, rows from before the check, and runs with --no-claim-check."""
+    assert bench.claim_support_summary([{"system": "rag"}, support_row(0, 0, status=None)]) is None
+
+
+def test_checked_answers_without_claims_have_no_shares():
+    assert bench.claim_support_summary([support_row(0, 0)])["supported"] is None
