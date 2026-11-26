@@ -129,6 +129,7 @@ Note: `docker-compose.yml` still defines a local `db` pgvector container (seeded
 | POST   | `/api/chat`                        | Send message, get response                |
 | POST   | `/api/chat/stream`                 | Send message, stream response (SSE), used by the UI |
 | GET    | `/api/history`                     | Message history                           |
+| POST   | `/api/chat/messages/{message_id}/claim-check` | Run again the claim check of an answer whose check could not run; answers with the `claim_check` event data and saves it in place of the failed one. 404 not the user's message, 409 no failed check to run again (#139) |
 | POST   | `/api/chunks/ingest-detaljplan`    | Ingest one detaljplan PDF or Markdown     |
 | POST   | `/api/chunks/ingest-data-folder`   | Ingest every file in a data folder        |
 | POST   | `/api/analyze`                     | Multi-agent feasibility analysis          |
@@ -813,7 +814,10 @@ stream writing to its own answer (#137, ADR-0026). An answer reopened while it i
 sending held back until it is finished. The chat leaves a flagged claim's text unmarked and puts a red flag after the sentence that lacks backing (the
 claim's `unbacked` sentences, else the whole claim): its hover text says the sources may not back the claim, or that
 it cites none, and tints the text it is about; a click opens the source panel with the claim, the reason and the
-chunks the claim cites (`SourceViewer`'s `claim` prop, #138). One line under the answer counts the flagged claims. It says "The claims in this answer could not be checked.", in grey, when no call succeeded.
+chunks the claim cites (`SourceViewer`'s `claim` prop, #138). One line under the answer counts the flagged claims. It says "The claims in this answer could not be checked.", in grey, when no call succeeded. A failed check is saved with
+what running it again needs (`chat._failed_check`: the raw answer, the chunk ids read, the place data, the message id;
+ADR-0027), and the grey line then carries a "Try again" button that asks `retry_claim_check` for the same check (#139);
+a check that failed before that has no button.
 Answers saved before the check show neither. Jev's wording was chosen on 380 claim-source pairs refereed by another
 model (2026-11-12): 88 % agreement, against 86 % for the LLM judge it replaced.
 The source panel a citation chip opens underlines, in each cited chunk, the supporting sentences of every claim that

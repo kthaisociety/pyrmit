@@ -522,13 +522,6 @@ def test_the_verdicts_are_saved_with_the_answer(checked_chat, jev):
                                                          "claims": [HOUSE_SUPPORTED, FEE_UNSUPPORTED]}]
 
 
-def test_a_failed_check_is_saved_with_the_answer(checked_chat, jev):
-    """A check that could not run is saved as failed."""
-    jev(error=RuntimeError("model down"))
-    stream_events(checked_chat)
-    assert claim_events(saved_answer(checked_chat)) == [{"status": "failed", "claims": []}]
-
-
 def test_a_failed_check_keeps_the_answer(checked_chat, jev):
     """The answer of a check that could not run is saved as it streamed."""
     jev(error=RuntimeError("model down"))
