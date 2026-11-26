@@ -5,6 +5,7 @@ import { ArrowLeft, LogOut, Trash2, Check, X } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
 import { useLanguage } from '@/lib/i18n';
 import ApiKeySettings from '@/components/ApiKeySettings';
+import LanguageSwitch from '@/components/LanguageSwitch';
 import UserRoleSettings, { ROLE_LABEL } from '@/components/UserRoleSettings';
 import { isOwner, type CurrentUser } from '@/lib/roles';
 
@@ -125,6 +126,12 @@ export default function Settings({ user, onBack, onLogout, logoutLoading, logout
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto p-6 space-y-8">
+
+          {/* Language */}
+          <section>
+            <h2 className="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-4">{t('settings.language')}</h2>
+            <LanguageSwitch />
+          </section>
 
           {/* Account Info */}
           <section>

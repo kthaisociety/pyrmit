@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Settings, MessageSquare, Trash2, Check, X, Pencil, Database, FlaskConical, Gauge } from 'lucide-react';
-import LanguageSwitch from '@/components/LanguageSwitch';
+import { Plus, MessageSquare, Trash2, Check, X, Pencil, Database, FlaskConical, Gauge } from 'lucide-react';
 import SidebarToggle from '@/components/SidebarToggle';
 import { authFetch } from '@/lib/auth';
 import { useLanguage } from '@/lib/i18n';
@@ -201,16 +200,6 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
       </div>
 
       <div className="p-3 border-t border-zinc-200 dark:border-zinc-800">
-        <div className="flex items-center gap-2 px-2 py-2 mb-2">
-          <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-xs">
-            {user?.name?.charAt(0).toUpperCase() || 'U'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.name}</p>
-            <p className="text-xs text-zinc-500 truncate">{user?.email}</p>
-          </div>
-          <LanguageSwitch />
-        </div>
         {isStaff(user) && (<>
         <button
           onClick={onOpenBenchmark}
@@ -235,11 +224,15 @@ export default function Sidebar({ currentSessionId, onSelectSession, onNewChat, 
         </button>
         </>)}
         <button
+          type="button"
           onClick={onOpenSettings}
-          className="w-full flex items-center gap-2 px-2 py-2 text-sm hover:bg-zinc-200 dark:hover:bg-zinc-900 rounded-lg transition-colors text-zinc-700 dark:text-zinc-300"
+          title={t('sidebar.settings')}
+          className="w-full flex items-center gap-2 px-2 py-2 mt-1 rounded-lg text-left hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
         >
-          <Settings size={16} />
-          <span>{t('sidebar.settings')}</span>
+          <span className="w-8 h-8 shrink-0 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-xs">
+            {user?.name?.charAt(0).toUpperCase() || 'U'}
+          </span>
+          <span className="flex-1 min-w-0 text-sm font-medium truncate">{user?.name}</span>
         </button>
       </div>
     </aside>
