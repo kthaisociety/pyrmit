@@ -807,10 +807,13 @@ call that fails or misses `CLAIM_CHECK_TIMEOUT_S` costs only its own claims. A c
 claim "uncited". Headings, table rows and text holding brackets are not judged. The answer is never rewritten. The
 stream sends the `citations` event first (the chips work during the check), then "Checking the claims" (the message
 stays `streaming`), then the verdicts as the `claim_check` pipeline event (`{status: checked | failed, claims}`,
-ADR-0004). The chat leaves a flagged claim's text unmarked and puts a red flag after the sentence that lacks backing (the
+ADR-0004). From "Checking the claims" on, the chat lets the next question be sent: the answer shows a discreet
+pulsing line ("Checking the claims", in the page language) and its stream stays open beside the next answer's, each
+stream writing to its own answer (#137, ADR-0026). An answer reopened while it is checked shows the same line, with
+sending held back until it is finished. The chat leaves a flagged claim's text unmarked and puts a red flag after the sentence that lacks backing (the
 claim's `unbacked` sentences, else the whole claim): its hover text says the sources may not back the claim, or that
 it cites none, and tints the text it is about; a click opens the source panel with the claim, the reason and the
-chunks the claim cites (`SourceViewer`'s `claim` prop, #138). One line under the answer counts the flagged claims. It says "The claims in this answer could not be checked." when no call succeeded.
+chunks the claim cites (`SourceViewer`'s `claim` prop, #138). One line under the answer counts the flagged claims. It says "The claims in this answer could not be checked.", in grey, when no call succeeded.
 Answers saved before the check show neither. Jev's wording was chosen on 380 claim-source pairs refereed by another
 model (2026-11-12): 88 % agreement, against 86 % for the LLM judge it replaced.
 The source panel a citation chip opens underlines, in each cited chunk, the supporting sentences of every claim that
